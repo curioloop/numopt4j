@@ -40,7 +40,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: native-${{ matrix.platform }}
-          path: build/lib/${{ matrix.lib }}
+          path: build/${{ matrix.lib }}
 
   package:
     needs: build-native
