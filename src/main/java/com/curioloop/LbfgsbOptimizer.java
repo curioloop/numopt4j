@@ -3,8 +3,6 @@
  */
 package com.curioloop;
 
-import java.util.function.ToDoubleFunction;
-
 /**
  * L-BFGS-B optimizer for bound-constrained optimization.
  * <p>
@@ -36,7 +34,7 @@ import java.util.function.ToDoubleFunction;
  * );
  * 
  * // Full control with builder
- * ObjectiveFunction rosenbrock = (x, g) -> {
+ * Evaluation rosenbrock = (x, g) -> {
  *     double f = 100 * Math.pow(x[1] - x[0]*x[0], 2) + Math.pow(1 - x[0], 2);
  *     if (g != null) {
  *         g[0] = -400 * x[0] * (x[1] - x[0]*x[0]) - 2 * (1 - x[0]);
@@ -63,7 +61,7 @@ public final class LbfgsbOptimizer {
     
     private final int dimension;
     private final int corrections;
-    private final ObjectiveFunction objective;
+    private final Evaluation objective;
     private final Bound[] bounds;
     private final Termination termination;
     
@@ -91,7 +89,7 @@ public final class LbfgsbOptimizer {
      * 
      * <p>Example:</p>
      * <pre>{@code
-     * ObjectiveFunction rosenbrock = (x, g) -> {
+     * Evaluation rosenbrock = (x, g) -> {
      *     double f = 100 * Math.pow(x[1] - x[0]*x[0], 2) + Math.pow(1 - x[0], 2);
      *     if (g != null) {
      *         g[0] = -400 * x[0] * (x[1] - x[0]*x[0]) - 2 * (1 - x[0]);
@@ -106,7 +104,7 @@ public final class LbfgsbOptimizer {
      * @param initialPoint Initial guess
      * @return Optimization result
      */
-    public static OptimizationResult minimize(ObjectiveFunction objective, double[] initialPoint) {
+    public static OptimizationResult minimize(Evaluation objective, double[] initialPoint) {
         if (initialPoint == null || initialPoint.length == 0) {
             throw new IllegalArgumentException("Initial point cannot be null or empty");
         }
@@ -237,7 +235,7 @@ public final class LbfgsbOptimizer {
         // Problem definition
         int n, int m, double[] x,
         // Callbacks
-        ObjectiveFunction objective, double[] gradient,
+        Evaluation objective, double[] gradient,
         // Termination criteria
         double factr, double pgtol, int maxIter, int maxEval, long maxTime,
         // Workspace
@@ -251,7 +249,7 @@ public final class LbfgsbOptimizer {
     public static final class Builder {
         private int dimension;
         private int corrections = 5;
-        private ObjectiveFunction objective;
+        private Evaluation objective;
         private Bound[] bounds;
         private Termination termination = Termination.defaults();
         
@@ -288,29 +286,8 @@ public final class LbfgsbOptimizer {
          * @param func Objective function
          * @return This builder
          */
-        public Builder objective(ObjectiveFunction func) {
+        public Builder objective(Evaluation func) {
             this.objective = func;
-            return this;
-        }
-        
-        /**
-         * Sets the objective function without gradient, using numerical differentiation.
-         * 
-         * <p>Example:</p>
-         * <pre>{@code
-         * // Using central difference (more accurate)
-         * builder.objective(x -> x[0]*x[0] + x[1]*x[1], NumericalGradient.CENTRAL);
-         * 
-         * // Using forward difference (faster)
-         * builder.objective(x -> x[0]*x[0] + x[1]*x[1], NumericalGradient.FORWARD);
-         * }</pre>
-         * 
-         * @param func Function that computes only the objective value
-         * @param diff Numerical differentiation method
-         * @return This builder
-         */
-        public Builder objective(ToDoubleFunction<double[]> func, NumericalGradient diff) {
-            this.objective = diff.wrap(func);
             return this;
         }
         

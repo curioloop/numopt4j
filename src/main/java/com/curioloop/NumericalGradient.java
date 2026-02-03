@@ -15,17 +15,19 @@ import java.util.function.ToDoubleFunction;
  * <h2>Usage</h2>
  * <pre>{@code
  * // Using five-point stencil (most accurate, O(h⁴))
- * builder.objective(x -> x[0]*x[0] + x[1]*x[1], NumericalGradient.FIVE_POINT);
+ * Evaluation accurate = NumericalGradient.FIVE_POINT.wrap(x -> x[0]*x[0] + x[1]*x[1]);
  * 
  * // Using central difference (accurate, O(h²))
- * builder.objective(x -> x[0]*x[0] + x[1]*x[1], NumericalGradient.CENTRAL);
+ * Evaluation balanced = NumericalGradient.CENTRAL.wrap(x -> x[0]*x[0] + x[1]*x[1]);
  * 
  * // Using forward difference (faster, O(h))
- * builder.objective(x -> x[0]*x[0] + x[1]*x[1], NumericalGradient.FORWARD);
+ * Evaluation fast = NumericalGradient.FORWARD.wrap(x -> x[0]*x[0] + x[1]*x[1]);
  * 
  * // Using backward difference (O(h))
- * builder.objective(x -> x[0]*x[0] + x[1]*x[1], NumericalGradient.BACKWARD);
+ * Evaluation backward = NumericalGradient.BACKWARD.wrap(x -> x[0]*x[0] + x[1]*x[1]);
  * }</pre>
+ * 
+ * @see Evaluation
  */
 public enum NumericalGradient {
     
@@ -38,7 +40,7 @@ public enum NumericalGradient {
      */
     FORWARD {
         @Override
-        public ObjectiveFunction wrap(ToDoubleFunction<double[]> func) {
+        public Evaluation wrap(ToDoubleFunction<double[]> func) {
             return (x, g) -> {
                 double f = func.applyAsDouble(x);
                 if (g != null) {
@@ -59,7 +61,7 @@ public enum NumericalGradient {
      */
     BACKWARD {
         @Override
-        public ObjectiveFunction wrap(ToDoubleFunction<double[]> func) {
+        public Evaluation wrap(ToDoubleFunction<double[]> func) {
             return (x, g) -> {
                 double f = func.applyAsDouble(x);
                 if (g != null) {
@@ -79,7 +81,7 @@ public enum NumericalGradient {
      */
     CENTRAL {
         @Override
-        public ObjectiveFunction wrap(ToDoubleFunction<double[]> func) {
+        public Evaluation wrap(ToDoubleFunction<double[]> func) {
             return (x, g) -> {
                 double f = func.applyAsDouble(x);
                 if (g != null) {
@@ -99,7 +101,7 @@ public enum NumericalGradient {
      */
     FIVE_POINT {
         @Override
-        public ObjectiveFunction wrap(ToDoubleFunction<double[]> func) {
+        public Evaluation wrap(ToDoubleFunction<double[]> func) {
             return (x, g) -> {
                 double f = func.applyAsDouble(x);
                 if (g != null) {
@@ -125,9 +127,9 @@ public enum NumericalGradient {
     /**
      * Wraps a function-only objective to include numerical gradient.
      * @param func Function that computes only the objective value
-     * @return ObjectiveFunction that computes both value and gradient
+     * @return Evaluation that computes both value and gradient
      */
-    public abstract ObjectiveFunction wrap(ToDoubleFunction<double[]> func);
+    public abstract Evaluation wrap(ToDoubleFunction<double[]> func);
     
     /**
      * Computes gradient using forward difference.

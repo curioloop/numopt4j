@@ -34,7 +34,7 @@ public class WorkspaceReuseProperties {
     ) {
         // Create a simple quadratic objective function: f(x) = sum(x_i^2)
         // This has a known minimum at x = 0 with f(0) = 0
-        ObjectiveFunction quadratic = (x, gradient) -> {
+        Evaluation quadratic = (x, gradient) -> {
             double f = 0.0;
             for (int i = 0; i < x.length; i++) {
                 f += x[i] * x[i];
@@ -136,7 +136,7 @@ public class WorkspaceReuseProperties {
             @ForAll @IntRange(min = 3, max = 5) int numOptimizations
     ) {
         // Create a simple quadratic objective function: f(x) = sum(x_i^2)
-        ObjectiveFunction quadratic = (x, gradient) -> {
+        Evaluation quadratic = (x, gradient) -> {
             double f = 0.0;
             for (int i = 0; i < x.length; i++) {
                 f += x[i] * x[i];
@@ -219,7 +219,7 @@ public class WorkspaceReuseProperties {
         Assume.that(workspaceN != problemN || workspaceM != problemM);
 
         // Create a simple quadratic objective function
-        ObjectiveFunction quadratic = (x, gradient) -> {
+        Evaluation quadratic = (x, gradient) -> {
             double f = 0.0;
             for (int i = 0; i < x.length; i++) {
                 f += x[i] * x[i];

@@ -42,7 +42,7 @@ public class BackwardCompatibilityProperties {
     ) {
         // Create a simple quadratic objective function: f(x) = sum(x_i^2)
         // This has a known minimum at x = 0 with f(0) = 0
-        ObjectiveFunction quadratic = (x, gradient) -> {
+        Evaluation quadratic = (x, gradient) -> {
             double f = 0.0;
             for (int i = 0; i < x.length; i++) {
                 f += x[i] * x[i];
@@ -125,7 +125,7 @@ public class BackwardCompatibilityProperties {
     ) {
         // Create a simple quadratic objective function: f(x) = sum(x_i^2)
         // This has a known minimum at x = 0 with f(0) = 0
-        ObjectiveFunction quadratic = (x, gradient) -> {
+        Evaluation quadratic = (x, gradient) -> {
             double f = 0.0;
             for (int i = 0; i < x.length; i++) {
                 f += x[i] * x[i];
@@ -201,7 +201,7 @@ public class BackwardCompatibilityProperties {
     ) {
         // Create a quadratic objective function: f(x) = sum((x_i - 1)^2)
         // This has a known minimum at x = [1, 1, ..., 1] with f(x*) = 0
-        ObjectiveFunction shiftedQuadratic = (x, gradient) -> {
+        Evaluation shiftedQuadratic = (x, gradient) -> {
             double f = 0.0;
             for (int i = 0; i < x.length; i++) {
                 double diff = x[i] - 1.0;
@@ -274,7 +274,7 @@ public class BackwardCompatibilityProperties {
             @ForAll @IntRange(min = 2, max = 15) int n
     ) {
         // Create a quadratic objective function: f(x) = sum(x_i^2)
-        ObjectiveFunction quadratic = (x, gradient) -> {
+        Evaluation quadratic = (x, gradient) -> {
             double f = 0.0;
             for (int i = 0; i < x.length; i++) {
                 f += x[i] * x[i];
@@ -290,7 +290,7 @@ public class BackwardCompatibilityProperties {
         // Equality constraint: sum(x) = 1
         // The optimal solution is x_i = 1/n for all i
         // with f(x*) = n * (1/n)^2 = 1/n
-        ConstraintFunction sumConstraint = (x, gradient) -> {
+        Evaluation sumConstraint = (x, gradient) -> {
             double sum = 0.0;
             for (int i = 0; i < x.length; i++) {
                 sum += x[i];
@@ -374,7 +374,7 @@ public class BackwardCompatibilityProperties {
     ) {
         // Rosenbrock function: f(x) = sum_{i=0}^{n-2} [100*(x_{i+1} - x_i^2)^2 + (1 - x_i)^2]
         // Known minimum at x = [1, 1, ..., 1] with f(x*) = 0
-        ObjectiveFunction rosenbrock = (x, gradient) -> {
+        Evaluation rosenbrock = (x, gradient) -> {
             double f = 0.0;
             for (int i = 0; i < x.length - 1; i++) {
                 double t1 = x[i + 1] - x[i] * x[i];
@@ -472,7 +472,7 @@ public class BackwardCompatibilityProperties {
             @ForAll @IntRange(min = 2, max = 10) int n
     ) {
         // Simple objective function
-        ObjectiveFunction objective = (x, gradient) -> {
+        Evaluation objective = (x, gradient) -> {
             double f = 0.0;
             for (int i = 0; i < x.length; i++) {
                 f += x[i] * x[i];

@@ -33,7 +33,7 @@ public class NumericalGradientTest {
         double[] x = {1.0, 2.0, 3.0};
         double[] g = new double[3];
         
-        ObjectiveFunction wrapped = method.wrap(QUADRATIC);
+        Evaluation wrapped = method.wrap(QUADRATIC);
         double f = wrapped.evaluate(x, g);
         
         double[] expected = analyticalGradient(x);
@@ -54,7 +54,7 @@ public class NumericalGradientTest {
         double[] x = {1.0, -2.0, 0.5};
         double[] g = new double[3];
         
-        ObjectiveFunction wrapped = NumericalGradient.FORWARD.wrap(QUADRATIC);
+        Evaluation wrapped = NumericalGradient.FORWARD.wrap(QUADRATIC);
         wrapped.evaluate(x, g);
         
         double[] expected = analyticalGradient(x);
@@ -69,7 +69,7 @@ public class NumericalGradientTest {
         double[] x = {1.0, -2.0, 0.5};
         double[] g = new double[3];
         
-        ObjectiveFunction wrapped = NumericalGradient.BACKWARD.wrap(QUADRATIC);
+        Evaluation wrapped = NumericalGradient.BACKWARD.wrap(QUADRATIC);
         wrapped.evaluate(x, g);
         
         double[] expected = analyticalGradient(x);
@@ -84,7 +84,7 @@ public class NumericalGradientTest {
         double[] x = {1.0, -2.0, 0.5};
         double[] g = new double[3];
         
-        ObjectiveFunction wrapped = NumericalGradient.CENTRAL.wrap(QUADRATIC);
+        Evaluation wrapped = NumericalGradient.CENTRAL.wrap(QUADRATIC);
         wrapped.evaluate(x, g);
         
         double[] expected = analyticalGradient(x);
@@ -99,7 +99,7 @@ public class NumericalGradientTest {
         double[] x = {1.0, -2.0, 0.5};
         double[] g = new double[3];
         
-        ObjectiveFunction wrapped = NumericalGradient.FIVE_POINT.wrap(QUADRATIC);
+        Evaluation wrapped = NumericalGradient.FIVE_POINT.wrap(QUADRATIC);
         wrapped.evaluate(x, g);
         
         double[] expected = analyticalGradient(x);
@@ -185,7 +185,7 @@ public class NumericalGradientTest {
         double[] x = {1.0, 2.0, 3.0};
         
         for (NumericalGradient method : NumericalGradient.values()) {
-            ObjectiveFunction wrapped = method.wrap(QUADRATIC);
+            Evaluation wrapped = method.wrap(QUADRATIC);
             double f = wrapped.evaluate(x, null);
             
             // Function value should still be computed

@@ -43,7 +43,7 @@ public class LargeConstraintStabilityProperties {
     ) {
         // Create a simple quadratic objective function: f(x) = sum(x_i^2)
         // This has a known minimum at x = 0 with f(0) = 0
-        ObjectiveFunction quadratic = (x, gradient) -> {
+        Evaluation quadratic = (x, gradient) -> {
             double f = 0.0;
             for (int i = 0; i < x.length; i++) {
                 f += x[i] * x[i];
@@ -71,7 +71,7 @@ public class LargeConstraintStabilityProperties {
             final int idx = i % n;  // Cycle through dimensions
             final double bound = -10.0 - i;  // Different bounds for variety
             
-            ConstraintFunction constraint = (x, gradient) -> {
+            Evaluation constraint = (x, gradient) -> {
                 // Constraint: x[idx] + bound >= 0, i.e., x[idx] >= -bound
                 if (gradient != null) {
                     for (int j = 0; j < x.length; j++) {
@@ -137,7 +137,7 @@ public class LargeConstraintStabilityProperties {
         final int numConstraints = 17;
 
         // Create a simple quadratic objective function
-        ObjectiveFunction quadratic = (x, gradient) -> {
+        Evaluation quadratic = (x, gradient) -> {
             double f = 0.0;
             for (int i = 0; i < x.length; i++) {
                 f += x[i] * x[i];
@@ -164,7 +164,7 @@ public class LargeConstraintStabilityProperties {
             final int idx = i % n;
             final double bound = -10.0 - i;
             
-            ConstraintFunction constraint = (x, gradient) -> {
+            Evaluation constraint = (x, gradient) -> {
                 if (gradient != null) {
                     for (int j = 0; j < x.length; j++) {
                         gradient[j] = (j == idx) ? 1.0 : 0.0;

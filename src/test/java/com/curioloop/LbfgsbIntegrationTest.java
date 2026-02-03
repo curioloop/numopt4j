@@ -61,7 +61,7 @@ public class LbfgsbIntegrationTest {
         
         // Define the log-likelihood objective function
         // f(x) = log(sum(exp(F*x))) - K'*x
-        ObjectiveFunction logLikelihood = (x, g) -> {
+        Evaluation logLikelihood = (x, g) -> {
             // Compute F*x
             double[] Fx = matrixVectorMultiply(F, F_ROWS, F_COLS, x);
             
@@ -222,7 +222,7 @@ public class LbfgsbIntegrationTest {
         
         // Define the 25-dimensional Rosenbrock function
         // f(x) = 0.25*(x[0]-1)^2 + sum_{i=1}^{n-1}[(x[i] - x[i-1]^2)^2] * 4
-        ObjectiveFunction rosenbrock = (x, g) -> {
+        Evaluation rosenbrock = (x, g) -> {
             // Compute function value
             double f = 0.25 * Math.pow(x[0] - 1.0, 2);
             for (int i = 1; i < n; i++) {
@@ -360,7 +360,7 @@ public class LbfgsbIntegrationTest {
     void testBoundClipping(double initialValue, Bound bound, double expectedSolution, String description) {
         // Define the simple quadratic objective function: f(x) = (x - 1)^2
         // Unconstrained minimum is at x = 1
-        ObjectiveFunction quadratic = (x, g) -> {
+        Evaluation quadratic = (x, g) -> {
             if (g != null) {
                 g[0] = 2.0 * (x[0] - 1.0);
             }

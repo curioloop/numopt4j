@@ -5,7 +5,6 @@ package com.curioloop;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.ToDoubleFunction;
 
 /**
  * SLSQP optimizer for constrained nonlinear optimization.
@@ -33,7 +32,7 @@ import java.util.function.ToDoubleFunction;
  * 
  * <h2>Example usage</h2>
  * <pre>{@code
- * ObjectiveFunction objective = (x, g) -> {
+ * Evaluation objective = (x, g) -> {
  *     double f = x[0]*x[0] + x[1]*x[1];
  *     if (g != null) {
  *         g[0] = 2*x[0];
@@ -43,7 +42,7 @@ import java.util.function.ToDoubleFunction;
  * };
  *
  * // Equality constraint: x[0] + x[1] = 1
- * ConstraintFunction eqConstraint = (x, g) -> {
+ * Evaluation eqConstraint = (x, g) -> {
  *     if (g != null) {
  *         g[0] = 1;
  *         g[1] = 1;
@@ -65,22 +64,21 @@ import java.util.function.ToDoubleFunction;
 public final class SlsqpOptimizer {
     
     /**
-     * Internal batch constraint wrapper for efficient JNI calls.
+     * Internal constraint wrapper for efficient JNI calls.
      * Evaluates all constraints at once with a shared gradient array.
      */
-    private static final class BatchConstraint {
-        private final ConstraintFunction[] constraints;
-        private final int m;  // number of constraints
+    private static final class Constraints {
+        private final Evaluation[] constraints;
         private final double[] grad;  // shared gradient array (from optimizer)
         
-        BatchConstraint(ConstraintFunction[] constraints, double[] grad) {
+        Constraints(Evaluation[] constraints, double[] grad) {
             this.constraints = constraints;
-            this.m = constraints.length;
             this.grad = grad;
         }
         
         @SuppressWarnings("unused")
         public void evaluate(double[] x, double[] c, double[] jac) {
+            int m = constraints.length;
             for (int i = 0; i < m; i++) {
                 c[i] = constraints[i].evaluate(x, jac != null ? grad : null);
                 if (jac != null) {
@@ -98,11 +96,11 @@ public final class SlsqpOptimizer {
     }
     
     private final int dimension;
-    private final ObjectiveFunction objective;
+    private final Evaluation objective;
     private final int numEqualityConstraints;
     private final int numInequalityConstraints;
-    private final BatchConstraint equalityConstraint;
-    private final BatchConstraint inequalityConstraint;
+    private final Constraints equalityConstraint;
+    private final Constraints inequalityConstraint;
     private final Bound[] bounds;
     private final Termination termination;
     
@@ -113,7 +111,7 @@ public final class SlsqpOptimizer {
     private final double variableDifferenceTolerance;
     
     private SlsqpOptimizer(Builder builder, int numEq, int numIneq, 
-                           BatchConstraint eqConstraint, BatchConstraint ineqConstraint) {
+                           Constraints eqConstraint, Constraints ineqConstraint) {
         this.dimension = builder.dimension;
         this.objective = builder.objective;
         this.numEqualityConstraints = numEq;
@@ -144,7 +142,7 @@ public final class SlsqpOptimizer {
      * 
      * <p>Example:</p>
      * <pre>{@code
-     * ObjectiveFunction objective = (x, g) -> {
+     * Evaluation objective = (x, g) -> {
      *     double f = x[0]*x[0] + x[1]*x[1];
      *     if (g != null) { g[0] = 2*x[0]; g[1] = 2*x[1]; }
      *     return f;
@@ -156,7 +154,7 @@ public final class SlsqpOptimizer {
      * @param initialPoint Initial guess
      * @return Optimization result
      */
-    public static OptimizationResult minimize(ObjectiveFunction objective, double[] initialPoint) {
+    public static OptimizationResult minimize(Evaluation objective, double[] initialPoint) {
         if (initialPoint == null || initialPoint.length == 0) {
             throw new IllegalArgumentException("Initial point cannot be null or empty");
         }
@@ -325,9 +323,9 @@ public final class SlsqpOptimizer {
         // Problem definition
         int n, int meq, int mineq, double[] x,
         // Objective callback
-        ObjectiveFunction objective, double[] gradient,
+        Evaluation objective, double[] gradient,
         // Constraint callbacks (share arrays since evaluated sequentially)
-        BatchConstraint eqConstraint, BatchConstraint ineqConstraint,
+        Constraints eqConstraint, Constraints ineqConstraint,
         double[] constraintValues, double[] constraintJacobian,
         // Termination criteria
         double accuracy, int maxIter, int nnlsIter, long maxTime,
@@ -342,13 +340,13 @@ public final class SlsqpOptimizer {
      */
     public static final class Builder {
         private int dimension;
-        private ObjectiveFunction objective;
+        private Evaluation objective;
         private Bound[] bounds;
         private Termination termination = Termination.defaults();
         
         // Lists to accumulate individual constraints (lazy initialization)
-        private List<ConstraintFunction> equalityConstraints;
-        private List<ConstraintFunction> inequalityConstraints;
+        private List<Evaluation> equalityConstraints;
+        private List<Evaluation> inequalityConstraints;
         
         // Extended configuration options with default values
         private boolean exactLineSearch = false;
@@ -376,29 +374,8 @@ public final class SlsqpOptimizer {
          * @param func Objective function
          * @return This builder
          */
-        public Builder objective(ObjectiveFunction func) {
+        public Builder objective(Evaluation func) {
             this.objective = func;
-            return this;
-        }
-        
-        /**
-         * Sets the objective function without gradient, using numerical differentiation.
-         * 
-         * <p>Example:</p>
-         * <pre>{@code
-         * // Using central difference (more accurate)
-         * builder.objective(x -> x[0]*x[0] + x[1]*x[1], NumericalGradient.CENTRAL);
-         * 
-         * // Using forward difference (faster)
-         * builder.objective(x -> x[0]*x[0] + x[1]*x[1], NumericalGradient.FORWARD);
-         * }</pre>
-         * 
-         * @param func Function that computes only the objective value
-         * @param diff Numerical differentiation method
-         * @return This builder
-         */
-        public Builder objective(ToDoubleFunction<double[]> func, NumericalGradient diff) {
-            this.objective = diff.wrap(func);
             return this;
         }
         
@@ -407,9 +384,9 @@ public final class SlsqpOptimizer {
          * @param constraints Constraint functions
          * @return This builder
          */
-        public Builder equalityConstraints(ConstraintFunction... constraints) {
+        public Builder equalityConstraints(Evaluation... constraints) {
             if (constraints != null) {
-                for (ConstraintFunction c : constraints) {
+                for (Evaluation c : constraints) {
                     if (c != null) {
                         if (equalityConstraints == null) {
                             equalityConstraints = new ArrayList<>();
@@ -426,9 +403,9 @@ public final class SlsqpOptimizer {
          * @param constraints Constraint functions
          * @return This builder
          */
-        public Builder inequalityConstraints(ConstraintFunction... constraints) {
+        public Builder inequalityConstraints(Evaluation... constraints) {
             if (constraints != null) {
-                for (ConstraintFunction c : constraints) {
+                for (Evaluation c : constraints) {
                     if (c != null) {
                         if (inequalityConstraints == null) {
                             inequalityConstraints = new ArrayList<>();
@@ -563,11 +540,11 @@ public final class SlsqpOptimizer {
             int numEq = equalityConstraints != null ? equalityConstraints.size() : 0;
             int numIneq = inequalityConstraints != null ? inequalityConstraints.size() : 0;
             double[] constraintGrad = (numEq > 0 || numIneq > 0) ? new double[dimension] : null;
-            BatchConstraint eqConstraint = numEq > 0 
-                ? new BatchConstraint(equalityConstraints.toArray(new ConstraintFunction[0]), constraintGrad) 
+            Constraints eqConstraint = numEq > 0 
+                ? new Constraints(equalityConstraints.toArray(new Evaluation[0]), constraintGrad) 
                 : null;
-            BatchConstraint ineqConstraint = numIneq > 0
-                ? new BatchConstraint(inequalityConstraints.toArray(new ConstraintFunction[0]), constraintGrad) 
+            Constraints ineqConstraint = numIneq > 0
+                ? new Constraints(inequalityConstraints.toArray(new Evaluation[0]), constraintGrad) 
                 : null;
             
             return new SlsqpOptimizer(this, numEq, numIneq, eqConstraint, ineqConstraint);

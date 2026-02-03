@@ -50,7 +50,7 @@ public class SlsqpIntegrationTest {
     void testRosenbrockWithConstraint() {
         // Define the 2-dimensional Rosenbrock function
         // f(x) = 100*(x[1] - x[0]^2)^2 + (1 - x[0])^2
-        ObjectiveFunction rosenbrock2D = (x, g) -> {
+        Evaluation rosenbrock2D = (x, g) -> {
             double x0 = x[0];
             double x1 = x[1];
             double x0sq = x0 * x0;
@@ -70,7 +70,7 @@ public class SlsqpIntegrationTest {
         
         // Define the circle inequality constraint
         // c(x) = 1 - x[0]^2 - x[1]^2 >= 0
-        ConstraintFunction circleConstraint = (x, g) -> {
+        Evaluation circleConstraint = (x, g) -> {
             if (g != null) {
                 g[0] = -2.0 * x[0];
                 g[1] = -2.0 * x[1];
@@ -181,7 +181,7 @@ public class SlsqpIntegrationTest {
     void testBasicConstrainedOptimizationInexactLineSearch() {
         // Define the objective function: f(x) = x[0]^2 + x[1]^2 + x[2]
         // Note: x[2] is linear, not quadratic
-        ObjectiveFunction objective = (x, g) -> {
+        Evaluation objective = (x, g) -> {
             double f = x[0] * x[0] + x[1] * x[1] + x[2];
             
             if (g != null) {
@@ -194,7 +194,7 @@ public class SlsqpIntegrationTest {
         };
         
         // Define the equality constraint: x[0]*x[1] - x[2] = 0
-        ConstraintFunction equalityConstraint = (x, g) -> {
+        Evaluation equalityConstraint = (x, g) -> {
             if (g != null) {
                 g[0] = x[1];
                 g[1] = x[0];
@@ -204,7 +204,7 @@ public class SlsqpIntegrationTest {
         };
         
         // Define the inequality constraint: x[2] - 1 >= 0
-        ConstraintFunction inequalityConstraint = (x, g) -> {
+        Evaluation inequalityConstraint = (x, g) -> {
             if (g != null) {
                 g[0] = 0.0;
                 g[1] = 0.0;
@@ -309,7 +309,7 @@ public class SlsqpIntegrationTest {
     void testBasicConstrainedOptimizationExactLineSearch() {
         // Define the objective function: f(x) = x[0]^2 + x[1]^2 + x[2]
         // Note: x[2] is linear, not quadratic
-        ObjectiveFunction objective = (x, g) -> {
+        Evaluation objective = (x, g) -> {
             double f = x[0] * x[0] + x[1] * x[1] + x[2];
             
             if (g != null) {
@@ -322,7 +322,7 @@ public class SlsqpIntegrationTest {
         };
         
         // Define the equality constraint: x[0]*x[1] - x[2] = 0
-        ConstraintFunction equalityConstraint = (x, g) -> {
+        Evaluation equalityConstraint = (x, g) -> {
             if (g != null) {
                 g[0] = x[1];
                 g[1] = x[0];
@@ -332,7 +332,7 @@ public class SlsqpIntegrationTest {
         };
         
         // Define the inequality constraint: x[2] - 1 >= 0
-        ConstraintFunction inequalityConstraint = (x, g) -> {
+        Evaluation inequalityConstraint = (x, g) -> {
             if (g != null) {
                 g[0] = 0.0;
                 g[1] = 0.0;
@@ -451,7 +451,7 @@ public class SlsqpIntegrationTest {
     void testProblem71() {
         // Define the 5-dimensional objective function
         // f(x) = x[0]*x[3]*(x[0] + x[1] + x[2]) + x[2]
-        ObjectiveFunction objective = (x, g) -> {
+        Evaluation objective = (x, g) -> {
             double f = x[0] * x[3] * (x[0] + x[1] + x[2]) + x[2];
             
             if (g != null) {
@@ -471,7 +471,7 @@ public class SlsqpIntegrationTest {
         };
         
         // Define equality constraint 1: x[0]*x[1]*x[2]*x[3] - x[4] - 25 = 0
-        ConstraintFunction cons1 = (x, g) -> {
+        Evaluation cons1 = (x, g) -> {
             if (g != null) {
                 g[0] = x[1] * x[2] * x[3];
                 g[1] = x[0] * x[2] * x[3];
@@ -483,7 +483,7 @@ public class SlsqpIntegrationTest {
         };
         
         // Define equality constraint 2: x[0]^2 + x[1]^2 + x[2]^2 + x[3]^2 - 40 = 0
-        ConstraintFunction cons2 = (x, g) -> {
+        Evaluation cons2 = (x, g) -> {
             if (g != null) {
                 g[0] = 2.0 * x[0];
                 g[1] = 2.0 * x[1];
@@ -626,7 +626,7 @@ public class SlsqpIntegrationTest {
     void testBoundClipping(double initialValue, Bound bound, double expectedSolution, String description) {
         // Define the simple quadratic objective function: f(x) = (x - 1)^2
         // Unconstrained minimum is at x = 1
-        ObjectiveFunction quadratic = (x, g) -> {
+        Evaluation quadratic = (x, g) -> {
             if (g != null) {
                 g[0] = 2.0 * (x[0] - 1.0);
             }
@@ -693,7 +693,7 @@ public class SlsqpIntegrationTest {
      */
     static Stream<Arguments> infeasibleInitialPointTestCases() {
         // Constraint: x <= 0 (expressed as -x >= 0)
-        ConstraintFunction upperBoundConstraint = (x, g) -> {
+        Evaluation upperBoundConstraint = (x, g) -> {
             if (g != null) {
                 g[0] = -1.0;
             }
@@ -701,7 +701,7 @@ public class SlsqpIntegrationTest {
         };
         
         // Constraint: x >= 2 (expressed as x - 2 >= 0)
-        ConstraintFunction lowerBoundConstraint = (x, g) -> {
+        Evaluation lowerBoundConstraint = (x, g) -> {
             if (g != null) {
                 g[0] = 1.0;
             }
@@ -710,14 +710,14 @@ public class SlsqpIntegrationTest {
         
         // Constraint: -1 <= x <= 0 (two inequality constraints)
         // Expressed as: x + 1 >= 0 AND -x >= 0
-        ConstraintFunction doubleBoundLower = (x, g) -> {
+        Evaluation doubleBoundLower = (x, g) -> {
             if (g != null) {
                 g[0] = 1.0;
             }
             return x[0] + 1.0;  // x + 1 >= 0 means x >= -1
         };
         
-        ConstraintFunction doubleBoundUpper = (x, g) -> {
+        Evaluation doubleBoundUpper = (x, g) -> {
             if (g != null) {
                 g[0] = -1.0;
             }
@@ -726,27 +726,27 @@ public class SlsqpIntegrationTest {
         
         return Stream.of(
             // Case 1: Initial=10 (infeasible), constraint x <= 0, expect solution at 0
-            Arguments.of(10.0, new ConstraintFunction[]{upperBoundConstraint}, 0.0, 
+            Arguments.of(10.0, new Evaluation[]{upperBoundConstraint}, 0.0, 
                 "initial=10, constraint x <= 0"),
             
             // Case 2: Initial=-10 (infeasible), constraint x >= 2, expect solution at 2
-            Arguments.of(-10.0, new ConstraintFunction[]{lowerBoundConstraint}, 2.0, 
+            Arguments.of(-10.0, new Evaluation[]{lowerBoundConstraint}, 2.0, 
                 "initial=-10, constraint x >= 2"),
             
             // Case 3: Initial=-10 (feasible but far), constraint x <= 0, expect solution at 0
-            Arguments.of(-10.0, new ConstraintFunction[]{upperBoundConstraint}, 0.0, 
+            Arguments.of(-10.0, new Evaluation[]{upperBoundConstraint}, 0.0, 
                 "initial=-10, constraint x <= 0"),
             
             // Case 4: Initial=10 (infeasible), constraint x >= 2, expect solution at 2
-            Arguments.of(10.0, new ConstraintFunction[]{lowerBoundConstraint}, 2.0, 
+            Arguments.of(10.0, new Evaluation[]{lowerBoundConstraint}, 2.0, 
                 "initial=10, constraint x >= 2"),
             
             // Case 5: Initial=-0.5 (feasible), constraint -1 <= x <= 0, expect solution at 0
-            Arguments.of(-0.5, new ConstraintFunction[]{doubleBoundLower, doubleBoundUpper}, 0.0, 
+            Arguments.of(-0.5, new Evaluation[]{doubleBoundLower, doubleBoundUpper}, 0.0, 
                 "initial=-0.5, constraint -1 <= x <= 0"),
             
             // Case 6: Initial=10 (infeasible), constraint -1 <= x <= 0, expect solution at 0
-            Arguments.of(10.0, new ConstraintFunction[]{doubleBoundLower, doubleBoundUpper}, 0.0, 
+            Arguments.of(10.0, new Evaluation[]{doubleBoundLower, doubleBoundUpper}, 0.0, 
                 "initial=10, constraint -1 <= x <= 0")
         );
     }
@@ -773,11 +773,11 @@ public class SlsqpIntegrationTest {
     @ParameterizedTest(name = "Infeasible initial point: {3}")
     @MethodSource("infeasibleInitialPointTestCases")
     @DisplayName("SLSQP infeasible initial point convergence")
-    void testInfeasibleInitialPointConvergence(double initialValue, ConstraintFunction[] constraints, 
+    void testInfeasibleInitialPointConvergence(double initialValue, Evaluation[] constraints, 
             double expectedSolution, String description) {
         // Define the simple quadratic objective function: f(x) = (x - 1)^2
         // Unconstrained minimum is at x = 1
-        ObjectiveFunction quadratic = (x, g) -> {
+        Evaluation quadratic = (x, g) -> {
             if (g != null) {
                 g[0] = 2.0 * (x[0] - 1.0);
             }
@@ -797,7 +797,7 @@ public class SlsqpIntegrationTest {
                 .termination(termination);
         
         // Add all inequality constraints
-        for (ConstraintFunction constraint : constraints) {
+        for (Evaluation constraint : constraints) {
             builder.inequalityConstraints(constraint);
         }
         
@@ -853,7 +853,7 @@ public class SlsqpIntegrationTest {
     void testInconsistentConstraints() {
         // Define a simple quadratic objective function: f(x) = (x - 1)^2
         // Unconstrained minimum is at x = 1
-        ObjectiveFunction quadratic = (x, g) -> {
+        Evaluation quadratic = (x, g) -> {
             if (g != null) {
                 g[0] = 2.0 * (x[0] - 1.0);
             }
@@ -862,7 +862,7 @@ public class SlsqpIntegrationTest {
         
         // Define contradictory constraints:
         // Constraint 1: x >= 2 (expressed as x - 2 >= 0)
-        ConstraintFunction lowerBoundConstraint = (x, g) -> {
+        Evaluation lowerBoundConstraint = (x, g) -> {
             if (g != null) {
                 g[0] = 1.0;
             }
@@ -870,7 +870,7 @@ public class SlsqpIntegrationTest {
         };
         
         // Constraint 2: x <= 0 (expressed as -x >= 0)
-        ConstraintFunction upperBoundConstraint = (x, g) -> {
+        Evaluation upperBoundConstraint = (x, g) -> {
             if (g != null) {
                 g[0] = -1.0;
             }

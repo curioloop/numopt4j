@@ -59,7 +59,7 @@ public class CallbackExceptionProperties {
         
         // Create an objective function that throws an exception after k evaluations
         // Use Rosenbrock function which requires many iterations to converge
-        ObjectiveFunction throwingObjective = (x, gradient) -> {
+        Evaluation throwingObjective = (x, gradient) -> {
             int currentEval = evaluationCount.incrementAndGet();
             
             // Throw exception after k evaluations
@@ -145,7 +145,7 @@ public class CallbackExceptionProperties {
         
         // Create an objective function that throws an exception after k evaluations
         // Use Rosenbrock function which requires many iterations
-        ObjectiveFunction throwingObjective = (x, gradient) -> {
+        Evaluation throwingObjective = (x, gradient) -> {
             int currentEval = evaluationCount.incrementAndGet();
             
             // Throw exception after k evaluations
@@ -226,7 +226,7 @@ public class CallbackExceptionProperties {
         AtomicInteger constraintEvalCount = new AtomicInteger(0);
         
         // Normal objective function - Rosenbrock
-        ObjectiveFunction objective = (x, gradient) -> {
+        Evaluation objective = (x, gradient) -> {
             double f = 0.0;
             for (int i = 0; i < x.length - 1; i++) {
                 double t1 = x[i + 1] - x[i] * x[i];
@@ -246,7 +246,7 @@ public class CallbackExceptionProperties {
         };
 
         // Constraint function that throws an exception after k evaluations
-        ConstraintFunction throwingConstraint = (x, gradient) -> {
+        Evaluation throwingConstraint = (x, gradient) -> {
             int currentEval = constraintEvalCount.incrementAndGet();
             
             // Throw exception after k evaluations
@@ -321,7 +321,7 @@ public class CallbackExceptionProperties {
         AtomicInteger constraintEvalCount = new AtomicInteger(0);
         
         // Normal objective function - Rosenbrock
-        ObjectiveFunction objective = (x, gradient) -> {
+        Evaluation objective = (x, gradient) -> {
             double f = 0.0;
             for (int i = 0; i < x.length - 1; i++) {
                 double t1 = x[i + 1] - x[i] * x[i];
@@ -341,7 +341,7 @@ public class CallbackExceptionProperties {
         };
 
         // Equality constraint function that throws an exception after k evaluations
-        ConstraintFunction throwingEqConstraint = (x, gradient) -> {
+        Evaluation throwingEqConstraint = (x, gradient) -> {
             int currentEval = constraintEvalCount.incrementAndGet();
             
             // Throw exception after k evaluations
@@ -418,7 +418,7 @@ public class CallbackExceptionProperties {
         
         // Create an objective function that throws an exception after k evaluations
         // Use Rosenbrock function which requires many iterations
-        ObjectiveFunction throwingObjective = (x, gradient) -> {
+        Evaluation throwingObjective = (x, gradient) -> {
             int currentEval = evaluationCount.incrementAndGet();
             
             // Throw exception after k evaluations

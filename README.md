@@ -31,7 +31,7 @@ High-performance numerical optimization library for Java.
 
 ```java
 // With analytical gradient
-ObjectiveFunction objective = (x, g) -> {
+Evaluation objective = (x, g) -> {
     double f = x[0]*x[0] + x[1]*x[1];
     if (g != null) {
         g[0] = 2*x[0];
@@ -49,9 +49,12 @@ System.out.println("Solution: " + Arrays.toString(x));
 ### With Numerical Gradient
 
 ```java
+// Wrap a function without gradient using numerical differentiation
+Evaluation objective = NumericalGradient.CENTRAL.wrap(x -> x[0]*x[0] + x[1]*x[1]);
+
 OptimizationResult result = LbfgsbOptimizer.builder()
     .dimension(2)
-    .objective(x -> x[0]*x[0] + x[1]*x[1], NumericalGradient.CENTRAL)
+    .objective(objective)
     .build()
     .optimize(new double[]{1, 1});
 ```
@@ -69,20 +72,20 @@ LbfgsbOptimizer optimizer = LbfgsbOptimizer.builder()
 ### Constrained Optimization (SLSQP)
 
 ```java
-ObjectiveFunction objective = (x, g) -> {
+Evaluation objective = (x, g) -> {
     double f = x[0]*x[0] + x[1]*x[1];
     if (g != null) { g[0] = 2*x[0]; g[1] = 2*x[1]; }
     return f;
 };
 
 // Equality constraint: x[0] + x[1] = 1
-ConstraintFunction eq = (x, g) -> {
+Evaluation eq = (x, g) -> {
     if (g != null) { g[0] = 1; g[1] = 1; }
     return x[0] + x[1] - 1;
 };
 
 // Inequality constraint: x[0] >= 0.5
-ConstraintFunction ineq = (x, g) -> {
+Evaluation ineq = (x, g) -> {
     if (g != null) { g[0] = 1; g[1] = 0; }
     return x[0] - 0.5;
 };
@@ -156,13 +159,13 @@ Four methods available with different accuracy/performance tradeoffs:
 
 ```java
 // Fastest (1 eval per dimension)
-builder.objective(func, NumericalGradient.FORWARD);
+Evaluation fast = NumericalGradient.FORWARD.wrap(func);
 
 // Good balance of accuracy and speed
-builder.objective(func, NumericalGradient.CENTRAL);
+Evaluation balanced = NumericalGradient.CENTRAL.wrap(func);
 
 // Highest accuracy (4 evals per dimension)
-builder.objective(func, NumericalGradient.FIVE_POINT);
+Evaluation accurate = NumericalGradient.FIVE_POINT.wrap(func);
 ```
 
 Typical error comparison:

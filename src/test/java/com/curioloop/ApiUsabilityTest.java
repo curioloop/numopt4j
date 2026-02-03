@@ -32,7 +32,7 @@ public class ApiUsabilityTest {
     void testLbfgsbMinimizeWithGradient() {
         // Quadratic function with analytical gradient: f(x) = (x-2)^2 + (y-3)^2
         // Minimum at (2, 3)
-        ObjectiveFunction quadratic = (x, g) -> {
+        Evaluation quadratic = (x, g) -> {
             double f = Math.pow(x[0] - 2, 2) + Math.pow(x[1] - 3, 2);
             if (g != null) {
                 g[0] = 2 * (x[0] - 2);
@@ -137,7 +137,7 @@ public class ApiUsabilityTest {
     @Test
     @DisplayName("SLSQP: Simple minimize")
     void testSlsqpSimpleMinimize() {
-        ObjectiveFunction objective = (x, g) -> {
+        Evaluation objective = (x, g) -> {
             double f = x[0] * x[0] + x[1] * x[1];
             if (g != null) {
                 g[0] = 2 * x[0];
@@ -156,7 +156,7 @@ public class ApiUsabilityTest {
     @DisplayName("SLSQP: Builder with multiple inequality constraints using varargs")
     void testSlsqpWithMultipleConstraints() {
         // Minimize x^2 + y^2 subject to x >= 1 and y >= 1
-        ObjectiveFunction objective = (x, g) -> {
+        Evaluation objective = (x, g) -> {
             double f = x[0] * x[0] + x[1] * x[1];
             if (g != null) {
                 g[0] = 2 * x[0];
@@ -166,13 +166,13 @@ public class ApiUsabilityTest {
         };
         
         // x - 1 >= 0 (i.e., x >= 1)
-        ConstraintFunction c1 = (x, g) -> {
+        Evaluation c1 = (x, g) -> {
             if (g != null) { g[0] = 1; g[1] = 0; }
             return x[0] - 1;
         };
         
         // y - 1 >= 0 (i.e., y >= 1)
-        ConstraintFunction c2 = (x, g) -> {
+        Evaluation c2 = (x, g) -> {
             if (g != null) { g[0] = 0; g[1] = 1; }
             return x[1] - 1;
         };
@@ -196,7 +196,7 @@ public class ApiUsabilityTest {
     @DisplayName("L-BFGS-B: maxComputations time limit")
     void testLbfgsbMaxComputations() {
         // Simple quadratic function with sleep to simulate computation time
-        ObjectiveFunction slowObjective = (x, g) -> {
+        Evaluation slowObjective = (x, g) -> {
             try {
                 Thread.sleep(1);  // Sleep 1ms per evaluation
             } catch (InterruptedException e) {
@@ -243,7 +243,7 @@ public class ApiUsabilityTest {
     @DisplayName("SLSQP: maxComputations time limit")
     void testSlsqpMaxComputations() {
         // Simple quadratic function with sleep to simulate computation time
-        ObjectiveFunction slowObjective = (x, g) -> {
+        Evaluation slowObjective = (x, g) -> {
             try {
                 Thread.sleep(2);  // Sleep 2ms per evaluation
             } catch (InterruptedException e) {
