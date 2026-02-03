@@ -241,7 +241,7 @@ JNIEXPORT jint JNICALL Java_com_curioloop_LbfgsbOptimizer_nativeOptimize
      /* Callbacks */
      jobject objective, jdoubleArray gradient,
      /* Termination criteria */
-     jdouble factr, jdouble pgtol, jint maxIter, jint maxEval,
+     jdouble factr, jdouble pgtol, jint maxIter, jint maxEval, jlong maxTime,
      /* Workspace */
      jobject workspace,
      jint lowerOffset, jint upperOffset, jint boundTypeOffset, jint resultOffset) {
@@ -295,7 +295,8 @@ JNIEXPORT jint JNICALL Java_com_curioloop_LbfgsbOptimizer_nativeOptimize
     config.pgtol = pgtol;
     config.max_iter = maxIter;
     config.max_eval = maxEval;
-    config.callback_ctx = &ctx;
+    config.max_time = maxTime;
+    config.eval_ctx = &ctx;
     config.eval = jni_objective_callback;
     
     /* Run optimization */
@@ -337,7 +338,7 @@ JNIEXPORT jint JNICALL Java_com_curioloop_SlsqpOptimizer_nativeOptimize
      jobject eqConstraint, jobject ineqConstraint,
      jdoubleArray constraintValues, jdoubleArray constraintJacobian,
      /* Termination criteria */
-     jdouble accuracy, jint maxIter,
+     jdouble accuracy, jint maxIter, jint nnlsIter, jlong maxTime,
      jboolean exactLineSearch, jdouble fEvalTol, jdouble fDiffTol, jdouble xDiffTol,
      /* Workspace */
      jobject workspace,
@@ -410,13 +411,15 @@ JNIEXPORT jint JNICALL Java_com_curioloop_SlsqpOptimizer_nativeOptimize
     config.accuracy = accuracy;
     config.max_iter = maxIter;
     config.exact_search = exactLineSearch ? 1 : 0;
+    config.nnls_iter = nnlsIter;
+    config.max_time = maxTime;
     
     /* Extended termination criteria from Java parameters */
     config.f_eval_tol = fEvalTol;
     config.f_diff_tol = fDiffTol;
     config.x_diff_tol = xDiffTol;
     
-    config.callback_ctx = &ctx;
+    config.eval_ctx = &ctx;
     config.obj_eval = jni_slsqp_obj_callback;
     config.eq_eval = (eqConstraint && meq > 0) ? jni_slsqp_eq_callback : NULL;
     config.ineq_eval = (ineqConstraint && mineq > 0) ? jni_slsqp_ineq_callback : NULL;

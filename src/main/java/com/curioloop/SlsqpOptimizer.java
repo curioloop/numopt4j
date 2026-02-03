@@ -226,7 +226,8 @@ public final class SlsqpOptimizer {
             objective, workspace.getGradient(),
             equalityConstraint, inequalityConstraint,
             workspace.getConstraintValues(), workspace.getConstraintJacobian(),
-            termination.getAccuracy(), termination.getMaxIterations(),
+            termination.getAccuracy(), termination.getMaxIterations(), 
+            termination.getNnlsIterations(), termination.getMaxComputations(),
             exactLineSearch, functionEvaluationTolerance, functionDifferenceTolerance, variableDifferenceTolerance,
             workspace.getBuffer(),
             workspace.getLowerOffset(), workspace.getUpperOffset(), workspace.getResultOffset()
@@ -329,7 +330,7 @@ public final class SlsqpOptimizer {
         BatchConstraint eqConstraint, BatchConstraint ineqConstraint,
         double[] constraintValues, double[] constraintJacobian,
         // Termination criteria
-        double accuracy, int maxIter,
+        double accuracy, int maxIter, int nnlsIter, long maxTime,
         boolean exactLineSearch, double fEvalTol, double fDiffTol, double xDiffTol,
         // Workspace
         java.nio.ByteBuffer workspace,

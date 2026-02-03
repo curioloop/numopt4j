@@ -23,6 +23,9 @@ public enum OptimizationStatus {
     /** Function tolerance satisfied */
     FUNCTION_TOLERANCE_REACHED(4, "Function tolerance satisfied"),
     
+    /** Maximum CPU time reached */
+    MAX_COMPUTATIONS_REACHED(5, "Maximum CPU time reached"),
+    
     /** Abnormal termination */
     ABNORMAL_TERMINATION(-1, "Abnormal termination"),
     
@@ -67,7 +70,7 @@ public enum OptimizationStatus {
      * @return true if converged
      */
     public boolean isConverged() {
-        return code >= 0 && code <= 4;
+        return code >= 0 && code <= 5;
     }
     
     /**

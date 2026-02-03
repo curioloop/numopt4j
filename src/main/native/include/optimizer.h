@@ -83,6 +83,7 @@ typedef enum {
     STATUS_MAX_EVAL               =  2,  /* Maximum evaluations reached */
     STATUS_GRAD_TOL               =  3,  /* Gradient tolerance satisfied */
     STATUS_FUNC_TOL               =  4,  /* Function tolerance satisfied */
+    STATUS_MAX_TIME               =  5,  /* Maximum CPU time reached */
     STATUS_ABNORMAL               = -1,  /* Abnormal termination */
     STATUS_INVALID_ARG            = -2,  /* Invalid argument */
     STATUS_CONSTRAINT_INCOMPATIBLE = -3, /* Constraints incompatible */
@@ -102,7 +103,7 @@ typedef enum {
  * @param n Problem dimension
  * @return Function value f(x)
  */
-typedef double (*EvalCallback)(void* ctx, const double* x, double* g, int n);
+typedef double (*Objective)(void* ctx, const double* x, double* g, int n);
 
 /**
  * Batch constraint evaluation callback.
@@ -117,7 +118,7 @@ typedef double (*EvalCallback)(void* ctx, const double* x, double* g, int n);
  * @param m Number of constraints
  * @param n Problem dimension
  */
-typedef void (*ConstraintCallback)(void* ctx, const double* x, double* c, double* jac, int m, int n);
+typedef void (*Constraint)(void* ctx, const double* x, double* c, double* jac, int m, int n);
 
 /* ============================================================================
  * L-BFGS-B Types
@@ -231,8 +232,9 @@ typedef struct {
     double pgtol;       /* Projected gradient tolerance */
     int max_iter;       /* Maximum iterations */
     int max_eval;       /* Maximum function evaluations */
-    void* callback_ctx; /* Callback context */
-    EvalCallback eval;  /* Objective function callback */
+    long max_time;      /* Maximum wall-clock time in microseconds (0 = disabled) */
+    void* eval_ctx;     /* Evaluation context */
+    Objective eval;     /* Objective function callback */
 } LbfgsbConfig;
 
 /**
@@ -327,16 +329,18 @@ typedef struct {
     double accuracy;    /* Solution accuracy */
     int max_iter;       /* Maximum iterations */
     int exact_search;   /* Enable exact line search (0=disabled, 1=enabled) */
-    
+    int nnls_iter;      /* Maximum NNLS iterations (0 = use default 3*n) */
+    long max_time;      /* Maximum wall-clock time in microseconds (0 = disabled) */
+
     /* Extended termination criteria (negative value = disabled) */
     double f_eval_tol;  /* Terminate when |f(x)| < tol, -1.0 = disabled */
     double f_diff_tol;  /* Terminate when |f_new - f_old| < tol, -1.0 = disabled */
     double x_diff_tol;  /* Terminate when ||x_new - x_old||_2 < tol, -1.0 = disabled */
     
-    void* callback_ctx; /* Callback context */
-    EvalCallback obj_eval;           /* Objective function callback */
-    ConstraintCallback eq_eval;      /* Equality constraint callback */
-    ConstraintCallback ineq_eval;    /* Inequality constraint callback */
+    void* eval_ctx;               /* Evaluation context */
+    Objective obj_eval;           /* Objective function callback */
+    Constraint eq_eval;           /* Equality constraint callback */
+    Constraint ineq_eval;         /* Inequality constraint callback */
 } SlsqpConfig;
 
 /**
@@ -347,6 +351,17 @@ typedef struct {
     int iterations;     /* Number of iterations */
     OptStatus status;   /* Optimization status */
 } SlsqpResult;
+
+/* ============================================================================
+ * Utility Functions
+ * ============================================================================ */
+
+/**
+ * Get current wall-clock time in microseconds.
+ * Uses monotonic clock to avoid issues with system time adjustments.
+ * @return Current time in microseconds
+ */
+long get_time_us(void);
 
 /* ============================================================================
  * L-BFGS-B Functions

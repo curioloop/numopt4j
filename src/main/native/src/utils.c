@@ -26,11 +26,39 @@
 #include <string.h>
 #include <stdint.h>
 #include <math.h>
+#include <time.h>
+
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 /* Alignment for memory allocation (8 bytes for double)
  * Ensures proper alignment for double precision floating point operations */
 #define ALIGN_SIZE 8
 #define ALIGN_UP(x) (((x) + ALIGN_SIZE - 1) & ~(ALIGN_SIZE - 1))
+
+/* ============================================================================
+ * Time Utility Function
+ * ============================================================================ */
+
+/**
+ * Get current wall-clock time in microseconds.
+ * Uses monotonic clock to avoid issues with system time adjustments.
+ *
+ * @return Current time in microseconds
+ */
+long get_time_us(void) {
+#ifdef _WIN32
+    LARGE_INTEGER freq, count;
+    QueryPerformanceFrequency(&freq);
+    QueryPerformanceCounter(&count);
+    return (long)(count.QuadPart * 1000000 / freq.QuadPart);
+#else
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (long)(ts.tv_sec * 1000000 + ts.tv_nsec / 1000);
+#endif
+}
 
 /* ============================================================================
  * L-BFGS-B Workspace Functions

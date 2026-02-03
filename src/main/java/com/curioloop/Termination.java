@@ -5,11 +5,19 @@ package com.curioloop;
 
 /**
  * Termination criteria for optimization algorithms.
+ * <p>
+ * Different parameters apply to different optimizers:
+ * <ul>
+ *   <li>L-BFGS-B: maxIterations, maxEvaluations, gradientTolerance, functionTolerance</li>
+ *   <li>SLSQP: maxIterations, accuracy</li>
+ * </ul>
  */
 public final class Termination {
     
     private final int maxIterations;
     private final int maxEvaluations;
+    private final int nnlsIterations;
+    private final long maxComputations;
     private final double accuracy;
     private final double gradientTolerance;
     private final double functionTolerance;
@@ -17,6 +25,8 @@ public final class Termination {
     private Termination(Builder builder) {
         this.maxIterations = builder.maxIterations;
         this.maxEvaluations = builder.maxEvaluations;
+        this.nnlsIterations = builder.nnlsIterations;
+        this.maxComputations = builder.maxComputations;
         this.accuracy = builder.accuracy;
         this.gradientTolerance = builder.gradientTolerance;
         this.functionTolerance = builder.functionTolerance;
@@ -40,6 +50,7 @@ public final class Termination {
     
     /**
      * Gets the maximum number of iterations.
+     * <p>Used by: L-BFGS-B, SLSQP</p>
      * @return Maximum iterations
      */
     public int getMaxIterations() {
@@ -48,6 +59,7 @@ public final class Termination {
     
     /**
      * Gets the maximum number of function evaluations.
+     * <p>Used by: L-BFGS-B</p>
      * @return Maximum evaluations
      */
     public int getMaxEvaluations() {
@@ -55,7 +67,26 @@ public final class Termination {
     }
     
     /**
+     * Gets the maximum NNLS iterations.
+     * <p>Used by: SLSQP</p>
+     * @return Maximum NNLS iterations (0 = use default 3*n)
+     */
+    public int getNnlsIterations() {
+        return nnlsIterations;
+    }
+    
+    /**
+     * Gets the maximum wall-clock time in microseconds.
+     * <p>Used by: L-BFGS-B, SLSQP</p>
+     * @return Maximum wall-clock time in microseconds (0 = disabled)
+     */
+    public long getMaxComputations() {
+        return maxComputations;
+    }
+    
+    /**
      * Gets the solution accuracy.
+     * <p>Used by: SLSQP</p>
      * @return Accuracy
      */
     public double getAccuracy() {
@@ -64,6 +95,7 @@ public final class Termination {
     
     /**
      * Gets the gradient tolerance.
+     * <p>Used by: L-BFGS-B</p>
      * @return Gradient tolerance
      */
     public double getGradientTolerance() {
@@ -72,6 +104,7 @@ public final class Termination {
     
     /**
      * Gets the function tolerance factor.
+     * <p>Used by: L-BFGS-B</p>
      * @return Function tolerance
      */
     public double getFunctionTolerance() {
@@ -84,6 +117,8 @@ public final class Termination {
     public static final class Builder {
         private int maxIterations = 100;
         private int maxEvaluations = 1000;
+        private int nnlsIterations = 0;
+        private long maxComputations = 0;
         private double accuracy = 1e-6;
         private double gradientTolerance = 1e-5;
         private double functionTolerance = 1e7;
@@ -92,6 +127,7 @@ public final class Termination {
         
         /**
          * Sets the maximum number of iterations.
+         * <p>Used by: L-BFGS-B, SLSQP</p>
          * @param value Maximum iterations (must be positive)
          * @return This builder
          */
@@ -105,6 +141,7 @@ public final class Termination {
         
         /**
          * Sets the maximum number of function evaluations.
+         * <p>Used by: L-BFGS-B</p>
          * @param value Maximum evaluations (must be positive)
          * @return This builder
          */
@@ -117,7 +154,45 @@ public final class Termination {
         }
         
         /**
+         * Sets the maximum NNLS iterations.
+         * <p>Used by: SLSQP</p>
+         * <p>
+         * The NNLS (Non-Negative Least Squares) subproblem is solved during
+         * each SLSQP iteration. This parameter limits the iterations for that
+         * subproblem. Default is 0, which means use 3 * n.
+         * </p>
+         * @param value Maximum NNLS iterations (0 for default, must be non-negative)
+         * @return This builder
+         */
+        public Builder nnlsIterations(int value) {
+            if (value < 0) {
+                throw new IllegalArgumentException("NNLS iterations must be non-negative");
+            }
+            this.nnlsIterations = value;
+            return this;
+        }
+        
+        /**
+         * Sets the maximum wall-clock time in microseconds.
+         * <p>Used by: L-BFGS-B, SLSQP</p>
+         * <p>
+         * When set to a positive value, optimization terminates when the
+         * wall-clock time exceeds this limit. Default is 0 (disabled).
+         * </p>
+         * @param value Maximum wall-clock time in microseconds (0 to disable, must be non-negative)
+         * @return This builder
+         */
+        public Builder maxComputations(long value) {
+            if (value < 0) {
+                throw new IllegalArgumentException("Max computations must be non-negative");
+            }
+            this.maxComputations = value;
+            return this;
+        }
+        
+        /**
          * Sets the solution accuracy.
+         * <p>Used by: SLSQP</p>
          * @param value Accuracy (must be positive)
          * @return This builder
          */
@@ -131,6 +206,7 @@ public final class Termination {
         
         /**
          * Sets the gradient tolerance.
+         * <p>Used by: L-BFGS-B</p>
          * @param value Gradient tolerance (must be non-negative)
          * @return This builder
          */
@@ -144,6 +220,7 @@ public final class Termination {
         
         /**
          * Sets the function tolerance factor.
+         * <p>Used by: L-BFGS-B</p>
          * @param value Function tolerance factor (must be >= 1)
          * @return This builder
          */
@@ -169,6 +246,8 @@ public final class Termination {
         return "Termination{" +
                 "maxIterations=" + maxIterations +
                 ", maxEvaluations=" + maxEvaluations +
+                ", nnlsIterations=" + nnlsIterations +
+                ", maxComputations=" + maxComputations +
                 ", accuracy=" + accuracy +
                 ", gradientTolerance=" + gradientTolerance +
                 ", functionTolerance=" + functionTolerance +

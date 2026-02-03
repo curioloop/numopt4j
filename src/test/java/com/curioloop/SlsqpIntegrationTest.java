@@ -583,16 +583,16 @@ public class SlsqpIntegrationTest {
     static Stream<Arguments> boundClippingTestCases() {
         return Stream.of(
             // Case 1: Initial=10, upper bound only (-∞, 0], optimal=1 is outside, expect clip to 0
-            Arguments.of(10.0, Bound.upperBound(0.0), 0.0, "upper bound only (-∞, 0]"),
+            Arguments.of(10.0, Bound.atMost(0.0), 0.0, "upper bound only (-∞, 0]"),
             
             // Case 2: Initial=-10, lower bound only [2, +∞), optimal=1 is outside, expect clip to 2
-            Arguments.of(-10.0, Bound.lowerBound(2.0), 2.0, "lower bound only [2, +∞)"),
+            Arguments.of(-10.0, Bound.atLeast(2.0), 2.0, "lower bound only [2, +∞)"),
             
             // Case 3: Initial=-10, upper bound only (-∞, 0], optimal=1 is outside, expect clip to 0
-            Arguments.of(-10.0, Bound.upperBound(0.0), 0.0, "upper bound only (-∞, 0] from negative"),
+            Arguments.of(-10.0, Bound.atMost(0.0), 0.0, "upper bound only (-∞, 0] from negative"),
             
             // Case 4: Initial=10, lower bound only [2, +∞), optimal=1 is outside, expect clip to 2
-            Arguments.of(10.0, Bound.lowerBound(2.0), 2.0, "lower bound only [2, +∞) from positive"),
+            Arguments.of(10.0, Bound.atLeast(2.0), 2.0, "lower bound only [2, +∞) from positive"),
             
             // Case 5: Initial=-0.5, double bound [-1, 0], optimal=1 is outside, expect clip to 0
             Arguments.of(-0.5, Bound.between(-1.0, 0.0), 0.0, "double bound [-1, 0]"),

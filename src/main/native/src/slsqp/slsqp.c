@@ -701,6 +701,9 @@ EXPORT OptStatus slsqp_optimize(const SlsqpConfig* config,
     const double* upper = config->upper;
     double acc = config->accuracy;
     int max_iter = config->max_iter;
+    long max_time = config->max_time;
+    long start_time_us = (max_time > 0) ? get_time_us() : 0;
+    int nnls_iter = config->nnls_iter > 0 ? config->nnls_iter : 3 * n;
     
     int n1 = n + 1;
     int n2 = n * n1 / 2;
@@ -726,7 +729,7 @@ EXPORT OptStatus slsqp_optimize(const SlsqpConfig* config,
     dzero(m > 0 ? m : 1, mu, 1);
     
     /* Evaluate initial function and gradient - matches Go's evalLoc(evalFunc) then evalLoc(evalGrad) */
-    double f = config->obj_eval(config->callback_ctx, x, g, n);
+    double f = config->obj_eval(config->eval_ctx, x, g, n);
     
     if (isnan(f) || isinf(f)) {
         result->status = STATUS_CALLBACK_ERROR;
@@ -738,11 +741,11 @@ EXPORT OptStatus slsqp_optimize(const SlsqpConfig* config,
     /* This matches Go's storage: dcopy(o.n, tmp, 1, loc.a[i:], mda) */
     if (config->eq_eval && meq > 0) {
         /* Batch evaluate equality constraints: c[0..meq-1] and Jacobian rows 0..meq-1 */
-        config->eq_eval(config->callback_ctx, x, c, a, meq, n);
+        config->eq_eval(config->eval_ctx, x, c, a, meq, n);
     }
     if (config->ineq_eval && mineq > 0) {
         /* Batch evaluate inequality constraints: c[meq..m-1] and Jacobian rows meq..m-1 */
-        config->ineq_eval(config->callback_ctx, x, &c[meq], &a[meq], mineq, n);
+        config->ineq_eval(config->eval_ctx, x, &c[meq], &a[meq], mineq, n);
     }
     
     /* Variables for extended termination criteria */
@@ -764,6 +767,17 @@ EXPORT OptStatus slsqp_optimize(const SlsqpConfig* config,
             return STATUS_MAX_ITER;
         }
         
+        /* Check time limit */
+        if (max_time > 0) {
+            long elapsed_us = get_time_us() - start_time_us;
+            if (elapsed_us >= max_time) {
+                result->f = f;
+                result->iterations = iter;
+                result->status = STATUS_MAX_TIME;
+                return STATUS_MAX_TIME;
+            }
+        }
+        
         ws->iter = iter;
         
         /* Transfer bounds from l <= x <= u to l - x^k <= d <= u - x^k */
@@ -775,7 +789,7 @@ EXPORT OptStatus slsqp_optimize(const SlsqpConfig* config,
         /* Solve QP subproblem to get search direction s and multipliers r */
         double norm;
         int lsq_mode = lsq(m, meq, n, n2 + 1, l, g, a, c, u, v,
-                       s, r, w, jw, 3 * n, INF_BND, &norm);
+                       s, r, w, jw, nnls_iter, INF_BND, &norm);
         
         /* Handle singular C matrix case */
         /* Matches Go: if mode == LSEISingularC && n == meq { mode = ConsIncompatible } */
@@ -810,7 +824,7 @@ EXPORT OptStatus slsqp_optimize(const SlsqpConfig* config,
             /* Matches Go: for relax := 0; relax <= 5; relax++ { ... } */
             for (int relax = 0; relax <= 5; relax++) {
                 lsq_mode = lsq(m, meq, n + 1, n2 + 1, l, g, a, c, u, v,
-                           s, r, w, jw, 3 * n, INF_BND, &norm);
+                           s, r, w, jw, nnls_iter, INF_BND, &norm);
                 h4 = ONE - s[n];  /* 1 - delta */
                 if (lsq_mode != MODE_CONS_INCOMPAT) {
                     break;
@@ -945,7 +959,7 @@ EXPORT OptStatus slsqp_optimize(const SlsqpConfig* config,
         int ls_mode = 1;  /* 1 = evalFunc, 0 = done */
         for (int ls_iter = 0; ls_iter < 20 && ls_mode == 1; ls_iter++) {
             /* Evaluate function at current point - matches Go's evalLoc(evalFunc) */
-            f = config->obj_eval(config->callback_ctx, x, g, n);
+            f = config->obj_eval(config->eval_ctx, x, g, n);
             
             if (isnan(f) || isinf(f)) {
                 result->f = f0;
@@ -956,10 +970,10 @@ EXPORT OptStatus slsqp_optimize(const SlsqpConfig* config,
             
             /* Evaluate constraints using batch callbacks */
             if (config->eq_eval && meq > 0) {
-                config->eq_eval(config->callback_ctx, x, c, a, meq, n);
+                config->eq_eval(config->eval_ctx, x, c, a, meq, n);
             }
             if (config->ineq_eval && mineq > 0) {
-                config->ineq_eval(config->callback_ctx, x, &c[meq], &a[meq], mineq, n);
+                config->ineq_eval(config->eval_ctx, x, &c[meq], &a[meq], mineq, n);
             }
             
             /* Compute merit function at new point: t = f + sum(mu_j * ||c_j||_1) */

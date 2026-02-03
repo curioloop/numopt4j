@@ -175,6 +175,7 @@ public final class LbfgsbOptimizer {
             termination.getGradientTolerance(),
             termination.getMaxIterations(),
             termination.getMaxEvaluations(),
+            termination.getMaxComputations(),
             workspace.getBuffer(),
             workspace.getLowerOffset(),
             workspace.getUpperOffset(),
@@ -238,7 +239,7 @@ public final class LbfgsbOptimizer {
         // Callbacks
         ObjectiveFunction objective, double[] gradient,
         // Termination criteria
-        double factr, double pgtol, int maxIter, int maxEval,
+        double factr, double pgtol, int maxIter, int maxEval, long maxTime,
         // Workspace
         java.nio.ByteBuffer workspace,
         int lowerOffset, int upperOffset, int boundTypeOffset, int resultOffset

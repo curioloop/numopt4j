@@ -116,6 +116,7 @@
 #include <math.h>
 #include <string.h>
 #include <float.h>
+#include <time.h>
 
 /* ============================================================================
  * Variable Status Constants (matches Go varWhere type in base.go)
@@ -489,6 +490,8 @@ EXPORT OptStatus lbfgsb_optimize(const LbfgsbConfig* config,
     double pgtol = config->pgtol;
     int max_iter = config->max_iter;
     int max_eval = config->max_eval;
+    long max_time = config->max_time;
+    long start_time_us = (max_time > 0) ? get_time_us() : 0;
     
     /* ========================================================================
      * Initialization (matching Go driver.go mainLoop initialization)
@@ -536,7 +539,7 @@ EXPORT OptStatus lbfgsb_optimize(const LbfgsbConfig* config,
     
     /* Calculate f₀ and g₀ (matching Go's d.nextLocation(iterLoop))
      * This is the first function evaluation at the projected initial point */
-    double f = config->eval(config->callback_ctx, x, g, n);
+    double f = config->eval(config->eval_ctx, x, g, n);
     ws->total_eval++;
     
     if (isnan(f) || isinf(f)) {
@@ -775,7 +778,7 @@ EXPORT OptStatus lbfgsb_optimize(const LbfgsbConfig* config,
                 if (!done) {
                     /* Need function evaluation at new point
                      * x has been updated to x + stp*d by perform_line_search */
-                    f = config->eval(config->callback_ctx, x, g, n);
+                    f = config->eval(config->eval_ctx, x, g, n);
                     ws->total_eval++;
                     ws->num_eval++;
                     ws->num_back = ws->num_eval - 1;
@@ -863,6 +866,18 @@ EXPORT OptStatus lbfgsb_optimize(const LbfgsbConfig* config,
             result->evaluations = ws->total_eval;
             result->status = STATUS_MAX_EVAL;
             return STATUS_MAX_EVAL;
+        }
+        
+        /* Check time limit */
+        if (max_time > 0) {
+            long elapsed_us = get_time_us() - start_time_us;
+            if (elapsed_us >= max_time) {
+                result->f = f;
+                result->iterations = ws->iter;
+                result->evaluations = ws->total_eval;
+                result->status = STATUS_MAX_TIME;
+                return STATUS_MAX_TIME;
+            }
         }
         
         /* Compute d_norm = ‖d‖₂ for gradient descent threshold check */

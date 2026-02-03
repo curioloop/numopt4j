@@ -36,24 +36,6 @@ public final class Bound {
     }
     
     /**
-     * Creates a bound with only a lower limit.
-     * @param lower Lower bound
-     * @return Bound with lower limit only
-     */
-    public static Bound lowerBound(double lower) {
-        return new Bound(lower, UNBOUNDED);
-    }
-    
-    /**
-     * Creates a bound with only an upper limit.
-     * @param upper Upper bound
-     * @return Bound with upper limit only
-     */
-    public static Bound upperBound(double upper) {
-        return new Bound(UNBOUNDED, upper);
-    }
-    
-    /**
      * Creates a bound with both lower and upper limits.
      * @param lower Lower bound
      * @param upper Upper bound
@@ -64,71 +46,30 @@ public final class Bound {
     }
     
     /**
-     * Creates a fixed bound where lower equals upper.
-     * @param value Fixed value
-     * @return Fixed bound
-     */
-    public static Bound fixed(double value) {
-        return new Bound(value, value);
-    }
-    
-    // ==================== Alias methods for better readability ====================
-    
-    /**
-     * Alias for {@link #between(double, double)}.
-     * Creates a bound with both lower and upper limits.
-     * @param lower Lower bound
-     * @param upper Upper bound
-     * @return Bound with both limits
-     */
-    public static Bound range(double lower, double upper) {
-        return between(lower, upper);
-    }
-    
-    /**
-     * Alias for {@link #lowerBound(double)}.
      * Creates a bound with only a lower limit (x >= value).
      * @param value Minimum value
      * @return Bound with lower limit only
      */
     public static Bound atLeast(double value) {
-        return lowerBound(value);
+        return new Bound(value, UNBOUNDED);
     }
     
     /**
-     * Alias for {@link #upperBound(double)}.
      * Creates a bound with only an upper limit (x <= value).
      * @param value Maximum value
      * @return Bound with upper limit only
      */
     public static Bound atMost(double value) {
-        return upperBound(value);
+        return new Bound(UNBOUNDED, value);
     }
     
     /**
-     * Alias for {@link #fixed(double)}.
      * Creates a fixed bound where the variable must equal the given value.
      * @param value Exact value
      * @return Fixed bound
      */
     public static Bound exactly(double value) {
-        return fixed(value);
-    }
-    
-    /**
-     * Creates a non-negative bound (x >= 0).
-     * @return Bound with lower limit of 0
-     */
-    public static Bound nonNegative() {
-        return lowerBound(0.0);
-    }
-    
-    /**
-     * Creates a non-positive bound (x <= 0).
-     * @return Bound with upper limit of 0
-     */
-    public static Bound nonPositive() {
-        return upperBound(0.0);
+        return new Bound(value, value);
     }
     
     /**

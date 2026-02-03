@@ -89,7 +89,7 @@ public class ApiUsabilityTest {
         LbfgsbOptimizer optimizer = LbfgsbOptimizer.builder()
             .dimension(3)
             .objective(x -> x[0] * x[0] + x[1] * x[1] + x[2] * x[2], NumericalGradient.CENTRAL)
-            .bounds(Bound.nonNegative())  // x >= 0 for all variables
+            .bounds(Bound.atLeast(0))  // x >= 0 for all variables
             .build();
         
         double[] x = {1.0, 1.0, 1.0};
@@ -102,11 +102,11 @@ public class ApiUsabilityTest {
     }
     
     @Test
-    @DisplayName("Bound: Alias methods")
-    void testBoundAliases() {
-        // Test all alias methods
-        assertThat(Bound.range(-1, 1).getLower()).isEqualTo(-1);
-        assertThat(Bound.range(-1, 1).getUpper()).isEqualTo(1);
+    @DisplayName("Bound: Factory methods")
+    void testBoundFactoryMethods() {
+        // Test factory methods
+        assertThat(Bound.between(-1, 1).getLower()).isEqualTo(-1);
+        assertThat(Bound.between(-1, 1).getUpper()).isEqualTo(1);
         
         assertThat(Bound.atLeast(0).getLower()).isEqualTo(0);
         assertThat(Bound.atLeast(0).hasUpper()).isFalse();
@@ -116,9 +116,6 @@ public class ApiUsabilityTest {
         
         assertThat(Bound.exactly(5).isFixed()).isTrue();
         assertThat(Bound.exactly(5).getLower()).isEqualTo(5);
-        
-        assertThat(Bound.nonNegative().getLower()).isEqualTo(0);
-        assertThat(Bound.nonPositive().getUpper()).isEqualTo(0);
     }
     
     @Test
@@ -193,5 +190,87 @@ public class ApiUsabilityTest {
         assertThat(result.isConverged()).isTrue();
         assertThat(x[0]).isCloseTo(1.0, within(1e-6));
         assertThat(x[1]).isCloseTo(1.0, within(1e-6));
+    }
+
+    @Test
+    @DisplayName("L-BFGS-B: maxComputations time limit")
+    void testLbfgsbMaxComputations() {
+        // Simple quadratic function with sleep to simulate computation time
+        ObjectiveFunction slowObjective = (x, g) -> {
+            try {
+                Thread.sleep(1);  // Sleep 1ms per evaluation
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            double f = x[0] * x[0] + x[1] * x[1];
+            if (g != null) {
+                g[0] = 2 * x[0];
+                g[1] = 2 * x[1];
+            }
+            return f;
+        };
+        
+        // Set a 5000 microseconds (5ms) time limit - should terminate after a few evaluations
+        LbfgsbOptimizer optimizer = LbfgsbOptimizer.builder()
+            .dimension(2)
+            .objective(slowObjective)
+            .termination(Termination.builder()
+                .maxIterations(1000)
+                .maxComputations(5000)  // 5000 microseconds = 5ms
+                .build())
+            .build();
+        
+        double[] x = {10.0, 10.0};  // Start far from optimum
+        OptimizationResult result = optimizer.optimize(x);
+        
+        // Should terminate due to time limit
+        assertThat(result.getStatus()).isEqualTo(OptimizationStatus.MAX_COMPUTATIONS_REACHED);
+    }
+    
+    @Test
+    @DisplayName("Termination: maxComputations and nnlsIterations configuration")
+    void testTerminationNewFields() {
+        Termination term = Termination.builder()
+            .maxComputations(5000000)  // 5 seconds in microseconds
+            .nnlsIterations(100)
+            .build();
+        
+        assertThat(term.getMaxComputations()).isEqualTo(5000000);
+        assertThat(term.getNnlsIterations()).isEqualTo(100);
+    }
+    
+    @Test
+    @DisplayName("SLSQP: maxComputations time limit")
+    void testSlsqpMaxComputations() {
+        // Simple quadratic function with sleep to simulate computation time
+        ObjectiveFunction slowObjective = (x, g) -> {
+            try {
+                Thread.sleep(2);  // Sleep 2ms per evaluation
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            double f = x[0] * x[0] + x[1] * x[1];
+            if (g != null) {
+                g[0] = 2 * x[0];
+                g[1] = 2 * x[1];
+            }
+            return f;
+        };
+        
+        // Set a 3000 microseconds (3ms) time limit - should trigger after 1-2 evaluations
+        SlsqpOptimizer optimizer = SlsqpOptimizer.builder()
+            .dimension(2)
+            .objective(slowObjective)
+            .termination(Termination.builder()
+                .maxIterations(1000)
+                .maxComputations(3000)  // 3000 microseconds = 3ms
+                .build())
+            .build();
+        
+        double[] x = {100.0, 100.0};  // Start very far from optimum
+        OptimizationResult result = optimizer.optimize(x);
+        
+        // Should terminate due to time limit
+        assertThat(result.getStatus()).isEqualTo(OptimizationStatus.MAX_COMPUTATIONS_REACHED);
     }
 }

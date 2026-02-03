@@ -184,7 +184,7 @@ JNIEXPORT jint JNICALL Java_com_curioloop_LbfgsbOptimizer_nativeOptimize
      /* Callbacks */
      jobject objective, jdoubleArray gradient,
      /* Termination criteria */
-     jdouble factr, jdouble pgtol, jint maxIter, jint maxEval,
+     jdouble factr, jdouble pgtol, jint maxIter, jint maxEval, jlong maxTimeMs,
      /* Workspace */
      jobject workspace,
      jint lowerOffset, jint upperOffset, jint boundTypeOffset, jint resultOffset);
@@ -207,7 +207,7 @@ JNIEXPORT jint JNICALL Java_com_curioloop_SlsqpOptimizer_nativeOptimize
      jobject eqConstraint, jobject ineqConstraint,
      jdoubleArray constraintValues, jdoubleArray constraintJacobian,
      /* Termination criteria */
-     jdouble accuracy, jint maxIter,
+     jdouble accuracy, jint maxIter, jint nnlsIter, jlong maxTime,
      jboolean exactLineSearch, jdouble fEvalTol, jdouble fDiffTol, jdouble xDiffTol,
      /* Workspace */
      jobject workspace,
