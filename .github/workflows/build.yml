@@ -63,10 +63,12 @@ jobs:
 
       - name: Copy natives to resources
         run: |
-          ls -laR natives/
-          cp natives/native-linux-x86_64/liboptimizer.so src/main/resources/native/linux-x86_64/
-          cp natives/native-darwin-aarch64/liboptimizer.dylib src/main/resources/native/darwin-aarch64/
-          cp natives/native-windows-x86_64/optimizer.dll src/main/resources/native/windows-x86_64/
+          find natives -type f \( -name "*.so" -o -name "*.dylib" -o -name "*.dll" \) | while read f; do
+            echo "Found: $f"
+          done
+          find natives -name "liboptimizer.so" -exec cp {} src/main/resources/native/linux-x86_64/ \;
+          find natives -name "liboptimizer.dylib" -exec cp {} src/main/resources/native/darwin-aarch64/ \;
+          find natives -name "optimizer.dll" -exec cp {} src/main/resources/native/windows-x86_64/ \;
 
       - name: Build and test
         run: mvn -B verify
