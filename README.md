@@ -8,7 +8,7 @@ High-performance numerical optimization library for Java.
 - **SLSQP**: Sequential Least Squares Programming with equality/inequality constraints
 - Native C implementation via JNI for performance
 - Workspace reuse for high-frequency optimization scenarios
-- Numerical gradient support (forward/central difference)
+- Multiple numerical gradient methods with different accuracy/speed tradeoffs
 
 ## Requirements
 
@@ -21,7 +21,7 @@ High-performance numerical optimization library for Java.
 <dependency>
     <groupId>com.curioloop</groupId>
     <artifactId>numopt4j</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>0.0.3</version>
 </dependency>
 ```
 
@@ -124,7 +124,7 @@ Bound.unbounded()           // No constraint
 Bound.between(lower, upper) // lower <= x <= upper
 Bound.atLeast(lower)        // x >= lower
 Bound.atMost(upper)         // x <= upper
-Bound.fixed(value)          // x == value
+Bound.exactly(value)        // x == value
 Bound.nonNegative()         // x >= 0
 Bound.nonPositive()         // x <= 0
 ```
@@ -137,6 +137,7 @@ Termination.defaults()  // Default criteria
 Termination.builder()
     .maxIterations(100)
     .maxEvaluations(1000)
+    .maxComputations(5000000)  // Time limit in microseconds
     .accuracy(1e-6)
     .gradientTolerance(1e-5)
     .build();
@@ -144,9 +145,31 @@ Termination.builder()
 
 ### NumericalGradient
 
+Four methods available with different accuracy/performance tradeoffs:
+
+| Method | Formula | Accuracy | Evals/dim |
+|--------|---------|----------|-----------|
+| `FORWARD` | `(f(x+h) - f(x)) / h` | O(h) | 1 |
+| `BACKWARD` | `(f(x) - f(x-h)) / h` | O(h) | 1 |
+| `CENTRAL` | `(f(x+h) - f(x-h)) / 2h` | O(h²) | 2 |
+| `FIVE_POINT` | `(-f(x+2h) + 8f(x+h) - 8f(x-h) + f(x-2h)) / 12h` | O(h⁴) | 4 |
+
 ```java
-NumericalGradient.CENTRAL  // Central difference (more accurate)
-NumericalGradient.FORWARD  // Forward difference (faster)
+// Fastest (1 eval per dimension)
+builder.objective(func, NumericalGradient.FORWARD);
+
+// Good balance of accuracy and speed
+builder.objective(func, NumericalGradient.CENTRAL);
+
+// Highest accuracy (4 evals per dimension)
+builder.objective(func, NumericalGradient.FIVE_POINT);
+```
+
+Typical error comparison:
+```
+FORWARD/BACKWARD: ~1e-7
+CENTRAL:          ~1e-11
+FIVE_POINT:       ~1e-12
 ```
 
 ## Building Native Library
