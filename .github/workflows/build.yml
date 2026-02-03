@@ -15,7 +15,7 @@ jobs:
           - os: ubuntu-latest
             platform: linux-x86_64
             lib: liboptimizer.so
-          - os: macos-13
+          - os: macos-12
             platform: darwin-x86_64
             lib: liboptimizer.dylib
           - os: macos-14
