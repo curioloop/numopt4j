@@ -15,9 +15,6 @@ jobs:
           - os: ubuntu-latest
             platform: linux-x86_64
             lib: liboptimizer.so
-          - os: macos-12
-            platform: darwin-x86_64
-            lib: liboptimizer.dylib
           - os: macos-14
             platform: darwin-aarch64
             lib: liboptimizer.dylib
@@ -67,7 +64,6 @@ jobs:
       - name: Copy natives to resources
         run: |
           cp natives/native-linux-x86_64/liboptimizer.so src/main/resources/native/linux-x86_64/
-          cp natives/native-darwin-x86_64/liboptimizer.dylib src/main/resources/native/darwin-x86_64/
           cp natives/native-darwin-aarch64/liboptimizer.dylib src/main/resources/native/darwin-aarch64/
           cp natives/native-windows-x86_64/optimizer.dll src/main/resources/native/windows-x86_64/
 
