@@ -8,17 +8,23 @@ import java.util.function.ToDoubleFunction;
 /**
  * Numerical gradient computation methods.
  * <p>
- * Provides forward difference and central difference methods for
+ * Provides forward, backward, central, and five-point difference methods for
  * approximating gradients when analytical gradients are not available.
  * </p>
  * 
  * <h2>Usage</h2>
  * <pre>{@code
- * // Using central difference (more accurate)
+ * // Using five-point stencil (most accurate, O(h⁴))
+ * builder.objective(x -> x[0]*x[0] + x[1]*x[1], NumericalGradient.FIVE_POINT);
+ * 
+ * // Using central difference (accurate, O(h²))
  * builder.objective(x -> x[0]*x[0] + x[1]*x[1], NumericalGradient.CENTRAL);
  * 
- * // Using forward difference (faster)
+ * // Using forward difference (faster, O(h))
  * builder.objective(x -> x[0]*x[0] + x[1]*x[1], NumericalGradient.FORWARD);
+ * 
+ * // Using backward difference (O(h))
+ * builder.objective(x -> x[0]*x[0] + x[1]*x[1], NumericalGradient.BACKWARD);
  * }</pre>
  */
 public enum NumericalGradient {
@@ -44,11 +50,32 @@ public enum NumericalGradient {
     },
     
     /**
+     * Backward difference method.
+     * <p>
+     * g[i] ≈ (f(x) - f(x - h*e_i)) / h
+     * </p>
+     * Same accuracy as forward difference, useful when function
+     * behaves better for smaller x values.
+     */
+    BACKWARD {
+        @Override
+        public ObjectiveFunction wrap(ToDoubleFunction<double[]> func) {
+            return (x, g) -> {
+                double f = func.applyAsDouble(x);
+                if (g != null) {
+                    backwardDifference(func, x, f, g);
+                }
+                return f;
+            };
+        }
+    },
+    
+    /**
      * Central difference method.
      * <p>
      * g[i] ≈ (f(x + h*e_i) - f(x - h*e_i)) / (2*h)
      * </p>
-     * More accurate but slower than forward difference.
+     * More accurate but slower than forward difference. O(h²) accuracy.
      */
     CENTRAL {
         @Override
@@ -57,6 +84,26 @@ public enum NumericalGradient {
                 double f = func.applyAsDouble(x);
                 if (g != null) {
                     centralDifference(func, x, g);
+                }
+                return f;
+            };
+        }
+    },
+    
+    /**
+     * Five-point stencil method.
+     * <p>
+     * g[i] ≈ (-f(x+2h) + 8f(x+h) - 8f(x-h) + f(x-2h)) / (12h)
+     * </p>
+     * Highest accuracy O(h⁴), but requires 4 function evaluations per dimension.
+     */
+    FIVE_POINT {
+        @Override
+        public ObjectiveFunction wrap(ToDoubleFunction<double[]> func) {
+            return (x, g) -> {
+                double f = func.applyAsDouble(x);
+                if (g != null) {
+                    fivePointDifference(func, x, g);
                 }
                 return f;
             };
@@ -71,6 +118,9 @@ public enum NumericalGradient {
     
     /** Default step size for central difference */
     private static final double CBRT_EPSILON = Math.cbrt(EPSILON);
+    
+    /** Default step size for five-point stencil (optimal for O(h⁴) method) */
+    private static final double FOURTH_ROOT_EPSILON = Math.pow(EPSILON, 0.25);
     
     /**
      * Wraps a function-only objective to include numerical gradient.
@@ -103,6 +153,29 @@ public enum NumericalGradient {
     }
     
     /**
+     * Computes gradient using backward difference.
+     */
+    private static void backwardDifference(ToDoubleFunction<double[]> func, double[] x, double f0, double[] g) {
+        int n = x.length;
+        
+        for (int i = 0; i < n; i++) {
+            double xi = x[i];
+            double h = SQRT_EPSILON * Math.max(1.0, Math.abs(xi));
+            if (xi < 0) h = -h;
+            
+            // Ensure h is representable
+            double temp = xi - h;
+            h = xi - temp;
+            
+            x[i] = xi - h;
+            double f1 = func.applyAsDouble(x);
+            x[i] = xi;
+            
+            g[i] = (f0 - f1) / h;
+        }
+    }
+    
+    /**
      * Computes gradient using central difference.
      */
     private static void centralDifference(ToDoubleFunction<double[]> func, double[] x, double[] g) {
@@ -121,6 +194,34 @@ public enum NumericalGradient {
             x[i] = xi;
             
             g[i] = (f1 - f2) / (2.0 * h);
+        }
+    }
+    
+    /**
+     * Computes gradient using five-point stencil.
+     */
+    private static void fivePointDifference(ToDoubleFunction<double[]> func, double[] x, double[] g) {
+        int n = x.length;
+        
+        for (int i = 0; i < n; i++) {
+            double xi = x[i];
+            double h = FOURTH_ROOT_EPSILON * Math.max(1.0, Math.abs(xi));
+            
+            x[i] = xi + 2*h;
+            double f1 = func.applyAsDouble(x);
+            
+            x[i] = xi + h;
+            double f2 = func.applyAsDouble(x);
+            
+            x[i] = xi - h;
+            double f3 = func.applyAsDouble(x);
+            
+            x[i] = xi - 2*h;
+            double f4 = func.applyAsDouble(x);
+            
+            x[i] = xi;
+            
+            g[i] = (-f1 + 8*f2 - 8*f3 + f4) / (12.0 * h);
         }
     }
     
