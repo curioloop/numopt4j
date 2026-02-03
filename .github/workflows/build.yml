@@ -47,13 +47,16 @@ jobs:
   package:
     needs: build-native
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        java: ['8', '11', '17', '21']
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '8'
+          java-version: ${{ matrix.java }}
 
       - name: Download all native libraries
         uses: actions/download-artifact@v4
