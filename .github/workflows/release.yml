@@ -55,7 +55,7 @@ jobs:
       - name: Import GPG key
         run: |
           echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
-          gpg --list-secret-keys
+          gpg --list-secret-keys --keyid-format LONG
 
       - uses: actions/download-artifact@v4
         with:
@@ -71,7 +71,10 @@ jobs:
         run: mvn versions:set -DnewVersion=${{ github.event.inputs.version }}
 
       - name: Publish to Maven Central
-        run: mvn -B deploy -Dgpg.skip=false -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
+        run: |
+          mvn -B deploy -Dgpg.skip=false \
+            -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}" \
+            -Dgpg.executable=gpg
         env:
           MAVEN_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
