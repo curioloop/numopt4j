@@ -1,0 +1,77 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-native:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux-x86_64
+            lib: liboptimizer.so
+          - os: macos-13
+            platform: darwin-x86_64
+            lib: liboptimizer.dylib
+          - os: macos-14
+            platform: darwin-aarch64
+            lib: liboptimizer.dylib
+          - os: windows-latest
+            platform: windows-x86_64
+            lib: optimizer.dll
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '8'
+
+      - name: Build native library
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --config Release
+
+      - name: Upload native library
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-${{ matrix.platform }}
+          path: build/lib/${{ matrix.lib }}
+
+  package:
+    needs: build-native
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '8'
+
+      - name: Download all native libraries
+        uses: actions/download-artifact@v4
+        with:
+          path: natives
+
+      - name: Copy natives to resources
+        run: |
+          cp natives/native-linux-x86_64/liboptimizer.so src/main/resources/native/linux-x86_64/
+          cp natives/native-darwin-x86_64/liboptimizer.dylib src/main/resources/native/darwin-x86_64/
+          cp natives/native-darwin-aarch64/liboptimizer.dylib src/main/resources/native/darwin-aarch64/
+          cp natives/native-windows-x86_64/optimizer.dll src/main/resources/native/windows-x86_64/
+
+      - name: Build and test
+        run: mvn -B verify
+
+      - name: Upload JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: numopt4j-jar
+          path: target/*.jar
