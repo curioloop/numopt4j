@@ -16,10 +16,10 @@ public class ApiUsabilityTest {
     @Test
     @DisplayName("L-BFGS-B: Simple minimize with function only (numerical gradient)")
     void testLbfgsbSimpleMinimize() {
-        // Minimize x^2 + y^2, minimum at (0, 0) using builder with ToDoubleFunction
+        // Minimize x^2 + y^2, minimum at (0, 0) using NumericalGradient.wrap()
         OptimizationResult result = LbfgsbOptimizer.builder()
             .dimension(2)
-            .objective(x -> x[0] * x[0] + x[1] * x[1], NumericalGradient.CENTRAL)
+            .objective(NumericalGradient.CENTRAL.wrap(x -> x[0] * x[0] + x[1] * x[1]))
             .build()
             .optimize(new double[]{1.0, 1.0});
         
@@ -52,10 +52,10 @@ public class ApiUsabilityTest {
     @Test
     @DisplayName("L-BFGS-B: Builder with function-only objective")
     void testLbfgsbBuilderWithFunctionOnly() {
-        // Using builder with ToDoubleFunction (no gradient needed)
+        // Using builder with NumericalGradient.wrap()
         LbfgsbOptimizer optimizer = LbfgsbOptimizer.builder()
             .dimension(2)
-            .objective(x -> x[0] * x[0] + x[1] * x[1], NumericalGradient.CENTRAL)
+            .objective(NumericalGradient.CENTRAL.wrap(x -> x[0] * x[0] + x[1] * x[1]))
             .termination(Termination.builder().maxIterations(50).accuracy(1e-4).build())
             .build();
         
@@ -71,7 +71,7 @@ public class ApiUsabilityTest {
         // Minimize (x-5)^2 + (y-5)^2 with bounds [0, 3]
         LbfgsbOptimizer optimizer = LbfgsbOptimizer.builder()
             .dimension(2)
-            .objective(x -> Math.pow(x[0] - 5, 2) + Math.pow(x[1] - 5, 2), NumericalGradient.CENTRAL)
+            .objective(NumericalGradient.CENTRAL.wrap(x -> Math.pow(x[0] - 5, 2) + Math.pow(x[1] - 5, 2)))
             .bounds(Bound.between(0.0, 3.0))  // single bound for all
             .build();
         
@@ -88,7 +88,7 @@ public class ApiUsabilityTest {
     void testLbfgsbBuilderWithSingleBound() {
         LbfgsbOptimizer optimizer = LbfgsbOptimizer.builder()
             .dimension(3)
-            .objective(x -> x[0] * x[0] + x[1] * x[1] + x[2] * x[2], NumericalGradient.CENTRAL)
+            .objective(NumericalGradient.CENTRAL.wrap(x -> x[0] * x[0] + x[1] * x[1] + x[2] * x[2]))
             .bounds(Bound.atLeast(0))  // x >= 0 for all variables
             .build();
         

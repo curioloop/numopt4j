@@ -200,7 +200,7 @@ public class NumericalGradientTest {
             double[] x = {5.0, 5.0};
             OptimizationResult result = LbfgsbOptimizer.builder()
                 .dimension(2)
-                .objective(p -> p[0] * p[0] + p[1] * p[1], method)
+                .objective(method.wrap(p -> p[0] * p[0] + p[1] * p[1]))
                 .build()
                 .optimize(x);
             
@@ -219,7 +219,7 @@ public class NumericalGradientTest {
             double[] x = {5.0, 5.0};
             OptimizationResult result = SlsqpOptimizer.builder()
                 .dimension(2)
-                .objective(p -> p[0] * p[0] + p[1] * p[1], method)
+                .objective(method.wrap(p -> p[0] * p[0] + p[1] * p[1]))
                 .build()
                 .optimize(x);
             
@@ -242,7 +242,7 @@ public class NumericalGradientTest {
         double[] x = {0.5, 0.5};  // Start closer to optimum
         OptimizationResult result = LbfgsbOptimizer.builder()
             .dimension(2)
-            .objective(rosenbrock, NumericalGradient.FIVE_POINT)
+            .objective(NumericalGradient.FIVE_POINT.wrap(rosenbrock))
             .termination(Termination.builder()
                 .maxIterations(2000)
                 .accuracy(1e-12)
