@@ -74,6 +74,7 @@ jobs:
         run: mvn -B verify
 
       - name: Upload JAR
+        if: matrix.java == '8'
         uses: actions/upload-artifact@v4
         with:
           name: numopt4j-jar
