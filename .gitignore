@@ -1,0 +1,10 @@
+.idea/
+.kiro/
+.vscode/
+build/
+target/
+cmake-build-*/
+*.so
+*.dylib
+*.dll
+.jqwik-database
