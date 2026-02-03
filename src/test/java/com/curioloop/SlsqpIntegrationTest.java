@@ -108,11 +108,10 @@ public class SlsqpIntegrationTest {
                 .isTrue();
         
         // Verify solution is close to expected
-        double[] solution = result.getSolution();
-        assertThat(solution[0])
+        assertThat(x0[0])
                 .as("Solution x[0] should be close to expected value")
                 .isCloseTo(expectedSolution[0], within(1e-6));
-        assertThat(solution[1])
+        assertThat(x0[1])
                 .as("Solution x[1] should be close to expected value")
                 .isCloseTo(expectedSolution[1], within(1e-6));
         
@@ -129,7 +128,7 @@ public class SlsqpIntegrationTest {
                 .isLessThanOrEqualTo(15);
         
         // Verify the solution satisfies the constraint: 1 - x[0]^2 - x[1]^2 >= 0
-        double constraintValue = 1.0 - solution[0] * solution[0] - solution[1] * solution[1];
+        double constraintValue = 1.0 - x0[0] * x0[0] - x0[1] * x0[1];
         assertThat(constraintValue)
                 .as("Solution should satisfy the circle inequality constraint (c(x) >= 0)")
                 .isGreaterThanOrEqualTo(-1e-8);
@@ -244,9 +243,6 @@ public class SlsqpIntegrationTest {
         // Run optimization
         OptimizationResult result = optimizer.optimize(x0);
         
-        // Get solution
-        double[] solution = result.getSolution();
-        
         // Verify convergence
         assertThat(result.isConverged())
                 .as("Optimization should converge")
@@ -254,13 +250,13 @@ public class SlsqpIntegrationTest {
         
         // Verify the solution satisfies the equality constraint: x[0]*x[1] - x[2] = 0
         // The JNI implementation may have different numerical behavior, so we use a relaxed tolerance
-        double eqConstraintValue = solution[0] * solution[1] - solution[2];
+        double eqConstraintValue = x0[0] * x0[1] - x0[2];
         assertThat(Math.abs(eqConstraintValue))
                 .as("Solution should approximately satisfy the equality constraint")
                 .isLessThan(1.0);  // Relaxed tolerance due to different line search parameters
         
         // Verify the solution satisfies the inequality constraint: x[2] - 1 >= 0
-        double ineqConstraintValue = solution[2] - 1.0;
+        double ineqConstraintValue = x0[2] - 1.0;
         assertThat(ineqConstraintValue)
                 .as("Solution should approximately satisfy the inequality constraint")
                 .isGreaterThanOrEqualTo(-1.0);  // Relaxed tolerance
@@ -376,9 +372,6 @@ public class SlsqpIntegrationTest {
         // Run optimization
         OptimizationResult result = optimizer.optimize(x0);
         
-        // Get solution
-        double[] solution = result.getSolution();
-        
         // Verify convergence - the exact line search mode may have different behavior
         // than the Go version due to different alpha bounds, but it should still converge
         assertThat(result.isConverged())
@@ -398,8 +391,8 @@ public class SlsqpIntegrationTest {
                 .isFinite();
         
         // Verify solution is within bounds
-        for (int i = 0; i < solution.length; i++) {
-            assertThat(solution[i])
+        for (int i = 0; i < x0.length; i++) {
+            assertThat(x0[i])
                     .as("Solution component " + i + " should be within bounds")
                     .isBetween(-10.0, 10.0);
         }
@@ -544,9 +537,8 @@ public class SlsqpIntegrationTest {
                 .isTrue();
         
         // Verify solution is close to expected
-        double[] solution = result.getSolution();
         for (int i = 0; i < expectedSolution.length; i++) {
-            assertThat(solution[i])
+            assertThat(x0[i])
                     .as("Solution x[" + i + "] should be close to expected value")
                     .isCloseTo(expectedSolution[i], within(1e-6));
         }
@@ -562,14 +554,14 @@ public class SlsqpIntegrationTest {
                 .isLessThanOrEqualTo(12);
         
         // Verify the solution satisfies equality constraint 1: x[0]*x[1]*x[2]*x[3] - x[4] - 25 = 0
-        double cons1Value = solution[0] * solution[1] * solution[2] * solution[3] - solution[4] - 25.0;
+        double cons1Value = x0[0] * x0[1] * x0[2] * x0[3] - x0[4] - 25.0;
         assertThat(Math.abs(cons1Value))
                 .as("Solution should satisfy equality constraint 1 (c1(x) = 0)")
                 .isLessThan(1e-6);
         
         // Verify the solution satisfies equality constraint 2: x[0]^2 + x[1]^2 + x[2]^2 + x[3]^2 - 40 = 0
-        double cons2Value = solution[0] * solution[0] + solution[1] * solution[1] 
-                          + solution[2] * solution[2] + solution[3] * solution[3] - 40.0;
+        double cons2Value = x0[0] * x0[0] + x0[1] * x0[1] 
+                          + x0[2] * x0[2] + x0[3] * x0[3] - 40.0;
         assertThat(Math.abs(cons2Value))
                 .as("Solution should satisfy equality constraint 2 (c2(x) = 0)")
                 .isLessThan(1e-6);
@@ -667,19 +659,18 @@ public class SlsqpIntegrationTest {
                 .isTrue();
         
         // Verify solution is correctly clipped to the expected boundary
-        double[] solution = result.getSolution();
-        assertThat(solution[0])
+        assertThat(x0[0])
                 .as("Solution should be clipped to expected boundary for case: %s", description)
                 .isCloseTo(expectedSolution, within(1e-6));
         
         // Verify solution respects the bounds
         if (bound.hasLower()) {
-            assertThat(solution[0])
+            assertThat(x0[0])
                     .as("Solution should respect lower bound for case: %s", description)
                     .isGreaterThanOrEqualTo(bound.getLower() - 1e-10);
         }
         if (bound.hasUpper()) {
-            assertThat(solution[0])
+            assertThat(x0[0])
                     .as("Solution should respect upper bound for case: %s", description)
                     .isLessThanOrEqualTo(bound.getUpper() + 1e-10);
         }
@@ -824,14 +815,13 @@ public class SlsqpIntegrationTest {
                 .isTrue();
         
         // Verify solution is close to expected feasible solution
-        double[] solution = result.getSolution();
-        assertThat(solution[0])
+        assertThat(x0[0])
                 .as("Solution should converge to expected feasible point for case: %s", description)
                 .isCloseTo(expectedSolution, within(1e-6));
         
         // Verify all constraints are satisfied at the solution
         for (int i = 0; i < constraints.length; i++) {
-            double constraintValue = constraints[i].evaluate(solution, null);
+            double constraintValue = constraints[i].evaluate(x0, null);
             assertThat(constraintValue)
                     .as("Solution should satisfy constraint %d for case: %s", i, description)
                     .isGreaterThanOrEqualTo(-1e-8);

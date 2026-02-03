@@ -84,13 +84,13 @@ public class BackwardCompatibilityProperties {
                 .isLessThan(1e-10);
 
         // Verify the solution is close to the known optimum (origin)
-        double[] solution = result.getSolution();
-        assertThat(solution.length)
+        // Note: The solution is stored in the initialPoint array (modified in-place)
+        assertThat(initialPoint.length)
                 .as("Solution dimension should match problem dimension")
                 .isEqualTo(n);
         
         for (int i = 0; i < n; i++) {
-            assertThat(Math.abs(solution[i]))
+            assertThat(Math.abs(initialPoint[i]))
                     .as("Solution component %d should be near 0", i)
                     .isLessThan(1e-4);
         }
@@ -165,13 +165,13 @@ public class BackwardCompatibilityProperties {
                 .isLessThan(1e-8);
 
         // Verify the solution is close to the known optimum (origin)
-        double[] solution = result.getSolution();
-        assertThat(solution.length)
+        // Note: The solution is stored in the initialPoint array (modified in-place)
+        assertThat(initialPoint.length)
                 .as("Solution dimension should match problem dimension")
                 .isEqualTo(n);
         
         for (int i = 0; i < n; i++) {
-            assertThat(Math.abs(solution[i]))
+            assertThat(Math.abs(initialPoint[i]))
                     .as("Solution component %d should be near 0", i)
                     .isLessThan(1e-4);
         }
@@ -251,9 +251,9 @@ public class BackwardCompatibilityProperties {
                 .isLessThan(1e-10);
 
         // Verify the solution is close to the known optimum [1, 1, ..., 1]
-        double[] solution = result.getSolution();
+        // Note: The solution is stored in the initialPoint array (modified in-place)
         for (int i = 0; i < n; i++) {
-            assertThat(solution[i])
+            assertThat(initialPoint[i])
                     .as("Solution component %d should be near 1", i)
                     .isCloseTo(1.0, within(1e-4));
         }
@@ -335,10 +335,10 @@ public class BackwardCompatibilityProperties {
                 .isCloseTo(expectedMinimum, within(1e-6));
 
         // Verify the solution satisfies the constraint (sum = 1)
-        double[] solution = result.getSolution();
+        // Note: The solution is stored in the initialPoint array (modified in-place)
         double sum = 0.0;
         for (int i = 0; i < n; i++) {
-            sum += solution[i];
+            sum += initialPoint[i];
         }
         assertThat(sum)
                 .as("Solution should satisfy constraint sum(x) = 1")
@@ -347,7 +347,7 @@ public class BackwardCompatibilityProperties {
         // Verify each component is close to 1/n
         double expectedComponent = 1.0 / n;
         for (int i = 0; i < n; i++) {
-            assertThat(solution[i])
+            assertThat(initialPoint[i])
                     .as("Solution component %d should be near 1/n = %f", i, expectedComponent)
                     .isCloseTo(expectedComponent, within(1e-4));
         }
@@ -416,7 +416,6 @@ public class BackwardCompatibilityProperties {
 
         // Verify the API returns a valid result (backward compatibility check)
         assertThat(lbfgsbResult).isNotNull();
-        assertThat(lbfgsbResult.getSolution()).hasSize(n);
         assertThat(lbfgsbResult.getStatus()).isNotNull();
         assertThat(lbfgsbResult.getFunctionValue()).isNotNaN();
         
@@ -450,7 +449,6 @@ public class BackwardCompatibilityProperties {
 
         // Verify the API returns a valid result (backward compatibility check)
         assertThat(slsqpResult).isNotNull();
-        assertThat(slsqpResult.getSolution()).hasSize(n);
         assertThat(slsqpResult.getStatus()).isNotNull();
         assertThat(slsqpResult.getFunctionValue()).isNotNaN();
         
@@ -498,7 +496,6 @@ public class BackwardCompatibilityProperties {
         
         // Verify result is not null and has expected structure
         assertThat(lbfgsbResult).isNotNull();
-        assertThat(lbfgsbResult.getSolution()).hasSize(n);
         assertThat(lbfgsbResult.getStatus()).isNotNull();
         assertThat(lbfgsbResult.getFunctionValue()).isNotNaN();
         assertThat(lbfgsbResult.getIterations()).isGreaterThanOrEqualTo(0);
@@ -514,7 +511,6 @@ public class BackwardCompatibilityProperties {
         
         // Verify result is not null and has expected structure
         assertThat(slsqpResult).isNotNull();
-        assertThat(slsqpResult.getSolution()).hasSize(n);
         assertThat(slsqpResult.getStatus()).isNotNull();
         assertThat(slsqpResult.getFunctionValue()).isNotNaN();
         assertThat(slsqpResult.getIterations()).isGreaterThanOrEqualTo(0);

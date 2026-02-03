@@ -41,11 +41,12 @@ public class ApiUsabilityTest {
             return f;
         };
         
-        OptimizationResult result = LbfgsbOptimizer.minimize(quadratic, new double[]{0.0, 0.0});
+        double[] x = {0.0, 0.0};
+        OptimizationResult result = LbfgsbOptimizer.minimize(quadratic, x);
         
         assertThat(result.isConverged()).isTrue();
-        assertThat(result.getSolution()[0]).isCloseTo(2.0, within(1e-6));
-        assertThat(result.getSolution()[1]).isCloseTo(3.0, within(1e-6));
+        assertThat(x[0]).isCloseTo(2.0, within(1e-6));
+        assertThat(x[1]).isCloseTo(3.0, within(1e-6));
     }
     
     @Test
@@ -74,11 +75,12 @@ public class ApiUsabilityTest {
             .bounds(Bound.between(0.0, 3.0))  // single bound for all
             .build();
         
-        OptimizationResult result = optimizer.optimize(new double[]{1.0, 1.0});
+        double[] x = {1.0, 1.0};
+        OptimizationResult result = optimizer.optimize(x);
         
         assertThat(result.isConverged()).isTrue();
-        assertThat(result.getSolution()[0]).isCloseTo(3.0, within(1e-6));
-        assertThat(result.getSolution()[1]).isCloseTo(3.0, within(1e-6));
+        assertThat(x[0]).isCloseTo(3.0, within(1e-6));
+        assertThat(x[1]).isCloseTo(3.0, within(1e-6));
     }
     
     @Test
@@ -90,10 +92,11 @@ public class ApiUsabilityTest {
             .bounds(Bound.nonNegative())  // x >= 0 for all variables
             .build();
         
-        OptimizationResult result = optimizer.optimize(new double[]{1.0, 1.0, 1.0});
+        double[] x = {1.0, 1.0, 1.0};
+        OptimizationResult result = optimizer.optimize(x);
         
         assertThat(result.isConverged()).isTrue();
-        for (double v : result.getSolution()) {
+        for (double v : x) {
             assertThat(v).isGreaterThanOrEqualTo(-1e-10);
         }
     }
@@ -184,10 +187,11 @@ public class ApiUsabilityTest {
             .inequalityConstraints(c1, c2)  // varargs!
             .build();
         
-        OptimizationResult result = optimizer.optimize(new double[]{0.0, 0.0});
+        double[] x = {0.0, 0.0};
+        OptimizationResult result = optimizer.optimize(x);
         
         assertThat(result.isConverged()).isTrue();
-        assertThat(result.getSolution()[0]).isCloseTo(1.0, within(1e-6));
-        assertThat(result.getSolution()[1]).isCloseTo(1.0, within(1e-6));
+        assertThat(x[0]).isCloseTo(1.0, within(1e-6));
+        assertThat(x[1]).isCloseTo(1.0, within(1e-6));
     }
 }

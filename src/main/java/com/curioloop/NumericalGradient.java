@@ -124,37 +124,4 @@ public enum NumericalGradient {
         }
     }
     
-    /**
-     * Checks if numerical gradient matches analytical gradient.
-     * @param objective Objective function with analytical gradient
-     * @param x Test point
-     * @param tolerance Relative tolerance
-     * @return true if gradients match within tolerance
-     */
-    public static boolean checkGradient(ObjectiveFunction objective, double[] x, double tolerance) {
-        int n = x.length;
-        double[] analyticalGrad = new double[n];
-        double[] numericalGrad = new double[n];
-        
-        // Compute analytical gradient
-        objective.evaluate(x, analyticalGrad);
-        
-        // Compute numerical gradient
-        ToDoubleFunction<double[]> func = pt -> objective.evaluate(pt, null);
-        centralDifference(func, x.clone(), numericalGrad);
-        
-        // Compare
-        for (int i = 0; i < n; i++) {
-            double a = analyticalGrad[i];
-            double num = numericalGrad[i];
-            double diff = Math.abs(a - num);
-            double scale = Math.max(1.0, Math.max(Math.abs(a), Math.abs(num)));
-            
-            if (diff / scale > tolerance) {
-                return false;
-            }
-        }
-        
-        return true;
-    }
 }

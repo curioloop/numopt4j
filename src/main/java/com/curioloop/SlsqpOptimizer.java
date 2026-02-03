@@ -103,7 +103,6 @@ public final class SlsqpOptimizer {
     private final int numInequalityConstraints;
     private final BatchConstraint equalityConstraint;
     private final BatchConstraint inequalityConstraint;
-    private final double[] constraintGradient;  // shared by eq/ineq BatchConstraint
     private final Bound[] bounds;
     private final Termination termination;
     
@@ -114,15 +113,13 @@ public final class SlsqpOptimizer {
     private final double variableDifferenceTolerance;
     
     private SlsqpOptimizer(Builder builder, int numEq, int numIneq, 
-                           BatchConstraint eqConstraint, BatchConstraint ineqConstraint,
-                           double[] constraintGradient) {
+                           BatchConstraint eqConstraint, BatchConstraint ineqConstraint) {
         this.dimension = builder.dimension;
         this.objective = builder.objective;
         this.numEqualityConstraints = numEq;
         this.numInequalityConstraints = numIneq;
         this.equalityConstraint = eqConstraint;
         this.inequalityConstraint = ineqConstraint;
-        this.constraintGradient = constraintGradient;
         this.bounds = builder.bounds;
         this.termination = builder.termination;
         this.exactLineSearch = builder.exactLineSearch;
@@ -238,7 +235,6 @@ public final class SlsqpOptimizer {
         OptimizationStatus optStatus = OptimizationStatus.fromCode(status);
         
         return new OptimizationResult(
-            x,
             workspace.getResultF(),
             optStatus,
             workspace.getResultIterations(),
@@ -573,7 +569,7 @@ public final class SlsqpOptimizer {
                 ? new BatchConstraint(inequalityConstraints.toArray(new ConstraintFunction[0]), constraintGrad) 
                 : null;
             
-            return new SlsqpOptimizer(this, numEq, numIneq, eqConstraint, ineqConstraint, constraintGrad);
+            return new SlsqpOptimizer(this, numEq, numIneq, eqConstraint, ineqConstraint);
         }
     }
 }

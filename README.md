@@ -40,8 +40,10 @@ ObjectiveFunction objective = (x, g) -> {
     return f;
 };
 
-OptimizationResult result = LbfgsbOptimizer.minimize(objective, new double[]{1, 1});
-System.out.println("Solution: " + Arrays.toString(result.getSolution()));
+double[] x = {1, 1};
+OptimizationResult result = LbfgsbOptimizer.minimize(objective, x);
+// Solution is stored in x (modified in-place)
+System.out.println("Solution: " + Arrays.toString(x));
 ```
 
 ### With Numerical Gradient

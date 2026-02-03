@@ -294,9 +294,8 @@ public class LbfgsbIntegrationTest {
                 .isLessThan(1e-3);
         
         // Verify solution is within bounds
-        double[] solution = result.getSolution();
         for (int i = 0; i < n; i++) {
-            assertThat(solution[i])
+            assertThat(x0[i])
                     .as("Solution[%d] should be within bounds", i)
                     .isBetween(bounds[i].getLower(), bounds[i].getUpper());
         }
@@ -396,19 +395,18 @@ public class LbfgsbIntegrationTest {
                 .isTrue();
         
         // Verify solution is correctly clipped to the expected boundary
-        double[] solution = result.getSolution();
-        assertThat(solution[0])
+        assertThat(x0[0])
                 .as("Solution should be clipped to expected boundary for case: %s", description)
                 .isCloseTo(expectedSolution, within(1e-6));
         
         // Verify solution respects the bounds
         if (bound.hasLower()) {
-            assertThat(solution[0])
+            assertThat(x0[0])
                     .as("Solution should respect lower bound for case: %s", description)
                     .isGreaterThanOrEqualTo(bound.getLower() - 1e-10);
         }
         if (bound.hasUpper()) {
-            assertThat(solution[0])
+            assertThat(x0[0])
                     .as("Solution should respect upper bound for case: %s", description)
                     .isLessThanOrEqualTo(bound.getUpper() + 1e-10);
         }

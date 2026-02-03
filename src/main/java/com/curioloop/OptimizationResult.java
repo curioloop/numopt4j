@@ -3,14 +3,15 @@
  */
 package com.curioloop;
 
-import java.util.Arrays;
-
 /**
  * Result of an optimization run.
+ * <p>
+ * Note: The solution is stored in the input array passed to {@code optimize()},
+ * which is modified in-place during optimization.
+ * </p>
  */
 public final class OptimizationResult {
     
-    private final double[] solution;
     private final double functionValue;
     private final OptimizationStatus status;
     private final int iterations;
@@ -18,27 +19,17 @@ public final class OptimizationResult {
     
     /**
      * Creates an optimization result.
-     * @param solution Solution vector
      * @param functionValue Optimal function value
      * @param status Optimization status
      * @param iterations Number of iterations
      * @param evaluations Number of function evaluations
      */
-    public OptimizationResult(double[] solution, double functionValue,
-                              OptimizationStatus status, int iterations, int evaluations) {
-        this.solution = solution != null ? solution.clone() : new double[0];
+    public OptimizationResult(double functionValue, OptimizationStatus status,
+                              int iterations, int evaluations) {
         this.functionValue = functionValue;
         this.status = status;
         this.iterations = iterations;
         this.evaluations = evaluations;
-    }
-    
-    /**
-     * Gets the solution vector.
-     * @return Copy of solution vector
-     */
-    public double[] getSolution() {
-        return solution.clone();
     }
     
     /**
@@ -81,14 +72,6 @@ public final class OptimizationResult {
         return evaluations;
     }
     
-    /**
-     * Gets the dimension of the solution.
-     * @return Solution dimension
-     */
-    public int getDimension() {
-        return solution.length;
-    }
-    
     @Override
     public String toString() {
         return "OptimizationResult{" +
@@ -96,7 +79,6 @@ public final class OptimizationResult {
                 ", functionValue=" + functionValue +
                 ", iterations=" + iterations +
                 ", evaluations=" + evaluations +
-                ", solution=" + Arrays.toString(solution) +
                 '}';
     }
 }

@@ -185,7 +185,6 @@ public final class LbfgsbOptimizer {
         OptimizationStatus optStatus = OptimizationStatus.fromCode(status);
         
         return new OptimizationResult(
-            x,
             workspace.getResultF(),
             optStatus,
             workspace.getResultIterations(),
