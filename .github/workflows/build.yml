@@ -7,43 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  build-native:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            platform: linux-x86_64
-            lib: liboptimizer.so
-          - os: macos-14
-            platform: darwin-aarch64
-            lib: liboptimizer.dylib
-          - os: windows-latest
-            platform: windows-x86_64
-            lib: optimizer.dll
-
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '11'
-
-      - name: Build native library
-        run: |
-          cmake -B build -DCMAKE_BUILD_TYPE=Release
-          cmake --build build --config Release
-
-      - name: Upload native library
-        uses: actions/upload-artifact@v4
-        with:
-          name: native-${{ matrix.platform }}
-          path: build/${{ matrix.lib }}
-
-  package:
-    needs: build-native
+  build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -55,20 +19,6 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ matrix.java }}
-
-      - name: Download all native libraries
-        uses: actions/download-artifact@v4
-        with:
-          path: natives
-
-      - name: Copy natives to resources
-        run: |
-          find natives -type f \( -name "*.so" -o -name "*.dylib" -o -name "*.dll" \) | while read f; do
-            echo "Found: $f"
-          done
-          find natives -name "liboptimizer.so" -exec cp {} src/main/resources/native/linux-x86_64/ \;
-          find natives -name "liboptimizer.dylib" -exec cp {} src/main/resources/native/darwin-aarch64/ \;
-          find natives -name "optimizer.dll" -exec cp {} src/main/resources/native/windows-x86_64/ \;
 
       - name: Build and test
         run: mvn -B verify

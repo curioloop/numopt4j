@@ -6,9 +6,10 @@ High-performance numerical optimization library for Java.
 
 - **L-BFGS-B**: Limited-memory BFGS with bound constraints
 - **SLSQP**: Sequential Least Squares Programming with equality/inequality constraints
-- Native C implementation via JNI for performance
+- **TRF**: Trust Region Reflective for nonlinear least squares
+- **Root finding**: Brentq (1-D), HYBR and Broyden (N-D) via `FindRoot`
 - Workspace reuse for high-frequency optimization scenarios
-- Multiple numerical gradient methods with different accuracy/speed tradeoffs
+- Multiple numerical gradient/Jacobian methods with different accuracy/speed tradeoffs
 
 ## Requirements
 
@@ -25,79 +26,134 @@ High-performance numerical optimization library for Java.
 </dependency>
 ```
 
+## AI 助手使用
+
+如果你在使用 AI 编程助手（如 GitHub Copilot、Cursor、Claude 等），可以通过以下方式获取 numopt4j 的完整 API 文档：
+
+- 在 AI 对话中输入 `use context7` 并提及 numopt4j，AI 助手将自动加载最新文档
+- 或直接引用项目根目录的 `llms.txt` 或 `llms-full.txt` 文件
+
+### 推荐的 AI 友好用法
+
+```java
+// 最简单的用法：只需提供目标函数，无需梯度
+OptimizationResult r = Minimize.objective(x -> x[0]*x[0] + x[1]*x[1])
+    .startingFrom(1.0, 1.0)
+    .run();
+
+if (r.isSuccessful()) {
+    System.out.println(Arrays.toString(r.getSolution()));
+} else {
+    System.out.println(r.getErrorMessage());
+}
+```
+
 ## Quick Start
 
 ### Unconstrained Optimization (L-BFGS-B)
 
 ```java
-// With analytical gradient
-Evaluation objective = (x, g) -> {
-    double f = x[0]*x[0] + x[1]*x[1];
-    if (g != null) {
-        g[0] = 2*x[0];
-        g[1] = 2*x[1];
-    }
-    return f;
-};
+// Simplest usage: no gradient required
+OptimizationResult result = LBFGSBProblem.create()
+    .objective(x -> x[0]*x[0] + x[1]*x[1])
+    .initialPoint(1.0, 1.0)
+    .solve();
 
-double[] x = {1, 1};
-OptimizationResult result = LbfgsbOptimizer.minimize(objective, x);
-// Solution is stored in x (modified in-place)
-System.out.println("Solution: " + Arrays.toString(x));
+if (result.isSuccessful()) {
+    System.out.println("Solution: " + Arrays.toString(result.getSolution()));
+}
 ```
 
-### With Numerical Gradient
+### With Analytical Gradient
 
 ```java
-// Wrap a function without gradient using numerical differentiation
-Evaluation objective = NumericalGradient.CENTRAL.wrap(x -> x[0]*x[0] + x[1]*x[1]);
-
-OptimizationResult result = LbfgsbOptimizer.builder()
-    .dimension(2)
-    .objective(objective)
-    .build()
-    .optimize(new double[]{1, 1});
+// Provide analytical gradient for best performance
+OptimizationResult result = LBFGSBProblem.create()
+    .objective((x, g) -> {
+        double f = x[0]*x[0] + x[1]*x[1];
+        if (g != null) { g[0] = 2*x[0]; g[1] = 2*x[1]; }
+        return f;
+    })
+    .initialPoint(1.0, 1.0)
+    .solve();
 ```
 
 ### Bound Constraints
 
 ```java
-LbfgsbOptimizer optimizer = LbfgsbOptimizer.builder()
-    .dimension(2)
-    .objective(objective)
-    .bounds(Bound.between(0, 10))  // 0 <= x <= 10 for all variables
-    .build();
+OptimizationResult result = LBFGSBProblem.create()
+    .objective(x -> x[0]*x[0] + x[1]*x[1])
+    .bounds(Bound.between(0, 10), Bound.between(0, 10))  // 0 <= x <= 10
+    .initialPoint(1.0, 1.0)
+    .solve();
 ```
 
 ### Constrained Optimization (SLSQP)
 
 ```java
-Evaluation objective = (x, g) -> {
-    double f = x[0]*x[0] + x[1]*x[1];
-    if (g != null) { g[0] = 2*x[0]; g[1] = 2*x[1]; }
-    return f;
-};
-
 // Equality constraint: x[0] + x[1] = 1
-Evaluation eq = (x, g) -> {
-    if (g != null) { g[0] = 1; g[1] = 1; }
-    return x[0] + x[1] - 1;
-};
-
 // Inequality constraint: x[0] >= 0.5
-Evaluation ineq = (x, g) -> {
-    if (g != null) { g[0] = 1; g[1] = 0; }
-    return x[0] - 0.5;
-};
+OptimizationResult result = SLSQPProblem.create()
+    .objective(x -> x[0]*x[0] + x[1]*x[1])
+    .equalityConstraints(x -> x[0] + x[1] - 1)
+    .inequalityConstraints(x -> x[0] - 0.5)
+    .initialPoint(0.5, 0.5)
+    .solve();
+```
 
-SlsqpOptimizer optimizer = SlsqpOptimizer.builder()
-    .dimension(2)
-    .objective(objective)
-    .equalityConstraints(eq)
-    .inequalityConstraints(ineq)
-    .build();
+### Nonlinear Least Squares (TRF)
 
-OptimizationResult result = optimizer.optimize(new double[]{0, 0});
+```java
+// Fit y = a * exp(-b * t)
+double[] tData = {0.0, 1.0, 2.0, 3.0};
+double[] yData = {2.0, 1.2, 0.7, 0.4};
+
+OptimizationResult result = TRFProblem.create()
+    .residuals((x, r) -> {
+        for (int i = 0; i < tData.length; i++) {
+            r[i] = yData[i] - x[0] * Math.exp(-x[1] * tData[i]);
+        }
+    }, tData.length)
+    .bounds(Bound.atLeast(0), Bound.atLeast(0))
+    .initialPoint(1.0, 0.5)
+    .solve();
+```
+
+### Root Finding (1-D Brentq)
+
+```java
+// Find root of sin(x) in [3, 4] → π
+OptimizationResult result = FindRoot.scalar(Math::sin)
+    .bracket(3.0, 4.0)
+    .solve();
+
+double root = result.getRoot(); // ≈ π
+```
+
+### Root Finding (N-D HYBR / Broyden)
+
+```java
+// Solve F(x) = 0 for a system of equations
+OptimizationResult result = FindRoot.equations((x, f) -> {
+        f[0] = x[0]*x[0] - 2;
+        f[1] = x[1] - x[0];
+    }, 2)
+    .initialPoint(1.0, 1.0)
+    .solve();
+
+double[] solution = result.getSolution(); // [√2, √2]
+
+// Use Broyden instead of HYBR (default)
+result = FindRoot.equations(fn, 2)
+    .initialPoint(1.0, 1.0)
+    .method(RootMethod.BROYDEN)
+    .solve();
+
+// Use central differences for Jacobian
+result = FindRoot.equations(fn, 2)
+    .jacobian(NumericalJacobian.CENTRAL)
+    .initialPoint(1.0, 1.0)
+    .solve();
 ```
 
 ### Workspace Reuse
@@ -105,16 +161,14 @@ OptimizationResult result = optimizer.optimize(new double[]{0, 0});
 For high-frequency optimization, reuse workspace to reduce allocation overhead:
 
 ```java
-LbfgsbOptimizer optimizer = LbfgsbOptimizer.builder()
-    .dimension(n)
-    .objective(objective)
-    .build();
+LBFGSBProblem problem = LBFGSBProblem.create()
+    .objective(x -> x[0]*x[0] + x[1]*x[1])
+    .initialPoint(new double[n]);
 
-try (LbfgsbWorkspace workspace = LbfgsbWorkspace.allocate(n, 5)) {
-    for (double[] point : points) {
-        OptimizationResult result = optimizer.optimize(point, workspace);
-        // process result
-    }
+LBFGSBWorkspace workspace = problem.alloc();  // allocate once
+for (double[] point : points) {
+    OptimizationResult result = problem.initialPoint(point).solve(workspace);
+    // process result
 }
 ```
 
@@ -159,13 +213,13 @@ Four methods available with different accuracy/performance tradeoffs:
 
 ```java
 // Fastest (1 eval per dimension)
-Evaluation fast = NumericalGradient.FORWARD.wrap(func);
+Univariate fast = NumericalGradient.FORWARD.wrap(func);
 
 // Good balance of accuracy and speed
-Evaluation balanced = NumericalGradient.CENTRAL.wrap(func);
+Univariate balanced = NumericalGradient.CENTRAL.wrap(func);
 
 // Highest accuracy (4 evals per dimension)
-Evaluation accurate = NumericalGradient.FIVE_POINT.wrap(func);
+Univariate accurate = NumericalGradient.FIVE_POINT.wrap(func);
 ```
 
 Typical error comparison:

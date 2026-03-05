@@ -1,0 +1,823 @@
+# numopt4j — Full API Reference
+
+> For AI assistants to deeply understand how to use the numopt4j library.
+
+## 1. Library Overview and Installation
+
+numopt4j is a high-performance Java numerical optimization library providing three mainstream optimization algorithms:
+
+- **L-BFGS-B**: Bounded quasi-Newton method, suitable for unconstrained or box-constrained optimization
+- **SLSQP**: Sequential Least Squares Programming, suitable for equality/inequality constrained optimization
+- **TRF**: Trust Region Reflective method, suitable for bounded nonlinear least-squares fitting
+
+### Maven Dependency
+
+```xml
+<dependency>
+    <groupId>com.curioloop</groupId>
+    <artifactId>numopt4j</artifactId>
+    <version>0.0.3</version>
+</dependency>
+```
+
+### Package Structure
+
+```
+com.curioloop.numopt4j.optim          # Public API (Minimize, FindRoot, Problem classes, utilities)
+com.curioloop.numopt4j.optim.lbfgsb   # L-BFGS-B algorithm (LBFGSBProblem)
+com.curioloop.numopt4j.optim.slsqp    # SLSQP algorithm (SLSQPProblem)
+com.curioloop.numopt4j.optim.trf      # TRF algorithm (TRFProblem)
+com.curioloop.numopt4j.optim.root     # Root-finding algorithms (RootFinder, BrentqSolver, HYBRSolver, BroydenSolver)
+```
+
+
+## 2. Algorithm Selection Decision Tree
+
+```
+Have a residual function (least squares)?
+  ├─ Yes → TRFProblem (or Minimize.leastSquares)
+  └─ No  → Root-finding problem (F(x) = 0)?
+            ├─ Yes → FindRoot.scalar (1-D) or FindRoot.equations (N-D)
+            └─ No  → Have equality/inequality constraints?
+                      ├─ Yes → SLSQPProblem (or Minimize.objective + .subjectTo/.equalTo)
+                      └─ No  → LBFGSBProblem (or Minimize.objective, optional .bounds)
+```
+
+| Problem Type | Recommended Class | Notes |
+|---|---|---|
+| Unconstrained optimization | `LBFGSBProblem` | Fastest, only needs objective function |
+| Box-constrained optimization | `LBFGSBProblem` | Supports l ≤ x ≤ u |
+| Equality-constrained optimization | `SLSQPProblem` | c(x) = 0 |
+| Inequality-constrained optimization | `SLSQPProblem` | c(x) ≥ 0 |
+| Nonlinear least squares | `TRFProblem` | min ½‖f(x)‖² |
+| 1-D root finding | `FindRoot.scalar` | Brentq, requires bracket interval |
+| N-D root finding | `FindRoot.equations` | HYBR (default) or Broyden |
+| Unsure | `Minimize` | Automatically selects algorithm |
+
+
+## 3. Minimize Class (Unified Entry Point with Automatic Algorithm Selection)
+
+`com.curioloop.numopt4j.optim.Minimize`
+
+Automatically selects the most appropriate algorithm based on problem characteristics. This is the preferred entry point for AI-generated code.
+
+### Static Entry Methods
+
+```java
+// Recommended: provide only the objective function, automatically uses NumericalGradient.CENTRAL
+public static ObjectiveBuilder objective(ToDoubleFunction<double[]> f)
+
+// Provide objective function with analytic gradient
+public static ObjectiveBuilder objective(Univariate f)
+
+// Least squares: provide residual function, automatically uses NumericalJacobian.CENTRAL
+public static LeastSquaresBuilder leastSquares(BiConsumer<double[], double[]> residuals, int m)
+
+// Least squares: provide multivariate function with analytic Jacobian
+public static LeastSquaresBuilder leastSquares(Multivariate f, int m)
+```
+
+### ObjectiveBuilder Methods
+
+```java
+ObjectiveBuilder bounds(Bound... bounds)                          // Set variable bounds (triggers L-BFGS-B)
+ObjectiveBuilder subjectTo(ToDoubleFunction<double[]>... c)       // Inequality constraints c(x) >= 0 (triggers SLSQP)
+ObjectiveBuilder equalTo(ToDoubleFunction<double[]>... c)         // Equality constraints c(x) = 0 (triggers SLSQP)
+ObjectiveBuilder startingFrom(double... x0)                       // Set initial point
+OptimizationResult run()                                          // Execute optimization
+```
+
+### LeastSquaresBuilder Methods
+
+```java
+LeastSquaresBuilder bounds(Bound... bounds)    // Set variable bounds
+LeastSquaresBuilder startingFrom(double... x0) // Set initial point
+OptimizationResult run()                        // Execute optimization (uses TRF)
+```
+
+### Complete Example
+
+```java
+import com.curioloop.numopt4j.optim.*;
+import java.util.Arrays;
+
+// Unconstrained optimization (automatically selects L-BFGS-B)
+OptimizationResult r1 = Minimize.objective(x -> x[0]*x[0] + x[1]*x[1])
+    .startingFrom(1.0, 1.0)
+    .run();
+System.out.println(Arrays.toString(r1.getSolution())); // [0.0, 0.0]
+
+// Box-constrained optimization (automatically selects L-BFGS-B)
+OptimizationResult r2 = Minimize.objective(x -> x[0]*x[0] + x[1]*x[1])
+    .bounds(Bound.atLeast(0.5), Bound.atLeast(0.5))
+    .startingFrom(1.0, 1.0)
+    .run();
+
+// Inequality-constrained optimization (automatically selects SLSQP)
+// minimize x[0] + x[1], subject to x[0]^2 + x[1]^2 >= 1
+OptimizationResult r3 = Minimize.objective(x -> x[0] + x[1])
+    .subjectTo(x -> x[0]*x[0] + x[1]*x[1] - 1)
+    .startingFrom(1.0, 1.0)
+    .run();
+
+// Equality-constrained optimization (automatically selects SLSQP)
+// minimize x[0]^2 + x[1]^2, subject to x[0] + x[1] = 1
+OptimizationResult r4 = Minimize.objective(x -> x[0]*x[0] + x[1]*x[1])
+    .equalTo(x -> x[0] + x[1] - 1)
+    .startingFrom(0.5, 0.5)
+    .run();
+
+// Least squares (automatically selects TRF)
+OptimizationResult r5 = Minimize.leastSquares((x, res) -> {
+        res[0] = x[0] - 3.0;
+        res[1] = x[1] - 4.0;
+    }, 2)
+    .startingFrom(0.0, 0.0)
+    .run();
+```
+
+
+## 4. LBFGSBProblem (L-BFGS-B Bounded Quasi-Newton Optimization)
+
+`com.curioloop.numopt4j.optim.lbfgsb.LBFGSBProblem`
+
+Solves box-constrained optimization: minimize f(x), subject to l ≤ x ≤ u
+
+### Factory Method
+
+```java
+public static LBFGSBProblem create()
+```
+
+### Fluent API Methods
+
+| Method | Description | Default | Constraint |
+|---|---|---|---|
+| `objective(ToDoubleFunction<double[]> f)` | Set objective function, automatically uses CENTRAL numerical gradient (**recommended**) | — | f != null |
+| `objective(Univariate f)` | Set objective function with analytic gradient | — | f != null |
+| `objective(NumericalGradient grad, ToDoubleFunction<double[]> f)` | Specify numerical gradient method | — | — |
+| `initialPoint(double... x0)` | Set initial point, also infers dimension n | — | non-null, non-empty |
+| `bounds(Bound... bounds)` | Set variable bounds | null (unbounded) | length must match n |
+| `maxIterations(int value)` | Maximum number of iterations | 100 | > 0 |
+| `maxEvaluations(int value)` | Maximum function evaluations | 1000 | > 0 |
+| `gradientTolerance(double value)` | Projected gradient convergence tolerance pgtol | √ε ≈ 1.5e-8 | > 0 |
+| `functionTolerance(double value)` | Function value change tolerance factor factr | 1e7 | >= 1 |
+| `corrections(int m)` | L-BFGS correction number (memory parameter) | 7 | > 0, typical range 3-20 |
+| `maxComputations(Duration value)` | Maximum computation time | null (unlimited) | non-negative |
+| `solve(LBFGSBWorkspace... ws)` | Execute optimization, return result | — | — |
+| `alloc()` | Pre-allocate workspace (for reuse) | — | — |
+
+### Complete Example
+
+```java
+// Basic usage: unconstrained optimization
+OptimizationResult result = LBFGSBProblem.create()
+    .objective(x -> x[0]*x[0] + x[1]*x[1])
+    .initialPoint(1.0, 1.0)
+    .solve();
+
+if (result.isSuccessful()) {
+    double[] sol = result.getSolution(); // [0.0, 0.0]
+}
+
+// Advanced usage: box constraints + analytic gradient
+OptimizationResult result2 = LBFGSBProblem.create()
+    .objective((x, g) -> {
+        double f = x[0]*x[0] + x[1]*x[1];
+        if (g != null) { g[0] = 2*x[0]; g[1] = 2*x[1]; }
+        return f;
+    })
+    .bounds(Bound.atLeast(0), Bound.atLeast(0))
+    .initialPoint(1.0, 1.0)
+    .maxIterations(200)
+    .gradientTolerance(1e-10)
+    .solve();
+
+// Workspace reuse (high-frequency optimization scenarios)
+LBFGSBProblem problem = LBFGSBProblem.create()
+    .objective(x -> x[0]*x[0])
+    .initialPoint(1.0);
+LBFGSBWorkspace ws = problem.alloc();
+for (double[] point : points) {
+    OptimizationResult r = problem.initialPoint(point).solve(ws);
+}
+```
+
+
+## 5. SLSQPProblem (SLSQP Sequential Least Squares Programming)
+
+`com.curioloop.numopt4j.optim.slsqp.SLSQPProblem`
+
+Solves general constrained optimization: minimize f(x), subject to c_eq(x) = 0, c_ineq(x) >= 0, l ≤ x ≤ u
+
+### Factory Method
+
+```java
+public static SLSQPProblem create()
+```
+
+### Fluent API Methods
+
+| Method | Description | Default | Constraint |
+|---|---|---|---|
+| `objective(ToDoubleFunction<double[]> f)` | Set objective function, automatically uses CENTRAL numerical gradient (**recommended**) | — | f != null |
+| `objective(Univariate f)` | Set objective function with analytic gradient | — | f != null |
+| `equalityConstraints(ToDoubleFunction<double[]>... c)` | Equality constraints c(x) = 0, automatic numerical gradient | — | — |
+| `equalityConstraints(Univariate... c)` | Equality constraints with analytic gradient | — | — |
+| `inequalityConstraints(ToDoubleFunction<double[]>... c)` | Inequality constraints c(x) >= 0, automatic numerical gradient | — | — |
+| `inequalityConstraints(Univariate... c)` | Inequality constraints with analytic gradient | — | — |
+| `initialPoint(double... x0)` | Set initial point | — | non-null, non-empty |
+| `bounds(Bound... bounds)` | Set variable bounds | null | length must match n |
+| `accuracy(double value)` | Primary convergence tolerance | 1e-6 | > 0 |
+| `maxIterations(int value)` | Maximum number of iterations | 100 | > 0 |
+| `maxEvaluations(int value)` | Maximum function evaluations | 1000 | > 0 |
+| `solve(SLSQPWorkspace... ws)` | Execute optimization, return result | — | — |
+
+### Complete Example
+
+```java
+// Equality constraint: minimize x[0]^2 + x[1]^2, subject to x[0] + x[1] = 1
+OptimizationResult result = SLSQPProblem.create()
+    .objective(x -> x[0]*x[0] + x[1]*x[1])
+    .equalityConstraints(x -> x[0] + x[1] - 1)
+    .initialPoint(0.5, 0.5)
+    .solve();
+// solution: [0.5, 0.5]
+
+// Mixed constraints + analytic gradient
+OptimizationResult result2 = SLSQPProblem.create()
+    .objective((x, g) -> {
+        double f = x[0]*x[0] + x[1]*x[1];
+        if (g != null) { g[0] = 2*x[0]; g[1] = 2*x[1]; }
+        return f;
+    })
+    .equalityConstraints((x, g) -> {
+        if (g != null) { g[0] = 1; g[1] = 1; }
+        return x[0] + x[1] - 1;
+    })
+    .inequalityConstraints(x -> x[0] - 0.1)  // x[0] >= 0.1
+    .bounds(Bound.atLeast(0), Bound.atLeast(0))
+    .initialPoint(0.5, 0.5)
+    .accuracy(1e-8)
+    .solve();
+```
+
+
+## 6. TRFProblem (TRF Trust Region Reflective Least Squares)
+
+`com.curioloop.numopt4j.optim.trf.TRFProblem`
+
+Solves bounded nonlinear least-squares: min F(x) = ½‖f(x)‖², subject to lb ≤ x ≤ ub
+
+Requires m >= n (number of residuals >= number of parameters).
+
+### Factory Method
+
+```java
+public static TRFProblem create()
+```
+
+### Fluent API Methods
+
+| Method | Description | Default | Constraint |
+|---|---|---|---|
+| `residuals(BiConsumer<double[],double[]> fn, int m)` | Set residual function, automatically uses CENTRAL numerical Jacobian (**recommended**) | — | m > 0 |
+| `residuals(NumericalJacobian jac, BiConsumer<double[],double[]> fn, int m)` | Specify numerical Jacobian method | — | m > 0 |
+| `objective(Multivariate f)` | Set multivariate function with analytic Jacobian | — | — |
+| `initialPoint(double... x0)` | Set initial point, infers n | — | non-null, non-empty |
+| `bounds(Bound... bounds)` | Set variable bounds | null | — |
+| `functionTolerance(double value)` | Function (chi-squared) convergence tolerance | 1e-8 | > 0 |
+| `coefficientTolerance(double value)` | Coefficient (step size) convergence tolerance | 1e-8 | > 0 |
+| `gradientTolerance(double value)` | Gradient convergence tolerance | 1e-8 | > 0 |
+| `maxEvaluations(int value)` | Maximum function evaluations | 100*n | > 0 |
+| `solve(TRFWorkspace... ws)` | Execute optimization, return result | — | requires m >= n |
+
+### Complete Example
+
+```java
+// Basic usage: fit y = a * exp(-b * t)
+double[] tData = {0.0, 1.0, 2.0, 3.0};
+double[] yData = {2.0, 1.2, 0.7, 0.4};
+
+OptimizationResult result = TRFProblem.create()
+    .residuals((x, r) -> {
+        for (int i = 0; i < tData.length; i++) {
+            r[i] = yData[i] - x[0] * Math.exp(-x[1] * tData[i]);
+        }
+    }, tData.length)
+    .bounds(Bound.atLeast(0), Bound.atLeast(0))
+    .initialPoint(1.0, 0.5)
+    .functionTolerance(1e-10)
+    .solve();
+
+double a = result.getSolution()[0];
+double b = result.getSolution()[1];
+
+// Simple example: find the point where residuals are zero
+OptimizationResult r2 = TRFProblem.create()
+    .residuals((x, r) -> { r[0] = x[0] - 1; r[1] = x[1] - 2; }, 2)
+    .initialPoint(0.0, 0.0)
+    .solve();
+// solution: [1.0, 2.0]
+```
+
+
+## 7. FindRoot (Unified Root-Finding Entry Point)
+
+`com.curioloop.numopt4j.optim.FindRoot`
+
+Mirrors `scipy.optimize.brentq` and `scipy.optimize.root`, providing a unified entry point for 1-D and N-D root finding.
+
+### Static Entry Methods
+
+```java
+// 1-D: returns RootFinder, call .bracket(a, b) then .solve()
+public static RootFinder scalar(DoubleUnaryOperator f)
+
+// N-D: returns RootFinder, call .initialPoint(x0) then .solve()
+public static RootFinder equations(BiConsumer<double[], double[]> fn, int n)
+```
+
+### RootFinder Fluent API
+
+| Method | Description | Applicable Algorithm |
+|---|---|---|
+| `function(DoubleUnaryOperator)` | Set scalar function | BRENTQ |
+| `bracket(double a, double b)` | Set search interval, requires f(a)·f(b) ≤ 0 | BRENTQ (required) |
+| `equations(BiConsumer, int n)` | Set system of equations F(x) = 0 | HYBR / BROYDEN |
+| `jacobian(NumericalJacobian)` | Specify numerical Jacobian method, default FORWARD | HYBR |
+| `initialPoint(double...)` | Set initial point | HYBR / BROYDEN (required) |
+| `method(RootMethod)` | Explicitly specify algorithm (auto-selected if not set) | All |
+| `tolerance(xtol, rtol)` | Brentq convergence tolerances | BRENTQ |
+| `functionTolerance(ftol)` | N-D convergence tolerance, default 1.49e-8 | HYBR / BROYDEN |
+| `maxIterations(int)` | Maximum iterations, default varies by algorithm | All |
+| `solve(RootWorkspace...)` | Execute root finding, return OptimizationResult | All |
+| `alloc()` | Pre-allocate RootWorkspace (for reuse) | HYBR / BROYDEN |
+
+### Automatic Algorithm Selection
+
+- `function` is set → BRENTQ
+- `equations` is set (no `function`) → HYBR
+- Override with `.method(RootMethod.BROYDEN)`
+
+### OptimizationResult Root-Finding Fields
+
+```java
+result.getRoot()          // 1-D root value (only valid for BRENTQ, NaN for N-D)
+result.getSolution()      // N-D solution vector (HYBR / BROYDEN)
+result.getObjectiveValue() // |f(root)| or max‖F(x)‖
+result.isSuccessful()     // Whether converged
+```
+
+### Complete Example
+
+```java
+// 1-D: find root of sin(x) in [3, 4] → π
+OptimizationResult r1 = FindRoot.scalar(Math::sin)
+    .bracket(3.0, 4.0)
+    .solve();
+double root = r1.getRoot(); // ≈ 3.14159...
+
+// N-D: HYBR (default), forward-difference Jacobian
+OptimizationResult r2 = FindRoot.equations((x, f) -> {
+        f[0] = x[0]*x[0] - 2;
+        f[1] = x[1] - x[0];
+    }, 2)
+    .initialPoint(1.0, 1.0)
+    .solve();
+double[] sol = r2.getSolution(); // [√2, √2]
+
+// N-D: HYBR + central difference (higher accuracy)
+OptimizationResult r3 = FindRoot.equations(fn, 2)
+    .jacobian(NumericalJacobian.CENTRAL)
+    .initialPoint(1.0, 1.0)
+    .solve();
+
+// N-D: Broyden (no Jacobian needed, suitable for large-scale problems)
+OptimizationResult r4 = FindRoot.equations(fn, 2)
+    .initialPoint(1.0, 1.0)
+    .method(RootMethod.BROYDEN)
+    .solve();
+
+// Workspace reuse (high-frequency root-finding scenarios)
+RootFinder finder = RootFinder.create()
+    .equations(fn, n)
+    .initialPoint(x0);
+RootWorkspace ws = finder.alloc();
+for (double[] pt : points) {
+    OptimizationResult r = finder.initialPoint(pt).solve(ws);
+}
+```
+
+
+## 8. OptimizationResult API
+
+`com.curioloop.numopt4j.optim.OptimizationResult`
+
+Return value of all Problem.solve() methods.
+
+### Methods
+
+```java
+// Core results
+double[]           getSolution()        // Solution vector (non-null when using Problem.solve())
+double             getObjectiveValue()  // Objective value (½‖f(x)‖² for least squares)
+OptimizationStatus getStatus()          // Optimization status enum
+int                getIterations()      // Number of iterations
+int                getEvaluations()     // Number of function evaluations
+
+// Diagnostic methods
+boolean  isSuccessful()    // Equivalent to status.isConverged()
+boolean  isConverged()     // Same as above (for compatibility)
+String   getSummary()      // Single-line summary: "Status: ... | Objective: ... | Iterations: ... | Evaluations: ..."
+String   getErrorMessage() // Returns "reason. suggestion" on error, null otherwise
+String   toString()        // Multi-line structured diagnostic output
+```
+
+### Usage Example
+
+```java
+OptimizationResult r = LBFGSBProblem.create()
+    .objective(x -> x[0]*x[0] + x[1]*x[1])
+    .initialPoint(1.0, 1.0)
+    .solve();
+
+if (r.isSuccessful()) {
+    System.out.println(Arrays.toString(r.getSolution()));
+    System.out.println(r.getSummary());
+    // "Status: Converged: gradient norm below tolerance | Objective: 0.000000e+00 | Iterations: 2 | Evaluations: 6"
+} else {
+    System.out.println(r.getErrorMessage()); // Error reason and suggestion
+    System.out.println(r.toString());        // Full diagnostic info
+}
+```
+
+### toString() Output Format
+
+```
+OptimizationResult {
+  status: Converged: gradient norm below tolerance
+  objectiveValue: 0.0
+  iterations: 2
+  evaluations: 6
+}
+```
+
+When not converged, additionally includes:
+```
+  suggestion: Consider increasing maxIterations or relaxing tolerances
+```
+
+
+## 9. OptimizationStatus Enum
+
+`com.curioloop.numopt4j.optim.OptimizationStatus`
+
+### Enum Values
+
+| Enum Value | code | isConverged | Description | Suggestion |
+|---|---|---|---|---|
+| `GRADIENT_TOLERANCE_REACHED` | 3 | true | Converged: gradient norm below tolerance | null |
+| `FUNCTION_TOLERANCE_REACHED` | 4 | true | Converged: function value change below tolerance | null |
+| `COEFFICIENT_TOLERANCE_REACHED` | 6 | true | Converged: variable change below tolerance | null |
+| `CHI_SQUARED_TOLERANCE_REACHED` | 7 | true | Converged: chi-squared reduction below tolerance | null |
+| `MAX_ITERATIONS_REACHED` | 1 | false | Maximum iterations reached without convergence | Consider increasing maxIterations or relaxing tolerances |
+| `MAX_EVALUATIONS_REACHED` | 2 | false | Maximum function evaluations reached | Consider increasing maxEvaluations |
+| `MAX_COMPUTATIONS_REACHED` | 5 | false | Maximum computation time reached | Consider increasing maxComputations or simplifying the objective |
+| `ABNORMAL_TERMINATION` | -1 | false | Abnormal termination due to internal error | Check objective function for numerical issues (NaN, Infinity) |
+| `INVALID_ARGUMENT` | -2 | false | Invalid argument provided to optimizer | Verify all parameters satisfy documented constraints |
+| `CONSTRAINT_INCOMPATIBLE` | -3 | false | Constraints are incompatible or infeasible | Check that constraints do not contradict each other |
+| `LINE_SEARCH_FAILED` | -4 | false | Line search failed to find acceptable step | Check objective function continuity and gradient accuracy |
+| `CALLBACK_ERROR` | -5 | false | Error in callback function evaluation | Check objective/constraint functions for exceptions |
+
+### Methods
+
+```java
+int     getCode()          // Numeric status code
+String  getDescription()   // Human-readable description (non-null)
+String  getSuggestion()    // Suggested action (null for converged states)
+boolean isConverged()      // Whether converged successfully
+boolean isLimitReached()   // Whether a resource limit was reached (code 1, 2, 5)
+boolean isError()          // Whether an error occurred (code < 0)
+```
+
+
+## 10. OptimizationException
+
+`com.curioloop.numopt4j.optim.OptimizationException`
+
+Extends `RuntimeException`, thrown by Problem.solve() when parameter issues are detected.
+
+### Error Codes
+
+| Error Code | Trigger Scenario | Message Format |
+|---|---|---|
+| `MISSING_PARAM` | Missing required parameter (objective or initialPoint) | `[MISSING_PARAM] {param} is required. Call .{method}() before .solve(). See: {url}` |
+| `INVALID_INPUT` | Initial point contains NaN or Infinity | `[INVALID_INPUT] initialPoint[{i}] is {NaN/Infinity}. All initial values must be finite. See: {url}` |
+| `DIMENSION_MISMATCH` | Array dimension mismatch | `[DIMENSION_MISMATCH] initialPoint.length={n} but dimension={expected}. See: {url}` |
+| `INVALID_VALUE` | Parameter value does not satisfy constraint | `[INVALID_VALUE] {param} must be {constraint}, got {value}. See: {url}` |
+
+### Methods
+
+```java
+String getErrorCode()   // Returns error code string (e.g. "MISSING_PARAM")
+String getMessage()     // Full message including error code, description, and documentation URL
+```
+
+### Documentation URL Configuration
+
+Error messages include a documentation URL, defaulting to `https://github.com/curioloop/numopt4j/wiki/{ERROR_CODE}`.
+
+Customize via:
+```java
+// Option 1: System property (highest priority)
+System.setProperty("numopt4j.doc.baseUrl", "https://internal.docs.com/numopt4j/");
+
+// Option 2: Environment variable
+// export NUMOPT4J_DOC_BASE_URL=https://internal.docs.com/numopt4j/
+```
+
+### Usage Example
+
+```java
+try {
+    OptimizationResult r = LBFGSBProblem.create()
+        .objective(x -> x[0]*x[0])
+        // forgot to set initialPoint
+        .solve();
+} catch (OptimizationException e) {
+    System.out.println(e.getErrorCode()); // "MISSING_PARAM"
+    System.out.println(e.getMessage());
+    // "[MISSING_PARAM] initialPoint is required. Call .initialPoint(x0) before .solve().
+    //  See: https://github.com/curioloop/numopt4j/wiki/MISSING_PARAM"
+}
+```
+
+
+## 11. Bound Factory Methods
+
+`com.curioloop.numopt4j.optim.Bound`
+
+Defines upper and lower bound constraints for optimization variables.
+
+### Factory Methods
+
+```java
+Bound.unbounded()              // x ∈ (-∞, +∞), no constraint (default)
+Bound.between(lower, upper)    // lower ≤ x ≤ upper
+Bound.atLeast(lower)           // x ≥ lower
+Bound.atMost(upper)            // x ≤ upper
+Bound.exactly(value)           // x = value (fixed variable)
+Bound.nonNegative()            // x ≥ 0 (equivalent to atLeast(0))
+Bound.nonPositive()            // x ≤ 0 (equivalent to atMost(0))
+```
+
+### Usage Example
+
+```java
+// Set bounds for each variable individually
+LBFGSBProblem.create()
+    .objective(x -> x[0]*x[0] + x[1]*x[1] + x[2]*x[2])
+    .bounds(
+        Bound.between(0, 10),   // 0 <= x[0] <= 10
+        Bound.atLeast(1),       // x[1] >= 1
+        Bound.atMost(5)         // x[2] <= 5
+    )
+    .initialPoint(1.0, 2.0, 3.0)
+    .solve();
+
+// Probability parameter (between 0 and 1)
+Bound prob = Bound.between(0, 1);
+
+// Non-negative parameter (e.g. mass, length)
+Bound positive = Bound.nonNegative();
+```
+
+
+## 12. NumericalGradient
+
+`com.curioloop.numopt4j.optim.NumericalGradient`
+
+Provides numerical gradient computation for scalar functions ℝⁿ → ℝ.
+
+### Method Comparison
+
+| Method | Formula | Accuracy Order | Evaluations per Dimension | Recommended Scenario |
+|---|---|---|---|---|
+| `FORWARD` | (f(x+h) - f(x)) / h | O(h) ≈ 1e-8 | 1 (+1 base) | Fast evaluation, low accuracy requirement |
+| `BACKWARD` | (f(x) - f(x-h)) / h | O(h) ≈ 1e-8 | 1 (+1 base) | Function more stable at smaller x |
+| `CENTRAL` | (f(x+h) - f(x-h)) / (2h) | O(h²) ≈ 1e-11 | 2 | **Default choice**, balanced accuracy/speed |
+| `FIVE_POINT` | (-f(x+2h)+8f(x+h)-8f(x-h)+f(x-2h)) / (12h) | O(h⁴) ≈ 1e-15 | 4 | Highest accuracy, when evaluations are not the bottleneck |
+
+### Step Sizes
+
+- FORWARD/BACKWARD: h = √ε · max(1, |xᵢ|) ≈ 1.49e-8 · scale
+- CENTRAL: h = ∛ε · max(1, |xᵢ|) ≈ 6.06e-6 · scale
+- FIVE_POINT: h = ε^(1/4) · max(1, |xᵢ|) ≈ 1.22e-4 · scale
+
+### Usage
+
+```java
+// Wrap as Univariate (for use with Problem.objective(Univariate))
+Univariate f = NumericalGradient.CENTRAL.wrap(x -> x[0]*x[0] + x[1]*x[1]);
+
+// Use directly in Problem (equivalent to above)
+LBFGSBProblem.create()
+    .objective(x -> x[0]*x[0] + x[1]*x[1])  // automatically uses CENTRAL
+    .initialPoint(1.0, 1.0)
+    .solve();
+
+// Specify gradient method explicitly
+LBFGSBProblem.create()
+    .objective(NumericalGradient.FIVE_POINT, x -> x[0]*x[0] + x[1]*x[1])
+    .initialPoint(1.0, 1.0)
+    .solve();
+```
+
+
+## 13. NumericalJacobian
+
+`com.curioloop.numopt4j.optim.NumericalJacobian`
+
+Provides numerical Jacobian matrix computation for vector-valued functions ℝⁿ → ℝᵐ.
+
+### Method Comparison
+
+| Method | Formula | Accuracy | Evaluations | Recommended Scenario |
+|---|---|---|---|---|
+| `FORWARD` | J[i,j] = (r(x+h·eⱼ)[i] - r(x)[i]) / h | O(h) ≈ 1e-8 | n+1 | Fast, low accuracy requirement |
+| `CENTRAL` | J[i,j] = (r(x+h·eⱼ)[i] - r(x-h·eⱼ)[i]) / (2h) | O(h²) ≈ 1e-11 | 2n | **Default choice**, higher accuracy |
+
+### Jacobian Storage Format (Row-Major)
+
+```
+jacobian[i*n + j] = ∂r[i]/∂x[j]
+
+where:
+  i = residual index (0 to m-1)
+  j = parameter index (0 to n-1)
+  total length = m * n
+```
+
+### wrap() Method Parameters
+
+```java
+Multivariate wrap(BiConsumer<double[], double[]> func, int m, int n)
+```
+
+- `func`: residual function `(x, r) -> void`, x has length n, r has length m
+- `m`: number of residuals (output dimension), corresponds to number of data points, must satisfy m >= n
+- `n`: number of parameters (input dimension), corresponds to number of model coefficients
+
+### Usage Example
+
+```java
+// Direct usage (TRFProblem calls this internally)
+BiConsumer<double[], double[]> residuals = (x, r) -> {
+    r[0] = x[0] - 1;
+    r[1] = x[1] - 2;
+};
+
+// Automatically uses CENTRAL (recommended)
+TRFProblem.create()
+    .residuals(residuals, 2)
+    .initialPoint(0.0, 0.0)
+    .solve();
+
+// Manually specify Jacobian method
+Multivariate eval = NumericalJacobian.CENTRAL.wrap(residuals, 2, 2);
+```
+
+
+## 14. Common Issues and Error Handling
+
+### Issue 1: Missing Required Parameters
+
+```java
+// Wrong: initialPoint not set
+try {
+    LBFGSBProblem.create()
+        .objective(x -> x[0]*x[0])
+        .solve();
+} catch (OptimizationException e) {
+    // [MISSING_PARAM] initialPoint is required. Call .initialPoint(x0) before .solve().
+    // See: https://github.com/curioloop/numopt4j/wiki/MISSING_PARAM
+}
+
+// Correct
+LBFGSBProblem.create()
+    .objective(x -> x[0]*x[0])
+    .initialPoint(1.0)
+    .solve();
+```
+
+### Issue 2: Initial Point Contains NaN or Infinity
+
+```java
+try {
+    LBFGSBProblem.create()
+        .objective(x -> x[0]*x[0])
+        .initialPoint(Double.NaN)
+        .solve();
+} catch (OptimizationException e) {
+    // [INVALID_INPUT] initialPoint[0] is NaN. All initial values must be finite.
+}
+```
+
+### Issue 3: Parameter Validation Failure (Immediate Feedback)
+
+```java
+// These errors throw IllegalArgumentException immediately when setting parameters
+LBFGSBProblem problem = LBFGSBProblem.create();
+
+problem.objective(null);          // "objective function must not be null"
+problem.initialPoint();           // "initialPoint must not be null or empty"
+problem.maxIterations(-1);        // "maxIterations must be positive, got -1"
+problem.maxEvaluations(0);        // "maxEvaluations must be positive, got 0"
+problem.gradientTolerance(-1e-6); // "gradientTolerance must be positive, got -1.0E-6"
+
+// Bounds length mismatch (after setting initialPoint)
+problem.initialPoint(1.0, 2.0);
+problem.bounds(Bound.atLeast(0)); // "bounds.length=1 but dimension=2"
+```
+
+### Issue 4: Insufficient TRF Residuals
+
+```java
+// solve() throws IllegalStateException when m < n
+try {
+    TRFProblem.create()
+        .residuals((x, r) -> { r[0] = x[0] - 1; }, 1)  // m=1
+        .initialPoint(0.0, 0.0)                          // n=2
+        .solve();
+} catch (IllegalStateException e) {
+    // "Cannot solve: need m >= n (residuals >= parameters), got m=1, n=2"
+}
+```
+
+### Issue 5: Optimization Did Not Converge
+
+```java
+OptimizationResult r = LBFGSBProblem.create()
+    .objective(x -> x[0]*x[0])
+    .initialPoint(1.0)
+    .maxIterations(1)  // intentionally small
+    .solve();
+
+if (!r.isSuccessful()) {
+    System.out.println(r.getStatus());       // MAX_ITERATIONS_REACHED(1)
+    System.out.println(r.getErrorMessage()); // null (not an error state)
+    System.out.println(r.toString());
+    // OptimizationResult {
+    //   status: Maximum iterations reached without convergence
+    //   objectiveValue: ...
+    //   iterations: 1
+    //   evaluations: ...
+    //   suggestion: Consider increasing maxIterations or relaxing tolerances
+    // }
+}
+```
+
+### Issue 6: Incompatible Constraints
+
+```java
+// SLSQP returns CONSTRAINT_INCOMPATIBLE when constraints conflict
+OptimizationResult r = SLSQPProblem.create()
+    .objective(x -> x[0])
+    .equalityConstraints(x -> x[0] - 1)   // x[0] = 1
+    .equalityConstraints(x -> x[0] - 2)   // x[0] = 2 (contradiction)
+    .initialPoint(0.0)
+    .solve();
+
+if (r.getStatus().isError()) {
+    System.out.println(r.getErrorMessage());
+    // "Constraints are incompatible or infeasible. Check that constraints do not contradict each other"
+}
+```
+
+### Performance Tips
+
+1. **Use analytic gradients**: When the objective function gradient can be derived manually, using the `Univariate` interface is 2-4x faster than numerical gradients
+2. **Reuse workspaces**: When solving the same-dimension problem multiple times in a loop, use `alloc()` to pre-allocate workspace
+3. **Choose the right gradient method**: `CENTRAL` is the default; if function evaluation is expensive, consider `FORWARD`
+4. **Set reasonable tolerances**: Overly tight tolerances increase iteration count; `gradientTolerance(1e-6)` is usually sufficient
+
+```java
+// High-performance mode: analytic gradient + workspace reuse
+LBFGSBProblem problem = LBFGSBProblem.create()
+    .objective((x, g) -> {
+        double f = 0;
+        for (int i = 0; i < x.length; i++) {
+            f += x[i] * x[i];
+            if (g != null) g[i] = 2 * x[i];
+        }
+        return f;
+    })
+    .initialPoint(new double[n]);
+
+LBFGSBWorkspace ws = problem.alloc();
+for (double[] startPoint : startPoints) {
+    OptimizationResult r = problem.initialPoint(startPoint).solve(ws);
+    // process r
+}
+```
