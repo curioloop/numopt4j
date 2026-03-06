@@ -29,14 +29,14 @@ import java.util.function.BiConsumer;
  *
  * <p>Singular H: reset to {@code H₀} and retry the step (scipy {@code BroydenFirst.solve()}).</p>
  */
-final class BroydenSolver {
+public final class BroydenSolver {
 
     private BroydenSolver() {}
 
     /** Default f_tol: {@code eps^(1/3) ≈ 6e-6} — matches scipy's TerminationCondition default. */
-    static final double DEFAULT_FTOL = 6e-6;
+    public static final double DEFAULT_FTOL = 6e-6;
 
-    static OptimizationResult solve(
+    public static OptimizationResult solve(
             BiConsumer<double[], double[]> fn,
             double[] x0,
             double ftol,

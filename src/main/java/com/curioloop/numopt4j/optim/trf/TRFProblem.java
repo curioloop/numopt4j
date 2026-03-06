@@ -3,11 +3,10 @@
  */
 package com.curioloop.numopt4j.optim.trf;
 
-import com.curioloop.numopt4j.optim.Bound;
+import com.curioloop.numopt4j.optim.Minimizer;
 import com.curioloop.numopt4j.optim.Multivariate;
 import com.curioloop.numopt4j.optim.NumericalJacobian;
 import com.curioloop.numopt4j.optim.OptimizationException;
-import com.curioloop.numopt4j.optim.OptimizationProblem;
 import com.curioloop.numopt4j.optim.OptimizationResult;
 
 import java.util.function.BiConsumer;
@@ -72,22 +71,10 @@ import static com.curioloop.numopt4j.optim.trf.TRFConstants.*;
  * @see com.curioloop.numopt4j.optim.Minimize
  * @see TRFWorkspace
  */
-public final class TRFProblem implements OptimizationProblem<OptimizationResult, TRFWorkspace> {
+public final class TRFProblem extends Minimizer<Multivariate, TRFWorkspace, TRFProblem> {
 
     /** Number of residuals */
     private int m;
-
-    /** Number of parameters (inferred from initialPoint) */
-    private int n;
-
-    /** Objective function (residuals + Jacobian) */
-    private Multivariate objective;
-
-    /** Initial point (x₀) */
-    private double[] initialPoint;
-
-    /** Variable bounds (lb ≤ x ≤ ub) */
-    private Bound[] bounds;
 
     /** Convergence tolerances */
     private double functionTolerance    = DEFAULT_FTOL;
@@ -109,8 +96,7 @@ public final class TRFProblem implements OptimizationProblem<OptimizationResult,
     /** User-supplied diagonal scaling (optional) */
     private double[] diag;
 
-    /** Cached workspace for reuse */
-    private transient TRFWorkspace workspace;
+    /** Cached workspace for reuse — inherited from {@link Minimizer} */
 
     private TRFProblem() {}
 
@@ -120,7 +106,7 @@ public final class TRFProblem implements OptimizationProblem<OptimizationResult,
 
     private Multivariate resolveObjective() {
         if (objective != null) return objective;
-        if (_pendingFn != null) return _pendingJac.wrap(_pendingFn, _pendingM, n);
+        if (_pendingFn != null) return _pendingJac.wrap(_pendingFn, _pendingM, dimension);
         return null;
     }
 
@@ -144,9 +130,9 @@ public final class TRFProblem implements OptimizationProblem<OptimizationResult,
             throw new OptimizationException("MISSING_PARAM",
                 "number of residuals m must be set. Call .residuals(fn, m) before .solve().");
         }
-        if (m < n) {
+        if (m < dimension) {
             throw new IllegalStateException(
-                "Cannot solve: need m >= n (residuals >= parameters), got m=" + m + ", n=" + n);
+                "Cannot solve: need m >= n (residuals >= parameters), got m=" + m + ", n=" + dimension);
         }
     }
 
@@ -154,9 +140,9 @@ public final class TRFProblem implements OptimizationProblem<OptimizationResult,
     public TRFWorkspace alloc() {
         validate();
         if (workspace == null) {
-            workspace = new TRFWorkspace(m, n);
+            workspace = new TRFWorkspace(m, dimension);
         } else {
-            workspace.ensureCapacity(m, n);
+            workspace.ensureCapacity(m, dimension);
         }
         return workspace;
     }
@@ -178,14 +164,14 @@ public final class TRFProblem implements OptimizationProblem<OptimizationResult,
         if (ws == null) {
             ws = this.workspace;
             if (ws == null) {
-                ws = new TRFWorkspace(m, n);
+                ws = new TRFWorkspace(m, dimension);
             }
         }
-        ws.ensureCapacity(m, n);
+        ws.ensureCapacity(m, dimension);
 
         double[] x = initialPoint.clone();
-        int maxfev = (maxEvaluations > 0) ? maxEvaluations : 100 * n;
-        OptimizationResult r = TRFCore.optimize(m, n, resolveObjective(),
+        int maxfev = (maxEvaluations > 0) ? maxEvaluations : 100 * dimension;
+        OptimizationResult r = TRFCore.optimize(m, dimension, resolveObjective(),
                 functionTolerance, coefficientTolerance, gradientTolerance,
                 maxfev, factor, diag, bounds, loss, lossScale, x, ws);
         return new OptimizationResult(r.getObjectiveValue(), r.getStatus(), r.getIterations(), r.getEvaluations(), x);
@@ -193,16 +179,13 @@ public final class TRFProblem implements OptimizationProblem<OptimizationResult,
 
     // ── Getters ──────────────────────────────────────────────────────────────
 
-    public int getM() { return m; }
-    public int getN() { return n; }
-    public double[] getInitialPoint() { return initialPoint != null ? initialPoint.clone() : null; }
-    public Bound[] getBounds() { return bounds; }
-    public double getFunctionTolerance() { return functionTolerance; }
-    public double getCoefficientTolerance() { return coefficientTolerance; }
-    public double getGradientTolerance() { return gradientTolerance; }
-    public int getMaxEvaluations() { return maxEvaluations; }
-    public RobustLoss getLoss() { return loss; }
-    public double getLossScale() { return lossScale; }
+    public int residualCount() { return m; }
+    public int maxEvaluations() { return maxEvaluations; }
+    public double functionTolerance() { return functionTolerance; }
+    public double coefficientTolerance() { return coefficientTolerance; }
+    public double gradientTolerance() { return gradientTolerance; }
+    public RobustLoss loss() { return loss; }
+    public double lossScale() { return lossScale; }
 
     // ── Fluent setters ────────────────────────────────────────────────────────
 
@@ -249,32 +232,6 @@ public final class TRFProblem implements OptimizationProblem<OptimizationResult,
     public TRFProblem objective(Multivariate f) {
         this.objective = f;
         this._pendingFn = null;
-        return this;
-    }
-
-    /**
-     * Sets the initial point. Also infers n (number of parameters).
-     *
-     * @param x0 initial point values
-     * @return this problem instance
-     */
-    public TRFProblem initialPoint(double... x0) {
-        if (x0 == null || x0.length == 0) {
-            throw new IllegalArgumentException("initialPoint must not be null or empty");
-        }
-        this.initialPoint = x0;
-        this.n = x0.length;
-        return this;
-    }
-
-    /**
-     * Sets variable bounds.
-     *
-     * @param bounds bounds for each variable (or a single bound applied to all)
-     * @return this problem instance
-     */
-    public TRFProblem bounds(Bound... bounds) {
-        this.bounds = bounds;
         return this;
     }
 

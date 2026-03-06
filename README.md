@@ -7,7 +7,7 @@ High-performance numerical optimization library for Java.
 - **L-BFGS-B**: Limited-memory BFGS with bound constraints
 - **SLSQP**: Sequential Least Squares Programming with equality/inequality constraints
 - **TRF**: Trust Region Reflective for nonlinear least squares
-- **Root finding**: Brentq (1-D), HYBR and Broyden (N-D) via `FindRoot`
+- **Root finding**: Brentq (1-D), HYBR and Broyden (N-D) via `RootFinder`
 - Workspace reuse for high-frequency optimization scenarios
 - Multiple numerical gradient/Jacobian methods with different accuracy/speed tradeoffs
 
@@ -33,28 +33,12 @@ High-performance numerical optimization library for Java.
 - 在 AI 对话中输入 `use context7` 并提及 numopt4j，AI 助手将自动加载最新文档
 - 或直接引用项目根目录的 `llms.txt` 或 `llms-full.txt` 文件
 
-### 推荐的 AI 友好用法
-
-```java
-// 最简单的用法：只需提供目标函数，无需梯度
-OptimizationResult r = Minimize.objective(x -> x[0]*x[0] + x[1]*x[1])
-    .startingFrom(1.0, 1.0)
-    .run();
-
-if (r.isSuccessful()) {
-    System.out.println(Arrays.toString(r.getSolution()));
-} else {
-    System.out.println(r.getErrorMessage());
-}
-```
-
 ## Quick Start
 
 ### Unconstrained Optimization (L-BFGS-B)
 
 ```java
-// Simplest usage: no gradient required
-OptimizationResult result = LBFGSBProblem.create()
+OptimizationResult result = Minimizer.lbfgsb()
     .objective(x -> x[0]*x[0] + x[1]*x[1])
     .initialPoint(1.0, 1.0)
     .solve();
@@ -67,8 +51,7 @@ if (result.isSuccessful()) {
 ### With Analytical Gradient
 
 ```java
-// Provide analytical gradient for best performance
-OptimizationResult result = LBFGSBProblem.create()
+OptimizationResult result = Minimizer.lbfgsb()
     .objective((x, g) -> {
         double f = x[0]*x[0] + x[1]*x[1];
         if (g != null) { g[0] = 2*x[0]; g[1] = 2*x[1]; }
@@ -81,9 +64,9 @@ OptimizationResult result = LBFGSBProblem.create()
 ### Bound Constraints
 
 ```java
-OptimizationResult result = LBFGSBProblem.create()
+OptimizationResult result = Minimizer.lbfgsb()
     .objective(x -> x[0]*x[0] + x[1]*x[1])
-    .bounds(Bound.between(0, 10), Bound.between(0, 10))  // 0 <= x <= 10
+    .bounds(Bound.between(0, 10), Bound.between(0, 10))
     .initialPoint(1.0, 1.0)
     .solve();
 ```
@@ -93,7 +76,7 @@ OptimizationResult result = LBFGSBProblem.create()
 ```java
 // Equality constraint: x[0] + x[1] = 1
 // Inequality constraint: x[0] >= 0.5
-OptimizationResult result = SLSQPProblem.create()
+OptimizationResult result = Minimizer.slsqp()
     .objective(x -> x[0]*x[0] + x[1]*x[1])
     .equalityConstraints(x -> x[0] + x[1] - 1)
     .inequalityConstraints(x -> x[0] - 0.5)
@@ -108,7 +91,7 @@ OptimizationResult result = SLSQPProblem.create()
 double[] tData = {0.0, 1.0, 2.0, 3.0};
 double[] yData = {2.0, 1.2, 0.7, 0.4};
 
-OptimizationResult result = TRFProblem.create()
+OptimizationResult result = Minimizer.trf()
     .residuals((x, r) -> {
         for (int i = 0; i < tData.length; i++) {
             r[i] = yData[i] - x[0] * Math.exp(-x[1] * tData[i]);
@@ -123,8 +106,8 @@ OptimizationResult result = TRFProblem.create()
 
 ```java
 // Find root of sin(x) in [3, 4] → π
-OptimizationResult result = FindRoot.scalar(Math::sin)
-    .bracket(3.0, 4.0)
+OptimizationResult result = RootFinder.brentq(Math::sin)
+    .bracket(Bound.between(3.0, 4.0))
     .solve();
 
 double root = result.getRoot(); // ≈ π
@@ -133,8 +116,8 @@ double root = result.getRoot(); // ≈ π
 ### Root Finding (N-D HYBR / Broyden)
 
 ```java
-// Solve F(x) = 0 for a system of equations
-OptimizationResult result = FindRoot.equations((x, f) -> {
+// Powell hybrid method (HYBR)
+OptimizationResult result = RootFinder.hybr((x, f) -> {
         f[0] = x[0]*x[0] - 2;
         f[1] = x[1] - x[0];
     }, 2)
@@ -143,14 +126,16 @@ OptimizationResult result = FindRoot.equations((x, f) -> {
 
 double[] solution = result.getSolution(); // [√2, √2]
 
-// Use Broyden instead of HYBR (default)
-result = FindRoot.equations(fn, 2)
+// Broyden (Jacobian-free)
+result = RootFinder.broyden((x, f) -> {
+        f[0] = x[0]*x[0] - 2;
+        f[1] = x[1] - x[0];
+    }, 2)
     .initialPoint(1.0, 1.0)
-    .method(RootMethod.BROYDEN)
     .solve();
 
-// Use central differences for Jacobian
-result = FindRoot.equations(fn, 2)
+// Use central differences for Jacobian (HYBR only)
+result = RootFinder.hybr(fn, 2)
     .jacobian(NumericalJacobian.CENTRAL)
     .initialPoint(1.0, 1.0)
     .solve();
@@ -161,7 +146,7 @@ result = FindRoot.equations(fn, 2)
 For high-frequency optimization, reuse workspace to reduce allocation overhead:
 
 ```java
-LBFGSBProblem problem = LBFGSBProblem.create()
+LBFGSBProblem problem = Minimizer.lbfgsb()
     .objective(x -> x[0]*x[0] + x[1]*x[1])
     .initialPoint(new double[n]);
 
@@ -170,9 +155,32 @@ for (double[] point : points) {
     OptimizationResult result = problem.initialPoint(point).solve(workspace);
     // process result
 }
+
+// Root finding workspace reuse
+HYBRProblem finder = RootFinder.hybr(fn, 2).initialPoint(0.0, 0.0);
+HYBRWorkspace ws = finder.alloc();
+for (double[] x0 : initialPoints) {
+    OptimizationResult r = finder.initialPoint(x0).solve(ws);
+}
 ```
 
 ## API Reference
+
+### Minimizer (facade — static factory entry point)
+
+```java
+Minimizer.lbfgsb()   // → LBFGSBProblem
+Minimizer.slsqp()    // → SLSQPProblem
+Minimizer.trf()      // → TRFProblem
+```
+
+### RootFinder (facade — static factory entry point)
+
+```java
+RootFinder.brentq(DoubleUnaryOperator f)                    // → BrentqProblem
+RootFinder.hybr(BiConsumer<double[],double[]> fn, int n)    // → HYBRProblem
+RootFinder.broyden(BiConsumer<double[],double[]> fn, int n) // → BroydenProblem
+```
 
 ### Bound
 
@@ -186,20 +194,6 @@ Bound.nonNegative()         // x >= 0
 Bound.nonPositive()         // x <= 0
 ```
 
-### Termination
-
-```java
-Termination.defaults()  // Default criteria
-
-Termination.builder()
-    .maxIterations(100)
-    .maxEvaluations(1000)
-    .maxComputations(5000000)  // Time limit in microseconds
-    .accuracy(1e-6)
-    .gradientTolerance(1e-5)
-    .build();
-```
-
 ### NumericalGradient
 
 Four methods available with different accuracy/performance tradeoffs:
@@ -210,24 +204,6 @@ Four methods available with different accuracy/performance tradeoffs:
 | `BACKWARD` | `(f(x) - f(x-h)) / h` | O(h) | 1 |
 | `CENTRAL` | `(f(x+h) - f(x-h)) / 2h` | O(h²) | 2 |
 | `FIVE_POINT` | `(-f(x+2h) + 8f(x+h) - 8f(x-h) + f(x-2h)) / 12h` | O(h⁴) | 4 |
-
-```java
-// Fastest (1 eval per dimension)
-Univariate fast = NumericalGradient.FORWARD.wrap(func);
-
-// Good balance of accuracy and speed
-Univariate balanced = NumericalGradient.CENTRAL.wrap(func);
-
-// Highest accuracy (4 evals per dimension)
-Univariate accurate = NumericalGradient.FIVE_POINT.wrap(func);
-```
-
-Typical error comparison:
-```
-FORWARD/BACKWARD: ~1e-7
-CENTRAL:          ~1e-11
-FIVE_POINT:       ~1e-12
-```
 
 ## Building Native Library
 

@@ -1,49 +1,41 @@
 # numopt4j
 
-> High-performance Java numerical optimization library providing L-BFGS-B, SLSQP, and TRF algorithms.
+> High-performance Java numerical optimization library providing L-BFGS-B, SLSQP, TRF, and root-finding algorithms.
 
-numopt4j is a Java numerical optimization library supporting unconstrained optimization, bound-constrained optimization, equality/inequality constrained optimization, and nonlinear least-squares fitting.
+numopt4j is a Java numerical optimization library supporting unconstrained optimization, bound-constrained optimization, equality/inequality constrained optimization, nonlinear least-squares fitting, and root finding.
 
 ## Algorithm Selection
 
-- Unconstrained or bound-constrained optimization → L-BFGS-B (`LBFGSBProblem`)
-- Equality or inequality constrained optimization → SLSQP (`SLSQPProblem`)
-- Nonlinear least-squares fitting → TRF (`TRFProblem`)
-- Scalar root-finding → Brentq (`FindRoot.scalar`)
-- Multivariate root-finding → HYBR / Broyden (`FindRoot.equations`)
-- Not sure which to use → `Minimize` (auto-selects)
+- Unconstrained or bound-constrained optimization → L-BFGS-B (`Minimizer.lbfgsb()`)
+- Equality or inequality constrained optimization → SLSQP (`Minimizer.slsqp()`)
+- Nonlinear least-squares fitting → TRF (`Minimizer.trf()`)
+- Scalar root-finding → Brentq (`RootFinder.brentq()`)
+- Multivariate root-finding with Jacobian → HYBR (`RootFinder.hybr()`)
+- Multivariate root-finding Jacobian-free → Broyden (`RootFinder.broyden()`)
 
 ## Quick Start
-
-### Unconstrained optimization (auto-selects L-BFGS-B)
-
-```java
-OptimizationResult r = Minimize.objective(x -> x[0]*x[0] + x[1]*x[1])
-    .startingFrom(1.0, 1.0)
-    .run();
-
-if (r.isSuccessful()) {
-    System.out.println(Arrays.toString(r.getSolution())); // [0.0, 0.0]
-} else {
-    System.out.println(r.getErrorMessage());
-}
-```
 
 ### Bound-constrained optimization (L-BFGS-B)
 
 ```java
-OptimizationResult r = LBFGSBProblem.create()
+OptimizationResult r = Minimizer.lbfgsb()
     .objective(x -> x[0]*x[0] + x[1]*x[1])
     .bounds(Bound.atLeast(0.5), Bound.atLeast(0.5))
     .initialPoint(1.0, 1.0)
     .solve();
+
+if (r.isSuccessful()) {
+    System.out.println(Arrays.toString(r.getSolution()));
+} else {
+    System.out.println(r.getErrorMessage());
+}
 ```
 
 ### Equality-constrained optimization (SLSQP)
 
 ```java
 // minimize x[0] + x[1], subject to x[0]^2 + x[1]^2 = 1
-OptimizationResult r = SLSQPProblem.create()
+OptimizationResult r = Minimizer.slsqp()
     .objective(x -> x[0] + x[1])
     .equalityConstraints(x -> x[0]*x[0] + x[1]*x[1] - 1)
     .initialPoint(0.5, 0.5)
@@ -53,20 +45,21 @@ OptimizationResult r = SLSQPProblem.create()
 ### Nonlinear least squares (TRF)
 
 ```java
-OptimizationResult r = Minimize.leastSquares((x, res) -> {
+OptimizationResult r = Minimizer.trf()
+    .residuals((x, res) -> {
         res[0] = x[0] - 3.0;
         res[1] = x[1] - 4.0;
     }, 2)
-    .startingFrom(0.0, 0.0)
-    .run();
+    .initialPoint(0.0, 0.0)
+    .solve();
 ```
 
 ### Scalar root-finding (Brentq)
 
 ```java
 // Find root of sin(x) in [3, 4] → π
-OptimizationResult r = FindRoot.scalar(Math::sin)
-    .bracket(3.0, 4.0)
+OptimizationResult r = RootFinder.brentq(Math::sin)
+    .bracket(Bound.between(3.0, 4.0))
     .solve();
 double root = r.getRoot(); // ≈ π
 ```
@@ -74,8 +67,8 @@ double root = r.getRoot(); // ≈ π
 ### Multivariate root-finding (HYBR / Broyden)
 
 ```java
-// Default: HYBR
-OptimizationResult r = FindRoot.equations((x, f) -> {
+// HYBR (Powell hybrid, requires Jacobian — numerical by default)
+OptimizationResult r = RootFinder.hybr((x, f) -> {
         f[0] = x[0]*x[0] - 2;
         f[1] = x[1] - x[0];
     }, 2)
@@ -83,59 +76,61 @@ OptimizationResult r = FindRoot.equations((x, f) -> {
     .solve();
 double[] solution = r.getSolution(); // [√2, √2]
 
-// Use Broyden explicitly
-FindRoot.equations(fn, 2).initialPoint(1.0, 1.0).method(RootMethod.BROYDEN).solve();
+// Broyden (Jacobian-free)
+RootFinder.broyden(fn, 2).initialPoint(1.0, 1.0).solve();
 
-// Use central-difference Jacobian (HYBR only)
-FindRoot.equations(fn, 2).jacobian(NumericalJacobian.CENTRAL).initialPoint(1.0, 1.0).solve();
+// Central-difference Jacobian (HYBR only)
+RootFinder.hybr(fn, 2).jacobian(NumericalJacobian.CENTRAL).initialPoint(1.0, 1.0).solve();
 ```
 
 ## Core API
 
-### Minimize (unified entry point, auto-selects algorithm)
+### Minimizer (facade — static factory entry point)
 
 ```java
-Minimize.objective(ToDoubleFunction<double[]> f)   // recommended: no gradient needed
-Minimize.objective(Univariate f)                   // analytic gradient
-Minimize.leastSquares(BiConsumer<double[],double[]> residuals, int m)
-Minimize.leastSquares(Multivariate f, int m)
+Minimizer.lbfgsb()   // → LBFGSBProblem
+Minimizer.slsqp()    // → SLSQPProblem
+Minimizer.trf()      // → TRFProblem
 ```
 
 ### LBFGSBProblem (L-BFGS-B bound-constrained quasi-Newton)
 
 ```java
-LBFGSBProblem.create()
+Minimizer.lbfgsb()
     .objective(ToDoubleFunction<double[]>)  // auto-uses NumericalGradient.CENTRAL
     .objective(Univariate)                  // analytic gradient
-    .initialPoint(double...)
-    .bounds(Bound...)
-    .maxIterations(int)                     // default 100
-    .maxEvaluations(int)                    // default 1000
-    .gradientTolerance(double)              // default √ε ≈ 1.5e-8
-    .functionTolerance(double)              // default 1e7 (factr)
-    .corrections(int)                       // L-BFGS correction count, default 7
+    .initialPoint(double...)                // sets x₀ and infers dimension
+    .bounds(Bound...)                       // optional, lb ≤ x ≤ ub
+    .maxIterations(int)                     // default 15000
+    .maxEvaluations(int)                    // default 15000
+    .gradientTolerance(double)              // default 1e-5
+    .functionTolerance(double)              // default 1e7 * ε
+    .corrections(int)                       // L-BFGS memory parameter m, default 10
+    .maxLineSearchSteps(int)                // default 20
     .solve()                                // → OptimizationResult
+    .alloc()                                // → LBFGSBWorkspace (for reuse)
 ```
 
 ### SLSQPProblem (SLSQP sequential least-squares programming)
 
 ```java
-SLSQPProblem.create()
+Minimizer.slsqp()
     .objective(ToDoubleFunction<double[]> / Univariate)
     .equalityConstraints(ToDoubleFunction<double[]>...)   // c(x) = 0
     .inequalityConstraints(ToDoubleFunction<double[]>...) // c(x) >= 0
     .initialPoint(double...)
     .bounds(Bound...)
-    .accuracy(double)                       // default 1e-6
+    .functionTolerance(double)              // default 1e-6
     .maxIterations(int)                     // default 100
     .maxEvaluations(int)                    // default 1000
     .solve()                                // → OptimizationResult
+    .alloc()                                // → SLSQPWorkspace (for reuse)
 ```
 
 ### TRFProblem (TRF trust-region reflective least squares)
 
 ```java
-TRFProblem.create()
+Minimizer.trf()
     .residuals(BiConsumer<double[],double[]>, int m)  // auto-uses NumericalJacobian.CENTRAL
     .objective(Multivariate)                          // analytic Jacobian
     .initialPoint(double...)
@@ -143,35 +138,53 @@ TRFProblem.create()
     .functionTolerance(double)              // default 1e-8
     .coefficientTolerance(double)           // default 1e-8
     .gradientTolerance(double)              // default 1e-8
-    .maxEvaluations(int)                    // default 100*n
+    .maxEvaluations(int)                    // default 100 * n
+    .loss(RobustLoss)                       // default LINEAR
+    .lossScale(double)                      // soft margin C, default 1.0
     .solve()                                // → OptimizationResult
+    .alloc()                                // → TRFWorkspace (for reuse)
 ```
 
-### FindRoot (unified root-finding entry point)
+### RootFinder (facade — static factory entry point)
 
 ```java
-FindRoot.scalar(DoubleUnaryOperator f)                          // 1-D, returns RootFinder
-FindRoot.equations(BiConsumer<double[],double[]> fn, int n)     // N-D, returns RootFinder
+RootFinder.brentq(DoubleUnaryOperator f)                    // → BrentqProblem
+RootFinder.hybr(BiConsumer<double[],double[]> fn, int n)    // → HYBRProblem
+RootFinder.broyden(BiConsumer<double[],double[]> fn, int n) // → BroydenProblem
 ```
 
-### RootFinder (fluent builder)
+### BrentqProblem (1-D Brent's method)
 
 ```java
-RootFinder.create()
-    // 1-D
-    .function(DoubleUnaryOperator)      // set scalar function
-    .bracket(double a, double b)        // set interval (required for Brentq)
-    // N-D
-    .equations(BiConsumer, int n)       // set system F(x) = 0
-    .jacobian(NumericalJacobian)        // optional, specify difference type (HYBR only)
-    .initialPoint(double...)            // set initial point (required)
-    // common
-    .method(RootMethod)                 // optional: BRENTQ / HYBR / BROYDEN
-    .tolerance(xtol, rtol)              // Brentq convergence tolerances
-    .functionTolerance(ftol)            // N-D convergence tolerance
+RootFinder.brentq(DoubleUnaryOperator f)
+    .bracket(Bound.between(a, b))       // required: f(a)*f(b) <= 0
+    .absoluteTolerance(double)          // default 2e-12
+    .relativeTolerance(double)          // default 4 * ε
     .maxIterations(int)
     .solve()                            // → OptimizationResult
-    .alloc()                            // → RootWorkspace (for reuse)
+```
+
+### HYBRProblem (N-D Powell hybrid, MINPACK hybrd)
+
+```java
+RootFinder.hybr(BiConsumer<double[],double[]> fn, int n)
+    .jacobian(NumericalJacobian)    // default FORWARD
+    .functionTolerance(double)      // default 1.49e-8
+    .maxIterations(int)             // default 200*(n+1)
+    .initialPoint(double...)        // required
+    .solve()                        // → OptimizationResult
+    .alloc()                        // → HYBRWorkspace (for reuse)
+```
+
+### BroydenProblem (N-D Broyden's method, Jacobian-free)
+
+```java
+RootFinder.broyden(BiConsumer<double[],double[]> fn, int n)
+    .functionTolerance(double)      // default 1.49e-8
+    .maxIterations(int)             // default 100*(n+1)
+    .initialPoint(double...)        // required
+    .solve()                        // → OptimizationResult
+    .alloc()                        // → BroydenWorkspace (for reuse)
 ```
 
 ### OptimizationResult
@@ -179,8 +192,8 @@ RootFinder.create()
 ```java
 result.isSuccessful()       // whether converged
 result.getRoot()            // 1-D root value (NaN for N-D)
-result.getSolution()        // solution vector (double[], never null)
-result.getObjectiveValue()  // objective function value
+result.getSolution()        // solution vector (null if not set)
+result.getObjectiveValue()  // objective / residual norm value
 result.getIterations()      // iteration count
 result.getEvaluations()     // function evaluation count
 result.getSummary()         // single-line summary string
@@ -191,5 +204,4 @@ result.toString()           // multi-line structured diagnostic output
 ## Documentation
 
 - [llms-full.txt](llms-full.txt): Full API reference (for deep AI understanding)
-- META-INF/AI_GUIDE.md: Built-in AI usage guide in JAR (accessible via Context7)
 - [GitHub Wiki](https://github.com/curioloop/numopt4j/wiki/): Detailed error code fix guides

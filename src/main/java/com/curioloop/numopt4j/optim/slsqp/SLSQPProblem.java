@@ -3,10 +3,9 @@
  */
 package com.curioloop.numopt4j.optim.slsqp;
 
-import com.curioloop.numopt4j.optim.Bound;
+import com.curioloop.numopt4j.optim.Minimizer;
 import com.curioloop.numopt4j.optim.NumericalGradient;
 import com.curioloop.numopt4j.optim.OptimizationException;
-import com.curioloop.numopt4j.optim.OptimizationProblem;
 import com.curioloop.numopt4j.optim.OptimizationResult;
 import com.curioloop.numopt4j.optim.Univariate;
 
@@ -67,7 +66,7 @@ import java.util.function.ToDoubleFunction;
  * @see com.curioloop.numopt4j.optim.Minimize
  * @see com.curioloop.numopt4j.optim.Bound
  */
-public final class SLSQPProblem implements OptimizationProblem<OptimizationResult, SLSQPWorkspace> {
+public final class SLSQPProblem extends Minimizer<Univariate, SLSQPWorkspace, SLSQPProblem> {
 
     /** Maximum number of iterations (default: 100) */
     private int maxIterations = 100;
@@ -77,18 +76,6 @@ public final class SLSQPProblem implements OptimizationProblem<OptimizationResul
 
     /** Maximum number of floating-point operations (default: null = unlimited) */
     private Duration maxComputations = null;
-
-    /** Problem dimension (number of variables) */
-    private int dimension;
-
-    /** Objective function that computes value and gradient */
-    private Univariate objective;
-
-    /** Initial point (x₀) */
-    private double[] initialPoint;
-
-    /** Variable bounds (l ≤ x ≤ u) */
-    private Bound[] bounds;
 
     /** Equality constraint functions (c(x) = 0) */
     private Univariate[] equalityConstraints;
@@ -156,8 +143,7 @@ public final class SLSQPProblem implements OptimizationProblem<OptimizationResul
      */
     private double variableDifferenceTolerance = -1;
 
-    /** Cached workspace for reuse across multiple solve calls */
-    private transient SLSQPWorkspace workspace;
+    /** Cached workspace for reuse — inherited from {@link Minimizer} */
 
     private SLSQPProblem() {}
 
@@ -186,8 +172,8 @@ public final class SLSQPProblem implements OptimizationProblem<OptimizationResul
     @Override
     public SLSQPWorkspace alloc() {
         validate();
-        if (workspace == null || !workspace.ensureCapacity(dimension, getNumEqualityConstraints(), getNumInequalityConstraints())) {
-            workspace = new SLSQPWorkspace(dimension, getNumEqualityConstraints(), getNumInequalityConstraints());
+        if (workspace == null || !workspace.ensureCapacity(dimension, numEqualityConstraints(), numInequalityConstraints())) {
+            workspace = new SLSQPWorkspace(dimension, numEqualityConstraints(), numInequalityConstraints());
         }
         return workspace;
     }
@@ -207,13 +193,13 @@ public final class SLSQPProblem implements OptimizationProblem<OptimizationResul
         validate();
         SLSQPWorkspace ws = (workspace != null && workspace.length > 0) ? workspace[0] : null;
         if (ws != null) {
-            if (!ws.ensureCapacity(dimension, getNumEqualityConstraints(), getNumInequalityConstraints())) {
+            if (!ws.ensureCapacity(dimension, numEqualityConstraints(), numInequalityConstraints())) {
                 throw new IllegalArgumentException("Workspace is incompatible with problem dimensions");
             }
         } else {
             ws = this.workspace;
-            if (ws == null || !ws.ensureCapacity(dimension, getNumEqualityConstraints(), getNumInequalityConstraints())) {
-                ws = new SLSQPWorkspace(dimension, getNumEqualityConstraints(), getNumInequalityConstraints());
+            if (ws == null || !ws.ensureCapacity(dimension, numEqualityConstraints(), numInequalityConstraints())) {
+                ws = new SLSQPWorkspace(dimension, numEqualityConstraints(), numInequalityConstraints());
             }
         }
 
@@ -240,13 +226,12 @@ public final class SLSQPProblem implements OptimizationProblem<OptimizationResul
         return new OptimizationResult(r.getObjectiveValue(), r.getStatus(), r.getIterations(), r.getEvaluations(), x);
     }
 
-    public int getDimension() { return dimension; }
-    public int getNumEqualityConstraints() { return equalityConstraints != null ? equalityConstraints.length : 0; }
-    public int getNumInequalityConstraints() { return inequalityConstraints != null ? inequalityConstraints.length : 0; }
-    public double[] getInitialPoint() { return initialPoint != null ? initialPoint.clone() : null; }
-    public Bound[] getBounds() { return bounds; }
-    public double getFunctionTolerance() { return functionTolerance; }
-    public int getNnlsIterations() { return nnlsIterations; }
+    private int numEqualityConstraints() { return equalityConstraints != null ? equalityConstraints.length : 0; }
+    private int numInequalityConstraints() { return inequalityConstraints != null ? inequalityConstraints.length : 0; }
+    public int maxIterations() { return maxIterations; }
+    public int maxEvaluations() { return maxEvaluations; }
+    public int nnlsIterations() { return nnlsIterations; }
+    public double functionTolerance() { return functionTolerance; }
 
     /**
      * Sets the maximum number of iterations allowed for the optimization algorithm.
@@ -351,36 +336,6 @@ public final class SLSQPProblem implements OptimizationProblem<OptimizationResul
             throw new IllegalArgumentException("objective function must not be null");
         }
         this.objective = f;
-        return this;
-    }
-
-    /**
-     * Sets the initial point.
-     *
-     * @param x0 initial point values
-     * @return this problem instance
-     */
-    public SLSQPProblem initialPoint(double... x0) {
-        if (x0 == null || x0.length == 0) {
-            throw new IllegalArgumentException("initialPoint must not be null or empty");
-        }
-        this.initialPoint = x0;
-        this.dimension = x0.length;
-        return this;
-    }
-
-    /**
-     * Sets variable bounds.
-     *
-     * @param bounds bounds for each variable
-     * @return this problem instance
-     */
-    public SLSQPProblem bounds(Bound... bounds) {
-        if (bounds != null && initialPoint != null && bounds.length != initialPoint.length) {
-            throw new IllegalArgumentException(
-                "bounds.length=" + bounds.length + " but dimension=" + initialPoint.length);
-        }
-        this.bounds = bounds;
         return this;
     }
 

@@ -4,6 +4,8 @@ import com.curioloop.numopt4j.optim.Multivariate;
 import com.curioloop.numopt4j.optim.NumericalJacobian;
 import com.curioloop.numopt4j.optim.OptimizationResult;
 import com.curioloop.numopt4j.optim.OptimizationStatus;
+
+
 import net.jqwik.api.*;
 import net.jqwik.api.constraints.DoubleRange;
 import org.junit.jupiter.api.Test;
@@ -97,10 +99,9 @@ class HYBRSolverTest {
 
     @Test
     void rootFinder_hybr() {
-        OptimizationResult res = RootFinder.create()
+        OptimizationResult res = new HYBRProblem()
                 .equations((x, f) -> { f[0] = x[0] - 2.0; f[1] = x[1] + 3.0; }, 2)
                 .initialPoint(0.0, 0.0)
-                .method(RootMethod.HYBR)
                 .solve();
 
         assertTrue(res.isSuccessful());

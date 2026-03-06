@@ -35,12 +35,12 @@ com.curioloop.numopt4j.optim.root     # Root-finding algorithms (RootFinder, Bre
 
 ```
 Have a residual function (least squares)?
-  ├─ Yes → TRFProblem (or Minimize.leastSquares)
+  ├─ Yes → TRFProblem via Minimizer.trf()
   └─ No  → Root-finding problem (F(x) = 0)?
-            ├─ Yes → FindRoot.scalar (1-D) or FindRoot.equations (N-D)
+            ├─ Yes → RootFinder.brentq() (1-D) or RootFinder.hybr() / RootFinder.broyden() (N-D)
             └─ No  → Have equality/inequality constraints?
-                      ├─ Yes → SLSQPProblem (or Minimize.objective + .subjectTo/.equalTo)
-                      └─ No  → LBFGSBProblem (or Minimize.objective, optional .bounds)
+                      ├─ Yes → SLSQPProblem via Minimizer.slsqp()
+                      └─ No  → LBFGSBProblem via Minimizer.lbfgsb()
 ```
 
 | Problem Type | Recommended Class | Notes |
@@ -50,9 +50,8 @@ Have a residual function (least squares)?
 | Equality-constrained optimization | `SLSQPProblem` | c(x) = 0 |
 | Inequality-constrained optimization | `SLSQPProblem` | c(x) ≥ 0 |
 | Nonlinear least squares | `TRFProblem` | min ½‖f(x)‖² |
-| 1-D root finding | `FindRoot.scalar` | Brentq, requires bracket interval |
-| N-D root finding | `FindRoot.equations` | HYBR (default) or Broyden |
-| Unsure | `Minimize` | Automatically selects algorithm |
+| 1-D root finding | `BrentqProblem` | Brentq, requires `Bound.between(a,b)` bracket |
+| N-D root finding | `HYBRProblem` / `BroydenProblem` | HYBR (with Jacobian) or Broyden (Jacobian-free) |
 
 
 ## 3. Minimize Class (Unified Entry Point with Automatic Algorithm Selection)
@@ -228,10 +227,11 @@ public static SLSQPProblem create()
 | `inequalityConstraints(Univariate... c)` | Inequality constraints with analytic gradient | — | — |
 | `initialPoint(double... x0)` | Set initial point | — | non-null, non-empty |
 | `bounds(Bound... bounds)` | Set variable bounds | null | length must match n |
-| `accuracy(double value)` | Primary convergence tolerance | 1e-6 | > 0 |
+| `functionTolerance(double value)` | Primary convergence tolerance | 1e-6 | > 0 |
 | `maxIterations(int value)` | Maximum number of iterations | 100 | > 0 |
 | `maxEvaluations(int value)` | Maximum function evaluations | 1000 | > 0 |
 | `solve(SLSQPWorkspace... ws)` | Execute optimization, return result | — | — |
+| `alloc()` | Pre-allocate workspace (for reuse) | — | — |
 
 ### Complete Example
 
@@ -258,7 +258,7 @@ OptimizationResult result2 = SLSQPProblem.create()
     .inequalityConstraints(x -> x[0] - 0.1)  // x[0] >= 0.1
     .bounds(Bound.atLeast(0), Bound.atLeast(0))
     .initialPoint(0.5, 0.5)
-    .accuracy(1e-8)
+    .functionTolerance(1e-8)
     .solve();
 ```
 
@@ -322,64 +322,64 @@ OptimizationResult r2 = TRFProblem.create()
 ```
 
 
-## 7. FindRoot (Unified Root-Finding Entry Point)
+## 7. RootFinder (Root-Finding Entry Point)
 
-`com.curioloop.numopt4j.optim.FindRoot`
+`com.curioloop.numopt4j.optim.RootFinder`
 
-Mirrors `scipy.optimize.brentq` and `scipy.optimize.root`, providing a unified entry point for 1-D and N-D root finding.
+Provides static factory methods for 1-D and N-D root finding.
 
-### Static Entry Methods
+### Static Factory Methods
 
 ```java
-// 1-D: returns RootFinder, call .bracket(a, b) then .solve()
-public static RootFinder scalar(DoubleUnaryOperator f)
-
-// N-D: returns RootFinder, call .initialPoint(x0) then .solve()
-public static RootFinder equations(BiConsumer<double[], double[]> fn, int n)
+RootFinder.brentq(DoubleUnaryOperator f)                    // → BrentqProblem
+RootFinder.hybr(BiConsumer<double[],double[]> fn, int n)    // → HYBRProblem
+RootFinder.broyden(BiConsumer<double[],double[]> fn, int n) // → BroydenProblem
 ```
 
-### RootFinder Fluent API
+### BrentqProblem (1-D Brent's method)
 
-| Method | Description | Applicable Algorithm |
+| Method | Description | Default |
 |---|---|---|
-| `function(DoubleUnaryOperator)` | Set scalar function | BRENTQ |
-| `bracket(double a, double b)` | Set search interval, requires f(a)·f(b) ≤ 0 | BRENTQ (required) |
-| `equations(BiConsumer, int n)` | Set system of equations F(x) = 0 | HYBR / BROYDEN |
-| `jacobian(NumericalJacobian)` | Specify numerical Jacobian method, default FORWARD | HYBR |
-| `initialPoint(double...)` | Set initial point | HYBR / BROYDEN (required) |
-| `method(RootMethod)` | Explicitly specify algorithm (auto-selected if not set) | All |
-| `tolerance(xtol, rtol)` | Brentq convergence tolerances | BRENTQ |
-| `functionTolerance(ftol)` | N-D convergence tolerance, default 1.49e-8 | HYBR / BROYDEN |
-| `maxIterations(int)` | Maximum iterations, default varies by algorithm | All |
-| `solve(RootWorkspace...)` | Execute root finding, return OptimizationResult | All |
-| `alloc()` | Pre-allocate RootWorkspace (for reuse) | HYBR / BROYDEN |
+| `bracket(Bound)` | Search interval via `Bound.between(a,b)`, requires f(a)·f(b) ≤ 0 | — (required) |
+| `absoluteTolerance(double)` | Absolute convergence tolerance | 2e-12 |
+| `relativeTolerance(double)` | Relative convergence tolerance | 4 * ε |
+| `maxIterations(int)` | Maximum iterations | 100 |
+| `solve()` | Execute, return OptimizationResult | — |
 
-### Automatic Algorithm Selection
+### HYBRProblem (N-D Powell hybrid, MINPACK hybrd)
 
-- `function` is set → BRENTQ
-- `equations` is set (no `function`) → HYBR
-- Override with `.method(RootMethod.BROYDEN)`
+| Method | Description | Default |
+|---|---|---|
+| `equations(BiConsumer, int n)` | System of equations F(x) = 0 | — (required) |
+| `jacobian(NumericalJacobian)` | Numerical Jacobian method | FORWARD |
+| `functionTolerance(double)` | Convergence tolerance ‖F(x)‖₂ ≤ ftol | 1.49e-8 |
+| `maxIterations(int)` | Maximum function evaluations | 200*(n+1) |
+| `initialPoint(double...)` | Initial point | — (required) |
+| `solve(HYBRWorkspace...)` | Execute, return OptimizationResult | — |
+| `alloc()` | Pre-allocate HYBRWorkspace (for reuse) | — |
 
-### OptimizationResult Root-Finding Fields
+### BroydenProblem (N-D Broyden's method, Jacobian-free)
 
-```java
-result.getRoot()          // 1-D root value (only valid for BRENTQ, NaN for N-D)
-result.getSolution()      // N-D solution vector (HYBR / BROYDEN)
-result.getObjectiveValue() // |f(root)| or max‖F(x)‖
-result.isSuccessful()     // Whether converged
-```
+| Method | Description | Default |
+|---|---|---|
+| `equations(BiConsumer, int n)` | System of equations F(x) = 0 | — (required) |
+| `functionTolerance(double)` | Convergence tolerance ‖F(x)‖₂ ≤ ftol | 1.49e-8 |
+| `maxIterations(int)` | Maximum iterations | 100*(n+1) |
+| `initialPoint(double...)` | Initial point | — (required) |
+| `solve(BroydenWorkspace...)` | Execute, return OptimizationResult | — |
+| `alloc()` | Pre-allocate BroydenWorkspace (for reuse) | — |
 
 ### Complete Example
 
 ```java
 // 1-D: find root of sin(x) in [3, 4] → π
-OptimizationResult r1 = FindRoot.scalar(Math::sin)
-    .bracket(3.0, 4.0)
+OptimizationResult r1 = RootFinder.brentq(Math::sin)
+    .bracket(Bound.between(3.0, 4.0))
     .solve();
 double root = r1.getRoot(); // ≈ 3.14159...
 
-// N-D: HYBR (default), forward-difference Jacobian
-OptimizationResult r2 = FindRoot.equations((x, f) -> {
+// N-D: HYBR, forward-difference Jacobian (default)
+OptimizationResult r2 = RootFinder.hybr((x, f) -> {
         f[0] = x[0]*x[0] - 2;
         f[1] = x[1] - x[0];
     }, 2)
@@ -388,22 +388,19 @@ OptimizationResult r2 = FindRoot.equations((x, f) -> {
 double[] sol = r2.getSolution(); // [√2, √2]
 
 // N-D: HYBR + central difference (higher accuracy)
-OptimizationResult r3 = FindRoot.equations(fn, 2)
+OptimizationResult r3 = RootFinder.hybr(fn, 2)
     .jacobian(NumericalJacobian.CENTRAL)
     .initialPoint(1.0, 1.0)
     .solve();
 
-// N-D: Broyden (no Jacobian needed, suitable for large-scale problems)
-OptimizationResult r4 = FindRoot.equations(fn, 2)
+// N-D: Broyden (Jacobian-free)
+OptimizationResult r4 = RootFinder.broyden(fn, 2)
     .initialPoint(1.0, 1.0)
-    .method(RootMethod.BROYDEN)
     .solve();
 
-// Workspace reuse (high-frequency root-finding scenarios)
-RootFinder finder = RootFinder.create()
-    .equations(fn, n)
-    .initialPoint(x0);
-RootWorkspace ws = finder.alloc();
+// Workspace reuse (high-frequency root-finding)
+HYBRProblem finder = RootFinder.hybr(fn, n).initialPoint(x0);
+HYBRWorkspace ws = finder.alloc();
 for (double[] pt : points) {
     OptimizationResult r = finder.initialPoint(pt).solve(ws);
 }

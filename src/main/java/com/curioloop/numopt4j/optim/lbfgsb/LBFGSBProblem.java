@@ -3,10 +3,9 @@
  */
 package com.curioloop.numopt4j.optim.lbfgsb;
 
-import com.curioloop.numopt4j.optim.Bound;
+import com.curioloop.numopt4j.optim.Minimizer;
 import com.curioloop.numopt4j.optim.NumericalGradient;
 import com.curioloop.numopt4j.optim.OptimizationException;
-import com.curioloop.numopt4j.optim.OptimizationProblem;
 import com.curioloop.numopt4j.optim.OptimizationResult;
 import com.curioloop.numopt4j.optim.OptimizationStatus;
 import com.curioloop.numopt4j.optim.Univariate;
@@ -68,7 +67,7 @@ import java.util.function.ToDoubleFunction;
  * @see com.curioloop.numopt4j.optim.Minimize
  * @see com.curioloop.numopt4j.optim.Bound
  */
-public final class LBFGSBProblem implements OptimizationProblem<OptimizationResult, LBFGSBWorkspace> {
+public final class LBFGSBProblem extends Minimizer<Univariate, LBFGSBWorkspace, LBFGSBProblem> {
 
     private static final double EPSILON = Math.ulp(1.0);
 
@@ -96,8 +95,7 @@ public final class LBFGSBProblem implements OptimizationProblem<OptimizationResu
      */
     private double gradientTolerance = 1e-5;
 
-    /** Problem dimension (number of variables) */
-    private int dimension;
+    /** Problem dimension (number of variables) — inherited as {@code dimension} from {@link Minimizer} */
 
     /**
      * Number of L-BFGS corrections (limited memory parameter m).
@@ -120,15 +118,6 @@ public final class LBFGSBProblem implements OptimizationProblem<OptimizationResu
      */
     private int maxLineSearchSteps = 20;
 
-    /** Objective function that computes value and gradient */
-    private Univariate objective;
-
-    /** Initial point (x₀) */
-    private double[] initialPoint;
-
-    /** Variable bounds (l ≤ x ≤ u) */
-    private Bound[] bounds;
-
     /**
      * Function tolerance (ftol) for convergence.
      * <p>
@@ -146,8 +135,7 @@ public final class LBFGSBProblem implements OptimizationProblem<OptimizationResu
      */
     private double functionTolerance = 1e7 * EPSILON;
 
-    /** Cached workspace for reuse across multiple solve calls */
-    private transient LBFGSBWorkspace workspace;
+    /** Cached workspace for reuse — inherited from {@link Minimizer} */
 
     private LBFGSBProblem() {}
 
@@ -246,12 +234,12 @@ public final class LBFGSBProblem implements OptimizationProblem<OptimizationResu
         return OptimizationStatus.ABNORMAL_TERMINATION;
     }
 
-    public int getDimension() { return dimension; }
-    public int getCorrections() { return corrections; }
-    public int getMaxLineSearchSteps() { return maxLineSearchSteps; }
-    public double[] getInitialPoint() { return initialPoint != null ? initialPoint.clone() : null; }
-    public Bound[] getBounds() { return bounds; }
-    public double getFunctionTolerance() { return functionTolerance; }
+    public int corrections() { return corrections; }
+    public int maxIterations() { return maxIterations; }
+    public int maxEvaluations() { return maxEvaluations; }
+    public int maxLineSearchSteps() { return maxLineSearchSteps; }
+    public double functionTolerance() { return functionTolerance; }
+    public double gradientTolerance() { return gradientTolerance; }
 
     /**
      * Sets the maximum number of iterations.
@@ -369,21 +357,6 @@ public final class LBFGSBProblem implements OptimizationProblem<OptimizationResu
     }
 
     /**
-     * Sets the initial point.
-     *
-     * @param x0 initial point values
-     * @return this problem instance
-     */
-    public LBFGSBProblem initialPoint(double... x0) {
-        if (x0 == null || x0.length == 0) {
-            throw new IllegalArgumentException("initialPoint must not be null or empty");
-        }
-        this.initialPoint = x0;
-        this.dimension = x0.length;
-        return this;
-    }
-
-    /**
      * Sets the number of L-BFGS corrections (limited memory parameter).
      * <p>
      * Default value is 10. Typical range is 3-20.
@@ -417,21 +390,6 @@ public final class LBFGSBProblem implements OptimizationProblem<OptimizationResu
             throw new IllegalArgumentException("maxLineSearchSteps must be positive, got " + value);
         }
         this.maxLineSearchSteps = value;
-        return this;
-    }
-
-    /**
-     * Sets variable bounds.
-     *
-     * @param bounds bounds for each variable
-     * @return this problem instance
-     */
-    public LBFGSBProblem bounds(Bound... bounds) {
-        if (bounds != null && initialPoint != null && bounds.length != initialPoint.length) {
-            throw new IllegalArgumentException(
-                "bounds.length=" + bounds.length + " but dimension=" + initialPoint.length);
-        }
-        this.bounds = bounds;
         return this;
     }
 

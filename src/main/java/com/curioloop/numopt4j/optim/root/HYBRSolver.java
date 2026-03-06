@@ -49,9 +49,9 @@ public final class HYBRSolver {
 
     private HYBRSolver() {}
 
-    static final double DEFAULT_FTOL          = 1.49e-8;
-    static final int    DEFAULT_MAXFEV_FACTOR = 200;
-    static final double DEFAULT_FACTOR        = 100.0;
+    public static final double DEFAULT_FTOL          = 1.49e-8;
+    public static final int    DEFAULT_MAXFEV_FACTOR = 200;
+    public static final double DEFAULT_FACTOR        = 100.0;
 
     /**
      * Solve F(x) = 0 using a {@link Multivariate} that provides F and optionally its Jacobian.

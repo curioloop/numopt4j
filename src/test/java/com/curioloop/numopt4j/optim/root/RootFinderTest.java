@@ -1,6 +1,8 @@
 package com.curioloop.numopt4j.optim.root;
 
+import com.curioloop.numopt4j.optim.Bound;
 import com.curioloop.numopt4j.optim.OptimizationResult;
+
 import net.jqwik.api.*;
 import net.jqwik.api.constraints.DoubleRange;
 import net.jqwik.api.constraints.IntRange;
@@ -12,7 +14,7 @@ import java.util.function.DoubleUnaryOperator;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Tests for RootFinder fluent builder API.
+ * Tests for RootFinder concrete finder APIs.
  */
 class RootFinderTest {
 
@@ -28,9 +30,8 @@ class RootFinderTest {
             @ForAll @DoubleRange(min = -10, max = 0) double a,
             @ForAll @DoubleRange(min = 0.01, max = 10) double b) {
         IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
-            RootFinder.create()
-                .method(RootMethod.BRENTQ)
-                .bracket(a, b)
+            new BrentqProblem()
+                .bracket(Bound.between(a, b))
                 .solve()
         );
         assertTrue(ex.getMessage().toLowerCase().contains("function"),
@@ -45,9 +46,8 @@ class RootFinderTest {
             @ForAll @DoubleRange(min = -5, max = 5) double c) {
         DoubleUnaryOperator f = x -> x - c;
         IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
-            RootFinder.create()
+            new BrentqProblem()
                 .function(f)
-                .method(RootMethod.BRENTQ)
                 .solve()
         );
         assertTrue(ex.getMessage().toLowerCase().contains("bracket"),
@@ -61,9 +61,8 @@ class RootFinderTest {
     void property5c_hybrMissingEquations(
             @ForAll @DoubleRange(min = -5, max = 5) double x0) {
         IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
-            RootFinder.create()
+            new HYBRProblem()
                 .initialPoint(x0, x0)
-                .method(RootMethod.HYBR)
                 .solve()
         );
         assertTrue(ex.getMessage().toLowerCase().contains("equations"),
@@ -77,9 +76,8 @@ class RootFinderTest {
     void property5d_hybrMissingInitialPoint(
             @ForAll @IntRange(min = 1, max = 4) int n) {
         IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
-            RootFinder.create()
+            new HYBRProblem()
                 .equations((x, f) -> { for (int i = 0; i < x.length; i++) f[i] = x[i]; }, n)
-                .method(RootMethod.HYBR)
                 .solve()
         );
         assertTrue(ex.getMessage().toLowerCase().contains("initialpoint"),
@@ -93,9 +91,8 @@ class RootFinderTest {
     void property5e_broydenMissingInitialPoint(
             @ForAll @IntRange(min = 1, max = 4) int n) {
         IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
-            RootFinder.create()
+            new BroydenProblem()
                 .equations((x, f) -> { for (int i = 0; i < x.length; i++) f[i] = x[i]; }, n)
-                .method(RootMethod.BROYDEN)
                 .solve()
         );
         assertTrue(ex.getMessage().toLowerCase().contains("initialpoint"),
@@ -113,14 +110,13 @@ class RootFinderTest {
     void property6a_scalarResultConsistency(
             @ForAll @DoubleRange(min = -5, max = 5) double root,
             @ForAll @DoubleRange(min = 0.1, max = 3) double halfWidth) {
-        // f(x) = x - root, bracket [root-halfWidth, root+halfWidth]
         DoubleUnaryOperator f = x -> x - root;
         double a = root - halfWidth;
         double b = root + halfWidth;
 
-        OptimizationResult result = RootFinder.create()
+        OptimizationResult result = new BrentqProblem()
             .function(f)
-            .bracket(a, b)
+            .bracket(Bound.between(a, b))
             .solve();
 
         assertTrue(result.isSuccessful(), "Should converge: " + result.getSummary());
@@ -131,19 +127,17 @@ class RootFinderTest {
 
     /**
      * N-D result consistency: getObjectiveValue() == max|F(getSolution())|
-     * (Broyden uses max-norm matching scipy's tol_norm=maxnorm)
      */
     @Property(tries = 50)
     void property6b_vectorResultConsistency(
             @ForAll @DoubleRange(min = -3, max = 3) double r1,
             @ForAll @DoubleRange(min = -3, max = 3) double r2) {
-        // F(x) = [x[0] - r1, x[1] - r2], solution = [r1, r2]
         BiConsumer<double[], double[]> fn = (x, f) -> {
             f[0] = x[0] - r1;
             f[1] = x[1] - r2;
         };
 
-        OptimizationResult result = RootFinder.create()
+        OptimizationResult result = new HYBRProblem()
             .equations(fn, 2)
             .initialPoint(0.0, 0.0)
             .solve();
@@ -153,7 +147,6 @@ class RootFinderTest {
         double[] sol = result.getSolution();
         double[] fSol = new double[2];
         fn.accept(sol, fSol);
-        // Broyden uses max-norm (scipy convention)
         double expectedResidual = Math.max(Math.abs(fSol[0]), Math.abs(fSol[1]));
         assertEquals(expectedResidual, result.getObjectiveValue(), 1e-10,
             "getObjectiveValue() should equal max|F(solution)| (max-norm)");
@@ -165,10 +158,9 @@ class RootFinderTest {
 
     @Test
     void integrationTest_brentqViaSolve() {
-        // sin(x) in [3, 4] → π
-        OptimizationResult result = RootFinder.create()
+        OptimizationResult result = new BrentqProblem()
             .function(Math::sin)
-            .bracket(3.0, 4.0)
+            .bracket(Bound.between(3.0, 4.0))
             .solve();
 
         assertTrue(result.isSuccessful());
@@ -177,13 +169,12 @@ class RootFinderTest {
 
     @Test
     void integrationTest_hybrViaSolve() {
-        // Rosenbrock equations: F1 = 1 - x1, F2 = 10*(x2 - x1^2)
         BiConsumer<double[], double[]> fn = (x, f) -> {
             f[0] = 1.0 - x[0];
             f[1] = 10.0 * (x[1] - x[0] * x[0]);
         };
 
-        OptimizationResult result = RootFinder.create()
+        OptimizationResult result = new HYBRProblem()
             .equations(fn, 2)
             .initialPoint(-1.0, 1.0)
             .solve();
@@ -196,17 +187,14 @@ class RootFinderTest {
 
     @Test
     void integrationTest_broydenViaSolve() {
-        // Same Rosenbrock equations via Broyden — use closer starting point (0.5, 0.5)
-        // (-1, 1) requires too many iterations for Broyden without a good Jacobian
         BiConsumer<double[], double[]> fn = (x, f) -> {
             f[0] = 1.0 - x[0];
             f[1] = 10.0 * (x[1] - x[0] * x[0]);
         };
 
-        OptimizationResult result = RootFinder.create()
+        OptimizationResult result = new BroydenProblem()
             .equations(fn, 2)
             .initialPoint(0.5, 0.5)
-            .method(RootMethod.BROYDEN)
             .solve();
 
         assertTrue(result.isSuccessful(), result.getSummary());
@@ -222,11 +210,11 @@ class RootFinderTest {
             f[1] = x[1] - 7.0;
         };
 
-        RootFinder finder = RootFinder.create()
+        HYBRProblem finder = new HYBRProblem()
             .equations(fn, 2)
             .initialPoint(0.0, 0.0);
 
-        RootWorkspace ws = finder.alloc();
+        HYBRWorkspace ws = finder.alloc();
 
         OptimizationResult r1 = finder.solve(ws);
         OptimizationResult r2 = finder.solve(ws);
@@ -241,21 +229,8 @@ class RootFinderTest {
     }
 
     @Test
-    void integrationTest_autoSelectBrentqWhenFunctionSet() {
-        // No explicit method() call — should auto-select BRENTQ
-        OptimizationResult result = RootFinder.create()
-            .function(x -> x * x - 2)
-            .bracket(1.0, 2.0)
-            .solve();
-
-        assertTrue(result.isSuccessful());
-        assertEquals(Math.sqrt(2), result.getRoot(), 1e-10);
-    }
-
-    @Test
     void integrationTest_autoSelectHybrWhenEquationsSet() {
-        // No explicit method() call — should auto-select HYBR
-        OptimizationResult result = RootFinder.create()
+        OptimizationResult result = new HYBRProblem()
             .equations((x, f) -> { f[0] = x[0] - 5.0; }, 1)
             .initialPoint(0.0)
             .solve();

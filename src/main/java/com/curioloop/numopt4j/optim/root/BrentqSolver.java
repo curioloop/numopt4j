@@ -12,18 +12,18 @@ import java.util.function.DoubleUnaryOperator;
  * The algorithm combines bisection, secant, and inverse quadratic interpolation
  * to achieve superlinear convergence while guaranteeing the bracket is maintained.</p>
  *
- * <p>This class is package-private; use {@link RootFinder} for the public API.</p>
+ * <p>Use {@link com.curioloop.numopt4j.optim.RootFinder#brentq} for the public API.</p>
  */
-final class BrentqSolver {
+public final class BrentqSolver {
 
     /** Default absolute tolerance (matches scipy brentq default). */
-    static final double DEFAULT_XTOL = 2e-12;
+    public static final double DEFAULT_XTOL = 2e-12;
 
     /** Default relative tolerance: 4 * machine epsilon (matches scipy brentq default). */
-    static final double DEFAULT_RTOL = 4 * Math.ulp(1.0);  // 4 * DBL_EPSILON
+    public static final double DEFAULT_RTOL = 4 * Math.ulp(1.0);  // 4 * DBL_EPSILON
 
     /** Default maximum number of iterations. */
-    static final int DEFAULT_MAXITER = 100;
+    public static final int DEFAULT_MAXITER = 100;
 
     // Prevent instantiation
     private BrentqSolver() {}
@@ -50,7 +50,7 @@ final class BrentqSolver {
      * @return an {@link OptimizationResult} describing the outcome
      * @throws IllegalArgumentException if {@code f(xa) * f(xb) > 0}
      */
-    static OptimizationResult solve(
+    public static OptimizationResult solve(
             DoubleUnaryOperator f,
             double xa, double xb,
             double xtol, double rtol,
