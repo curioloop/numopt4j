@@ -176,28 +176,37 @@ public final class LBFGSBProblem implements OptimizationProblem<OptimizationResu
     @Override
     public LBFGSBWorkspace alloc() {
         validate();
-        if (workspace == null || !workspace.isCompatible(dimension, corrections)) {
+        if (workspace == null || !workspace.ensureCapacity(dimension, corrections)) {
             workspace = new LBFGSBWorkspace(dimension, corrections);
         }
         return workspace;
     }
 
+    /**
+     * Solves the optimization problem.
+     *
+     * <p>The initial point is cloned internally; {@code initialPoint} is not modified.
+     * The solution is stored in {@link OptimizationResult#getSolution()} and returned
+     * as a direct reference (no defensive copy). The caller owns the returned array.</p>
+     *
+     * @param workspace optional pre-allocated workspace for reuse
+     * @return optimization result
+     */
     @Override
     public OptimizationResult solve(LBFGSBWorkspace... workspace) {
         validate();
         LBFGSBWorkspace ws = (workspace != null && workspace.length > 0) ? workspace[0] : null;
-        if (ws != null && !ws.isCompatible(dimension, corrections)) {
+        if (ws != null && !ws.ensureCapacity(dimension, corrections)) {
             throw new IllegalArgumentException(
                     "Workspace dimensions (" + ws.getDimension() + ", " + ws.getCorrections() +
                             ") do not match problem dimensions (" + dimension + ", " + corrections + ")");
         }
         if (ws == null) {
             ws = this.workspace;
-            if (ws == null || !ws.isCompatible(dimension, corrections)) {
+            if (ws == null || !ws.ensureCapacity(dimension, corrections)) {
                 ws = new LBFGSBWorkspace(dimension, corrections);
             }
         }
-
         ws.reset();
         double[] x = initialPoint.clone();
 

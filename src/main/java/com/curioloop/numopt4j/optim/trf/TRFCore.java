@@ -125,71 +125,75 @@ final class TRFCore {
      * @param rdiag  output: diagonal of R (length n)
      * @param acnorm output: column norms of original A (length n)
      * @param wa     scratch array (length n)
-     * @param dot    scratch array of length n (reuses ws.qtf before applyQtToVec)
+     * @param tmp    scratch array of length n (reuses ws.qtf before applyQtToVec)
+     * @param tmpOff offset into tmp[]
      */
     static void qrfac(int m, int n, double[] a, int[] ipvt,
-                      double[] rdiag, double[] acnorm, double[] wa, double[] dot) {
-        for (int j = 0; j < n; j++) { acnorm[j] = 0.0; rdiag[j] = 0.0; }
+                      double[] rdiag, int rdiagOff,
+                      double[] acnorm, int acnormOff,
+                      double[] wa, int waOff,
+                      double[] tmp, int tmpOff) {
+        for (int j = 0; j < n; j++) { acnorm[acnormOff+j] = 0.0; rdiag[rdiagOff+j] = 0.0; }
         for (int i = 0; i < m; i++) {
             int rowBase = i * n;
-            for (int j = 0; j < n; j++) { double v = a[rowBase + j]; acnorm[j] += v * v; }
+            for (int j = 0; j < n; j++) { double v = a[rowBase + j]; acnorm[acnormOff+j] += v * v; }
         }
         for (int j = 0; j < n; j++) {
-            acnorm[j] = Math.sqrt(acnorm[j]);
-            rdiag[j]  = acnorm[j];
-            wa[j]     = rdiag[j];
-            ipvt[j]   = j;
+            acnorm[acnormOff+j] = Math.sqrt(acnorm[acnormOff+j]);
+            rdiag[rdiagOff+j]   = acnorm[acnormOff+j];
+            wa[waOff+j]         = rdiag[rdiagOff+j];
+            ipvt[j]             = j;
         }
 
         int minmn = Math.min(m, n);
         for (int j = 0; j < minmn; j++) {
             int kmax = j;
-            for (int k = j + 1; k < n; k++) if (rdiag[k] > rdiag[kmax]) kmax = k;
+            for (int k = j + 1; k < n; k++) if (rdiag[rdiagOff+k] > rdiag[rdiagOff+kmax]) kmax = k;
             if (kmax != j) {
                 for (int i = 0; i < m; i++) {
                     int base = i * n;
-                    double tmp = a[base + j]; a[base + j] = a[base + kmax]; a[base + kmax] = tmp;
+                    double t = a[base + j]; a[base + j] = a[base + kmax]; a[base + kmax] = t;
                 }
-                rdiag[kmax] = rdiag[j]; wa[kmax] = wa[j];
+                rdiag[rdiagOff+kmax] = rdiag[rdiagOff+j]; wa[waOff+kmax] = wa[waOff+j];
                 int itmp = ipvt[j]; ipvt[j] = ipvt[kmax]; ipvt[kmax] = itmp;
             }
 
             double ajnorm = 0.0;
             for (int i = j; i < m; i++) { double v = a[i * n + j]; ajnorm += v * v; }
             ajnorm = Math.sqrt(ajnorm);
-            if (ajnorm == 0.0) { rdiag[j] = 0.0; continue; }
+            if (ajnorm == 0.0) { rdiag[rdiagOff+j] = 0.0; continue; }
             if (a[j * n + j] < 0.0) ajnorm = -ajnorm;
             for (int i = j; i < m; i++) a[i * n + j] /= ajnorm;
             a[j * n + j] += 1.0;
 
             int nk = n - j - 1;
             if (nk > 0) {
-                for (int k = j + 1; k < n; k++) dot[k] = 0.0;
+                for (int k = j + 1; k < n; k++) tmp[tmpOff+k] = 0.0;
                 for (int i = j; i < m; i++) {
                     double vij = a[i * n + j];
                     int rowBase = i * n + j + 1;
-                    for (int k = 0; k < nk; k++) dot[j + 1 + k] += vij * a[rowBase + k];
+                    for (int k = 0; k < nk; k++) tmp[tmpOff+j+1+k] += vij * a[rowBase + k];
                 }
                 double ajj = a[j * n + j];
-                for (int k = j + 1; k < n; k++) dot[k] /= ajj;
+                for (int k = j + 1; k < n; k++) tmp[tmpOff+k] /= ajj;
                 for (int i = j; i < m; i++) {
                     double vij = a[i * n + j];
                     int rowBase = i * n + j + 1;
-                    for (int k = 0; k < nk; k++) a[rowBase + k] -= dot[j + 1 + k] * vij;
+                    for (int k = 0; k < nk; k++) a[rowBase + k] -= tmp[tmpOff+j+1+k] * vij;
                 }
                 for (int k = j + 1; k < n; k++) {
-                    if (rdiag[k] != 0.0) {
-                        double t = a[j * n + k] / rdiag[k];
-                        rdiag[k] *= Math.sqrt(Math.max(0.0, 1.0 - t * t));
-                        if (0.05 * (rdiag[k] / wa[k]) * (rdiag[k] / wa[k]) <= EPSMCH) {
+                    if (rdiag[rdiagOff+k] != 0.0) {
+                        double t = a[j * n + k] / rdiag[rdiagOff+k];
+                        rdiag[rdiagOff+k] *= Math.sqrt(Math.max(0.0, 1.0 - t * t));
+                        if (0.05 * (rdiag[rdiagOff+k] / wa[waOff+k]) * (rdiag[rdiagOff+k] / wa[waOff+k]) <= EPSMCH) {
                             double s2 = 0.0;
                             for (int i = j + 1; i < m; i++) { double v = a[i * n + k]; s2 += v * v; }
-                            rdiag[k] = Math.sqrt(s2); wa[k] = rdiag[k];
+                            rdiag[rdiagOff+k] = Math.sqrt(s2); wa[waOff+k] = rdiag[rdiagOff+k];
                         }
                     }
                 }
             }
-            rdiag[j] = -ajnorm;
+            rdiag[rdiagOff+j] = -ajnorm;
         }
     }
 
@@ -210,15 +214,15 @@ final class TRFCore {
      * @param b     vector to transform in place (length m)
      * @param rdiag diagonal of R (length n), restored into fjac diagonal on exit
      */
-    static void applyQtToVec(double[] fjac, int m, int n, double[] b, double[] rdiag) {
+    static void applyQtToVec(double[] fjac, int m, int n, double[] b, double[] rdiag, int rdiagOff) {
         int minmn = Math.min(m, n);
         for (int j = 0; j < minmn; j++) {
-            if (fjac[j*n+j] == 0.0) { fjac[j*n+j] = rdiag[j]; continue; }
+            if (fjac[j*n+j] == 0.0) { fjac[j*n+j] = rdiag[rdiagOff+j]; continue; }
             double sum = 0.0;
             for (int i = j; i < m; i++) sum += fjac[i*n+j] * b[i];
             double tmp = -sum / fjac[j*n+j];
             for (int i = j; i < m; i++) b[i] += fjac[i*n+j] * tmp;
-            fjac[j*n+j] = rdiag[j];
+            fjac[j*n+j] = rdiag[rdiagOff+j];
         }
     }
 
@@ -246,56 +250,57 @@ final class TRFCore {
      * @param sdiag  output: diagonal of the modified R after Givens rotations (length n)
      * @param wa     scratch array (length n)
      */
-    static void qrsolv(int n, double[] r, int[] ipvt, double[] diag,
-                       double[] qtb, double[] x, double[] sdiag, double[] wa) {
+    static void qrsolv(int n, double[] r, int rOff, int[] ipvt, double[] diag,
+                       double[] qtb, int qtbOff, double[] x, int xOff, double[] sdiag, int sdiagOff,
+                       double[] wa) {
         for (int j = 0; j < n; j++) {
-            for (int i = j; i < n; i++) r[i*n+j] = r[j*n+i];
-            x[j]  = r[j*n+j];
-            wa[j] = qtb[j];
+            for (int i = j; i < n; i++) r[rOff+i*n+j] = r[rOff+j*n+i];
+            x[xOff+j] = r[rOff+j*n+j];
+            wa[j]     = qtb[qtbOff+j];
         }
         for (int j = 0; j < n; j++) {
             int l = ipvt[j];
-            if (diag[l] == 0.0) { sdiag[j] = r[j*n+j]; r[j*n+j] = x[j]; continue; }
-            for (int k = j; k < n; k++) sdiag[k] = 0.0;
-            sdiag[j] = diag[l];
+            if (diag[l] == 0.0) { sdiag[sdiagOff+j] = r[rOff+j*n+j]; r[rOff+j*n+j] = x[xOff+j]; continue; }
+            for (int k = j; k < n; k++) sdiag[sdiagOff+k] = 0.0;
+            sdiag[sdiagOff+j] = diag[l];
             double qtbpj = 0.0;
             for (int k = j; k < n; k++) {
-                if (sdiag[k] == 0.0) continue;
+                if (sdiag[sdiagOff+k] == 0.0) continue;
                 double cos, sin;
-                if (Math.abs(r[k*n+k]) >= Math.abs(sdiag[k])) {
-                    double tan = sdiag[k] / r[k*n+k];
+                if (Math.abs(r[rOff+k*n+k]) >= Math.abs(sdiag[sdiagOff+k])) {
+                    double tan = sdiag[sdiagOff+k] / r[rOff+k*n+k];
                     cos = 0.5 / Math.sqrt(0.25 + 0.25*tan*tan);
                     sin = cos * tan;
                 } else {
-                    double cotan = r[k*n+k] / sdiag[k];
+                    double cotan = r[rOff+k*n+k] / sdiag[sdiagOff+k];
                     sin = 0.5 / Math.sqrt(0.25 + 0.25*cotan*cotan);
                     cos = sin * cotan;
                 }
-                r[k*n+k] = cos*r[k*n+k] + sin*sdiag[k];
+                r[rOff+k*n+k] = cos*r[rOff+k*n+k] + sin*sdiag[sdiagOff+k];
                 double temp = cos*wa[k] + sin*qtbpj;
                 qtbpj = -sin*wa[k] + cos*qtbpj;
                 wa[k] = temp;
                 for (int i = k+1; i < n; i++) {
-                    temp      =  cos*r[i*n+k] + sin*sdiag[i];
-                    sdiag[i]  = -sin*r[i*n+k] + cos*sdiag[i];
-                    r[i*n+k]  = temp;
+                    temp              =  cos*r[rOff+i*n+k] + sin*sdiag[sdiagOff+i];
+                    sdiag[sdiagOff+i] = -sin*r[rOff+i*n+k] + cos*sdiag[sdiagOff+i];
+                    r[rOff+i*n+k]     = temp;
                 }
             }
-            sdiag[j] = r[j*n+j];
-            r[j*n+j] = x[j];
+            sdiag[sdiagOff+j] = r[rOff+j*n+j];
+            r[rOff+j*n+j] = x[xOff+j];
         }
         int nsing = n;
         for (int j = 0; j < n; j++) {
-            if (sdiag[j] == 0.0 && nsing == n) nsing = j;
+            if (sdiag[sdiagOff+j] == 0.0 && nsing == n) nsing = j;
             if (nsing < n) wa[j] = 0.0;
         }
         for (int k = 0; k < nsing; k++) {
             int j = nsing - 1 - k;
             double sum = 0.0;
-            for (int i = j+1; i < nsing; i++) sum += r[i*n+j] * wa[i];
-            wa[j] = (wa[j] - sum) / sdiag[j];
+            for (int i = j+1; i < nsing; i++) sum += r[rOff+i*n+j] * wa[i];
+            wa[j] = (wa[j] - sum) / sdiag[sdiagOff+j];
         }
-        for (int j = 0; j < n; j++) x[ipvt[j]] = wa[j];
+        for (int j = 0; j < n; j++) x[xOff+ipvt[j]] = wa[j];
     }
 
     /**
@@ -327,34 +332,40 @@ final class TRFCore {
      * @param qtb    Qᵀf vector (length n)
      * @param delta  trust-region radius Δ
      * @param par    initial estimate of λ (updated on return)
-     * @param x      output: solution p(λ) (length n)
+     * @param x      output: solution p(λ) (length n, starting at xOff)
+     * @param xOff   offset into x[]
      * @param sdiag  scratch: modified diagonal from qrsolv (length n)
      * @param wa1    scratch array (length n)
      * @param wa2    scratch array (length n)
      * @return       updated Levenberg-Marquardt parameter λ
      */
-    static double lmpar(int n, double[] r, int[] ipvt, double[] diag,
-                        double[] qtb, double delta, double par,
-                        double[] x, double[] sdiag, double[] wa1, double[] wa2) {
+    static double lmpar(int n, double[] r, int rOff, int[] ipvt,
+                        double[] diag, int diagOff,
+                        double[] qtb, int qtbOff,
+                        double delta, double par,
+                        double[] x, int xOff,
+                        double[] sdiag, int sdiagOff,
+                        double[] wa1,
+                        double[] wa2) {
         final double dwarf = Double.MIN_VALUE;
         final double p1 = 0.1, p001 = 0.001;
 
         int nsing = n;
-        System.arraycopy(qtb, 0, wa1, 0, n);
+        System.arraycopy(qtb, qtbOff, wa1, 0, n);
         for (int j = 0; j < n; j++) {
-            if (r[j*n+j] == 0.0 && nsing == n) nsing = j;
+            if (r[rOff+j*n+j] == 0.0 && nsing == n) nsing = j;
             if (nsing < n) wa1[j] = 0.0;
         }
         for (int k = 0; k < nsing; k++) {
             int j = nsing - 1 - k;
-            wa1[j] /= r[j*n+j];
+            wa1[j] /= r[rOff+j*n+j];
             double tmp = wa1[j];
-            for (int i = 0; i < j; i++) wa1[i] -= r[i*n+j] * tmp;
+            for (int i = 0; i < j; i++) wa1[i] -= r[rOff+i*n+j] * tmp;
         }
-        for (int j = 0; j < n; j++) x[ipvt[j]] = wa1[j];
+        for (int j = 0; j < n; j++) x[xOff+ipvt[j]] = wa1[j];
 
         int iter = 0;
-        for (int j = 0; j < n; j++) wa2[j] = diag[j] * x[j];
+        for (int j = 0; j < n; j++) wa2[j] = diag[diagOff+j] * x[xOff+j];
         double dxnorm = enorm(n, wa2, 0);
         double fp = dxnorm - delta;
         if (fp <= p1 * delta) { if (iter == 0) par = 0.0; return par; }
@@ -363,12 +374,12 @@ final class TRFCore {
         if (nsing >= n) {
             for (int j = 0; j < n; j++) {
                 int l = ipvt[j];
-                wa1[j] = diag[l] * (wa2[l] / dxnorm);
+                wa1[j] = diag[diagOff+l] * (wa2[l] / dxnorm);
             }
             for (int j = 0; j < n; j++) {
                 double sum = 0.0;
-                for (int i = 0; i < j; i++) sum += r[i*n+j] * wa1[i];
-                wa1[j] = (wa1[j] - sum) / r[j*n+j];
+                for (int i = 0; i < j; i++) sum += r[rOff+i*n+j] * wa1[i];
+                wa1[j] = (wa1[j] - sum) / r[rOff+j*n+j];
             }
             double tmp = enorm(n, wa1, 0);
             parl = ((fp / delta) / tmp) / tmp;
@@ -376,9 +387,9 @@ final class TRFCore {
 
         for (int j = 0; j < n; j++) {
             double sum = 0.0;
-            for (int i = 0; i <= j; i++) sum += r[i*n+j] * qtb[i];
+            for (int i = 0; i <= j; i++) sum += r[rOff+i*n+j] * qtb[qtbOff+i];
             int l = ipvt[j];
-            wa1[j] = sum / diag[l];
+            wa1[j] = sum / diag[diagOff+l];
         }
         double gnorm = enorm(n, wa1, 0);
         double paru = gnorm / delta;
@@ -391,9 +402,9 @@ final class TRFCore {
         for (iter = 1; iter <= 10; iter++) {
             if (par == 0.0) par = Math.max(dwarf, p001 * paru);
             double sqrtPar = Math.sqrt(par);
-            for (int j = 0; j < n; j++) wa1[j] = sqrtPar * diag[j];
-            qrsolv(n, r, ipvt, wa1, qtb, x, sdiag, wa2);
-            for (int j = 0; j < n; j++) wa2[j] = diag[j] * x[j];
+            for (int j = 0; j < n; j++) wa1[j] = sqrtPar * diag[diagOff+j];
+            qrsolv(n, r, rOff, ipvt, wa1, qtb, qtbOff, x, xOff, sdiag, sdiagOff, wa2);
+            for (int j = 0; j < n; j++) wa2[j] = diag[diagOff+j] * x[xOff+j];
             dxnorm = enorm(n, wa2, 0);
             double fpOld = fp;
             fp = dxnorm - delta;
@@ -404,12 +415,12 @@ final class TRFCore {
 
             for (int j = 0; j < n; j++) {
                 int l = ipvt[j];
-                wa1[j] = diag[l] * (wa2[l] / dxnorm);
+                wa1[j] = diag[diagOff+l] * (wa2[l] / dxnorm);
             }
             for (int j = 0; j < n; j++) {
-                wa1[j] /= sdiag[j];
+                wa1[j] /= sdiag[sdiagOff+j];
                 double tmp = wa1[j];
-                for (int i = j+1; i < n; i++) wa1[i] -= r[i*n+j] * tmp;  // lower triangle (S factor from qrsolv)
+                for (int i = j+1; i < n; i++) wa1[i] -= r[rOff+i*n+j] * tmp;
             }
             double tmp = enorm(n, wa1, 0);
             double parc = ((fp / delta) / tmp) / tmp;
@@ -447,21 +458,21 @@ final class TRFCore {
      * @param n      problem dimension
      * @param v      output: scaling vector (length n)
      */
-    static void clScaling(double[] x, double[] qtf, Bound[] bounds, int n, double[] v) {
+    static void clScaling(double[] x, double[] qtf, int qtfOff, Bound[] bounds, int n, double[] v, int vOff) {
         if (bounds == null) {
-            Arrays.fill(v, 0, n, 1.0);
+            Arrays.fill(v, vOff, vOff + n, 1.0);
             return;
         }
         for (int i = 0; i < n; i++) {
             Bound b = bounds[i];
             if (b == null || b.isUnbounded()) {
-                v[i] = 1.0;
+                v[vOff+i] = 1.0;
                 continue;
             }
             double dLo = b.hasLower() ? (x[i] - b.getLower()) : Double.MAX_VALUE;
             double dHi = b.hasUpper() ? (b.getUpper() - x[i]) : Double.MAX_VALUE;
 
-            double g = (qtf != null) ? qtf[i] : 0.0;
+            double g = (qtf != null) ? qtf[qtfOff+i] : 0.0;
             double dist;
             if (g < 0 && b.hasUpper() && dHi > 1e-8) {
                 // moving toward upper bound — use distance to upper
@@ -478,7 +489,7 @@ final class TRFCore {
                 // reflectiveStep, stalling convergence of unconstrained variables.
                 dist = 1.0;
             }
-            v[i] = Math.max(1e-10, dist);
+            v[vOff+i] = Math.max(1e-10, dist);
         }
     }
 
@@ -556,7 +567,8 @@ final class TRFCore {
      * <p>Mirrors SciPy's {@code select_step} in {@code _lsq/trf.py}.</p>
      *
      * @param x      current point xₖ (length n)
-     * @param p      unconstrained step direction from lmpar (length n)
+     * @param p      unconstrained step direction from lmpar (length n, starting at pOff)
+     * @param pOff   offset into p[]
      * @param bounds box constraints; null means unbounded (full step used)
      * @param n      problem dimension
      * @param theta  step-back fraction θ (0.995 ≤ θ ≤ 1); keeps step strictly interior
@@ -575,16 +587,18 @@ final class TRFCore {
      * @param delta  current trust-region radius Δ — used to bound Cauchy step length
      * @param delta  current trust-region radius Δ — used to bound Cauchy step length
      */
-    static void reflectiveStep(double[] x, double[] p, Bound[] bounds, int n,
+    static void reflectiveStep(double[] x, double[] p, int pOff, Bound[] bounds, int n,
                                 double theta,
-                                double[] xNew, double[] step,
-                                double[] Jp, double[] Jpr,
-                                double[] xHit, double[] pRef, double[] ag,
+                                double[] xNew, double[] step, int stepOff,
+                                double[] Jp, int JpOff, double[] Jpr, int JprOff,
+                                double[] xHit, int xHitOff, double[] pRef, int pRefOff,
+                                double[] ag, int agOff,
                                 int m,
-                                double[] fjac, int[] ipvt, double[] qtf, double fnorm,
-                                double delta) {
+                                double[] fjac, int[] ipvt,
+                                double[] qtf, int qtfOff,
+                                double fnorm, double delta) {
         if (bounds == null) {
-            for (int i = 0; i < n; i++) { xNew[i] = x[i] + p[i]; step[i] = p[i]; }
+            for (int i = 0; i < n; i++) { xNew[i] = x[i] + p[pOff+i]; step[stepOff+i] = p[pOff+i]; }
             return;
         }
 
@@ -594,20 +608,20 @@ final class TRFCore {
         for (int i = 0; i < n; i++) {
             Bound b = bounds[i];
             if (b == null || b.isUnbounded()) continue;
-            if (p[i] < 0 && b.hasLower()) {
-                double t = (b.getLower() - x[i]) / p[i];
+            if (p[pOff+i] < 0 && b.hasLower()) {
+                double t = (b.getLower() - x[i]) / p[pOff+i];
                 if (t > 0 && t < tHit) { tHit = t; hitIdx = i; }
-            } else if (p[i] > 0 && b.hasUpper()) {
-                double t = (b.getUpper() - x[i]) / p[i];
+            } else if (p[pOff+i] > 0 && b.hasUpper()) {
+                double t = (b.getUpper() - x[i]) / p[pOff+i];
                 if (t > 0 && t < tHit) { tHit = t; hitIdx = i; }
             }
         }
 
         if (hitIdx < 0) {
             // No bound hit: use full step (clipped for safety)
-            for (int i = 0; i < n; i++) { xNew[i] = x[i] + p[i]; step[i] = p[i]; }
+            for (int i = 0; i < n; i++) { xNew[i] = x[i] + p[pOff+i]; step[stepOff+i] = p[pOff+i]; }
             applyBounds(xNew, bounds, n);
-            for (int i = 0; i < n; i++) step[i] = xNew[i] - x[i];
+            for (int i = 0; i < n; i++) step[stepOff+i] = xNew[i] - x[i];
             return;
         }
 
@@ -617,51 +631,50 @@ final class TRFCore {
 
         // ── Candidate 2: reflective step ──────────────────────────────────────
         // Point where we hit the bound
-        for (int i = 0; i < n; i++) xHit[i] = x[i] + tHit * p[i];
+        for (int i = 0; i < n; i++) xHit[xHitOff+i] = x[i] + tHit * p[pOff+i];
 
         // Reflected direction: flip the component that hit the bound
-        System.arraycopy(p, 0, pRef, 0, n);
-        pRef[hitIdx] = -pRef[hitIdx];
+        System.arraycopy(p, pOff, pRef, pRefOff, n);
+        pRef[pRefOff+hitIdx] = -pRef[pRefOff+hitIdx];
         double tRemain = 1.0 - tHit;
 
         // Clip reflected direction to stay feasible
         double tRef = tRemain;
         for (int i = 0; i < n; i++) {
-            if (pRef[i] == 0) continue;
+            if (pRef[pRefOff+i] == 0) continue;
             Bound b = bounds[i];
             if (b == null || b.isUnbounded()) continue;
-            if (pRef[i] < 0 && b.hasLower()) {
-                double t = (b.getLower() - xHit[i]) / pRef[i];
+            if (pRef[pRefOff+i] < 0 && b.hasLower()) {
+                double t = (b.getLower() - xHit[xHitOff+i]) / pRef[pRefOff+i];
                 if (t >= 0 && t < tRef) tRef = t;
-            } else if (pRef[i] > 0 && b.hasUpper()) {
-                double t = (b.getUpper() - xHit[i]) / pRef[i];
+            } else if (pRef[pRefOff+i] > 0 && b.hasUpper()) {
+                double t = (b.getUpper() - xHit[xHitOff+i]) / pRef[pRefOff+i];
                 if (t >= 0 && t < tRef) tRef = t;
             }
         }
         // Step back reflected stride by theta as well
         double rStrideL = (1.0 - theta) * tHit / Math.max(tRef, 1e-300);
         double rStrideU = theta * tRef;
-        // tOpt for reflected path is in [rStrideL, rStrideU]
 
-        // ── Candidate 3: Cauchy step along -g (true anti-gradient) ──────────
-        // ag[i] = -g[i] = -(J^T f)[i], the steepest descent direction.
-        // g = J^T f = P R^T (Q^T f) = P R^T qtf, so g[ipvt[j]] = sum_{i<=j} R[i,j]*qtf[i].
+        // ── Candidate 3: Cauchy step along −g (true anti-gradient) ───────────
+        // ag[i] = −g[i] = −(Jᵀf)[i], the steepest descent direction.
+        // g = Jᵀf = P·Rᵀ·(Qᵀf) = P·Rᵀ·qtf, so g[ipvt[j]] = Σᵢ≤ⱼ R[i,j]*qtf[i].
+
         // Project out components blocked at a bound: if ag[i] > 0 and x[i] is at its
         // upper bound (dHi < threshold), or ag[i] < 0 and x[i] is at its lower bound
         // (dLo < threshold), set ag[i] = 0.  This mirrors scipy's hat-space projection
         // (d_h[i] = 0 when v[i] ≈ 0) and prevents the Cauchy step from being collapsed
         // to near-zero by a single variable that is already at a bound.
         double agNorm = 0.0;
-        // First compute g = J^T f = P R^T qtf, then negate to get ag = -g
-        for (int i = 0; i < n; i++) ag[i] = 0.0;
+        for (int i = 0; i < n; i++) ag[agOff+i] = 0.0;
         for (int j = 0; j < n; j++) {
             int l = ipvt[j];
             double gj = 0.0;
-            for (int i = 0; i <= j; i++) gj += fjac[i * n + j] * qtf[i];
-            ag[l] = -gj; // ag[l] = -g[l]
+            for (int i = 0; i <= j; i++) gj += fjac[i * n + j] * qtf[qtfOff+i];
+            ag[agOff+l] = -gj;
         }
         for (int i = 0; i < n; i++) {
-            double ai = ag[i];
+            double ai = ag[agOff+i];
             if (bounds != null && ai != 0.0) {
                 Bound b = bounds[i];
                 if (b != null && !b.isUnbounded()) {
@@ -674,11 +687,11 @@ final class TRFCore {
                     else if (ai < 0 && dLo < 1e-8) ai = 0.0;
                 }
             }
-            ag[i] = ai;
+            ag[agOff+i] = ai;
             agNorm += ai * ai;
         }
         agNorm = Math.sqrt(agNorm);
-        // Clip Cauchy direction to trust-region ball radius (Delta) and bounds.
+        // Clip Cauchy direction to trust-region ball radius (Δ) and bounds.
         // scipy uses to_tr = Delta / norm(ag_h), NOT pNorm / agNorm.
         // Using pNorm would collapse the Cauchy step to zero when tHit≈0 (x at bound),
         // preventing convergence of unconstrained variables in the same iteration.
@@ -688,64 +701,64 @@ final class TRFCore {
             tCauchy = delta / agNorm;
             // Clip to bounds
             for (int i = 0; i < n; i++) {
-                if (ag[i] == 0) continue;
+                if (ag[agOff+i] == 0) continue;
                 Bound b = bounds[i];
                 if (b == null || b.isUnbounded()) continue;
-                if (ag[i] < 0 && b.hasLower()) {
-                    double t = (b.getLower() - x[i]) / ag[i];
+                if (ag[agOff+i] < 0 && b.hasLower()) {
+                    double t = (b.getLower() - x[i]) / ag[agOff+i];
                     if (t >= 0 && t < tCauchy) tCauchy = t;
-                } else if (ag[i] > 0 && b.hasUpper()) {
-                    double t = (b.getUpper() - x[i]) / ag[i];
+                } else if (ag[agOff+i] > 0 && b.hasUpper()) {
+                    double t = (b.getUpper() - x[i]) / ag[agOff+i];
                     if (t >= 0 && t < tCauchy) tCauchy = t;
                 }
             }
             tCauchy *= theta;
         }
 
-        // ── Compute R·P^T vectors for quadratic model evaluation ─────────────
-        // Jp  = R·P^T·(tHit·p)
-        // Jpr = R·P^T·pRef
-        // Jag = R·P^T·ag  (reuse xHit as scratch for Jag)
-        Arrays.fill(Jp,   0, n, 0.0);
-        Arrays.fill(Jpr,  0, n, 0.0);
-        Arrays.fill(xHit, 0, n, 0.0); // reuse as Jag scratch
+        // ── Compute R·Pᵀ vectors for quadratic model evaluation ──────────────
+        // Jp  = R·Pᵀ·(tHit·p)
+        // Jpr = R·Pᵀ·pRef
+        // Jag = R·Pᵀ·ag  (reuse xHit as scratch for Jag)
+        Arrays.fill(Jp,   JpOff,   JpOff   + n, 0.0);
+        Arrays.fill(Jpr,  JprOff,  JprOff  + n, 0.0);
+        Arrays.fill(xHit, xHitOff, xHitOff + n, 0.0); // reuse as Jag scratch
         for (int j = 0; j < n; j++) {
             int l = ipvt[j];
-            double vp   = tHit * p[l];
-            double vpr  = pRef[l];
-            double vag  = ag[l];
+            double vp   = tHit * p[pOff+l];
+            double vpr  = pRef[pRefOff+l];
+            double vag  = ag[agOff+l];
             for (int i = 0; i <= j; i++) {
                 double fij = fjac[i * n + j];
-                Jp[i]   += fij * vp;
-                Jpr[i]  += fij * vpr;
-                xHit[i] += fij * vag;
+                Jp[JpOff+i]   += fij * vp;
+                Jpr[JprOff+i] += fij * vpr;
+                xHit[xHitOff+i] += fij * vag;
             }
         }
 
-        // Quadratic model: ||Q^T·f/fnorm + R·P^T·s||^2
+        // Quadratic model: ‖Qᵀ·f/‖f‖ + R·Pᵀ·s‖²
         // Evaluate at three candidates and pick the best
         double invFnorm = (fnorm > 0) ? 1.0 / fnorm : 1.0;
 
-        // Candidate 1: TR step at tTR (= theta*tHit along p, so Jp scaled by tTR/tHit = theta)
+        // Candidate 1: TR step at tTR (= theta*tHit along p)
         double valTR = 0;
         for (int i = 0; i < n; i++) {
-            double qi = qtf[i] * invFnorm;
-            double d  = qi + (tTR / Math.max(tHit, 1e-300)) * Jp[i];
+            double qi = qtf[qtfOff+i] * invFnorm;
+            double d  = qi + (tTR / Math.max(tHit, 1e-300)) * Jp[JpOff+i];
             valTR += d * d;
         }
 
         // Candidate 2: reflective — find optimal t along reflected path
         double aRef = 0, bRef = 0;
         for (int i = 0; i < n; i++) {
-            double qi = qtf[i] * invFnorm;
-            aRef += Jpr[i] * Jpr[i];
-            bRef += (Jp[i] + qi) * Jpr[i];
+            double qi = qtf[qtfOff+i] * invFnorm;
+            aRef += Jpr[JprOff+i] * Jpr[JprOff+i];
+            bRef += (Jp[JpOff+i] + qi) * Jpr[JprOff+i];
         }
         double tOptRef = (aRef > 0) ? Math.max(rStrideL, Math.min(rStrideU, -bRef / (2 * aRef))) : rStrideL;
         double valRef = 0;
         for (int i = 0; i < n; i++) {
-            double qi = qtf[i] * invFnorm;
-            double d  = qi + Jp[i] + Jpr[i] * tOptRef;
+            double qi = qtf[qtfOff+i] * invFnorm;
+            double d  = qi + Jp[JpOff+i] + Jpr[JprOff+i] * tOptRef;
             valRef += d * d;
         }
 
@@ -753,8 +766,8 @@ final class TRFCore {
         double valCauchy = 0;
         if (agNorm > 0) {
             for (int i = 0; i < n; i++) {
-                double qi = qtf[i] * invFnorm;
-                double d  = qi + xHit[i] * tCauchy; // xHit reused as Jag
+                double qi = qtf[qtfOff+i] * invFnorm;
+                double d  = qi + xHit[xHitOff+i] * tCauchy; // xHit reused as Jag
                 valCauchy += d * d;
             }
         } else {
@@ -762,30 +775,30 @@ final class TRFCore {
         }
 
         // ── Restore xHit to actual bound-hit point ────────────────────────────
-        for (int i = 0; i < n; i++) xHit[i] = x[i] + tHit * p[i];
+        for (int i = 0; i < n; i++) xHit[xHitOff+i] = x[i] + tHit * p[pOff+i];
 
         // ── Pick best candidate ───────────────────────────────────────────────
         if (valTR <= valRef && valTR <= valCauchy) {
             // Candidate 1: step back along p
             for (int i = 0; i < n; i++) {
-                xNew[i] = x[i] + tTR * p[i];
-                step[i] = tTR * p[i];
+                xNew[i] = x[i] + tTR * p[pOff+i];
+                step[stepOff+i] = tTR * p[pOff+i];
             }
         } else if (valRef <= valCauchy) {
             // Candidate 2: reflective
             for (int i = 0; i < n; i++) {
-                xNew[i] = xHit[i] + tOptRef * pRef[i];
-                step[i] = xNew[i] - x[i];
+                xNew[i] = xHit[xHitOff+i] + tOptRef * pRef[pRefOff+i];
+                step[stepOff+i] = xNew[i] - x[i];
             }
         } else {
             // Candidate 3: Cauchy
             for (int i = 0; i < n; i++) {
-                xNew[i] = x[i] + tCauchy * ag[i];
-                step[i] = tCauchy * ag[i];
+                xNew[i] = x[i] + tCauchy * ag[agOff+i];
+                step[stepOff+i] = tCauchy * ag[agOff+i];
             }
         }
         applyBounds(xNew, bounds, n);
-        for (int i = 0; i < n; i++) step[i] = xNew[i] - x[i];
+        for (int i = 0; i < n; i++) step[stepOff+i] = xNew[i] - x[i];
     }
 
     // ── Main optimization loop ────────────────────────────────────────────────
@@ -865,24 +878,28 @@ final class TRFCore {
                                        RobustLoss loss, double lossScale,
                                        double[] x, TRFWorkspace ws) {
 
-        double[] fvec    = ws.fvec;
-        double[] fjac    = ws.fjac;
-        double[] rwork   = ws.rwork;
-        double[] diag    = ws.diag;
-        double[] qtf     = ws.qtf;
-        double[] wa1     = ws.wa1;
-        double[] wa2     = ws.wa2;
-        double[] wa3     = ws.wa3;
-        double[] wa4     = ws.wa4;
-        int[]    ipvt    = ws.ipvt;
-        double[] clScale = ws.clScale;
-        double[] effDiag = ws.effDiag;
-        double[] Jp      = ws.Jp;
-        double[] Jpr     = ws.Jpr;
-        double[] step    = ws.step;
-        double[] xHit    = ws.xHit;
-        double[] pRef    = ws.pRef;
-        double[] ag      = ws.ag;
+        // ── eval-facing standalone arrays ─────────────────────────────────────
+        double[] fvec = ws.fvec;   // f(xₖ)
+        double[] fjac = ws.fjac;   // J(xₖ) row-major
+        double[] wa2  = ws.wa2;    // acnorm (qrfac output) / trial point xₖ+p (eval input) / xnorm scratch
+        double[] wa4  = ws.wa4;    // f(xₖ+p) — trial residuals
+        int[]    ipvt = ws.ipvt;
+
+        // ── merged scratch buffer + offsets ───────────────────────────────────
+        double[] work      = ws.work;
+        final int rworkOff   = ws.rworkOff;
+        final int diagOff    = ws.diagOff;
+        final int qtfOff     = ws.qtfOff;
+        final int wa1Off     = ws.wa1Off;
+        final int wa3Off     = ws.wa3Off;
+        final int clScaleOff = ws.clScaleOff;
+        final int effDiagOff = ws.effDiagOff;
+        final int JpOff      = ws.JpOff;
+        final int JprOff     = ws.JprOff;
+        final int stepOff    = ws.stepOff;
+        final int xHitOff    = ws.xHitOff;
+        final int pRefOff    = ws.pRefOff;
+        final int agOff      = ws.agOff;
 
         applyBounds(x, bounds, n);
 
@@ -895,7 +912,7 @@ final class TRFCore {
         OptimizationStatus status = null;
 
         // Tracks cost at current x; updated at outer loop top and on each accepted step.
-        // For LINEAR: cost = 0.5*||f||²; for robust: cost = 0.5*C²*Σρ(f²/C²).
+        // For LINEAR: cost = 0.5*‖f‖²; for robust: cost = 0.5*C²*Σρ(f²/C²).
         double cost = 0.0;
 
         outer:
@@ -914,68 +931,77 @@ final class TRFCore {
             loss.scaleJF(fvec, fjac, m, n, lossScale);
 
             // ── Factor J·P = Q·R (on the loss-scaled Jacobian) ───────────────
-            // qtf is passed as dot[] scratch — safe because qrfac runs before applyQtToVec
-            qrfac(m, n, fjac, ipvt, wa1, wa2, wa3, qtf);
+            // wa1 → rdiag, wa2 → acnorm (offset 0, standalone), wa3 → wa scratch, qtf → tmp scratch
+            // work[qtfOff] is passed as tmp[] scratch — safe because qrfac runs before applyQtToVec
+            qrfac(m, n, fjac, ipvt,
+                  work, wa1Off,   // rdiag
+                  wa2,  0,        // acnorm — wa2 is standalone, offset 0
+                  work, wa3Off,   // wa scratch
+                  work, qtfOff);  // dot scratch
 
             // For robust loss, use cost-based effective norm so that actred and prered
             // are computed on the same scale: fnorm² ≈ 2*cost, fnorm = sqrt(2*cost).
-            // For LINEAR, cost = 0.5*||f||², so sqrt(2*cost) = ||f|| — identical.
+            // For LINEAR, cost = 0.5*‖f‖², so sqrt(2*cost) = ‖f‖ — identical.
             fnorm = Math.sqrt(2.0 * cost);
 
             // ── Coleman-Li scaling from current x ────────────────────────────
             // qtf not yet computed on first call; pass null to fall back to geometric distance
-            clScaling(x, (iter == 1) ? null : qtf, bounds, n, clScale);
+            clScaling(x, (iter == 1) ? null : work, qtfOff, bounds, n, work, clScaleOff);
 
             // ── Initialize scaling diagonal on first iteration ────────────────
             if (iter == 1) {
                 if (userDiag == null) {
-                    for (int j = 0; j < n; j++) diag[j] = (wa2[j] != 0.0) ? wa2[j] : 1.0;
+                    for (int j = 0; j < n; j++)
+                        work[diagOff+j] = (wa2[j] != 0.0) ? wa2[j] : 1.0;  // wa2 = acnorm here
                 } else {
-                    System.arraycopy(userDiag, 0, diag, 0, n);
+                    System.arraycopy(userDiag, 0, work, diagOff, n);
                 }
-                for (int j = 0; j < n; j++) wa3[j] = diag[j] * clScale[j] * x[j];
-                double xnorm = enorm(n, wa3, 0);
+                for (int j = 0; j < n; j++)
+                    work[wa3Off+j] = work[diagOff+j] * work[clScaleOff+j] * x[j];
+                double xnorm = enorm(n, work, wa3Off);
                 double delta = (xnorm != 0.0) ? factor * xnorm : factor;
                 ws.delta = delta;
                 ws.xnorm = xnorm;
             }
 
-            // ── Compute Q^T·f ─────────────────────────────────────────────────
+            // ── Compute Qᵀ·f ──────────────────────────────────────────────────
             System.arraycopy(fvec, 0, wa4, 0, m);
-            applyQtToVec(fjac, m, n, wa4, wa1);
-            System.arraycopy(wa4, 0, qtf, 0, n);
+            applyQtToVec(fjac, m, n, wa4, work, wa1Off);  // wa1 = rdiag
+            System.arraycopy(wa4, 0, work, qtfOff, n);
 
             // ── Gradient norm (Coleman-Li scaled) ─────────────────────────────
-            // Also compute the true gradient g = J^T f = P R^T (Q^T f) = P R^T qtf,
-            // stored in wa3[ipvt[j]] = sum_i fjac[i*n+j] * qtf[i].
+            // Also compute the true gradient g = Jᵀf = P·Rᵀ·(Qᵀf) = P·Rᵀ·qtf,
+            // stored in work[wa3Off+ipvt[j]] = Σᵢ fjac[i*n+j] * qtf[i].
             // This is needed for clScaling (which requires the true gradient direction,
-            // not qtf = Q^T f whose sign may differ from g due to Q's sign convention).
+            // not qtf = Qᵀf whose sign may differ from g due to Q's sign convention).
             double gnorm = 0.0;
             if (fnorm != 0.0) {
                 for (int j = 0; j < n; j++) {
                     int l = ipvt[j];
                     double sum = 0.0;
-                    for (int i = 0; i <= j; i++) sum += fjac[i * n + j] * qtf[i];
-                    wa3[l] = sum; // true gradient g[l] = (R^T qtf)[j] mapped back via P
-                    if (wa2[l] == 0.0) continue;
-                    gnorm = Math.max(gnorm, Math.abs((sum / fnorm) * clScale[l] / wa2[l]));
+                    for (int i = 0; i <= j; i++) sum += fjac[i * n + j] * work[qtfOff+i];
+                    work[wa3Off+l] = sum; // true gradient g[l] = (Rᵀ·qtf)[j] mapped back via P
+                    if (wa2[l] == 0.0) continue;  // wa2 = acnorm here
+                    gnorm = Math.max(gnorm, Math.abs((sum / fnorm) * work[clScaleOff+l] / wa2[l]));
                 }
             }
 
             if (gnorm <= gtol) { status = OptimizationStatus.GRADIENT_TOLERANCE_REACHED; break; }
 
             if (userDiag == null) {
-                for (int j = 0; j < n; j++) diag[j] = Math.max(diag[j], wa2[j]);
+                for (int j = 0; j < n; j++)
+                    work[diagOff+j] = Math.max(work[diagOff+j], wa2[j]);  // wa2 = acnorm here
             }
 
-            // ── Effective lmpar diagonal: diag * clScale ──────────────────────
+            // ── Effective lmpar diagonal: diag·clScale ────────────────────────
             // SciPy uses effDiag = diag * sqrt(v) * x_scale (hat-space scaling),
-            // and augments the trust-region Hessian with C = diag(g * dv * scale)
+            // and augments the trust-region Hessian with C = diag(g·dv·scale)
             // to account for CL-transformation curvature near bounds. We omit C
-            // and use MINPACK-style lmpar (positive-definite J^T J only), which is
+            // and use MINPACK-style lmpar (positive-definite JᵀJ only), which is
             // ~3-5× faster per outer iteration at the cost of potentially more
             // iterations when variables are actively constrained at bounds.
-            for (int j = 0; j < n; j++) effDiag[j] = diag[j] * clScale[j];
+            for (int j = 0; j < n; j++)
+                work[effDiagOff+j] = work[diagOff+j] * work[clScaleOff+j];
 
             // ── Freeze variables at active bounds for lmpar ───────────────────
             // When a variable is at a bound in the gradient direction (dHi/dLo < 1e-8),
@@ -986,52 +1012,63 @@ final class TRFCore {
             // to produce p[i] ≈ 0 for the frozen variable. The pnorm is computed with
             // the original effDiag (not inflated) so delta updates remain correct.
             //
-            // lmpar gives p = -(J^T J + λD^T D)^{-1} J^T f ≈ -H^{-1} g:
+            // lmpar gives p = −(JᵀJ + λDᵀD)⁻¹·Jᵀf ≈ −H⁻¹·g:
             //   g[j] < 0 → p[j] > 0 (wants to increase x[j]) → blocked if dHi ≈ 0
             //   g[j] > 0 → p[j] < 0 (wants to decrease x[j]) → blocked if dLo ≈ 0
-            // Use true gradient g = J^T f (stored in wa3 from gnorm computation),
-            // NOT qtf = Q^T f (whose sign may differ from g due to Q's sign convention).
+            // Use true gradient g = Jᵀf (stored in work[wa3Off] from gnorm computation),
+            // NOT qtf = Qᵀf (whose sign may differ from g due to Q's sign convention).
             if (bounds != null) {
                 for (int j = 0; j < n; j++) {
                     Bound b = bounds[j];
                     if (b == null || b.isUnbounded()) continue;
                     double dLo = b.hasLower() ? (x[j] - b.getLower()) : Double.MAX_VALUE;
                     double dHi = b.hasUpper() ? (b.getUpper() - x[j]) : Double.MAX_VALUE;
-                    double gj  = wa3[j]; // true gradient g[j] = (J^T f)[j]
+                    double gj  = work[wa3Off+j]; // true gradient g[j] = (Jᵀf)[j]
                     if ((gj < 0 && dHi < 1e-8) || (gj > 0 && dLo < 1e-8)) {
-                        effDiag[j] = diag[j] * 1e10; // inflate to freeze
+                        work[effDiagOff+j] = work[diagOff+j] * 1e10; // inflate to freeze
                     }
                 }
             }
 
-            // ── theta: step-back fraction (SciPy: max(0.995, 1 - ||g||)) ──────
+            // ── theta: step-back fraction (SciPy: max(0.995, 1 − ‖g‖)) ───────
             double theta = Math.max(0.995, 1.0 - gnorm);
 
             // ════════════════════════════════════════════════════════════════
             // Inner loop: trust-region step selection
             // ════════════════════════════════════════════════════════════════
             while (true) {
+                // Copy upper triangle of fjac into rwork for lmpar (lmpar modifies r in-place)
                 for (int j = 0; j < n; j++)
                     for (int i = 0; i <= j; i++)
-                        rwork[i*n+j] = fjac[i*n+j];
+                        work[rworkOff+i*n+j] = fjac[i*n+j];
 
-                par = lmpar(n, rwork, ipvt, effDiag, qtf, ws.delta, par, wa1, wa2, wa3, wa4);
+                par = lmpar(n, work, rworkOff, ipvt,
+                            work, effDiagOff,
+                            work, qtfOff,
+                            ws.delta, par,
+                            work, wa1Off,   // x output → work[wa1Off] (step p)
+                            work, wa3Off,   // sdiag scratch
+                            wa2,            // wa1 scratch (eval not yet called, safe to reuse)
+                            wa4);           // wa2 scratch (eval not yet called, safe to reuse)
 
-                // wa1 = unconstrained step p (sign-flipped)
-                for (int j = 0; j < n; j++) wa1[j] = -wa1[j];
+                // work[wa1Off] now holds the unconstrained step p; negate it
+                for (int j = 0; j < n; j++) work[wa1Off+j] = -work[wa1Off+j];
 
                 // ── Reflective step: find best feasible step ──────────────────
-                reflectiveStep(x, wa1, bounds, n,
+                // p = work[wa1Off] (negated step), xNew = wa2 (standalone), step → work[stepOff]
+                reflectiveStep(x, work, wa1Off, bounds, n,
                                theta,
-                               wa2, step,
-                               Jp, Jpr, xHit, pRef, ag, m, fjac, ipvt, qtf, fnorm,
+                               wa2, work, stepOff,
+                               work, JpOff, work, JprOff,
+                               work, xHitOff, work, pRefOff, work, agOff,
+                               m, fjac, ipvt, work, qtfOff, fnorm,
                                ws.delta);
 
-                // pnorm based on actual step (Coleman-Li scaled, using base effDiag without
-                // the freeze inflation applied above). Frozen variables have step ≈ 0 anyway,
-                // but using diag*clScale avoids any 1e10 * ~0 numerical noise.
-                for (int j = 0; j < n; j++) wa3[j] = diag[j] * clScale[j] * step[j];
-                double pnorm = enorm(n, wa3, 0);
+                // pnorm based on actual step (Coleman-Li scaled, using effDiag = diag·clScale).
+                // effDiag is computed before lmpar and not modified by it, so it's stable here.
+                for (int j = 0; j < n; j++)
+                    work[wa3Off+j] = work[effDiagOff+j] * work[stepOff+j];
+                double pnorm = enorm(n, work, wa3Off);
 
                 if (iter == 1 && pnorm > 0) ws.delta = Math.min(ws.delta, pnorm);
 
@@ -1041,7 +1078,7 @@ final class TRFCore {
                 makeStrictlyFeasible(wa2, bounds, n);
                 fcn.evaluate(wa2, wa4, null);
                 nfev++;
-                // For LINEAR: cost1 = 0.5*||f_new||², fnorm1 = ||f_new|| (same as enorm).
+                // For LINEAR: cost1 = 0.5*‖f_new‖², fnorm1 = ‖f_new‖ (same as enorm).
                 // For robust: cost1 = 0.5*C²*Σρ(f²/C²), fnorm1 = sqrt(2*cost1).
                 double cost1  = loss.cost(wa4, m, lossScale);
                 double fnorm1 = Math.sqrt(2.0 * cost1);
@@ -1050,13 +1087,16 @@ final class TRFCore {
                 if (P1 * fnorm1 < fnorm) {
                     double r = fnorm1 / fnorm;
                     actred = 1.0 - r * r;
-                }                Arrays.fill(wa3, 0, n, 0.0);
+                }
+
+                // Predicted reduction: wa3 = R·Pᵀ·step
+                Arrays.fill(work, wa3Off, wa3Off + n, 0.0);
                 for (int j = 0; j < n; j++) {
                     int l = ipvt[j];
-                    double tmp = step[l];
-                    for (int i = 0; i <= j; i++) wa3[i] += fjac[i * n + j] * tmp;
+                    double tmp = work[stepOff+l];
+                    for (int i = 0; i <= j; i++) work[wa3Off+i] += fjac[i * n + j] * tmp;
                 }
-                double temp1  = enorm(n, wa3, 0) / fnorm;
+                double temp1  = enorm(n, work, wa3Off) / fnorm;
                 double temp2  = (Math.sqrt(par) * pnorm) / fnorm;
                 double prered = temp1 * temp1 + temp2 * temp2 / P5;
                 double dirder = -(temp1 * temp1 + temp2 * temp2);
@@ -1082,10 +1122,10 @@ final class TRFCore {
                 if (ratio >= P0001) {
                     System.arraycopy(wa2, 0, x, 0, n);
                     System.arraycopy(wa4, 0, fvec, 0, m);
-                    cost = cost1; // update to cost at new x
-                    clScaling(x, qtf, bounds, n, clScale);
-                    for (int j = 0; j < n; j++) effDiag[j] = diag[j] * clScale[j];
-                    for (int j = 0; j < n; j++) wa2[j] = effDiag[j] * x[j];
+                    cost = cost1;
+                    clScaling(x, work, qtfOff, bounds, n, work, clScaleOff);
+                    for (int j = 0; j < n; j++) work[effDiagOff+j] = work[diagOff+j] * work[clScaleOff+j];
+                    for (int j = 0; j < n; j++) wa2[j] = work[effDiagOff+j] * x[j];  // xnorm scratch
                     ws.xnorm = enorm(n, wa2, 0);
                     fnorm = fnorm1;
                     iter++;
@@ -1110,7 +1150,7 @@ final class TRFCore {
             }
         }
 
-        // For LINEAR: return ||f||² (RSS), consistent with original behavior.
+        // For LINEAR: return ‖f‖² (RSS), consistent with original behavior.
         // For robust: return scipy cost = 0.5*C²*Σρ(f²/C²).
         double objectiveValue = (loss == RobustLoss.LINEAR) ? fnorm * fnorm : cost;
         return new OptimizationResult(objectiveValue, status, iter - 1, nfev);

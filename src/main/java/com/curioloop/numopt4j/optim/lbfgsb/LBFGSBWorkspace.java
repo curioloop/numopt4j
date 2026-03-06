@@ -362,6 +362,22 @@ public final class LBFGSBWorkspace {
         return this.n == dimension && this.m == corrections;
     }
 
+    /**
+     * Ensures this workspace has sufficient capacity for the given dimensions.
+     *
+     * <p>Since L-BFGS-B workspace dimensions are fixed at construction time,
+     * this method returns {@code true} if the current workspace can be reused
+     * (i.e., dimensions match exactly), or {@code false} if a new workspace
+     * must be allocated by the caller.</p>
+     *
+     * @param dimension   required problem dimension
+     * @param corrections required number of L-BFGS corrections
+     * @return true if this workspace is sufficient; false if reallocation is needed
+     */
+    public boolean ensureCapacity(int dimension, int corrections) {
+        return this.n == dimension && this.m == corrections;
+    }
+
     // ========================================================================
     // Reset method
     // ========================================================================

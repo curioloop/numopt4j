@@ -53,13 +53,14 @@ final class BroydenSolver {
         // ── workspace fields ─────────────────────────────────────────────────
         final double[] x    = ws.x;
         final double[] fx   = ws.fx;
-        final double[] dx   = ws.dx;
-        final double[] Hdf  = ws.Hdf;
-        final double[] dxH  = ws.dxH;
-        final double[] H    = ws.H;
         final double[] xNew = ws.xNew;
         final double[] fNew = ws.fNew;
-        final double[] dF   = ws.dF;
+        final double[] work = ws.work;
+        final int hOff   = ws.hOff;
+        final int dxOff  = ws.dxOff;
+        final int HdfOff = ws.HdfOff;
+        final int dxHOff = ws.dxHOff;
+        final int dFOff  = ws.dFOff;
 
         System.arraycopy(x0, 0, x, 0, n);
         fn.accept(x, fx);
@@ -82,36 +83,36 @@ final class BroydenSolver {
         // fjac is zero-initialised by RootWorkspace; only write diagonal.
         double alpha = 0.5 * Math.max(BLAS.dnrm2(n, x, 0, 1), 1.0)
                            / BLAS.dnrm2(n, fx, 0, 1);
-        Arrays.fill(H, 0);
-        BLAS.dset(n, -alpha, H, 0, n + 1);  // stride n+1 → diagonal only
+        Arrays.fill(work, hOff, hOff + n * n, 0.0);
+        BLAS.dset(n, -alpha, work, hOff, n + 1);  // stride n+1 → diagonal only
 
         for (int iter = 1; iter <= maxiter; iter++) {
 
             // ── Newton step: dx = -H · F ─────────────────────────────────────
             // scipy BroydenFirst.solve(): r = Gm.matvec(f); if not finite → reset H, return Gm.matvec(f)
             // so dx = -H·F, with singular-reset applied before the step is used.
-            BLAS.dgemv(BLAS.Transpose.NoTrans, n, n, 1.0, H, 0, n, fx, 0, 1, 0.0, dx, 0, 1);
+            BLAS.dgemv(BLAS.Transpose.NoTrans, n, n, 1.0, work, hOff, n, fx, 0, 1, 0.0, work, dxOff, 1);
             boolean finite = true;
-            for (int i = 0; i < n; i++) if (!Double.isFinite(dx[i])) { finite = false; break; }
+            for (int i = 0; i < n; i++) if (!Double.isFinite(work[dxOff + i])) { finite = false; break; }
             if (!finite) {
                 // reset H₀ = -resetAlpha·I  (scipy: self.setup(last_x, last_f, func))
                 // H·fx = -resetAlpha·fx, so dx = -H·fx = resetAlpha·fx — no dgemv needed
                 double resetAlpha = 0.5 * Math.max(BLAS.dnrm2(n, x, 0, 1), 1.0)
                                         / Math.max(fnorm, 1e-300);
-                BLAS.dlaset('A', n, n, 0.0, -resetAlpha, H, 0, n);  // full clear + diagonal
-                BLAS.dcopy(n, fx, 0, 1, dx, 0, 1);
-                BLAS.dscal(n, -resetAlpha, dx, 0, 1);
+                BLAS.dlaset('A', n, n, 0.0, -resetAlpha, work, hOff, n);  // full clear + diagonal
+                BLAS.dcopy(n, fx, 0, 1, work, dxOff, 1);
+                BLAS.dscal(n, -resetAlpha, work, dxOff, 1);
             } else {
-                BLAS.dscal(n, -1.0, dx, 0, 1);
+                BLAS.dscal(n, -1.0, work, dxOff, 1);
             }
 
             // ── Armijo line search (scalar_search_armijo) ────────────────────
-            // scipy _nonlin_line_search: phi(s) = ||F(x+s*dx)||₂²  (L2 norm squared)
-            // derphi0 = -tmp_phi[0] = -||F||₂²  (scipy convention)
+            // scipy _nonlin_line_search: phi(s) = ‖F(x+s·dx)‖₂²  (L2 norm squared)
+            // derphi0 = -tmp_phi[0] = -‖F‖₂²  (scipy convention)
             // Convergence check uses max-norm, but line search phi uses L2 norm.
             // amin = 1e-2,  c1 = 1e-4
             final double fnormL2 = BLAS.dnrm2(n, fx, 0, 1);
-            final double phi0    = fnormL2 * fnormL2;   // ||F||₂²
+            final double phi0    = fnormL2 * fnormL2;   // ‖F‖₂²
             final double derphi0 = -phi0;               // scipy: -tmp_phi[0]
             final double amin    = 1e-2;
             final double c1      = 1e-4;
@@ -121,7 +122,7 @@ final class BroydenSolver {
 
             // evaluate phi(alpha0=1)
             BLAS.dcopy(n, x, 0, 1, xNew, 0, 1);
-            BLAS.daxpy(n, 1.0, dx, 0, 1, xNew, 0, 1);
+            BLAS.daxpy(n, 1.0, work, dxOff, 1, xNew, 0, 1);
             fn.accept(xNew, fNew);
             nfev++;
             double phi_a0 = l2normSq(fNew, n);
@@ -136,7 +137,7 @@ final class BroydenSolver {
                 double alpha1 = -derphi0 * alpha0 * alpha0
                         / (2.0 * (phi_a0 - phi0 - derphi0 * alpha0));
                 BLAS.dcopy(n, x, 0, 1, xNew, 0, 1);
-                BLAS.daxpy(n, alpha1, dx, 0, 1, xNew, 0, 1);
+                BLAS.daxpy(n, alpha1, work, dxOff, 1, xNew, 0, 1);
                 fn.accept(xNew, fNew);
                 nfev++;
                 double phi_a1 = l2normSq(fNew, n);
@@ -148,7 +149,7 @@ final class BroydenSolver {
                     // cubic interpolation loop — fev[] carries extra evaluation count back
                     int[] fev = {0};
                     step = cubicSearchArmijo(
-                            fn, x, dx, n, phi0, derphi0, c1, amin,
+                            fn, x, work, dxOff, n, phi0, derphi0, c1, amin,
                             alpha0, phi_a0, alpha1, phi_a1,
                             xNew, fNew, fev);
                     nfev += fev[0];
@@ -157,7 +158,7 @@ final class BroydenSolver {
                         // scipy returns None → s=1.0, x=x+dx, Fx=func(x+dx)
                         step = 1.0;
                         BLAS.dcopy(n, x, 0, 1, xNew, 0, 1);
-                        BLAS.daxpy(n, 1.0, dx, 0, 1, xNew, 0, 1);
+                        BLAS.daxpy(n, 1.0, work, dxOff, 1, xNew, 0, 1);
                         fn.accept(xNew, fNew);
                         nfev++;
                     }
@@ -180,9 +181,9 @@ final class BroydenSolver {
             }
 
             // ── actual dx = s·dx, dF = F_new - F ────────────────────────────
-            BLAS.dscal(n, step, dx, 0, 1);
-            BLAS.dcopy(n, fNew, 0, 1, dF, 0, 1);
-            BLAS.daxpy(n, -1.0, fx, 0, 1, dF, 0, 1);
+            BLAS.dscal(n, step, work, dxOff, 1);
+            BLAS.dcopy(n, fNew, 0, 1, work, dFOff, 1);
+            BLAS.daxpy(n, -1.0, fx, 0, 1, work, dFOff, 1);
 
             // ── Good Broyden rank-1 update of H (inverse Jacobian) ───────────
             // scipy BroydenFirst._update:
@@ -194,16 +195,16 @@ final class BroydenSolver {
             // Expanded: H₊ = H + (dx - H·dF)·(dxᵀ·H) / (dxᵀ·H·dF)
 
             // dxH = Hᵀ·dx  (rmatvec)
-            BLAS.dgemv(BLAS.Transpose.Trans, n, n, 1.0, H, 0, n, dx, 0, 1, 0.0, dxH, 0, 1);
+            BLAS.dgemv(BLAS.Transpose.Trans, n, n, 1.0, work, hOff, n, work, dxOff, 1, 0.0, work, dxHOff, 1);
             // Hdf = H·dF  (matvec), then c = dx - Hdf  reusing Hdf array: Hdf = dx - H·dF
-            BLAS.dgemv(BLAS.Transpose.NoTrans, n, n, -1.0, H, 0, n, dF, 0, 1, 0.0, Hdf, 0, 1);
-            BLAS.daxpy(n, 1.0, dx, 0, 1, Hdf, 0, 1);  // Hdf = dx - H·dF  (= c)
+            BLAS.dgemv(BLAS.Transpose.NoTrans, n, n, -1.0, work, hOff, n, work, dFOff, 1, 0.0, work, HdfOff, 1);
+            BLAS.daxpy(n, 1.0, work, dxOff, 1, work, HdfOff, 1);  // Hdf = dx - H·dF  (= c)
 
-            double denom = BLAS.ddot(n, dF, 0, 1, dxH, 0, 1);  // dFᵀ·(Hᵀ·dx) = dxᵀ·H·dF
+            double denom = BLAS.ddot(n, work, dFOff, 1, work, dxHOff, 1);  // dFᵀ·(Hᵀ·dx) = dxᵀ·H·dF
 
             if (Math.abs(denom) > 1e-300) {
                 // H += c·dᵀ / denom  →  dger(alpha=1/denom, x=Hdf(=c), y=dxH)
-                BLAS.dger(n, n, 1.0 / denom, Hdf, 0, 1, dxH, 0, 1, H, 0, n);
+                BLAS.dger(n, n, 1.0 / denom, work, HdfOff, 1, work, dxHOff, 1, work, hOff, n);
             }
             // Note: singular H (denom≈0) is detected at the start of the next iteration
             // via the finite-check on dx = H·F, matching scipy BroydenFirst.solve().
@@ -227,7 +228,7 @@ final class BroydenSolver {
      */
     private static double cubicSearchArmijo(
             BiConsumer<double[], double[]> fn,
-            double[] x, double[] dx, int n,
+            double[] x, double[] work, int dxOff, int n,
             double phi0, double derphi0, double c1, double amin,
             double alpha0, double phi_a0,
             double alpha1, double phi_a1,
@@ -251,7 +252,7 @@ final class BroydenSolver {
             alpha2 = (-b + Math.sqrt(Math.abs(b * b - 3.0 * a * derphi0))) / (3.0 * a);
 
             BLAS.dcopy(n, x, 0, 1, xNew, 0, 1);
-            BLAS.daxpy(n, alpha2, dx, 0, 1, xNew, 0, 1);
+            BLAS.daxpy(n, alpha2, work, dxOff, 1, xNew, 0, 1);
             fn.accept(xNew, fNew);
             extraFev++;
             double phi_a2 = l2normSq(fNew, n);

@@ -223,8 +223,10 @@ public final class RootFinder implements OptimizationProblem<OptimizationResult,
      */
     public RootWorkspace alloc() {
         if (n < 1) throw new IllegalStateException("Problem dimension n is unknown; call equations(fn, n) or initialPoint(x0) first");
-        if (workspace == null || !workspace.isCompatible(n)) {
+        if (workspace == null) {
             workspace = new RootWorkspace(n);
+        } else {
+            workspace.ensureCapacity(n);
         }
         return workspace;
     }

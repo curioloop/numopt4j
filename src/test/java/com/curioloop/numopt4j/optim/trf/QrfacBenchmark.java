@@ -136,7 +136,7 @@ public class QrfacBenchmark {
     @Benchmark
     public double[] small_opt() {
         double[] A = A_small.clone();
-        TRFCore.qrfac(SM, SN, A, ipvt_s, rdiag_s, acnorm_s, wa_s, dot_s);
+        TRFCore.qrfac(SM, SN, A, ipvt_s, rdiag_s, 0, acnorm_s, 0, wa_s, 0, dot_s, 0);
         return A;
     }
 
@@ -152,7 +152,7 @@ public class QrfacBenchmark {
     @Benchmark
     public double[] medium_opt() {
         double[] A = A_medium.clone();
-        TRFCore.qrfac(MM, MN, A, ipvt_m, rdiag_m, acnorm_m, wa_m, dot_m);
+        TRFCore.qrfac(MM, MN, A, ipvt_m, rdiag_m, 0, acnorm_m, 0, wa_m, 0, dot_m, 0);
         return A;
     }
 
@@ -168,7 +168,7 @@ public class QrfacBenchmark {
     @Benchmark
     public double[] large_opt() {
         double[] A = A_large.clone();
-        TRFCore.qrfac(LM, LN, A, ipvt_l, rdiag_l, acnorm_l, wa_l, dot_l);
+        TRFCore.qrfac(LM, LN, A, ipvt_l, rdiag_l, 0, acnorm_l, 0, wa_l, 0, dot_l, 0);
         return A;
     }
 
@@ -184,7 +184,7 @@ public class QrfacBenchmark {
     @Benchmark
     public double[] xlarge_opt() {
         double[] A = A_xlarge.clone();
-        TRFCore.qrfac(XM, XN, A, ipvt_x, rdiag_x, acnorm_x, wa_x, dot_x);
+        TRFCore.qrfac(XM, XN, A, ipvt_x, rdiag_x, 0, acnorm_x, 0, wa_x, 0, dot_x, 0);
         return A;
     }
 

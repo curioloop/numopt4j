@@ -11,7 +11,7 @@ package com.curioloop.numopt4j.optim.root;
  */
 public final class RootWorkspace {
 
-    private final int n;
+    private int n;
     private HYBRWorkspace   hybr;
     private BroydenWorkspace broyden;
 
@@ -21,6 +21,23 @@ public final class RootWorkspace {
     }
 
     public boolean isCompatible(int n) { return this.n == n; }
+
+    /**
+     * Ensures this workspace can handle dimension {@code newN}.
+     * Reallocates sub-workspaces only when {@code newN > n} (capacity exceeded).
+     * Always resets buffers to zero before returning.
+     */
+    public void ensureCapacity(int newN) {
+        if (newN < 1) throw new IllegalArgumentException("Workspace dimension must be >= 1, got: " + newN);
+        if (newN > n) {
+            // Capacity exceeded — drop sub-workspaces so they are reallocated on next use
+            hybr    = null;
+            broyden = null;
+            n = newN;
+        } else {
+            reset();
+        }
+    }
 
     /** Returns (allocating if necessary) the HYBR workspace. */
     public HYBRWorkspace hybr() {

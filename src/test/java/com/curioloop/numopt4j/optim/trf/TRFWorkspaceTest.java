@@ -29,12 +29,9 @@ class TRFWorkspaceTest {
 
         assertThat(ws.fvec).hasSize(m);
         assertThat(ws.fjac).hasSize(m * n);
-        assertThat(ws.rwork).hasSize(n * n);
-        assertThat(ws.diag).hasSize(n);
-        assertThat(ws.qtf).hasSize(n);
-        assertThat(ws.wa1).hasSize(n);
+        assertThat(ws.work).hasSize(n * n + 12 * n);
+        assertThat(ws.getN()).isEqualTo(n);
         assertThat(ws.wa2).hasSize(n);
-        assertThat(ws.wa3).hasSize(n);
         assertThat(ws.wa4).hasSize(m);
         assertThat(ws.ipvt).hasSize(n);
     }
@@ -46,7 +43,7 @@ class TRFWorkspaceTest {
         TRFProblem p = TRFProblem.create().residuals(fn, m).initialPoint(0.0, 0.0, 0.0);
         TRFWorkspace ws = p.alloc();
         assertThat(ws.fvec).hasSize(m);
-        assertThat(ws.diag).hasSize(n);
+        assertThat(ws.getN()).isEqualTo(n);
     }
 
     @Test
@@ -56,7 +53,7 @@ class TRFWorkspaceTest {
         TRFProblem p = TRFProblem.create().residuals(fn, m).initialPoint(0.0, 0.0);
         TRFWorkspace ws = p.alloc();
         assertThat(ws.fvec).hasSize(m);
-        assertThat(ws.diag).hasSize(2);
+        assertThat(ws.getN()).isEqualTo(2);
     }
 
     // ── Workspace reuse via TRFProblem ───────────────────────────────────────

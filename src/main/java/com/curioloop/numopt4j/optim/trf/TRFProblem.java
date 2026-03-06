@@ -153,22 +153,35 @@ public final class TRFProblem implements OptimizationProblem<OptimizationResult,
     @Override
     public TRFWorkspace alloc() {
         validate();
-        if (workspace == null || workspace.fvec.length != m || workspace.diag.length != n) {
+        if (workspace == null) {
             workspace = new TRFWorkspace(m, n);
+        } else {
+            workspace.ensureCapacity(m, n);
         }
         return workspace;
     }
 
+    /**
+     * Solves the optimization problem.
+     *
+     * <p>The initial point is cloned internally; {@code initialPoint} is not modified.
+     * The solution is stored in {@link OptimizationResult#getSolution()} and returned
+     * as a direct reference (no defensive copy). The caller owns the returned array.</p>
+     *
+     * @param workspace optional pre-allocated workspace for reuse
+     * @return optimization result
+     */
     @Override
     public OptimizationResult solve(TRFWorkspace... workspace) {
         validate();
         TRFWorkspace ws = (workspace != null && workspace.length > 0) ? workspace[0] : null;
         if (ws == null) {
             ws = this.workspace;
-            if (ws == null || ws.fvec.length != m || ws.diag.length != n) {
+            if (ws == null) {
                 ws = new TRFWorkspace(m, n);
             }
         }
+        ws.ensureCapacity(m, n);
 
         double[] x = initialPoint.clone();
         int maxfev = (maxEvaluations > 0) ? maxEvaluations : 100 * n;

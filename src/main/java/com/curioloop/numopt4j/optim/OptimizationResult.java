@@ -81,13 +81,16 @@ public class OptimizationResult {
     }
 
     /**
-     * Returns the solution vector, or an empty array if the optimizer wrote the
+     * Returns the solution vector directly, or {@code null} if the optimizer wrote the
      * solution back into the caller-supplied initial-point array instead.
      *
-     * @return defensive copy of the solution, or empty array if not available
+     * <p><b>Caller owns the buffer:</b> The returned array is the same reference stored
+     * in this result. Modifying it will affect this result.</p>
+     *
+     * @return the solution array reference, or {@code null} if not available
      */
     public double[] getSolution() {
-        return solution != null ? solution.clone() : new double[0];
+        return solution;
     }
 
     /**

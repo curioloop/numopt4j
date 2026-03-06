@@ -186,23 +186,33 @@ public final class SLSQPProblem implements OptimizationProblem<OptimizationResul
     @Override
     public SLSQPWorkspace alloc() {
         validate();
-        if (workspace == null || !workspace.isCompatible(dimension, getNumEqualityConstraints(), getNumInequalityConstraints())) {
+        if (workspace == null || !workspace.ensureCapacity(dimension, getNumEqualityConstraints(), getNumInequalityConstraints())) {
             workspace = new SLSQPWorkspace(dimension, getNumEqualityConstraints(), getNumInequalityConstraints());
         }
         return workspace;
     }
 
+    /**
+     * Solves the optimization problem.
+     *
+     * <p>The initial point is cloned internally; {@code initialPoint} is not modified.
+     * The solution is stored in {@link OptimizationResult#getSolution()} and returned
+     * as a direct reference (no defensive copy). The caller owns the returned array.</p>
+     *
+     * @param workspace optional pre-allocated workspace for reuse
+     * @return optimization result
+     */
     @Override
     public OptimizationResult solve(SLSQPWorkspace... workspace) {
         validate();
         SLSQPWorkspace ws = (workspace != null && workspace.length > 0) ? workspace[0] : null;
         if (ws != null) {
-            if (!ws.isCompatible(dimension, getNumEqualityConstraints(), getNumInequalityConstraints())) {
+            if (!ws.ensureCapacity(dimension, getNumEqualityConstraints(), getNumInequalityConstraints())) {
                 throw new IllegalArgumentException("Workspace is incompatible with problem dimensions");
             }
         } else {
             ws = this.workspace;
-            if (ws == null || !ws.isCompatible(dimension, getNumEqualityConstraints(), getNumInequalityConstraints())) {
+            if (ws == null || !ws.ensureCapacity(dimension, getNumEqualityConstraints(), getNumInequalityConstraints())) {
                 ws = new SLSQPWorkspace(dimension, getNumEqualityConstraints(), getNumInequalityConstraints());
             }
         }

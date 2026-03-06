@@ -376,6 +376,23 @@ public final class SLSQPWorkspace {
         return this.n == n && this.meq == meq && this.mineq == mineq;
     }
 
+    /**
+     * Ensures this workspace has sufficient capacity for the given dimensions.
+     *
+     * <p>Since SLSQP workspace dimensions are fixed at construction time,
+     * this method returns {@code true} if the current workspace can be reused
+     * (dimensions match exactly), or {@code false} if a new workspace must be
+     * allocated by the caller.</p>
+     *
+     * @param n      required problem dimension
+     * @param meq    required number of equality constraints
+     * @param mineq  required number of inequality constraints
+     * @return true if this workspace is sufficient; false if reallocation is needed
+     */
+    public boolean ensureCapacity(int n, int meq, int mineq) {
+        return this.n == n && this.meq == meq && this.mineq == mineq;
+    }
+
     // ========================================================================
     // Dimension Accessors
     // ========================================================================

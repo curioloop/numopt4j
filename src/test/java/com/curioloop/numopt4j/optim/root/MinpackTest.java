@@ -21,7 +21,7 @@ class MinpackTest {
         double[] rdiag = new double[n];
         double[] acnorm = new double[n];
         double[] wa = new double[n];
-        Minpack.qrfac(m, n, a, lda, true, ipvt, n, rdiag, acnorm, wa);
+        Minpack.qrfac(m, n, a, lda, true, ipvt, n, rdiag, 0, acnorm, 0, wa, 0);
         // |rdiag[0]| >= |rdiag[1]|
         assertTrue(Math.abs(rdiag[0]) >= Math.abs(rdiag[1]) - 1e-12);
     }
@@ -32,7 +32,7 @@ class MinpackTest {
         int m = 2;
         double[] q = {1.0, 0.0, 0.0, 1.0}; // identity column-major
         double[] wa = new double[m];
-        Minpack.qform(m, 0, q, m, wa);
+        Minpack.qform(m, 0, q, m, wa, 0);
         // Q should remain identity
         assertEquals(1.0, q[0], 1e-14);
         assertEquals(0.0, q[1], 1e-14);
@@ -51,7 +51,7 @@ class MinpackTest {
         double[] x = new double[1];
         double[] sdiag = new double[1];
         double[] wa = new double[1];
-        Minpack.qrsolv(n, r, n, ipvt, diag, qtb, x, sdiag, wa);
+        Minpack.qrsolv(n, r, 0, n, ipvt, diag, 0, qtb, 0, x, sdiag, 0, wa, 0);
         // x should minimize ||[3;2]*x - [6;0]||
         double expected = 3.0 * 6.0 / (9.0 + 4.0); // normal equations: (R^T R + D^T D) x = R^T qtb
         assertEquals(expected, x[0], 1e-12);
@@ -68,7 +68,7 @@ class MinpackTest {
         double[] rdiag = new double[n];
         double[] acnorm = new double[n];
         double[] wa = new double[n];
-        Minpack.qrfac(m, n, a, lda, true, ipvt, n, rdiag, acnorm, wa);
+        Minpack.qrfac(m, n, a, lda, true, ipvt, n, rdiag, 0, acnorm, 0, wa, 0);
         for (int j = 0; j < n - 1; j++) {
             assertTrue(Math.abs(rdiag[j]) >= Math.abs(rdiag[j + 1]) - 1e-10,
                     "rdiag not non-increasing at j=" + j + ": " + rdiag[j] + " < " + rdiag[j + 1]);
@@ -86,7 +86,7 @@ class MinpackTest {
         double[] rdiag = new double[n];
         double[] acnorm = new double[n];
         double[] wa = new double[n];
-        Minpack.qrfac(m, n, a, lda, true, ipvt, n, rdiag, acnorm, wa);
+        Minpack.qrfac(m, n, a, lda, true, ipvt, n, rdiag, 0, acnorm, 0, wa, 0);
 
         // Accumulate Q (m x m)
         double[] q = new double[m * m];
@@ -101,7 +101,7 @@ class MinpackTest {
             q[j + m * j] = 1.0;
         }
         double[] waQ = new double[m];
-        Minpack.qform(m, n, q, m, waQ);
+        Minpack.qform(m, n, q, m, waQ, 0);
 
         // Check Q^T * Q ≈ I
         double tol = n * Minpack.dpmpar(1) * 100;
@@ -132,7 +132,7 @@ class MinpackTest {
         double[] x = new double[n];
         double[] sdiag = new double[n];
         double[] wa = new double[n];
-        Minpack.qrsolv(n, r, n, ipvt, diag, qtb, x, sdiag, wa);
+        Minpack.qrsolv(n, r, 0, n, ipvt, diag, 0, qtb, 0, x, sdiag, 0, wa, 0);
         for (double xi : x) {
             assertFalse(Double.isNaN(xi), "x contains NaN");
             assertFalse(Double.isInfinite(xi), "x contains Infinity");
