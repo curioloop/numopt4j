@@ -23,7 +23,7 @@ public final class HYBRProblem extends RootFinder<BiConsumer<double[], double[]>
 
     private NumericalJacobian jacobian = NumericalJacobian.FORWARD;
     private double ftol = HYBRSolver.DEFAULT_FTOL;
-    private int maxIterations = 0;
+    private int maxEvaluations = 0;
 
     public HYBRProblem() {}
 
@@ -54,13 +54,13 @@ public final class HYBRProblem extends RootFinder<BiConsumer<double[], double[]>
     public double functionTolerance() { return ftol; }
 
     /** Sets the maximum number of function evaluations. */
-    public HYBRProblem maxIterations(int k) {
-        if (k <= 0) throw new IllegalArgumentException("maxIterations must be > 0");
-        this.maxIterations = k;
+    public HYBRProblem maxEvaluations(int k) {
+        if (k <= 0) throw new IllegalArgumentException("maxEvaluations must be > 0");
+        this.maxEvaluations = k;
         return this;
     }
 
-    public int maxIterations() { return maxIterations; }
+    public int maxEvaluations() { return maxEvaluations; }
 
     /** Allocates a {@link HYBRWorkspace} for dimension {@code n} and caches it. */
     @Override
@@ -72,16 +72,21 @@ public final class HYBRProblem extends RootFinder<BiConsumer<double[], double[]>
     }
 
     @Override
-    public OptimizationResult solve(HYBRWorkspace... ws) {
+    public OptimizationResult solve() {
+        return solve((HYBRWorkspace) null);
+    }
+
+    @Override
+    public OptimizationResult solve(HYBRWorkspace ws) {
         if (function == null)
             throw new IllegalStateException(
                 "Missing required parameter: equations. Call .equations(fn, n) before .solve().");
         if (initialPoint == null)
             throw new IllegalStateException(
                 "Missing required parameter: initialPoint. Call .initialPoint(x0) before .solve().");
-        HYBRWorkspace ws0 = (ws != null && ws.length > 0 && ws[0] != null) ? ws[0] : alloc();
+        HYBRWorkspace ws0 = ws != null ? ws : alloc();
         ws0.reset();
-        int maxfev = maxIterations > 0 ? maxIterations : HYBRSolver.DEFAULT_MAXFEV_FACTOR * (dimension + 1);
+        int maxfev = maxEvaluations > 0 ? maxEvaluations : HYBRSolver.DEFAULT_MAXFEV_FACTOR * (dimension + 1);
         return HYBRSolver.solve(jacobian.wrap(function, dimension, dimension, true), initialPoint, ftol, maxfev, ws0);
     }
 }

@@ -31,7 +31,7 @@ import java.util.function.ToDoubleFunction;
  * <pre>{@code
  * // Recommended entry point: ToDoubleFunction lambda (no gradient required)
  * // Equality constraint: x[0] + x[1] = 1
- * OptimizationResult result = SLSQPProblem.create()
+ * OptimizationResult result = new SLSQPProblem()
  *     .objective(x -> x[0]*x[0] + x[1]*x[1])
  *     .equalityConstraints(x -> x[0] + x[1] - 1)
  *     .initialPoint(0.5, 0.5)
@@ -45,7 +45,7 @@ import java.util.function.ToDoubleFunction;
  * <h2>Advanced Usage</h2>
  * <pre>{@code
  * // Mixed constraints with analytical gradients for best performance
- * OptimizationResult result = SLSQPProblem.create()
+ * OptimizationResult result = new SLSQPProblem()
  *     .objective((x, g) -> {
  *         double f = x[0]*x[0] + x[1]*x[1];
  *         if (g != null) { g[0] = 2*x[0]; g[1] = 2*x[1]; }
@@ -145,11 +145,7 @@ public final class SLSQPProblem extends Minimizer<Univariate, SLSQPWorkspace, SL
 
     /** Cached workspace for reuse — inherited from {@link Minimizer} */
 
-    private SLSQPProblem() {}
-
-    public static SLSQPProblem create() {
-        return new SLSQPProblem();
-    }
+    public SLSQPProblem() {}
 
     private void validate() {
         if (objective == null) {
@@ -189,9 +185,14 @@ public final class SLSQPProblem extends Minimizer<Univariate, SLSQPWorkspace, SL
      * @return optimization result
      */
     @Override
-    public OptimizationResult solve(SLSQPWorkspace... workspace) {
+    public OptimizationResult solve() {
+        return solve((SLSQPWorkspace) null);
+    }
+
+    @Override
+    public OptimizationResult solve(SLSQPWorkspace workspace) {
         validate();
-        SLSQPWorkspace ws = (workspace != null && workspace.length > 0) ? workspace[0] : null;
+        SLSQPWorkspace ws = workspace;
         if (ws != null) {
             if (!ws.ensureCapacity(dimension, numEqualityConstraints(), numInequalityConstraints())) {
                 throw new IllegalArgumentException("Workspace is incompatible with problem dimensions");
@@ -223,7 +224,7 @@ public final class SLSQPProblem extends Minimizer<Univariate, SLSQPWorkspace, SL
                 variableDifferenceTolerance,
                 ws
         );
-        return new OptimizationResult(r.getObjectiveValue(), r.getStatus(), r.getIterations(), r.getEvaluations(), x);
+        return new OptimizationResult(Double.NaN, x, r.getCost(), r.getStatus(), r.getIterations(), r.getEvaluations());
     }
 
     private int numEqualityConstraints() { return equalityConstraints != null ? equalityConstraints.length : 0; }

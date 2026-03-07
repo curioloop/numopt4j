@@ -58,7 +58,7 @@ public class SLSQPBenchmark {
             return f;
         };
 
-        SLSQPProblem p = SLSQPProblem.create()
+        SLSQPProblem p = new SLSQPProblem()
                 .objective(objective)
                 .maxIterations(MAX_ITERATIONS)
                 .functionTolerance(ACCURACY)

@@ -234,7 +234,7 @@ public final class GEVD implements Decomposition {
     }
 
     @Override
-    public Pool work() { return pool; }
+    public Pool pool() { return pool; }
 
     /** Returns eigenvalues as an n×1 matrix (ascending order), or null if decomposition failed. */
     public Matrix toS() {

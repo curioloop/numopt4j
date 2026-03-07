@@ -104,7 +104,7 @@ class RootFinderTest {
     // ========================================================================
 
     /**
-     * 1-D result consistency: getObjectiveValue() == |f(getRoot())|
+     * 1-D result consistency: getCost() == |f(getRoot())|
      */
     @Property(tries = 100)
     void property6a_scalarResultConsistency(
@@ -121,12 +121,12 @@ class RootFinderTest {
 
         assertTrue(result.isSuccessful(), "Should converge: " + result.getSummary());
         double actualResidual = Math.abs(f.applyAsDouble(result.getRoot()));
-        assertEquals(actualResidual, result.getObjectiveValue(), 1e-14,
-            "getObjectiveValue() should equal |f(getRoot())|");
+        assertEquals(actualResidual, result.getCost(), 1e-14,
+            "getCost() should equal |f(getRoot())|");
     }
 
     /**
-     * N-D result consistency: getObjectiveValue() == max|F(getSolution())|
+     * N-D result consistency: getCost() == max|F(getSolution())|
      */
     @Property(tries = 50)
     void property6b_vectorResultConsistency(
@@ -148,8 +148,8 @@ class RootFinderTest {
         double[] fSol = new double[2];
         fn.accept(sol, fSol);
         double expectedResidual = Math.max(Math.abs(fSol[0]), Math.abs(fSol[1]));
-        assertEquals(expectedResidual, result.getObjectiveValue(), 1e-10,
-            "getObjectiveValue() should equal max|F(solution)| (max-norm)");
+        assertEquals(expectedResidual, result.getCost(), 1e-10,
+            "getCost() should equal max|F(solution)| (max-norm)");
     }
 
     // ========================================================================

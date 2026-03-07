@@ -59,7 +59,7 @@ public class BrentqSolverTest {
         OptimizationResult result = BrentqSolver.solve(f, xa, xb,
                 BrentqSolver.DEFAULT_XTOL, BrentqSolver.DEFAULT_RTOL, BrentqSolver.DEFAULT_MAXITER);
 
-        assertThat(result.isConverged())
+        assertThat(result.isSuccessful())
                 .as("Solver must converge for valid bracket")
                 .isTrue();
 
@@ -186,7 +186,7 @@ public class BrentqSolverTest {
                 BrentqSolver.DEFAULT_XTOL, BrentqSolver.DEFAULT_RTOL,
                 BrentqSolver.DEFAULT_MAXITER);
 
-        assertThat(result.isConverged()).isTrue();
+        assertThat(result.isSuccessful()).isTrue();
         assertThat(Math.abs(result.getRoot() - Math.PI))
                 .as("|root - π| must be < 1e-10")
                 .isLessThan(1e-10);
@@ -205,7 +205,7 @@ public class BrentqSolverTest {
                 BrentqSolver.DEFAULT_MAXITER);
 
         double expected = 1.5213797068045676;
-        assertThat(result.isConverged()).isTrue();
+        assertThat(result.isSuccessful()).isTrue();
         assertThat(Math.abs(result.getRoot() - expected))
                 .as("|root - 1.5213797...| must be < 1e-10")
                 .isLessThan(1e-10);
@@ -223,7 +223,7 @@ public class BrentqSolverTest {
                 BrentqSolver.DEFAULT_XTOL, BrentqSolver.DEFAULT_RTOL,
                 BrentqSolver.DEFAULT_MAXITER);
 
-        assertThat(result.isConverged()).isTrue();
+        assertThat(result.isSuccessful()).isTrue();
         assertThat(Math.abs(result.getRoot() - Math.log(2.0)))
                 .as("|root - ln(2)| must be < 1e-10")
                 .isLessThan(1e-10);
@@ -242,7 +242,7 @@ public class BrentqSolverTest {
                 BrentqSolver.DEFAULT_XTOL, BrentqSolver.DEFAULT_RTOL,
                 BrentqSolver.DEFAULT_MAXITER);
 
-        assertThat(result.isConverged()).isTrue();
+        assertThat(result.isSuccessful()).isTrue();
         assertThat(result.getRoot())
                 .as("Root must equal the endpoint 1.5")
                 .isEqualTo(1.5);

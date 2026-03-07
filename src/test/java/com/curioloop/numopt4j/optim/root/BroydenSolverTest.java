@@ -90,13 +90,13 @@ public class BroydenSolverTest {
 
         OptimizationResult result = BroydenSolver.solve(fn, x0, ftol, maxiter, ws);
 
-        assertThat(result.isConverged())
+        assertThat(result.isSuccessful())
                 .as("Broyden must converge for diagonally dominant linear system (n=%d)", n)
                 .isTrue();
 
-        // getObjectiveValue() returns max-norm (scipy convention)
-        assertThat(result.getObjectiveValue())
-                .as("max|F(x)| must be <= ftol, got %s", result.getObjectiveValue())
+        // getCost() returns max-norm (scipy convention)
+        assertThat(result.getCost())
+                .as("max|F(x)| must be <= ftol, got %s", result.getCost())
                 .isLessThanOrEqualTo(ftol);
     }
 
@@ -137,12 +137,12 @@ public class BroydenSolverTest {
 
         OptimizationResult result = BroydenSolver.solve(fn, x0, BroydenSolver.DEFAULT_FTOL, maxiter, ws);
 
-        assertThat(result.isConverged())
+        assertThat(result.isSuccessful())
                 .as("Broyden must converge on Rosenbrock system from (0.5, 0.5)")
                 .isTrue();
 
-        // getObjectiveValue() returns max-norm (scipy convention)
-        assertThat(result.getObjectiveValue())
+        // getCost() returns max-norm (scipy convention)
+        assertThat(result.getCost())
                 .as("max|F(x)| must be <= ftol")
                 .isLessThanOrEqualTo(BroydenSolver.DEFAULT_FTOL);
     }

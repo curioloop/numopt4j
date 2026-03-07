@@ -496,7 +496,7 @@ public final class Schur implements Decomposition {
     }
 
     @Override
-    public Pool work() { return pool; }
+    public Pool pool() { return pool; }
 
     /** Returns the quasi-upper-triangular Schur form T as an n×n matrix. */
     public Matrix toT() {

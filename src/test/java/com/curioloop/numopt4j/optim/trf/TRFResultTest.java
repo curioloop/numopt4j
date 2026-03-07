@@ -26,25 +26,25 @@ class TRFResultTest {
         BiConsumer<double[], double[]> fn = (c, r) -> {
             for (int i = 0; i < M; i++) r[i] = Y_DATA[i] - (c[0] + c[1] * X_DATA[i]);
         };
-        return TRFProblem.create()
+        return new TRFProblem()
             .residuals(fn, M)
             .initialPoint(0.0, 1.0)
-            .gradientTolerance(1e-10).coefficientTolerance(1e-10).maxEvaluations(1000)
+            .gradientTolerance(1e-10).parameterTolerance(1e-10).maxEvaluations(1000)
             .solve();
     }
 
     @Test
     void convergenceStatusIsSet() {
         OptimizationResult r = runLinearFit();
-        assertThat(r.isConverged()).isTrue();
+        assertThat(r.isSuccessful()).isTrue();
         assertThat(r.getStatus().isConverged()).isTrue();
     }
 
     @Test
     void chiSquaredIsNearZeroForExactFit() {
         OptimizationResult r = runLinearFit();
-        assertThat(r.getObjectiveValue()).isGreaterThanOrEqualTo(0.0);
-        assertThat(r.getObjectiveValue()).isLessThan(1e-10);
+        assertThat(r.getCost()).isGreaterThanOrEqualTo(0.0);
+        assertThat(r.getCost()).isLessThan(1e-10);
     }
 
     @Test
@@ -76,7 +76,7 @@ class TRFResultTest {
         BiConsumer<double[], double[]> fn = (c, r) -> {
             for (int i = 0; i < m; i++) r[i] = yd[i] - (c[0] + c[1] * xd[i]);
         };
-        OptimizationResult r = TRFProblem.create()
+        OptimizationResult r = new TRFProblem()
             .residuals(fn, m)
             .initialPoint(0.0, 1.0)
             .maxEvaluations(2)

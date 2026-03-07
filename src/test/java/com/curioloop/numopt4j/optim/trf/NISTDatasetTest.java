@@ -53,18 +53,18 @@ public class NISTDatasetTest {
         residualFunc.accept(initialGuess, ir);
         double initialRss = 0; for (double v : ir) initialRss += v * v;
 
-        OptimizationResult result = TRFProblem.create()
+        OptimizationResult result = new TRFProblem()
             .residuals(residualFunc, m)
             .initialPoint(initialGuess.clone())
-            .gradientTolerance(1e-8).coefficientTolerance(1e-8).functionTolerance(1e-6).maxEvaluations(20000)
+            .gradientTolerance(1e-8).parameterTolerance(1e-8).functionTolerance(1e-6).maxEvaluations(20000)
             .solve();
 
-        assertTrue(result.isConverged() || result.getStatus() == OptimizationStatus.MAX_EVALUATIONS_REACHED,
+        assertTrue(result.isSuccessful() || result.getStatus() == OptimizationStatus.MAX_EVALUATIONS_REACHED,
             "Misra1a (" + label + ") should converge");
-        assertTrue(result.getObjectiveValue() <= initialRss,
+        assertTrue(result.getCost() <= initialRss,
             "Misra1a (" + label + ") RSS should improve");
-        assertTrue(result.getObjectiveValue() < MISRA1A_CERTIFIED_RSS * 5,
-            "Misra1a (" + label + ") RSS too large: " + result.getObjectiveValue());
+        assertTrue(result.getCost() < MISRA1A_CERTIFIED_RSS * 5,
+            "Misra1a (" + label + ") RSS too large: " + result.getCost());
     }
 
     // ==================== Lanczos1 Dataset ====================
@@ -93,16 +93,16 @@ public class NISTDatasetTest {
                 r[i] = LANCZOS1_Y[i] - (c[0]*Math.exp(-c[1]*x) + c[2]*Math.exp(-c[3]*x) + c[4]*Math.exp(-c[5]*x));
             }
         };
-        OptimizationResult result = TRFProblem.create()
+        OptimizationResult result = new TRFProblem()
             .residuals(residualFunc, m)
             .initialPoint(initialGuess.clone())
-            .gradientTolerance(1e-10).coefficientTolerance(1e-10).functionTolerance(1e-10).maxEvaluations(20000)
+            .gradientTolerance(1e-10).parameterTolerance(1e-10).functionTolerance(1e-10).maxEvaluations(20000)
             .solve();
 
-        assertTrue(result.isConverged() || result.getStatus() == OptimizationStatus.MAX_EVALUATIONS_REACHED,
+        assertTrue(result.isSuccessful() || result.getStatus() == OptimizationStatus.MAX_EVALUATIONS_REACHED,
             "Lanczos1 (" + label + ") should converge");
-        assertTrue(result.getObjectiveValue() < 1.0,
-            "Lanczos1 (" + label + ") RSS should be < 1.0: " + result.getObjectiveValue());
+        assertTrue(result.getCost() < 1.0,
+            "Lanczos1 (" + label + ") RSS should be < 1.0: " + result.getCost());
     }
 
     // ==================== Gauss1 Dataset ====================
@@ -158,19 +158,19 @@ public class NISTDatasetTest {
         residualFunc.accept(initialGuess, ir);
         double initialRss = 0; for (double v : ir) initialRss += v * v;
 
-        OptimizationResult result = TRFProblem.create()
+        OptimizationResult result = new TRFProblem()
             .residuals(residualFunc, m)
             .initialPoint(initialGuess.clone())
-            .gradientTolerance(1e-6).coefficientTolerance(1e-6).functionTolerance(0.1).maxEvaluations(20000)
+            .gradientTolerance(1e-6).parameterTolerance(1e-6).functionTolerance(0.1).maxEvaluations(20000)
             .solve();
 
-        assertTrue(result.isConverged() || result.getStatus() == OptimizationStatus.MAX_EVALUATIONS_REACHED,
+        assertTrue(result.isSuccessful() || result.getStatus() == OptimizationStatus.MAX_EVALUATIONS_REACHED,
             "Gauss1 should converge, status=" + result.getStatus());
-        assertTrue(result.getObjectiveValue() <= initialRss,
+        assertTrue(result.getCost() <= initialRss,
             "Gauss1 RSS should improve");
-        double relErr = Math.abs(result.getObjectiveValue() - GAUSS1_CERTIFIED_RSS) / GAUSS1_CERTIFIED_RSS;
+        double relErr = Math.abs(result.getCost() - GAUSS1_CERTIFIED_RSS) / GAUSS1_CERTIFIED_RSS;
         assertTrue(relErr < 0.5,
-            "Gauss1 RSS error: " + relErr + " (RSS=" + result.getObjectiveValue() + ")");
+            "Gauss1 RSS error: " + relErr + " (RSS=" + result.getCost() + ")");
     }
 
     // ==================== Property 22: Difficulty Level Handling ====================
@@ -184,13 +184,13 @@ public class NISTDatasetTest {
             for (int i = 0; i < m; i++)
                 r[i] = MISRA1A_Y[i] - c[0] * (1.0 - Math.exp(-c[1] * MISRA1A_X[i]));
         };
-        OptimizationResult result = TRFProblem.create()
+        OptimizationResult result = new TRFProblem()
             .residuals(residualFunc, m)
             .initialPoint(startingPoint.clone())
             .gradientTolerance(1e-10).maxEvaluations(5000)
             .solve();
 
-        double relRssError = Math.abs(result.getObjectiveValue() - MISRA1A_CERTIFIED_RSS) / MISRA1A_CERTIFIED_RSS;
+        double relRssError = Math.abs(result.getCost() - MISRA1A_CERTIFIED_RSS) / MISRA1A_CERTIFIED_RSS;
         assertTrue(relRssError < RELATIVE_TOLERANCE,
             "Starting point should converge to certified RSS (error=" + relRssError + ")");
     }

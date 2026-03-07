@@ -38,7 +38,7 @@ public class WorkspaceReuseProperties {
         Univariate quadratic = TestTemplates.quadratic();
 
         // Build problem
-        LBFGSBProblem problem = LBFGSBProblem.create()
+        LBFGSBProblem problem = new LBFGSBProblem()
                 .objective(quadratic)
                 .maxIterations(100)
                 .maxEvaluations(500)
@@ -59,25 +59,25 @@ public class WorkspaceReuseProperties {
             // Verify all results are consistent with each other
             for (int i = 0; i < numOptimizations; i++) {
                 // All optimizations should converge
-                assertThat(results[i].isConverged())
+                assertThat(results[i].isSuccessful())
                         .as("Optimization %d should converge", i)
                         .isTrue();
 
                 // Function values should be close to 0 (the minimum)
-                assertThat(results[i].getObjectiveValue())
+                assertThat(results[i].getCost())
                         .as("Function value for optimization %d should be near minimum", i)
                         .isLessThan(1e-8);
             }
 
             // Verify results match baseline (without workspace reuse)
-            assertThat(baselineResult.isConverged())
+            assertThat(baselineResult.isSuccessful())
                     .as("Baseline optimization should converge")
                     .isTrue();
 
             // Compare function values between workspace and non-workspace versions
-            assertThat(results[0].getObjectiveValue())
+            assertThat(results[0].getCost())
                     .as("Workspace result should match baseline function value")
-                    .isCloseTo(baselineResult.getObjectiveValue(), within(1e-8));
+                    .isCloseTo(baselineResult.getCost(), within(1e-8));
 
             // Compare solutions (using the initial arrays which are modified in-place)
             // Note: Since we create new initial arrays for each optimization, we can't compare
@@ -119,7 +119,7 @@ public class WorkspaceReuseProperties {
         Univariate quadratic = TestTemplates.quadratic();
 
         // Build SLSQP problem (no constraints)
-        SLSQPProblem problem = SLSQPProblem.create()
+        SLSQPProblem problem = new SLSQPProblem()
                 .objective(quadratic)
                 .maxIterations(100)
                 .functionTolerance(1e-8);
@@ -139,25 +139,25 @@ public class WorkspaceReuseProperties {
             // Verify all results are consistent with each other
             for (int i = 0; i < numOptimizations; i++) {
                 // All optimizations should converge
-                assertThat(results[i].isConverged())
+                assertThat(results[i].isSuccessful())
                         .as("SLSQP Optimization %d should converge", i)
                         .isTrue();
 
                 // Function values should be close to 0 (the minimum)
-                assertThat(results[i].getObjectiveValue())
+                assertThat(results[i].getCost())
                         .as("SLSQP Function value for optimization %d should be near minimum", i)
                         .isLessThan(1e-8);
             }
 
             // Verify results match baseline (without workspace reuse)
-            assertThat(baselineResult.isConverged())
+            assertThat(baselineResult.isSuccessful())
                     .as("SLSQP Baseline optimization should converge")
                     .isTrue();
 
             // Compare function values between workspace and non-workspace versions
-            assertThat(results[0].getObjectiveValue())
+            assertThat(results[0].getCost())
                     .as("SLSQP Workspace result should match baseline function value")
-                    .isCloseTo(baselineResult.getObjectiveValue(), within(1e-8));
+                    .isCloseTo(baselineResult.getCost(), within(1e-8));
     }
 
     /**
@@ -183,7 +183,7 @@ public class WorkspaceReuseProperties {
         Univariate quadratic = TestTemplates.quadratic();;
 
         // Build problem with problem dimensions (n2, m2)
-        LBFGSBProblem problem = LBFGSBProblem.create()
+        LBFGSBProblem problem = new LBFGSBProblem()
                 .objective(quadratic)
                 .initialPoint(createInitialPoint(problemN, 1.0))
                 .corrections(problemM)

@@ -249,7 +249,7 @@ public class WorkspaceReuseProperties implements LBFGSBConstants {
         int n = 2;
         int m = 5;
 
-        LBFGSBProblem problem = LBFGSBProblem.create()
+        LBFGSBProblem problem = new LBFGSBProblem()
                 .objective(quadratic)
                 .corrections(m)
                 .maxIterations(100)
@@ -273,9 +273,9 @@ public class WorkspaceReuseProperties implements LBFGSBConstants {
                 .isTrue();
 
         // Both should find the same minimum
-        assertThat(result1.getObjectiveValue())
+        assertThat(result1.getCost())
                 .as("Both runs should find same minimum")
-                .isCloseTo(result2.getObjectiveValue(), within(1e-6));
+                .isCloseTo(result2.getCost(), within(1e-6));
     }
 
 

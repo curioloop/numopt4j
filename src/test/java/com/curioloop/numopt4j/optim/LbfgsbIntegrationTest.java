@@ -99,7 +99,7 @@ public class LbfgsbIntegrationTest {
         };
         
         // Build the optimizer
-        OptimizationResult result = LBFGSBProblem.create()
+        OptimizationResult result = new LBFGSBProblem()
                 .objective(logLikelihood)
                 .initialPoint(0.0, 0.0, 0.0)
                 .maxIterations(50)
@@ -108,13 +108,13 @@ public class LbfgsbIntegrationTest {
                 .solve();
         
         // Verify convergence
-        assertThat(result.isConverged())
+        assertThat(result.isSuccessful())
                 .as("Optimization should converge")
                 .isTrue();
         
         // Verify objective function value
         // Note: Using a slightly larger threshold to account for floating-point precision differences
-        assertThat(result.getObjectiveValue())
+        assertThat(result.getCost())
                 .as("Objective function value should be less than expected threshold")
                 .isLessThan(1.5591321679);
         
@@ -250,7 +250,7 @@ public class LbfgsbIntegrationTest {
             x0[i] = 3.0;
         }
         
-        OptimizationResult result = LBFGSBProblem.create()
+        OptimizationResult result = new LBFGSBProblem()
                 .objective(rosenbrock)
                 .initialPoint(x0)
                 .corrections(5)
@@ -262,12 +262,12 @@ public class LbfgsbIntegrationTest {
         double[] solution = result.getSolution();
         
         // Verify convergence
-        assertThat(result.isConverged())
+        assertThat(result.isSuccessful())
                 .as("Optimization should converge")
                 .isTrue();
         
         // Verify objective function value is close to global minimum (0)
-        assertThat(result.getObjectiveValue())
+        assertThat(result.getCost())
                 .as("Objective function value should be close to global minimum")
                 .isLessThan(1e-3);
         
@@ -340,7 +340,7 @@ public class LbfgsbIntegrationTest {
         Univariate quadratic = TestTemplates.quadraticWithTarget(new double[]{1});;
         
         // Build the optimizer with the specified bound
-        OptimizationResult result = LBFGSBProblem.create()
+        OptimizationResult result = new LBFGSBProblem()
                 .objective(quadratic)
                 .initialPoint(initialValue)
                 .bounds(bound)
@@ -351,7 +351,7 @@ public class LbfgsbIntegrationTest {
         double[] x0 = result.getSolution();
         
         // Verify convergence
-        assertThat(result.isConverged())
+        assertThat(result.isSuccessful())
                 .as("Optimization should converge for case: %s", description)
                 .isTrue();
         

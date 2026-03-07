@@ -44,15 +44,18 @@ public interface OptimizationProblem<R extends OptimizationResult, W> {
     W alloc();
 
     /**
-     * Solves the optimization problem.
-     * <p>
-     * If no workspace is provided, a temporary workspace is created for this solve only.
-     * </p>
+     * Solves the optimization problem using a temporary workspace.
      *
-     * @param workspace optional pre-allocated workspace (omit to create temporary)
+     * @return optimization result
+     */
+    R solve();
+
+    /**
+     * Solves the optimization problem with a pre-allocated workspace for reuse.
+     *
+     * @param workspace pre-allocated workspace
      * @return optimization result
      * @throws IllegalArgumentException if workspace is incompatible
      */
-    @SuppressWarnings("unchecked")
-    R solve(W... workspace);
+    R solve(W workspace);
 }

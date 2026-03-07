@@ -121,7 +121,7 @@ public abstract class Minimizer<O, W, S extends Minimizer<O, W, S>> implements O
      * @return new {@link LBFGSBProblem} builder
      */
     public static LBFGSBProblem lbfgsb() {
-        return LBFGSBProblem.create();
+        return new LBFGSBProblem();
     }
 
     /**
@@ -135,7 +135,7 @@ public abstract class Minimizer<O, W, S extends Minimizer<O, W, S>> implements O
      * @return new {@link SLSQPProblem} builder
      */
     public static SLSQPProblem slsqp() {
-        return SLSQPProblem.create();
+        return new SLSQPProblem();
     }
 
     /**
@@ -148,6 +148,6 @@ public abstract class Minimizer<O, W, S extends Minimizer<O, W, S>> implements O
      * @return new {@link TRFProblem} builder
      */
     public static TRFProblem trf() {
-        return TRFProblem.create();
+        return new TRFProblem();
     }
 }

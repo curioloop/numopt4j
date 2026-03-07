@@ -30,7 +30,7 @@ import static com.curioloop.numopt4j.optim.trf.TRFConstants.*;
  * <h2>Basic Usage</h2>
  * <pre>{@code
  * // Recommended entry point: BiConsumer lambda (no Jacobian required)
- * OptimizationResult result = TRFProblem.create()
+ * OptimizationResult result = new TRFProblem()
  *     .residuals((x, r) -> { r[0] = x[0] - 1; r[1] = x[1] - 2; }, 2)
  *     .initialPoint(0.0, 0.0)
  *     .solve();
@@ -46,7 +46,7 @@ import static com.curioloop.numopt4j.optim.trf.TRFConstants.*;
  * double[] tData = {0.0, 1.0, 2.0, 3.0};
  * double[] yData = {2.0, 1.2, 0.7, 0.4};
  *
- * OptimizationResult result = TRFProblem.create()
+ * OptimizationResult result = new TRFProblem()
  *     .residuals((x, r) -> {
  *         for (int i = 0; i < tData.length; i++) {
  *             r[i] = yData[i] - x[0] * Math.exp(-x[1] * tData[i]);
@@ -59,7 +59,7 @@ import static com.curioloop.numopt4j.optim.trf.TRFConstants.*;
  *     .solve();
  *
  * // With workspace reuse for high-frequency optimization
- * TRFProblem problem = TRFProblem.create()
+ * TRFProblem problem = new TRFProblem()
  *     .residuals(fn, m)
  *     .initialPoint(x0);
  * TRFWorkspace ws = problem.alloc();
@@ -74,11 +74,11 @@ import static com.curioloop.numopt4j.optim.trf.TRFConstants.*;
 public final class TRFProblem extends Minimizer<Multivariate, TRFWorkspace, TRFProblem> {
 
     /** Number of residuals */
-    private int m;
+    private int numResiduals;
 
     /** Convergence tolerances */
     private double functionTolerance    = DEFAULT_FTOL;
-    private double coefficientTolerance = DEFAULT_XTOL;
+    private double parameterTolerance       = DEFAULT_XTOL;
     private double gradientTolerance    = DEFAULT_GTOL;
 
     /** Maximum function evaluations */
@@ -98,20 +98,16 @@ public final class TRFProblem extends Minimizer<Multivariate, TRFWorkspace, TRFP
 
     /** Cached workspace for reuse — inherited from {@link Minimizer} */
 
-    private TRFProblem() {}
-
-    public static TRFProblem create() {
-        return new TRFProblem();
-    }
+    public TRFProblem() {}
 
     private Multivariate resolveObjective() {
         if (objective != null) return objective;
-        if (_pendingFn != null) return _pendingJac.wrap(_pendingFn, _pendingM, dimension);
+        if (pendingFn != null) return pendingJac.wrap(pendingFn, numResiduals, dimension);
         return null;
     }
 
     private void validate() {
-        if (objective == null && _pendingFn == null) {
+        if (objective == null && pendingFn == null) {
             throw new OptimizationException("MISSING_PARAM",
                 "residuals/objective is required. Call .residuals(fn, m) before .solve().");
         }
@@ -126,13 +122,13 @@ public final class TRFProblem extends Minimizer<Multivariate, TRFWorkspace, TRFP
                     "initialPoint[" + i + "] is " + v + ". All initial values must be finite.");
             }
         }
-        if (m <= 0) {
+        if (numResiduals <= 0) {
             throw new OptimizationException("MISSING_PARAM",
                 "number of residuals m must be set. Call .residuals(fn, m) before .solve().");
         }
-        if (m < dimension) {
+        if (numResiduals < dimension) {
             throw new IllegalStateException(
-                "Cannot solve: need m >= n (residuals >= parameters), got m=" + m + ", n=" + dimension);
+                "Cannot solve: need m >= n (residuals >= parameters), got m=" + numResiduals + ", n=" + dimension);
         }
     }
 
@@ -140,9 +136,9 @@ public final class TRFProblem extends Minimizer<Multivariate, TRFWorkspace, TRFP
     public TRFWorkspace alloc() {
         validate();
         if (workspace == null) {
-            workspace = new TRFWorkspace(m, dimension);
+            workspace = new TRFWorkspace(numResiduals, dimension);
         } else {
-            workspace.ensureCapacity(m, dimension);
+            workspace.ensureCapacity(numResiduals, dimension);
         }
         return workspace;
     }
@@ -158,31 +154,36 @@ public final class TRFProblem extends Minimizer<Multivariate, TRFWorkspace, TRFP
      * @return optimization result
      */
     @Override
-    public OptimizationResult solve(TRFWorkspace... workspace) {
+    public OptimizationResult solve() {
+        return solve((TRFWorkspace) null);
+    }
+
+    @Override
+    public OptimizationResult solve(TRFWorkspace workspace) {
         validate();
-        TRFWorkspace ws = (workspace != null && workspace.length > 0) ? workspace[0] : null;
+        TRFWorkspace ws = workspace;
         if (ws == null) {
             ws = this.workspace;
             if (ws == null) {
-                ws = new TRFWorkspace(m, dimension);
+                ws = new TRFWorkspace(numResiduals, dimension);
             }
         }
-        ws.ensureCapacity(m, dimension);
+        ws.ensureCapacity(numResiduals, dimension);
 
         double[] x = initialPoint.clone();
         int maxfev = (maxEvaluations > 0) ? maxEvaluations : 100 * dimension;
-        OptimizationResult r = TRFCore.optimize(m, dimension, resolveObjective(),
-                functionTolerance, coefficientTolerance, gradientTolerance,
+        OptimizationResult r = TRFCore.optimize(numResiduals, dimension, resolveObjective(),
+                functionTolerance, parameterTolerance, gradientTolerance,
                 maxfev, factor, diag, bounds, loss, lossScale, x, ws);
-        return new OptimizationResult(r.getObjectiveValue(), r.getStatus(), r.getIterations(), r.getEvaluations(), x);
+        return new OptimizationResult(Double.NaN, x, r.getCost(), r.getStatus(), r.getIterations(), r.getEvaluations());
     }
 
     // ── Getters ──────────────────────────────────────────────────────────────
 
-    public int residualCount() { return m; }
+    public int residualCount() { return numResiduals; }
     public int maxEvaluations() { return maxEvaluations; }
     public double functionTolerance() { return functionTolerance; }
-    public double coefficientTolerance() { return coefficientTolerance; }
+    public double parameterTolerance() { return parameterTolerance; }
     public double gradientTolerance() { return gradientTolerance; }
     public RobustLoss loss() { return loss; }
     public double lossScale() { return lossScale; }
@@ -215,10 +216,9 @@ public final class TRFProblem extends Minimizer<Multivariate, TRFWorkspace, TRFP
         if (m <= 0) {
             throw new IllegalArgumentException("number of residuals m must be positive, got " + m);
         }
-        this.m = m;
-        this._pendingJac = jac;
-        this._pendingFn  = fn;
-        this._pendingM   = m;
+        this.numResiduals = m;
+        this.pendingJac = jac;
+        this.pendingFn  = fn;
         this.objective   = null; // cleared; will be built lazily in solve()
         return this;
     }
@@ -231,7 +231,7 @@ public final class TRFProblem extends Minimizer<Multivariate, TRFWorkspace, TRFP
      */
     public TRFProblem objective(Multivariate f) {
         this.objective = f;
-        this._pendingFn = null;
+        this.pendingFn = null;
         return this;
     }
 
@@ -252,7 +252,7 @@ public final class TRFProblem extends Minimizer<Multivariate, TRFWorkspace, TRFP
     }
 
     /**
-     * Sets the coefficient (step) tolerance.
+     * Sets the step tolerance.
      *
      * <p>Valid range: &gt; 0. Default: 1e-8.
      * Convergence criterion: relative change in the solution vector is below this value.
@@ -261,9 +261,9 @@ public final class TRFProblem extends Minimizer<Multivariate, TRFWorkspace, TRFP
      * @param value tolerance (must be positive)
      * @return this problem instance
      */
-    public TRFProblem coefficientTolerance(double value) {
-        if (value <= 0) throw new IllegalArgumentException("coefficientTolerance must be positive, got " + value);
-        this.coefficientTolerance = value;
+    public TRFProblem parameterTolerance(double value) {
+        if (value <= 0) throw new IllegalArgumentException("parameterTolerance must be positive, got " + value);
+        this.parameterTolerance = value;
         return this;
     }
 
@@ -358,7 +358,6 @@ public final class TRFProblem extends Minimizer<Multivariate, TRFWorkspace, TRFP
 
     // ── Internal state for lazy Jacobian wrapping ─────────────────────────────
 
-    private transient NumericalJacobian _pendingJac;
-    private transient BiConsumer<double[], double[]> _pendingFn;
-    private transient int _pendingM;
+    private transient NumericalJacobian pendingJac;
+    private transient BiConsumer<double[], double[]> pendingFn;
 }

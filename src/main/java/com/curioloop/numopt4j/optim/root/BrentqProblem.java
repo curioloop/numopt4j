@@ -79,7 +79,12 @@ public final class BrentqProblem extends RootFinder<DoubleUnaryOperator, Void, B
     public Void alloc() { return null; }
 
     @Override
-    public OptimizationResult solve(Void... ws) {
+    public OptimizationResult solve() {
+        return solve((Void) null);
+    }
+
+    @Override
+    public OptimizationResult solve(Void ws) {
         if (function == null)
             throw new IllegalStateException(
                 "Missing required parameter: function. Call .function(f) before .solve().");

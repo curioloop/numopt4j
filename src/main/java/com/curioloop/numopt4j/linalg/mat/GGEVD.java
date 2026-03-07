@@ -245,5 +245,5 @@ public final class GGEVD implements Decomposition {
     }
 
     @Override
-    public Pool work() { return pool; }
+    public Pool pool() { return pool; }
 }

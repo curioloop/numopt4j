@@ -35,10 +35,10 @@ class TRFExtremeConvergenceTest {
 
     /** Builds a standard TRF problem with tight tolerances. */
     private static TRFProblem trf(int m, BiConsumer<double[], double[]> fn, Bound[] bounds) {
-        TRFProblem p = TRFProblem.create()
+        TRFProblem p = new TRFProblem()
             .residuals(fn, m)
             .functionTolerance(1e-10)
-            .coefficientTolerance(1e-10)
+            .parameterTolerance(1e-10)
             .gradientTolerance(1e-10)
             .maxEvaluations(5000);
         if (bounds != null) p.bounds(bounds);
@@ -70,13 +70,13 @@ class TRFExtremeConvergenceTest {
         OptimizationResult result = trf(2, fn, bounds).initialPoint(0.5, 0.5).solve();
         double[] sol = result.getSolution();
 
-        assertThat(result.isConverged()).isTrue();
+        assertThat(result.isSuccessful()).isTrue();
         assertBoundsRespected(sol, bounds);
         // x0 should be pushed to upper bound 2.0; x1 converges freely to 5.0 (interior of [0,8])
         assertThat(sol[0]).isCloseTo(2.0, within(1e-6));
         assertThat(sol[1]).isCloseTo(5.0, within(1e-6));
         // RSS = (2-3)^2 + (5-5)^2 = 1
-        assertThat(result.getObjectiveValue()).isCloseTo(1.0, within(1e-6));
+        assertThat(result.getCost()).isCloseTo(1.0, within(1e-6));
     }
 
     // ── Case 2: ill-conditioned Jacobian (Hilbert 4×4, condition number ~1.5e4) ──
@@ -107,13 +107,13 @@ class TRFExtremeConvergenceTest {
         OptimizationResult result = trf(4, fn, null).initialPoint(0.0, 0.0, 0.0, 0.0).solve();
         double[] sol = result.getSolution();
 
-        assertThat(result.isConverged()).isTrue();
+        assertThat(result.isSuccessful()).isTrue();
         // Ill-conditioned system should still converge to the correct solution (within numerical precision)
         assertThat(sol[0]).isCloseTo(1.0, within(1e-5));
         assertThat(sol[1]).isCloseTo(2.0, within(1e-5));
         assertThat(sol[2]).isCloseTo(3.0, within(1e-5));
         assertThat(sol[3]).isCloseTo(4.0, within(1e-5));
-        assertThat(result.getObjectiveValue()).isLessThan(1e-10);
+        assertThat(result.getCost()).isLessThan(1e-10);
     }
 
     // ── Case 3: high-dimensional diagonal linear system (n=10, m=20) ─────────
@@ -135,11 +135,11 @@ class TRFExtremeConvergenceTest {
         OptimizationResult result = trf(m, fn, null).initialPoint(x0).solve();
         double[] sol = result.getSolution();
 
-        assertThat(result.isConverged()).isTrue();
+        assertThat(result.isSuccessful()).isTrue();
         for (int j = 0; j < n; j++) {
             assertThat(sol[j]).as("x[%d]", j).isCloseTo(xTrue[j], within(1e-6));
         }
-        assertThat(result.getObjectiveValue()).isLessThan(1e-10);
+        assertThat(result.getCost()).isLessThan(1e-10);
     }
 
     // ── Case 4: tight bounds force corner solution ────────────────────────────
@@ -155,12 +155,12 @@ class TRFExtremeConvergenceTest {
         OptimizationResult result = trf(2, fn, bounds).initialPoint(0.5, 0.5).solve();
         double[] sol = result.getSolution();
 
-        assertThat(result.isConverged()).isTrue();
+        assertThat(result.isSuccessful()).isTrue();
         assertBoundsRespected(sol, bounds);
         assertThat(sol[0]).isCloseTo(1.0, within(1e-6));
         assertThat(sol[1]).isCloseTo(1.0, within(1e-6));
         // RSS = (1-2)^2 + (1-2)^2 = 2
-        assertThat(result.getObjectiveValue()).isCloseTo(2.0, within(1e-6));
+        assertThat(result.getCost()).isCloseTo(2.0, within(1e-6));
     }
 
     // ── Case 5: very distant initial point (initial residual ~1e6) ───────────
@@ -175,10 +175,10 @@ class TRFExtremeConvergenceTest {
         OptimizationResult result = trf(2, fn, null).initialPoint(1e6, 1e6).solve();
         double[] sol = result.getSolution();
 
-        assertThat(result.isConverged()).isTrue();
+        assertThat(result.isSuccessful()).isTrue();
         assertThat(sol[0]).isCloseTo(1.0, within(1e-5));
         assertThat(sol[1]).isCloseTo(2.0, within(1e-5));
-        assertThat(result.getObjectiveValue()).isLessThan(1e-8);
+        assertThat(result.getCost()).isLessThan(1e-8);
     }
 
     // ── Case 6: flat valley (high-aspect-ratio Rosenbrock variant) ───────────
@@ -197,10 +197,10 @@ class TRFExtremeConvergenceTest {
             .solve();
         double[] sol = result.getSolution();
 
-        assertThat(result.isConverged()).isTrue();
+        assertThat(result.isSuccessful()).isTrue();
         assertThat(sol[0]).isCloseTo(1.0, within(1e-5));
         assertThat(sol[1]).isCloseTo(1.0, within(1e-5));
-        assertThat(result.getObjectiveValue()).isLessThan(1e-8);
+        assertThat(result.getCost()).isLessThan(1e-8);
     }
 
     // ── Case 7: overdetermined system with no exact solution ─────────────────
@@ -217,12 +217,12 @@ class TRFExtremeConvergenceTest {
         OptimizationResult result = trf(3, fn, null).initialPoint(0.0, 0.0).solve();
         double[] sol = result.getSolution();
 
-        assertThat(result.isConverged()).isTrue();
+        assertThat(result.isSuccessful()).isTrue();
         // Least-squares solution: A^T A x = A^T b → x = [13/7, 3/14] ≈ [1.857, 0.214]
         assertThat(sol[0]).isCloseTo(13.0 / 7.0, within(1e-5));
         assertThat(sol[1]).isCloseTo(3.0 / 14.0, within(1e-5));
         // RSS = 25/14 ≈ 1.786, cost = RSS/2 ≈ 0.893
-        assertThat(result.getObjectiveValue()).isCloseTo(25.0 / 14.0, within(1e-5));
+        assertThat(result.getCost()).isCloseTo(25.0 / 14.0, within(1e-5));
     }
 
     // ── Case 8: multiple constraints simultaneously active (3-D corner) ───────
@@ -245,13 +245,13 @@ class TRFExtremeConvergenceTest {
         OptimizationResult result = trf(3, fn, bounds).initialPoint(0.5, 0.5, 0.5).solve();
         double[] sol = result.getSolution();
 
-        assertThat(result.isConverged()).isTrue();
+        assertThat(result.isSuccessful()).isTrue();
         assertBoundsRespected(sol, bounds);
         assertThat(sol[0]).isCloseTo(1.0,  within(1e-6));
         assertThat(sol[1]).isCloseTo(2.0,  within(1e-6));
         assertThat(sol[2]).isCloseTo(1.5,  within(1e-6));
         // RSS = (1-3)^2 + (2-3)^2 + (1.5-3)^2 = 4 + 1 + 2.25 = 7.25
-        assertThat(result.getObjectiveValue()).isCloseTo(7.25, within(1e-5));
+        assertThat(result.getCost()).isCloseTo(7.25, within(1e-5));
     }
 
     // ── Case 9: single-variable bounded convergence (1-D exact verification) ─
@@ -264,11 +264,11 @@ class TRFExtremeConvergenceTest {
         OptimizationResult result = trf(1, fn, bounds).initialPoint(1.0).solve();
         double[] sol = result.getSolution();
 
-        assertThat(result.isConverged()).isTrue();
+        assertThat(result.isSuccessful()).isTrue();
         assertBoundsRespected(sol, bounds);
         assertThat(sol[0]).isCloseTo(3.0, within(1e-8));
         // RSS = (3-5)^2 = 4
-        assertThat(result.getObjectiveValue()).isCloseTo(4.0, within(1e-8));
+        assertThat(result.getCost()).isCloseTo(4.0, within(1e-8));
     }
 
     // ── Case 10: exponential fit with non-negativity constraints (bounded + nonlinear) ─
@@ -291,11 +291,11 @@ class TRFExtremeConvergenceTest {
         OptimizationResult result = trf(m, fn, bounds).initialPoint(0.5, 0.1).solve();
         double[] sol = result.getSolution();
 
-        assertThat(result.isConverged()).isTrue();
+        assertThat(result.isSuccessful()).isTrue();
         assertBoundsRespected(sol, bounds);
         assertThat(sol[0]).isCloseTo(trueA, within(1e-5));
         assertThat(sol[1]).isCloseTo(trueB, within(1e-5));
-        assertThat(result.getObjectiveValue()).isLessThan(1e-8);
+        assertThat(result.getCost()).isLessThan(1e-8);
     }
 
     // ── Case 11: bounded constraints + robust loss (exponential fit with outliers) ──
@@ -324,18 +324,18 @@ class TRFExtremeConvergenceTest {
         };
         Bound[] bounds = { Bound.between(0.0, 5.0), Bound.between(0.0, 2.0) };
 
-        OptimizationResult result = TRFProblem.create()
+        OptimizationResult result = new TRFProblem()
             .residuals(fn, m)
             .bounds(bounds)
             .loss(loss)
             .lossScale(1.0)
-            .functionTolerance(1e-10).coefficientTolerance(1e-10).gradientTolerance(1e-10)
+            .functionTolerance(1e-10).parameterTolerance(1e-10).gradientTolerance(1e-10)
             .maxEvaluations(5000)
             .initialPoint(1.0, 1.0)
             .solve();
         double[] sol = result.getSolution();
 
-        assertThat(result.isConverged()).isTrue();
+        assertThat(result.isSuccessful()).isTrue();
         assertBoundsRespected(sol, bounds);
         // scipy (soft_l1/huber): a≈2.039, b≈0.462; (cauchy): a≈2.006, b≈0.499; (arctan): a≈2.000, b≈0.500
         // Robust loss should significantly suppress outliers and recover near true values (LINEAR gives b≈0.19, robust should be > 0.3)

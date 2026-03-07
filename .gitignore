@@ -4,4 +4,5 @@
 .qoder/
 build/
 target/
+dogfood/
 .jqwik-database

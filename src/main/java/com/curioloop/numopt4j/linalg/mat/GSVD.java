@@ -212,7 +212,7 @@ public final class GSVD implements Decomposition {
     }
 
     @Override
-    public Pool work() { return pool; }
+    public Pool pool() { return pool; }
 
     /** Returns generalized singular values as a (k+l)×1 matrix, or null if failed. */
     public Matrix toS() {

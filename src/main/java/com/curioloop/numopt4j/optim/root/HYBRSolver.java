@@ -134,12 +134,12 @@ public final class HYBRSolver {
         int nfev = 1;
         for (double v : fvec) {
             if (Double.isNaN(v) || Double.isInfinite(v))
-                return new OptimizationResult(Double.NaN, x.clone(), Double.NaN, OptimizationStatus.INVALID_INPUT, nfev);
+                return new OptimizationResult(Double.NaN, x.clone(), Double.NaN, OptimizationStatus.INVALID_INPUT, nfev, nfev);
         }
 
         double fnorm = Minpack.enorm(n, fvec);
         if (fnorm == 0.0)
-            return new OptimizationResult(Double.NaN, x.clone(), fnorm, OptimizationStatus.COEFFICIENT_TOLERANCE_REACHED, nfev);
+            return new OptimizationResult(Double.NaN, x.clone(), fnorm, OptimizationStatus.COEFFICIENT_TOLERANCE_REACHED, nfev, nfev);
 
         int    iter   = 1;
         double delta  = 0.0;
@@ -312,6 +312,6 @@ public final class HYBRSolver {
         else if (info == -1) status = OptimizationStatus.ABNORMAL_TERMINATION;
         else                 status = OptimizationStatus.MAX_ITERATIONS_REACHED;
 
-        return new OptimizationResult(Double.NaN, x.clone(), fnorm, status, nfev);
+        return new OptimizationResult(Double.NaN, x.clone(), fnorm, status, nfev, nfev);
     }
 }

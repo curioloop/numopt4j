@@ -58,16 +58,16 @@ class RobustLossTest {
 
     /** Solve with given loss and return the solution. */
     static double[] solve(RobustLoss loss, double lossScale) {
-        OptimizationResult r = TRFProblem.create()
+        OptimizationResult r = new TRFProblem()
                 .residuals(residualFn(), M_OUTLIER)
                 .initialPoint(1.0, 0.0)
                 .loss(loss)
                 .lossScale(lossScale)
                 .functionTolerance(1e-10)
-                .coefficientTolerance(1e-10)
+                .parameterTolerance(1e-10)
                 .maxEvaluations(2000)
                 .solve();
-        assertThat(r.isConverged()).isTrue();
+        assertThat(r.isSuccessful()).isTrue();
         return r.getSolution();
     }
 
@@ -80,14 +80,14 @@ class RobustLossTest {
                 r[i] = Y_CLEAN[i] - (c[0] * X_DATA[i] + c[1]);
             }
         };
-        OptimizationResult r = TRFProblem.create()
+        OptimizationResult r = new TRFProblem()
                 .residuals(fn, M_CLEAN)
                 .initialPoint(1.0, 0.0)
                 .loss(RobustLoss.LINEAR)
                 .functionTolerance(1e-12)
-                .coefficientTolerance(1e-12)
+                .parameterTolerance(1e-12)
                 .solve();
-        assertThat(r.isConverged()).isTrue();
+        assertThat(r.isSuccessful()).isTrue();
         assertThat(r.getSolution()[0]).isCloseTo(TRUE_A, within(1e-6));
         assertThat(r.getSolution()[1]).isCloseTo(TRUE_B, within(1e-6));
     }

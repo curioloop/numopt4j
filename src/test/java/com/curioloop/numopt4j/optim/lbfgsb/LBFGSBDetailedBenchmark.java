@@ -47,7 +47,7 @@ public class LBFGSBDetailedBenchmark {
             initialPoint[i] = (i % 2 == 0) ? -1.0 : 1.0;
         }
 
-        problem = LBFGSBProblem.create()
+        problem = new LBFGSBProblem()
                 .objective(TestTemplates.rosenbrock())
                 .corrections(CORRECTIONS)
                 .functionTolerance(FUNCTION_TOLERANCE)

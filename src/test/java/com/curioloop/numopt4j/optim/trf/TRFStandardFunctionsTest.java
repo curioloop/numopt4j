@@ -30,13 +30,13 @@ class TRFStandardFunctionsTest {
         BiConsumer<double[], double[]> fn = (c, r) -> {
             for (int i = 0; i < m; i++) r[i] = yd[i] - (c[0] + c[1] * xd[i]);
         };
-        OptimizationResult r = TRFProblem.create()
+        OptimizationResult r = new TRFProblem()
             .residuals(fn, m).initialPoint(0.0, 1.0)
-            .gradientTolerance(1e-10).coefficientTolerance(1e-10).maxEvaluations(1000)
+            .gradientTolerance(1e-10).parameterTolerance(1e-10).maxEvaluations(1000)
             .solve();
 
-        assertThat(r.isConverged()).isTrue();
-        assertThat(r.getObjectiveValue()).isLessThan(1e-10);
+        assertThat(r.isSuccessful()).isTrue();
+        assertThat(r.getCost()).isLessThan(1e-10);
         double[] sol = r.getSolution();
         assertThat(sol[0]).isCloseTo(1.0, within(1e-6)); // intercept
         assertThat(sol[1]).isCloseTo(2.0, within(1e-6)); // slope
@@ -53,13 +53,13 @@ class TRFStandardFunctionsTest {
         BiConsumer<double[], double[]> fn = (c, r) -> {
             for (int i = 0; i < m; i++) r[i] = yd[i] - c[0] * Math.exp(-c[1] * td[i]);
         };
-        OptimizationResult r = TRFProblem.create()
+        OptimizationResult r = new TRFProblem()
             .residuals(fn, m).initialPoint(2.0, 0.3)
-            .gradientTolerance(1e-10).coefficientTolerance(1e-10).maxEvaluations(1000)
+            .gradientTolerance(1e-10).parameterTolerance(1e-10).maxEvaluations(1000)
             .solve();
 
-        assertThat(r.isConverged()).isTrue();
-        assertThat(r.getObjectiveValue()).isLessThan(1e-10);
+        assertThat(r.isSuccessful()).isTrue();
+        assertThat(r.getCost()).isLessThan(1e-10);
         double[] sol = r.getSolution();
         assertThat(sol[0]).isCloseTo(trueA, within(1e-6));
         assertThat(sol[1]).isCloseTo(trueK, within(1e-6));
@@ -74,13 +74,13 @@ class TRFStandardFunctionsTest {
             r[0] = 10.0 * (c[1] - c[0]*c[0]);
             r[1] = 1.0 - c[0];
         };
-        OptimizationResult r = TRFProblem.create()
+        OptimizationResult r = new TRFProblem()
             .residuals(fn, m).initialPoint(-1.2, 1.0)
-            .gradientTolerance(1e-10).coefficientTolerance(1e-10).maxEvaluations(10000)
+            .gradientTolerance(1e-10).parameterTolerance(1e-10).maxEvaluations(10000)
             .solve();
 
-        assertThat(r.isConverged()).isTrue();
-        assertThat(r.getObjectiveValue()).isLessThan(1e-10);
+        assertThat(r.isSuccessful()).isTrue();
+        assertThat(r.getCost()).isLessThan(1e-10);
     }
 
     @Test
@@ -95,11 +95,11 @@ class TRFStandardFunctionsTest {
             {-1.2, 1.0}, {0.0, 0.0}, {2.0, 2.0}, {-2.0, -2.0}, {1.5, 1.5}, {-0.5, 0.5}
         };
         for (double[] start : starts) {
-            OptimizationResult r = TRFProblem.create()
+            OptimizationResult r = new TRFProblem()
                 .residuals(fn, m).initialPoint(start.clone())
                 .gradientTolerance(1e-8).functionTolerance(1e-10).maxEvaluations(10000)
                 .solve();
-            assertThat(r.getObjectiveValue())
+            assertThat(r.getCost())
                 .as("Rosenbrock from %s", java.util.Arrays.toString(start))
                 .isLessThan(1.0);
         }
@@ -116,13 +116,13 @@ class TRFStandardFunctionsTest {
             r[2] = 2.625 - c[0] * (1.0 - c[1]*c[1]*c[1]);
             r[3] = 0.0;
         };
-        OptimizationResult r = TRFProblem.create()
+        OptimizationResult r = new TRFProblem()
             .residuals(fn, m).initialPoint(2.0, 0.3)
-            .gradientTolerance(1e-8).coefficientTolerance(1e-8).maxEvaluations(5000)
+            .gradientTolerance(1e-8).parameterTolerance(1e-8).maxEvaluations(5000)
             .solve();
 
-        assertThat(r.isConverged()).isTrue();
-        assertThat(r.getObjectiveValue()).isLessThan(0.2);
+        assertThat(r.isSuccessful()).isTrue();
+        assertThat(r.getCost()).isLessThan(0.2);
     }
 
     @Test
@@ -134,12 +134,12 @@ class TRFStandardFunctionsTest {
             r[2] = 2.625 - c[0] * (1.0 - c[1]*c[1]*c[1]);
             r[3] = 0.0;
         };
-        OptimizationResult r = TRFProblem.create()
+        OptimizationResult r = new TRFProblem()
             .residuals(fn, m).initialPoint(2.8, 0.45)
             .gradientTolerance(1e-12).maxEvaluations(2000)
             .solve();
 
-        assertThat(r.getObjectiveValue()).isLessThan(0.1);
+        assertThat(r.getCost()).isLessThan(0.1);
     }
 
     // ── Powell Singular ───────────────────────────────────────────────────────
@@ -154,13 +154,13 @@ class TRFStandardFunctionsTest {
             r[3] = Math.sqrt(10.0) * (c[0] - c[3]) * (c[0] - c[3]);
             r[4] = 0.0;
         };
-        OptimizationResult r = TRFProblem.create()
+        OptimizationResult r = new TRFProblem()
             .residuals(fn, m).initialPoint(3.0, -1.0, 0.0, 1.0)
-            .gradientTolerance(1e-8).coefficientTolerance(1e-8).maxEvaluations(10000)
+            .gradientTolerance(1e-8).parameterTolerance(1e-8).maxEvaluations(10000)
             .solve();
 
-        assertThat(r.isConverged() || r.getStatus() == OptimizationStatus.MAX_EVALUATIONS_REACHED).isTrue();
-        assertThat(r.getObjectiveValue()).isLessThan(1.0);
+        assertThat(r.isSuccessful() || r.getStatus() == OptimizationStatus.MAX_EVALUATIONS_REACHED).isTrue();
+        assertThat(r.getCost()).isLessThan(1.0);
     }
 
     // ── Composite examples ────────────────────────────────────────────────────
@@ -182,13 +182,13 @@ class TRFStandardFunctionsTest {
                 r[i] = yd[i] - (c[0]*Math.exp(-t/c[1]) + c[2]*t*Math.exp(-t/c[3]));
             }
         };
-        OptimizationResult r = TRFProblem.create()
+        OptimizationResult r = new TRFProblem()
             .residuals(fn, m).initialPoint(4.0, 2.5, 2.5, 3.5)
             .gradientTolerance(1e-8).maxEvaluations(2000)
             .solve();
 
-        assertThat(r.isConverged()).isTrue();
-        assertThat(r.getObjectiveValue()).isLessThan(0.1);
+        assertThat(r.isSuccessful()).isTrue();
+        assertThat(r.getCost()).isLessThan(0.1);
     }
 
     @Test
@@ -209,12 +209,12 @@ class TRFStandardFunctionsTest {
                 r[i] = yd[i] - (c[0]*x + c[1]*x*x + c[2]*x*x*x + c[3]*x*x*x*x);
             }
         };
-        OptimizationResult r = TRFProblem.create()
+        OptimizationResult r = new TRFProblem()
             .residuals(fn, m).initialPoint(0.5, -1.0, 2.0, -0.5)
             .gradientTolerance(1e-8).maxEvaluations(2000)
             .solve();
 
-        assertThat(r.isConverged() || r.getStatus() == OptimizationStatus.MAX_EVALUATIONS_REACHED).isTrue();
-        assertThat(r.getObjectiveValue()).isLessThan(0.5);
+        assertThat(r.isSuccessful() || r.getStatus() == OptimizationStatus.MAX_EVALUATIONS_REACHED).isTrue();
+        assertThat(r.getCost()).isLessThan(0.5);
     }
 }

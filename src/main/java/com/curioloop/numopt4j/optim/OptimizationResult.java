@@ -4,17 +4,32 @@
 package com.curioloop.numopt4j.optim;
 
 /**
- * Result of an optimization run.
- * <p>
- * When using {@code XxxOptimizer.optimize(x0)}, the solution is written back
- * into {@code x0} in-place and {@link #getSolution()} returns {@code null}.
- * When using {@code XxxProblem.solve()}, the solution is stored in
- * {@link #getSolution()} and the original initial-point array is not modified.
- * </p>
+ * Immutable result of an optimization or root-finding run.
+ *
+ * <h2>Solution access</h2>
+ * <ul>
+ *   <li>When using {@code XxxOptimizer.optimize(x0)}, the solution is written back
+ *       into {@code x0} in-place and {@link #getSolution()} returns {@code null}.</li>
+ *   <li>When using {@code XxxProblem.solve()}, the solution is stored in
+ *       {@link #getSolution()} and the original initial-point array is not modified.</li>
+ *   <li>For 1-D root-finding ({@code BrentqProblem}), the scalar root is available
+ *       via {@link #getRoot()}; {@link #getSolution()} is {@code null}.</li>
+ *   <li>For N-D root-finding ({@code HYBRProblem}, {@code BroydenProblem}),
+ *       the solution vector is in {@link #getSolution()} and {@link #getRoot()}
+ *       returns {@code NaN}.</li>
+ * </ul>
+ *
+ * <h2>Cost field semantics</h2>
+ * <ul>
+ *   <li>Minimizers (L-BFGS-B, SLSQP): value of the objective function F(x).</li>
+ *   <li>TRF: residual sum of squares ‖f(x)‖² (or robust cost when a loss is set).</li>
+ *   <li>HYBR / Broyden: residual norm ‖F(x)‖.</li>
+ *   <li>Brentq: |f(x)| at the returned root.</li>
+ * </ul>
  */
 public class OptimizationResult {
-    
-    private final double objectiveValue;
+
+    private final double cost;
     private final OptimizationStatus status;
     private final int iterations;
     private final int evaluations;
@@ -23,32 +38,29 @@ public class OptimizationResult {
     /** Scalar root value for 1-D root-finding results; NaN otherwise. */
     private final double root;
 
-    /** Constructor used by core algorithms (solution lives in the caller's x array). */
-    public OptimizationResult(double objectiveValue, OptimizationStatus status,
-                              int iterations, int evaluations) {
-        this(objectiveValue, status, iterations, evaluations, null);
-    }
-
-    /** Constructor used by {@code XxxProblem.solve()} to carry the solution. */
-    public OptimizationResult(double objectiveValue, OptimizationStatus status,
-                              int iterations, int evaluations, double[] solution) {
-        this.objectiveValue = objectiveValue;
-        this.status = status != null ? status : OptimizationStatus.ABNORMAL_TERMINATION;
+    /**
+     * Full-args constructor.
+     *
+     * <p>All fields are set explicitly. Pass {@code Double.NaN} for {@code root}
+     * when there is no scalar root (minimizers, N-D root finders).
+     * Pass {@code null} for {@code solution} when the solution lives in the
+     * caller-supplied initial-point array.</p>
+     *
+     * @param root       scalar root (1-D root-finding only; {@code NaN} otherwise)
+     * @param solution   solution vector, or {@code null}
+     * @param cost       objective / residual-norm value at termination
+     * @param status     termination status (defaults to {@link OptimizationStatus#ABNORMAL_TERMINATION} if null)
+     * @param iterations iteration count
+     * @param evaluations function-evaluation count
+     */
+    public OptimizationResult(double root, double[] solution, double cost,
+                              OptimizationStatus status, int iterations, int evaluations) {
+        this.root       = root;
+        this.solution   = solution;
+        this.cost       = cost;
+        this.status     = status != null ? status : OptimizationStatus.ABNORMAL_TERMINATION;
         this.iterations = iterations;
         this.evaluations = evaluations;
-        this.solution = solution;
-        this.root = Double.NaN;
-    }
-
-    /** Constructor used by root-finding solvers. */
-    public OptimizationResult(double root, double[] solution, double objectiveValue,
-                               OptimizationStatus status, int evaluations) {
-        this.root = root;
-        this.solution = solution;
-        this.objectiveValue = objectiveValue;
-        this.status = status != null ? status : OptimizationStatus.ABNORMAL_TERMINATION;
-        this.evaluations = evaluations;
-        this.iterations = evaluations;
     }
 
     /**
@@ -56,66 +68,40 @@ public class OptimizationResult {
      *
      * @return the root value, or {@code NaN} if this is not a scalar root result
      */
-    public double getRoot() {
-        return root;
-    }
+    public double getRoot() { return root; }
 
-    public double getObjectiveValue() {
-        return objectiveValue;
-    }
-    
-    public OptimizationStatus getStatus() {
-        return status;
-    }
-    
-    public boolean isConverged() {
-        return status.isConverged();
-    }
-    
-    public int getIterations() {
-        return iterations;
-    }
-    
-    public int getEvaluations() {
-        return evaluations;
-    }
+    /** Returns the objective / residual-norm value at termination. */
+    public double getCost() { return cost; }
+
+    /** Returns the termination status. */
+    public OptimizationStatus getStatus() { return status; }
+
+    /** Returns the number of iterations performed. */
+    public int getIterations() { return iterations; }
+
+    /** Returns the number of function evaluations performed. */
+    public int getEvaluations() { return evaluations; }
 
     /**
-     * Returns the solution vector directly, or {@code null} if the optimizer wrote the
+     * Returns the solution vector, or {@code null} if the optimizer wrote the
      * solution back into the caller-supplied initial-point array instead.
      *
-     * <p><b>Caller owns the buffer:</b> The returned array is the same reference stored
-     * in this result. Modifying it will affect this result.</p>
-     *
-     * @return the solution array reference, or {@code null} if not available
+     * <p><b>Caller owns the buffer:</b> the returned array is the same reference
+     * stored in this result — modifying it will affect this result.</p>
      */
-    public double[] getSolution() {
-        return solution;
-    }
-
-    /**
-     * Returns a formatted single-line summary of this result.
-     *
-     * @return summary string containing status, objective value, iterations and evaluations
-     */
-    public String getSummary() {
-        return String.format("Status: %s | Objective: %.6e | Iterations: %d | Evaluations: %d",
-                status.getDescription(), objectiveValue, iterations, evaluations);
-    }
+    public double[] getSolution() { return solution; }
 
     /**
      * Returns whether the optimization converged successfully.
      *
-     * @return true if status is converged
+     * @return {@code true} if {@link #getStatus()} is a converged status
      */
-    public boolean isSuccessful() {
-        return status.isConverged();
-    }
+    public boolean isSuccessful() { return status.isConverged(); }
 
     /**
-     * Returns an error description when the status is an error state, otherwise null.
+     * Returns an error description when the status is an error state, otherwise {@code null}.
      *
-     * @return error message with suggestion, or null if not an error
+     * @return error message with suggestion, or {@code null} if not an error
      */
     public String getErrorMessage() {
         if (status.isError()) {
@@ -124,12 +110,18 @@ public class OptimizationResult {
         return null;
     }
 
+    /** Returns a formatted single-line summary of this result. */
+    public String getSummary() {
+        return String.format("Status: %s | Cost: %.6e | Iterations: %d | Evaluations: %d",
+                status.getDescription(), cost, iterations, evaluations);
+    }
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("OptimizationResult {\n");
         sb.append("  status: ").append(status.getDescription()).append('\n');
-        sb.append("  objectiveValue: ").append(objectiveValue).append('\n');
+        sb.append("  cost: ").append(cost).append('\n');
         sb.append("  iterations: ").append(iterations).append('\n');
         sb.append("  evaluations: ").append(evaluations).append('\n');
         if (!status.isConverged() && status.getSuggestion() != null) {

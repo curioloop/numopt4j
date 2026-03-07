@@ -48,13 +48,13 @@ if (r.isSuccessful()) {
 
 ```java
 // 无约束优化
-OptimizationResult r1 = LBFGSBProblem.create()
+OptimizationResult r1 = new LBFGSBProblem()
     .objective(x -> x[0]*x[0] + x[1]*x[1])  // 自动使用 NumericalGradient.CENTRAL
     .initialPoint(1.0, 1.0)
     .solve();
 
 // 边界约束优化
-OptimizationResult r2 = LBFGSBProblem.create()
+OptimizationResult r2 = new LBFGSBProblem()
     .objective(x -> x[0]*x[0] + x[1]*x[1])
     .bounds(Bound.atLeast(0.5), Bound.atLeast(0.5))
     .initialPoint(1.0, 1.0)
@@ -62,7 +62,7 @@ OptimizationResult r2 = LBFGSBProblem.create()
     .solve();
 
 // 解析梯度（性能最优）
-OptimizationResult r3 = LBFGSBProblem.create()
+OptimizationResult r3 = new LBFGSBProblem()
     .objective((x, g) -> {
         double f = x[0]*x[0] + x[1]*x[1];
         if (g != null) { g[0] = 2*x[0]; g[1] = 2*x[1]; }
@@ -76,7 +76,7 @@ OptimizationResult r3 = LBFGSBProblem.create()
 
 ```java
 // 等式约束：minimize x[0]^2 + x[1]^2, subject to x[0] + x[1] = 1
-OptimizationResult r = SLSQPProblem.create()
+OptimizationResult r = new SLSQPProblem()
     .objective(x -> x[0]*x[0] + x[1]*x[1])
     .equalityConstraints(x -> x[0] + x[1] - 1)
     .initialPoint(0.5, 0.5)
@@ -84,7 +84,7 @@ OptimizationResult r = SLSQPProblem.create()
 // solution: [0.5, 0.5]
 
 // 不等式约束：minimize x[0] + x[1], subject to x[0]^2 + x[1]^2 >= 1
-OptimizationResult r2 = SLSQPProblem.create()
+OptimizationResult r2 = new SLSQPProblem()
     .objective(x -> x[0] + x[1])
     .inequalityConstraints(x -> x[0]*x[0] + x[1]*x[1] - 1)
     .initialPoint(1.0, 1.0)
@@ -98,7 +98,7 @@ OptimizationResult r2 = SLSQPProblem.create()
 double[] tData = {0.0, 1.0, 2.0, 3.0};
 double[] yData = {2.0, 1.2, 0.7, 0.4};
 
-OptimizationResult r = TRFProblem.create()
+OptimizationResult r = new TRFProblem()
     .residuals((x, res) -> {
         for (int i = 0; i < tData.length; i++) {
             res[i] = yData[i] - x[0] * Math.exp(-x[1] * tData[i]);
@@ -137,7 +137,7 @@ problem.gradientTolerance(-1e-6); // "gradientTolerance must be positive, got -1
 ### 优化未收敛
 
 ```java
-OptimizationResult r = LBFGSBProblem.create()
+OptimizationResult r = new LBFGSBProblem()
     .objective(x -> x[0]*x[0])
     .initialPoint(1.0)
     .maxIterations(5)
@@ -154,7 +154,7 @@ if (!r.isSuccessful()) {
     // }
 
     // 根据建议调整参数
-    r = LBFGSBProblem.create()
+    r = new LBFGSBProblem()
         .objective(x -> x[0]*x[0])
         .initialPoint(1.0)
         .maxIterations(100)  // 增加迭代次数
@@ -166,7 +166,7 @@ if (!r.isSuccessful()) {
 
 ```java
 // 残差数量必须 >= 参数数量
-TRFProblem.create()
+new TRFProblem()
     .residuals((x, r) -> { r[0] = x[0] - 1; r[1] = x[1] - 2; }, 2)  // m=2
     .initialPoint(0.0, 0.0)  // n=2，满足 m >= n
     .solve();
@@ -179,7 +179,7 @@ TRFProblem.create()
 在循环中多次求解相同维度的问题时，预分配工作空间可避免重复内存分配：
 
 ```java
-LBFGSBProblem problem = LBFGSBProblem.create()
+LBFGSBProblem problem = new LBFGSBProblem()
     .objective(x -> x[0]*x[0] + x[1]*x[1])
     .initialPoint(1.0, 1.0);
 
@@ -197,13 +197,13 @@ for (double[] startPoint : startPoints) {
 
 ```java
 // 数值梯度（简单，每维度 2 次额外评估）
-LBFGSBProblem.create()
+new LBFGSBProblem()
     .objective(x -> x[0]*x[0] + x[1]*x[1])
     .initialPoint(1.0, 1.0)
     .solve();
 
 // 解析梯度（更快，无额外评估）
-LBFGSBProblem.create()
+new LBFGSBProblem()
     .objective((x, g) -> {
         double f = x[0]*x[0] + x[1]*x[1];
         if (g != null) { g[0] = 2*x[0]; g[1] = 2*x[1]; }

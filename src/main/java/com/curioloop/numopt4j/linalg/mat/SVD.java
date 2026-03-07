@@ -279,7 +279,7 @@ public final class SVD implements Decomposition {
     }
 
     @Override
-    public Pool work() {
+    public Pool pool() {
         return pool;
     }
 

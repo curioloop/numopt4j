@@ -123,7 +123,7 @@ public final class Cholesky implements Decomposition {
     }
 
     @Override
-    public Pool work() {
+    public Pool pool() {
         return pool;
     }
 

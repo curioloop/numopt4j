@@ -69,14 +69,14 @@ public final class BroydenSolver {
         for (double v : fx) {
             if (Double.isNaN(v) || Double.isInfinite(v))
                 return new OptimizationResult(Double.NaN, x.clone(), Double.NaN,
-                        OptimizationStatus.ABNORMAL_TERMINATION, nfev);
+                        OptimizationStatus.ABNORMAL_TERMINATION, nfev, nfev);
         }
 
         // ── initial convergence check ────────────────────────────────────────
         double fnorm = maxnorm(fx, n);
         if (fnorm <= ftol)
             return new OptimizationResult(Double.NaN, x.clone(), fnorm,
-                    OptimizationStatus.COEFFICIENT_TOLERANCE_REACHED, 0);
+                    OptimizationStatus.COEFFICIENT_TOLERANCE_REACHED, 0, 0);
 
         // ── H₀ = -alpha·I  (scipy GenericBroyden.setup) ─────────────────────
         // alpha = 0.5 * max(‖x₀‖₂, 1) / ‖F₀‖₂
@@ -170,14 +170,14 @@ public final class BroydenSolver {
             for (double v : fNew) {
                 if (Double.isNaN(v) || Double.isInfinite(v))
                     return new OptimizationResult(Double.NaN, x.clone(), fnorm,
-                            OptimizationStatus.ABNORMAL_TERMINATION, nfev);
+                            OptimizationStatus.ABNORMAL_TERMINATION, nfev, nfev);
             }
 
             // ── convergence check ────────────────────────────────────────────
             if (fnormNew <= ftol) {
                 BLAS.dcopy(n, xNew, 0, 1, x, 0, 1);
                 return new OptimizationResult(Double.NaN, x.clone(), fnormNew,
-                        OptimizationStatus.COEFFICIENT_TOLERANCE_REACHED, iter);
+                        OptimizationStatus.COEFFICIENT_TOLERANCE_REACHED, iter, iter);
             }
 
             // ── actual dx = s·dx, dF = F_new - F ────────────────────────────
@@ -215,7 +215,7 @@ public final class BroydenSolver {
         }
 
         return new OptimizationResult(Double.NaN, x.clone(), fnorm,
-                OptimizationStatus.MAX_ITERATIONS_REACHED, maxiter);
+                OptimizationStatus.MAX_ITERATIONS_REACHED, maxiter, maxiter);
     }
 
     // ── Armijo cubic interpolation loop ──────────────────────────────────────

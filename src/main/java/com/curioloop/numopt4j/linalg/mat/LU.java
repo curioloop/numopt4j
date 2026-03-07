@@ -87,7 +87,7 @@ public final class LU implements Decomposition {
 
     /** Pre-allocate workspace for reuse in high-frequency scenarios. */
     @Override
-    public Pool work() {
+    public Pool pool() {
         return pool;
     }
 

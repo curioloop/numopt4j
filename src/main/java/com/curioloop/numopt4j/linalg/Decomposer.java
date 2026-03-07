@@ -53,11 +53,20 @@ public final class Decomposer {
      *
      * @param A  input matrix (row-major, length >= n*n), overwritten in place
      * @param n  matrix dimension
-     * @param ws optional workspace pool for reuse
      */
-    public static LU lu(double[] A, int n, LU.Pool... ws) {
-        LU.Pool pool = (ws != null && ws.length > 0) ? ws[0] : null;
-        return LU.decompose(A, n, pool);
+    public static LU lu(double[] A, int n) {
+        return LU.decompose(A, n, null);
+    }
+
+    /**
+     * Performs LU decomposition with workspace reuse.
+     *
+     * @param A  input matrix (row-major, length >= n*n), overwritten in place
+     * @param n  matrix dimension
+     * @param ws workspace pool for reuse
+     */
+    public static LU lu(double[] A, int n, LU.Pool ws) {
+        return LU.decompose(A, n, ws);
     }
 
     // =========================================================================
@@ -308,11 +317,21 @@ public final class Decomposer {
      * @param A  input matrix (row-major, length >= m*n), overwritten in place
      * @param m  number of rows
      * @param n  number of columns
-     * @param ws optional workspace pool for reuse
      */
-    public static LQ lq(double[] A, int m, int n, LQ.Pool... ws) {
-        LQ.Pool pool = (ws != null && ws.length > 0) ? ws[0] : null;
-        return LQ.decompose(A, m, n, pool);
+    public static LQ lq(double[] A, int m, int n) {
+        return LQ.decompose(A, m, n, null);
+    }
+
+    /**
+     * Performs LQ decomposition with workspace reuse.
+     *
+     * @param A  input matrix (row-major, length >= m*n), overwritten in place
+     * @param m  number of rows
+     * @param n  number of columns
+     * @param ws workspace pool for reuse
+     */
+    public static LQ lq(double[] A, int m, int n, LQ.Pool ws) {
+        return LQ.decompose(A, m, n, ws);
     }
 
     // =========================================================================

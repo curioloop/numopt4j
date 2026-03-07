@@ -21,7 +21,7 @@ import java.util.function.BiConsumer;
 public final class BroydenProblem extends RootFinder<BiConsumer<double[], double[]>, BroydenWorkspace, BroydenProblem> {
 
     private double ftol = HYBRSolver.DEFAULT_FTOL;
-    private int maxIterations = 0;
+    private int maxEvaluations = 0;
 
     public BroydenProblem() {}
 
@@ -43,13 +43,13 @@ public final class BroydenProblem extends RootFinder<BiConsumer<double[], double
     public double functionTolerance() { return ftol; }
 
     /** Sets the maximum number of iterations. */
-    public BroydenProblem maxIterations(int k) {
-        if (k <= 0) throw new IllegalArgumentException("maxIterations must be > 0");
-        this.maxIterations = k;
+    public BroydenProblem maxEvaluations(int k) {
+        if (k <= 0) throw new IllegalArgumentException("maxEvaluations must be > 0");
+        this.maxEvaluations = k;
         return this;
     }
 
-    public int maxIterations() { return maxIterations; }
+    public int maxEvaluations() { return maxEvaluations; }
 
     /** Allocates a {@link BroydenWorkspace} for dimension {@code n} and caches it. */
     @Override
@@ -61,16 +61,21 @@ public final class BroydenProblem extends RootFinder<BiConsumer<double[], double
     }
 
     @Override
-    public OptimizationResult solve(BroydenWorkspace... ws) {
+    public OptimizationResult solve() {
+        return solve((BroydenWorkspace) null);
+    }
+
+    @Override
+    public OptimizationResult solve(BroydenWorkspace ws) {
         if (function == null)
             throw new IllegalStateException(
                 "Missing required parameter: equations. Call .equations(fn, n) before .solve().");
         if (initialPoint == null)
             throw new IllegalStateException(
                 "Missing required parameter: initialPoint. Call .initialPoint(x0) before .solve().");
-        BroydenWorkspace ws0 = (ws != null && ws.length > 0 && ws[0] != null) ? ws[0] : alloc();
+        BroydenWorkspace ws0 = ws != null ? ws : alloc();
         ws0.reset();
-        int maxIter = maxIterations > 0 ? maxIterations : 100 * (dimension + 1);
+        int maxIter = maxEvaluations > 0 ? maxEvaluations : 100 * (dimension + 1);
         return BroydenSolver.solve(function, initialPoint, ftol, maxIter, ws0);
     }
 }

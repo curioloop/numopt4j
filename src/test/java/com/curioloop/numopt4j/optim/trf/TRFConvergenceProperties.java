@@ -47,7 +47,7 @@ public class TRFConvergenceProperties {
     void chiSquaredShouldDecreaseOrStayConstant(@ForAll("quadraticProblems") QuadraticProblem p) {
         double initialChi2 = p.initialChi2();
         OptimizationResult r = p.solve(1e-8, 1e-8, 1e-8, 2000);
-        assertThat(r.getObjectiveValue())
+        assertThat(r.getCost())
             .as("Final χ² should be ≤ initial χ²")
             .isLessThanOrEqualTo(initialChi2 + 1e-10);
     }
@@ -57,7 +57,7 @@ public class TRFConvergenceProperties {
     void chiSquaredShouldDecreaseForExponentialProblems(@ForAll("exponentialProblems") ExponentialProblem p) {
         double initialChi2 = p.initialChi2();
         OptimizationResult r = p.solve(1e-8, 1e-8, 1e-8, 2000);
-        assertThat(r.getObjectiveValue())
+        assertThat(r.getCost())
             .as("Final χ² should be ≤ initial χ²")
             .isLessThanOrEqualTo(initialChi2 + 1e-10);
     }
@@ -68,7 +68,7 @@ public class TRFConvergenceProperties {
     @Label("Optimizer should converge or reach limit on quadratic problems")
     void optimizerShouldConvergeOnQuadraticProblems(@ForAll("quadraticProblems") QuadraticProblem p) {
         OptimizationResult r = p.solve(1e-8, 1e-8, 1e-8, 3000);
-        assertThat(r.isConverged() || r.getStatus() == OptimizationStatus.MAX_EVALUATIONS_REACHED)
+        assertThat(r.isSuccessful() || r.getStatus() == OptimizationStatus.MAX_EVALUATIONS_REACHED)
             .as("Should converge or reach limit, not fail abnormally")
             .isTrue();
     }
@@ -80,7 +80,7 @@ public class TRFConvergenceProperties {
     void gradientConvergenceImpliesConvergedStatus(@ForAll("quadraticProblems") QuadraticProblem p) {
         OptimizationResult r = p.solve(1e-6, 1e-12, 1e-12, 5000);
         if (r.getStatus() == OptimizationStatus.GRADIENT_TOLERANCE_REACHED) {
-            assertThat(r.isConverged()).isTrue();
+            assertThat(r.isSuccessful()).isTrue();
         }
     }
 
@@ -89,7 +89,7 @@ public class TRFConvergenceProperties {
     void coefficientConvergenceImpliesConvergedStatus(@ForAll("quadraticProblems") QuadraticProblem p) {
         OptimizationResult r = p.solve(1e-12, 1e-4, 1e-12, 5000);
         if (r.getStatus() == OptimizationStatus.COEFFICIENT_TOLERANCE_REACHED) {
-            assertThat(r.isConverged()).isTrue();
+            assertThat(r.isSuccessful()).isTrue();
         }
     }
 
@@ -98,7 +98,7 @@ public class TRFConvergenceProperties {
     void chiSquaredConvergenceImpliesConvergedStatus(@ForAll("quadraticProblems") QuadraticProblem p) {
         OptimizationResult r = p.solve(1e-12, 1e-12, 0.5, 5000);
         if (r.getStatus() == OptimizationStatus.CHI_SQUARED_TOLERANCE_REACHED) {
-            assertThat(r.isConverged()).isTrue();
+            assertThat(r.isSuccessful()).isTrue();
         }
     }
 
@@ -160,9 +160,9 @@ public class TRFConvergenceProperties {
         }
 
         OptimizationResult solve(double gtol, double xtol, double ftol, int maxfev) {
-            return TRFProblem.create()
+            return new TRFProblem()
                 .residuals(fn, m).initialPoint(initialGuess.clone())
-                .gradientTolerance(gtol).coefficientTolerance(xtol).functionTolerance(ftol)
+                .gradientTolerance(gtol).parameterTolerance(xtol).functionTolerance(ftol)
                 .maxEvaluations(maxfev).solve();
         }
     }
@@ -195,9 +195,9 @@ public class TRFConvergenceProperties {
         }
 
         OptimizationResult solve(double gtol, double xtol, double ftol, int maxfev) {
-            return TRFProblem.create()
+            return new TRFProblem()
                 .residuals(fn, m).initialPoint(initialGuess.clone())
-                .gradientTolerance(gtol).coefficientTolerance(xtol).functionTolerance(ftol)
+                .gradientTolerance(gtol).parameterTolerance(xtol).functionTolerance(ftol)
                 .maxEvaluations(maxfev).solve();
         }
     }

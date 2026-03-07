@@ -133,7 +133,7 @@ public final class QR implements Decomposition {
     }
 
     @Override
-    public Pool work() {
+    public Pool pool() {
         return pool;
     }
 

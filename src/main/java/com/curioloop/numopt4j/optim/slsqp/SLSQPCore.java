@@ -352,7 +352,7 @@ final class SLSQPCore {
 
         // Validate inputs
         if (x == null || objEval == null) {
-            return new OptimizationResult(0.0, OptimizationStatus.INVALID_ARGUMENT, 0, 0);
+            return new OptimizationResult(Double.NaN, null, 0.0, OptimizationStatus.INVALID_ARGUMENT, 0, 0);
         }
 
         int meq = (eqCons != null) ? eqCons.length : 0;
@@ -411,7 +411,7 @@ final class SLSQPCore {
         System.arraycopy(g, 0, buffer, gOff, n);
 
         if (Double.isNaN(f) || Double.isInfinite(f)) {
-            return new OptimizationResult(f, OptimizationStatus.CALLBACK_ERROR, 0, nfev);
+            return new OptimizationResult(Double.NaN, null, f, OptimizationStatus.CALLBACK_ERROR, 0, nfev);
         }
 
         // Evaluate constraints and their gradients (if provided)
@@ -443,7 +443,7 @@ final class SLSQPCore {
             if (maxTimeNanos > 0) {
                 long elapsedNanos = System.nanoTime() - startTimeNanos;
                 if (elapsedNanos >= maxTimeNanos) {
-                    return new OptimizationResult(f, OptimizationStatus.MAX_COMPUTATIONS_REACHED, iter, nfev);
+                    return new OptimizationResult(Double.NaN, null, f, OptimizationStatus.MAX_COMPUTATIONS_REACHED, iter, nfev);
                 }
             }
 
@@ -520,7 +520,7 @@ final class SLSQPCore {
 
             // Unable to solve LSQ even the augmented one
             if (lsqMode != MODE_HAS_SOLUTION) {
-                return new OptimizationResult(f, OptimizationStatus.CONSTRAINT_INCOMPATIBLE, iter, nfev);
+                return new OptimizationResult(Double.NaN, null, f, OptimizationStatus.CONSTRAINT_INCOMPATIBLE, iter, nfev);
             }
 
             // Update multipliers for L1-test: v[i] = g[i] - λᵀ∇c[i]
@@ -547,7 +547,7 @@ final class SLSQPCore {
 
             // Check convergence
             if (h1 < accuracy && h2 < accuracy && !badQP && !Double.isNaN(f)) {
-                return new OptimizationResult(f, OptimizationStatus.GRADIENT_TOLERANCE_REACHED, iter, nfev);
+                return new OptimizationResult(Double.NaN, null, f, OptimizationStatus.GRADIENT_TOLERANCE_REACHED, iter, nfev);
             }
 
             // Compute directional derivative of merit function
@@ -570,10 +570,10 @@ final class SLSQPCore {
                             buffer, sOff, n, fEvalTol, fDiffTol, xDiffTol,
                             x, 0, buffer, x0Off, buffer, uOff, vio);
                     if (convStatus != null) {
-                        return new OptimizationResult(f, convStatus, iter, nfev);
+                        return new OptimizationResult(Double.NaN, null, f, convStatus, iter, nfev);
                     }
                     // Not converged even with relaxed tolerance
-                    return new OptimizationResult(f, OptimizationStatus.LINE_SEARCH_FAILED, iter, nfev);
+                    return new OptimizationResult(Double.NaN, null, f, OptimizationStatus.LINE_SEARCH_FAILED, iter, nfev);
                 }
                 // Reset L = I, D = I
                 BLAS.dset(n2 + 1, 0, buffer, lOff, 1);
@@ -620,10 +620,10 @@ final class SLSQPCore {
                 nfev++;
 
                 if (Double.isNaN(f) || Double.isInfinite(f)) {
-                    return new OptimizationResult(f0, OptimizationStatus.CALLBACK_ERROR, iter, nfev);
+                    return new OptimizationResult(Double.NaN, null, f0, OptimizationStatus.CALLBACK_ERROR, iter, nfev);
                 }
                 if (maxEval > 0 && nfev >= maxEval) {
-                    return new OptimizationResult(f, OptimizationStatus.MAX_EVALUATIONS_REACHED, iter, nfev);
+                    return new OptimizationResult(Double.NaN, null, f, OptimizationStatus.MAX_EVALUATIONS_REACHED, iter, nfev);
                 }
 
                 // Evaluate constraint values only (no gradient)
@@ -659,7 +659,7 @@ final class SLSQPCore {
                         if (convStatus != null) {
                             // Evaluate gradients at accepted point before returning
                             evalGradients(x, n, m, meq, mineq, la, objEval, eqCons, ineqCons, g, buffer, gOff, cOff, aOff);
-                            return new OptimizationResult(f, convStatus, iter, nfev);
+                            return new OptimizationResult(Double.NaN, null, f, convStatus, iter, nfev);
                         }
                         h3 = vio[0];
                         lsDone = true;
@@ -691,7 +691,7 @@ final class SLSQPCore {
                         if (convStatus != null) {
                             // Evaluate gradients at accepted point before returning
                             evalGradients(x, n, m, meq, mineq, la, objEval, eqCons, ineqCons, g, buffer, gOff, cOff, aOff);
-                            return new OptimizationResult(f, convStatus, iter, nfev);
+                            return new OptimizationResult(Double.NaN, null, f, convStatus, iter, nfev);
                         }
                         h3 = vio[0];
                         lsDone = true;
@@ -759,10 +759,10 @@ final class SLSQPCore {
                             buffer, sOff, n, fEvalTol, fDiffTol, xDiffTol,
                             x, 0, buffer, x0Off, buffer, uOff, vio);
                     if (convStatus != null) {
-                        return new OptimizationResult(f, convStatus, iter, nfev);
+                        return new OptimizationResult(Double.NaN, null, f, convStatus, iter, nfev);
                     }
                     // Not converged even with relaxed tolerance
-                    return new OptimizationResult(f, OptimizationStatus.LINE_SEARCH_FAILED, iter, nfev);
+                    return new OptimizationResult(Double.NaN, null, f, OptimizationStatus.LINE_SEARCH_FAILED, iter, nfev);
                 }
                 // Reset L = I, D = I
                 BLAS.dset(n2 + 1, 0, buffer, lOff, 1);
@@ -778,7 +778,7 @@ final class SLSQPCore {
         }
 
         // Maximum iterations reached
-        return new OptimizationResult(f, OptimizationStatus.MAX_ITERATIONS_REACHED, maxIter, nfev);
+        return new OptimizationResult(Double.NaN, null, f, OptimizationStatus.MAX_ITERATIONS_REACHED, maxIter, nfev);
     }
 
     /**

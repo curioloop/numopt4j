@@ -307,7 +307,7 @@ public final class Eigen implements Decomposition {
     }
 
     @Override
-    public Pool work() {
+    public Pool pool() {
         return pool;
     }
 

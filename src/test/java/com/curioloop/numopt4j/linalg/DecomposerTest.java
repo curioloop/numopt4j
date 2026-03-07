@@ -36,7 +36,7 @@ class DecomposerTest {
     void luAllocNonNull() {
         double[] A = {4, 3, 6, 3};
         LU lu = Decomposer.lu(A, 2);
-        LU.Pool pool = lu.work();
+        LU.Pool pool = lu.pool();
         assertThat(pool).isNotNull();
     }
 
@@ -45,9 +45,9 @@ class DecomposerTest {
         double[] A = {4, 3, 6, 3};
         LU lu = Decomposer.lu(A, 2);
         // work() returns LU.Pool directly — no cast needed
-        LU.Pool pool = lu.work();
+        LU.Pool pool = lu.pool();
         assertThat(pool).isNotNull();
-        assertThat(pool).isSameAs(lu.work());
+        assertThat(pool).isSameAs(lu.pool());
     }
 
     @Test
@@ -71,16 +71,16 @@ class DecomposerTest {
     void qrAllocNonNull() {
         double[] A = {1, 2, 3, 4};
         QR qr = Decomposer.qr(A, 2, 2);
-        assertThat(qr.work()).isNotNull();
+        assertThat(qr.pool()).isNotNull();
     }
 
     @Test
     void qrWorkCovariantNocast() {
         double[] A = {1, 2, 3, 4};
         QR qr = Decomposer.qr(A, 2, 2);
-        QR.Pool pool = qr.work();
+        QR.Pool pool = qr.pool();
         assertThat(pool).isNotNull();
-        assertThat(pool).isSameAs(qr.work());
+        assertThat(pool).isSameAs(qr.pool());
     }
 
     @Test
@@ -112,16 +112,16 @@ class DecomposerTest {
     void svdAllocNonNull() {
         double[] A = {1, 2, 3, 4};
         SVD svd = Decomposer.svd(A, 2, 2);
-        assertThat(svd.work()).isNotNull();
+        assertThat(svd.pool()).isNotNull();
     }
 
     @Test
     void svdWorkCovariantNocast() {
         double[] A = {1, 2, 3, 4};
         SVD svd = Decomposer.svd(A, 2, 2);
-        SVD.Pool pool = svd.work();
+        SVD.Pool pool = svd.pool();
         assertThat(pool).isNotNull();
-        assertThat(pool).isSameAs(svd.work());
+        assertThat(pool).isSameAs(svd.pool());
     }
 
     @Test
@@ -171,16 +171,16 @@ class DecomposerTest {
     void choleskyAllocNonNull() {
         double[] A = {4, 2, 2, 3};
         Cholesky chol = Decomposer.cholesky(A, 2);
-        assertThat(chol.work()).isNotNull();
+        assertThat(chol.pool()).isNotNull();
     }
 
     @Test
     void choleskyWorkCovariantNocast() {
         double[] A = {4, 2, 2, 3};
         Cholesky chol = Decomposer.cholesky(A, 2);
-        Cholesky.Pool pool = chol.work();
+        Cholesky.Pool pool = chol.pool();
         assertThat(pool).isNotNull();
-        assertThat(pool).isSameAs(chol.work());
+        assertThat(pool).isSameAs(chol.pool());
     }
 
     @Test
@@ -203,44 +203,44 @@ class DecomposerTest {
     void workspaceReuseReferenceEquality() {
         double[] A1 = {4, 3, 6, 3};
         LU lu1 = Decomposer.lu(A1, 2);
-        LU.Pool ws = lu1.work();
+        LU.Pool ws = lu1.pool();
 
         double[] A2 = {2, 1, 1, 3};
         LU lu2 = Decomposer.lu(A2, 2, ws);
-        assertThat(lu2.work()).isSameAs(ws);
+        assertThat(lu2.pool()).isSameAs(ws);
     }
 
     @Test
     void qrWorkspaceReuseWithOpts() {
         double[] A1 = {1, 2, 3, 4};
         QR qr1 = Decomposer.qr(A1, 2, 2, QR.Opts.PIVOTING);
-        QR.Pool ws = qr1.work();
+        QR.Pool ws = qr1.pool();
 
         double[] A2 = {5, 6, 7, 8};
         QR qr2 = Decomposer.qr(A2, 2, 2, ws, QR.Opts.PIVOTING);
-        assertThat(qr2.work()).isSameAs(ws);
+        assertThat(qr2.pool()).isSameAs(ws);
     }
 
     @Test
     void svdWorkspaceReuseWithOpts() {
         double[] A1 = {1, 2, 3, 4};
         SVD svd1 = Decomposer.svd(A1, 2, 2, SVD.Opts.WANT_U);
-        SVD.Pool ws = svd1.work();
+        SVD.Pool ws = svd1.pool();
 
         double[] A2 = {5, 6, 7, 8};
         SVD svd2 = Decomposer.svd(A2, 2, 2, ws, SVD.Opts.WANT_U);
-        assertThat(svd2.work()).isSameAs(ws);
+        assertThat(svd2.pool()).isSameAs(ws);
     }
 
     @Test
     void choleskyWorkspaceReuseWithOpts() {
         double[] A1 = {4, 2, 2, 3};
         Cholesky c1 = Decomposer.cholesky(A1, 2, Cholesky.Opts.PIVOTING);
-        Cholesky.Pool ws = c1.work();
+        Cholesky.Pool ws = c1.pool();
 
         double[] A2 = {9, 3, 3, 4};
         Cholesky c2 = Decomposer.cholesky(A2, 2, ws, Cholesky.Opts.PIVOTING);
-        assertThat(c2.work()).isSameAs(ws);
+        assertThat(c2.pool()).isSameAs(ws);
     }
 
     // =========================================================================
@@ -298,15 +298,15 @@ class DecomposerTest {
     @Test
     void gevdAllocNonNull() {
         GEVD eg = Decomposer.gevd(A2.clone(), B2.clone(), 2);
-        assertThat(eg.work()).isNotNull();
+        assertThat(eg.pool()).isNotNull();
     }
 
     @Test
     void gevdWorkCovariantNocast() {
         GEVD eg = Decomposer.gevd(A2.clone(), B2.clone(), 2);
-        GEVD.Pool pool = eg.work();
+        GEVD.Pool pool = eg.pool();
         assertThat(pool).isNotNull();
-        assertThat(pool).isSameAs(eg.work());
+        assertThat(pool).isSameAs(eg.pool());
     }
 
     @Test
@@ -321,13 +321,13 @@ class DecomposerTest {
     @Test
     void gevdWorkspaceReuse() {
         GEVD eg1 = Decomposer.gevd(A2.clone(), B2.clone(), 2);
-        GEVD.Pool ws = eg1.work();
+        GEVD.Pool ws = eg1.pool();
 
         double[] A2b = {4.0, 1.0, 1.0, 3.0};
         double[] B2b = {2.0, 0.0, 0.0, 2.0};
         GEVD eg2 = Decomposer.gevd(A2b, B2b, 2, ws);
         assertThat(eg2.ok()).isTrue();
-        assertThat(eg2.work()).isSameAs(ws);
+        assertThat(eg2.pool()).isSameAs(ws);
     }
 
     @Test

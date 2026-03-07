@@ -199,12 +199,12 @@ public class NumericalGradientTest {
     @DisplayName("All methods should work with L-BFGS-B optimizer")
     void testWithLbfgsbOptimizer() {
         for (NumericalGradient method : NumericalGradient.values()) {
-            OptimizationResult result = LBFGSBProblem.create()
+            OptimizationResult result = new LBFGSBProblem()
                 .objective(method.wrap(p -> p[0] * p[0] + p[1] * p[1]))
                 .initialPoint(5.0, 5.0)
                 .solve();
             double[] x = result.getSolution();
-            assertThat(result.isConverged())
+            assertThat(result.isSuccessful())
                 .as("Method %s should converge", method)
                 .isTrue();
             assertThat(x[0]).isCloseTo(0.0, within(1e-4));
@@ -216,12 +216,12 @@ public class NumericalGradientTest {
     @DisplayName("All methods should work with SLSQP optimizer")
     void testWithSlsqpOptimizer() {
         for (NumericalGradient method : NumericalGradient.values()) {
-            OptimizationResult result = SLSQPProblem.create()
+            OptimizationResult result = new SLSQPProblem()
                 .objective(method.wrap(p -> p[0] * p[0] + p[1] * p[1]))
                 .initialPoint(5.0, 5.0)
                 .solve();
             double[] x = result.getSolution();
-            assertThat(result.isConverged())
+            assertThat(result.isSuccessful())
                 .as("Method %s should converge", method)
                 .isTrue();
             assertThat(x[0]).isCloseTo(0.0, within(1e-4));
@@ -237,7 +237,7 @@ public class NumericalGradientTest {
         ToDoubleFunction<double[]> rosenbrock = x -> 
             Math.pow(1 - x[0], 2) + 100 * Math.pow(x[1] - x[0] * x[0], 2);
         
-        OptimizationResult result = LBFGSBProblem.create()
+        OptimizationResult result = new LBFGSBProblem()
             .objective(NumericalGradient.FIVE_POINT.wrap(rosenbrock))
             .initialPoint(0.5, 0.5)
             .maxIterations(2000)

@@ -68,7 +68,7 @@ public class LBFGSBBenchmark {
                     return f;
                 };
 
-        LBFGSBProblem p = LBFGSBProblem.create()
+        LBFGSBProblem p = new LBFGSBProblem()
                 .objective(objective)
                 .corrections(CORRECTIONS)
                 .functionTolerance(FUNCTION_TOLERANCE)

@@ -169,7 +169,7 @@ class QRPivotTest {
         QR qr = QR.decompose(A, 2, 2, true, ws);
         
         assertThat(qr.ok()).isTrue();
-        assertThat(qr.work()).isSameAs(ws);
+        assertThat(qr.pool()).isSameAs(ws);
     }
 
     @Test
@@ -191,6 +191,6 @@ class QRPivotTest {
         QR qr2 = QR.decompose(A2, 2, 2, ws);
         assertThat(qr2.ok()).isTrue();
         
-        assertThat(qr1.work()).isSameAs(qr2.work());
+        assertThat(qr1.pool()).isSameAs(qr2.pool());
     }
 }

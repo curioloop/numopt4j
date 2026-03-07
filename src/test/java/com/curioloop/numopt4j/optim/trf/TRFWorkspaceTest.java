@@ -40,7 +40,7 @@ class TRFWorkspaceTest {
     void allocViaOptimizerMatchesDirectAlloc() {
         final int m = 10, n = 3;
         BiConsumer<double[], double[]> fn = (c, r) -> {};
-        TRFProblem p = TRFProblem.create().residuals(fn, m).initialPoint(0.0, 0.0, 0.0);
+        TRFProblem p = new TRFProblem().residuals(fn, m).initialPoint(0.0, 0.0, 0.0);
         TRFWorkspace ws = p.alloc();
         assertThat(ws.fvec).hasSize(m);
         assertThat(ws.getN()).isEqualTo(n);
@@ -50,7 +50,7 @@ class TRFWorkspaceTest {
     void allocViaProblemMatchesDirectAlloc() {
         final int m = 5;
         BiConsumer<double[], double[]> fn = (c, r) -> {};
-        TRFProblem p = TRFProblem.create().residuals(fn, m).initialPoint(0.0, 0.0);
+        TRFProblem p = new TRFProblem().residuals(fn, m).initialPoint(0.0, 0.0);
         TRFWorkspace ws = p.alloc();
         assertThat(ws.fvec).hasSize(m);
         assertThat(ws.getN()).isEqualTo(2);
@@ -65,9 +65,9 @@ class TRFWorkspaceTest {
         BiConsumer<double[], double[]> fn = (c, r) -> {
             for (int i = 0; i < m; i++) r[i] = yd[i] - (c[0] + c[1] * xd[i]);
         };
-        TRFProblem p = TRFProblem.create()
+        TRFProblem p = new TRFProblem()
             .residuals(fn, m).initialPoint(0.0, 1.0)
-            .gradientTolerance(1e-10).coefficientTolerance(1e-10);
+            .gradientTolerance(1e-10).parameterTolerance(1e-10);
         TRFWorkspace ws = p.alloc();
         double[] x0 = {0.0, 1.0};
 
@@ -75,7 +75,7 @@ class TRFWorkspaceTest {
         p.initialPoint(x0.clone());
         OptimizationResult r2 = p.solve(ws);
 
-        assertThat(r1.getObjectiveValue()).isCloseTo(r2.getObjectiveValue(), within(1e-10));
+        assertThat(r1.getCost()).isCloseTo(r2.getCost(), within(1e-10));
         assertThat(r1.getStatus()).isEqualTo(r2.getStatus());
     }
 
@@ -86,14 +86,14 @@ class TRFWorkspaceTest {
         BiConsumer<double[], double[]> fn = (c, r) -> {
             for (int i = 0; i < m; i++) r[i] = yd[i] - (c[0] + c[1] * xd[i]);
         };
-        TRFProblem p = TRFProblem.create()
+        TRFProblem p = new TRFProblem()
             .residuals(fn, m).initialPoint(1.0, 1.5)
-            .gradientTolerance(1e-10).coefficientTolerance(1e-10);
+            .gradientTolerance(1e-10).parameterTolerance(1e-10);
 
         OptimizationResult r1 = p.solve();
         OptimizationResult r2 = p.solve(p.alloc());
 
-        assertThat(r1.getObjectiveValue()).isCloseTo(r2.getObjectiveValue(), within(1e-10));
+        assertThat(r1.getCost()).isCloseTo(r2.getCost(), within(1e-10));
         assertThat(r1.getStatus()).isEqualTo(r2.getStatus());
     }
 
@@ -106,15 +106,15 @@ class TRFWorkspaceTest {
         BiConsumer<double[], double[]> fn = (c, r) -> {
             for (int i = 0; i < m; i++) r[i] = yd[i] - (c[0] + c[1] * xd[i]);
         };
-        TRFProblem p = TRFProblem.create()
+        TRFProblem p = new TRFProblem()
             .residuals(fn, m).initialPoint(0.0, 1.0)
-            .gradientTolerance(1e-10).coefficientTolerance(1e-10);
+            .gradientTolerance(1e-10).parameterTolerance(1e-10);
         TRFWorkspace ws = p.alloc();
 
         OptimizationResult r1 = p.solve(ws);
         OptimizationResult r2 = p.solve(ws);
 
-        assertThat(r1.getObjectiveValue()).isCloseTo(r2.getObjectiveValue(), within(1e-10));
+        assertThat(r1.getCost()).isCloseTo(r2.getCost(), within(1e-10));
         assertThat(r1.getStatus()).isEqualTo(r2.getStatus());
     }
 
@@ -141,15 +141,15 @@ class TRFWorkspaceTest {
         BiConsumer<double[], double[]> fn = (c, r) -> {
             for (int i = 0; i < m; i++) r[i] = yd[i] - (c[0] + c[1] * xd[i]);
         };
-        TRFProblem p = TRFProblem.create()
+        TRFProblem p = new TRFProblem()
             .residuals(fn, m).initialPoint(0.0, 1.0)
-            .gradientTolerance(1e-15).coefficientTolerance(1e-15).functionTolerance(1e-15)
+            .gradientTolerance(1e-15).parameterTolerance(1e-15).functionTolerance(1e-15)
             .maxEvaluations(10000);
 
         OptimizationResult r1 = p.solve();
         OptimizationResult r2 = p.solve(p.alloc());
 
-        assertThat(r1.getObjectiveValue()).isCloseTo(r2.getObjectiveValue(), within(1e-10));
+        assertThat(r1.getCost()).isCloseTo(r2.getCost(), within(1e-10));
         assertThat(r1.getIterations()).isEqualTo(r2.getIterations());
         assertThat(r1.getStatus()).isEqualTo(r2.getStatus());
     }
@@ -162,15 +162,15 @@ class TRFWorkspaceTest {
         BiConsumer<double[], double[]> fn = (c, r) -> {
             for (int i = 0; i < m; i++) r[i] = yd[i] - (c[0] + c[1] * xd[i]);
         };
-        TRFProblem p = TRFProblem.create()
+        TRFProblem p = new TRFProblem()
             .residuals(fn, m).initialPoint(0.0, 1.0)
-            .gradientTolerance(1e-15).coefficientTolerance(1e-15).functionTolerance(1e-15)
+            .gradientTolerance(1e-15).parameterTolerance(1e-15).functionTolerance(1e-15)
             .maxEvaluations(10000);
         TRFWorkspace ws = p.alloc();
 
         OptimizationResult r1 = p.solve(ws);
         OptimizationResult r2 = p.solve(ws);
 
-        assertThat(r1.getObjectiveValue()).isCloseTo(r2.getObjectiveValue(), within(1e-10));
+        assertThat(r1.getCost()).isCloseTo(r2.getCost(), within(1e-10));
     }
 }

@@ -40,7 +40,7 @@ class WorkspaceReuseProperties {
 
     /** Build a simple quadratic SLSQPProblem (no constraints). */
     private SLSQPProblem quadraticProblem(int n, double[] x0) {
-        return SLSQPProblem.create()
+        return new SLSQPProblem()
                 .objective((double[] x) -> {
                     double f = 0;
                     for (double v : x) f += v * v;
@@ -88,9 +88,9 @@ class WorkspaceReuseProperties {
         for (int i = 0; i < 3; i++) {
             problem.initialPoint(generateInitialPoint(n, rand));
             OptimizationResult result = problem.solve(workspace);
-            if (result.isConverged()) {
-                assertTrue(result.getObjectiveValue() < TOLERANCE,
-                        "Optimization " + i + " should find minimum near 0, got: " + result.getObjectiveValue());
+            if (result.isSuccessful()) {
+                assertTrue(result.getCost() < TOLERANCE,
+                        "Optimization " + i + " should find minimum near 0, got: " + result.getCost());
             }
         }
     }
@@ -234,7 +234,7 @@ class WorkspaceReuseProperties {
         problem.initialPoint(initialPoint.clone());
         OptimizationResult result2 = problem.solve(workspace);
 
-        assertEquals(result1.getObjectiveValue(), result2.getObjectiveValue(), TOLERANCE);
+        assertEquals(result1.getCost(), result2.getCost(), TOLERANCE);
         assertEquals(result1.getStatus(), result2.getStatus());
     }
 
@@ -252,7 +252,7 @@ class WorkspaceReuseProperties {
         SLSQPProblem p2 = quadraticProblem(n, initialPoint.clone());
         OptimizationResult result2 = p2.solve(new SLSQPWorkspace(n, 0, 0));
 
-        assertEquals(result1.getObjectiveValue(), result2.getObjectiveValue(), EPSILON);
+        assertEquals(result1.getCost(), result2.getCost(), EPSILON);
         assertEquals(result1.getStatus(), result2.getStatus());
     }
 
@@ -279,7 +279,7 @@ class WorkspaceReuseProperties {
         problem.initialPoint(initialPoint.clone());
         OptimizationResult resultReused = problem.solve(reusedWs);
 
-        assertEquals(resultFresh.getObjectiveValue(), resultReused.getObjectiveValue(), TOLERANCE);
+        assertEquals(resultFresh.getCost(), resultReused.getCost(), TOLERANCE);
         assertEquals(resultFresh.getStatus(), resultReused.getStatus());
     }
 
@@ -295,8 +295,8 @@ class WorkspaceReuseProperties {
         for (int i = 0; i < 10; i++) {
             problem.initialPoint(generateInitialPoint(n, rand));
             OptimizationResult result = problem.solve(workspace);
-            if (result.isConverged()) {
-                assertTrue(result.getObjectiveValue() < TOLERANCE,
+            if (result.isSuccessful()) {
+                assertTrue(result.getCost() < TOLERANCE,
                         "After " + (i + 1) + " reuses, should still find minimum");
             }
         }
@@ -354,7 +354,7 @@ class WorkspaceReuseProperties {
         java.util.Random rand = new java.util.Random(seed);
         Univariate eqConstraint = TestTemplates.sumConstraint(1.0);
 
-        SLSQPProblem problem = SLSQPProblem.create()
+        SLSQPProblem problem = new SLSQPProblem()
                 .objective((double[] x) -> { double f = 0; for (double v : x) f += v * v; return f; })
                 .equalityConstraints(eqConstraint)
                 .maxIterations(300)
@@ -382,7 +382,7 @@ class WorkspaceReuseProperties {
         java.util.Random rand = new java.util.Random(seed);
         Univariate ineqConstraint = TestTemplates.inequalityAtIndex(0, -0.5);
 
-        SLSQPProblem problem = SLSQPProblem.create()
+        SLSQPProblem problem = new SLSQPProblem()
                 .objective((double[] x) -> { double f = 0; for (double v : x) f += v * v; return f; })
                 .inequalityConstraints(ineqConstraint)
                 .maxIterations(300)

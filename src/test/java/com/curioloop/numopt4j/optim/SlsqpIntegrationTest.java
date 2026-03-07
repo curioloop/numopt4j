@@ -56,7 +56,7 @@ public class SlsqpIntegrationTest {
         Univariate circleConstraint = TestTemplates.unitBallConstraint(1);;
         
         // Build the optimizer with inequality constraint
-        OptimizationResult result = SLSQPProblem.create()
+        OptimizationResult result = new SLSQPProblem()
                 .objective(rosenbrock2D)
                 .initialPoint(0.0, 0.0)
                 .inequalityConstraints(circleConstraint)
@@ -70,7 +70,7 @@ public class SlsqpIntegrationTest {
         double expectedFunctionValue = 0.0456748087191604;
         
         // Verify convergence
-        assertThat(result.isConverged())
+        assertThat(result.isSuccessful())
                 .as("Optimization should converge")
                 .isTrue();
         
@@ -83,7 +83,7 @@ public class SlsqpIntegrationTest {
                 .isCloseTo(expectedSolution[1], within(1e-6));
         
         // Verify objective function value
-        assertThat(result.getObjectiveValue())
+        assertThat(result.getCost())
                 .as("Objective function value should be close to expected value")
                 .isCloseTo(expectedFunctionValue, within(1e-6));
         
@@ -181,7 +181,7 @@ public class SlsqpIntegrationTest {
         
         // Build the optimizer with both equality and inequality constraints
         // Using default inexact line search mode
-        OptimizationResult result = SLSQPProblem.create()
+        OptimizationResult result = new SLSQPProblem()
                 .objective(objective)
                 .initialPoint(1.0, 2.0, 3.0)
                 .equalityConstraints(equalityConstraint)
@@ -193,7 +193,7 @@ public class SlsqpIntegrationTest {
         double[] x0 = result.getSolution();
         
         // Verify convergence
-        assertThat(result.isConverged())
+        assertThat(result.isSuccessful())
                 .as("Optimization should converge")
                 .isTrue();
         
@@ -218,7 +218,7 @@ public class SlsqpIntegrationTest {
         // Verify objective function value is reasonable
         // The optimal value is 3.0 for [1,1,1], but due to different convergence behavior,
         // we accept a wider range
-        assertThat(result.getObjectiveValue())
+        assertThat(result.getCost())
                 .as("Objective function value should be reasonable")
                 .isLessThan(10.0);
     }
@@ -291,7 +291,7 @@ public class SlsqpIntegrationTest {
         
         // Build the optimizer with both equality and inequality constraints
         // Using exact line search mode
-        OptimizationResult result = SLSQPProblem.create()
+        OptimizationResult result = new SLSQPProblem()
                 .objective(objective)
                 .initialPoint(1.0, 2.0, 3.0)
                 .equalityConstraints(equalityConstraint)
@@ -305,7 +305,7 @@ public class SlsqpIntegrationTest {
         
         // Verify convergence - the exact line search mode may have different behavior
         // than the Go version due to different alpha bounds, but it should still converge
-        assertThat(result.isConverged())
+        assertThat(result.isSuccessful())
                 .as("Optimization should converge with exact line search")
                 .isTrue();
         
@@ -317,7 +317,7 @@ public class SlsqpIntegrationTest {
         // Note: Due to different line search parameters between JNI and Go implementations,
         // the exact line search mode may converge to different solutions. The key validation
         // is that the optimizer converges and produces a finite result.
-        assertThat(result.getObjectiveValue())
+        assertThat(result.getCost())
                 .as("Objective function value should be finite")
                 .isFinite();
         
@@ -436,7 +436,7 @@ public class SlsqpIntegrationTest {
         };
         
         // Build the optimizer with two equality constraints
-        OptimizationResult result = SLSQPProblem.create()
+        OptimizationResult result = new SLSQPProblem()
                 .objective(objective)
                 .initialPoint(1.0, 5.0, 5.0, 1.0, -24.0)
                 .equalityConstraints(cons1, cons2)
@@ -451,7 +451,7 @@ public class SlsqpIntegrationTest {
         double expectedFunctionValue = 17.0140172891520542;
         
         // Verify convergence
-        assertThat(result.isConverged())
+        assertThat(result.isSuccessful())
                 .as("Optimization should converge")
                 .isTrue();
         
@@ -463,7 +463,7 @@ public class SlsqpIntegrationTest {
         }
         
         // Verify objective function value
-        assertThat(result.getObjectiveValue())
+        assertThat(result.getCost())
                 .as("Objective function value should be close to expected value")
                 .isCloseTo(expectedFunctionValue, within(1e-6));
         
@@ -547,7 +547,7 @@ public class SlsqpIntegrationTest {
         Univariate quadratic = TestTemplates.quadraticWithTarget(new double[]{1});;
         
         // Build the optimizer with the specified bound
-        OptimizationResult result = SLSQPProblem.create()
+        OptimizationResult result = new SLSQPProblem()
                 .objective(quadratic)
                 .initialPoint(initialValue)
                 .bounds(bound)
@@ -557,7 +557,7 @@ public class SlsqpIntegrationTest {
         double[] x0 = result.getSolution();
         
         // Verify convergence
-        assertThat(result.isConverged())
+        assertThat(result.isSuccessful())
                 .as("Optimization should converge for case: %s", description)
                 .isTrue();
         
@@ -672,7 +672,7 @@ public class SlsqpIntegrationTest {
         Univariate quadratic = TestTemplates.quadraticWithTarget(new double[]{1});;
         
         // Build the optimizer with inequality constraints
-        SLSQPProblem problem = SLSQPProblem.create()
+        SLSQPProblem problem = new SLSQPProblem()
                 .objective(quadratic)
                 .initialPoint(initialValue)
                 .maxIterations(100)
@@ -685,7 +685,7 @@ public class SlsqpIntegrationTest {
         double[] x0 = result.getSolution();
         
         // Verify convergence
-        assertThat(result.isConverged())
+        assertThat(result.isSuccessful())
                 .as("Optimization should converge from infeasible initial point for case: %s", description)
                 .isTrue();
         
@@ -742,7 +742,7 @@ public class SlsqpIntegrationTest {
         };
         
         // Build the optimizer with contradictory inequality constraints
-        OptimizationResult result = SLSQPProblem.create()
+        OptimizationResult result = new SLSQPProblem()
                 .objective(quadratic)
                 .initialPoint(1.0)
                 .inequalityConstraints(lowerBoundConstraint, upperBoundConstraint)
@@ -752,7 +752,7 @@ public class SlsqpIntegrationTest {
         
         // Verify non-convergence: optimizer should detect that constraints are inconsistent
         // Requirements 9.1: WHEN constraints are contradictory THEN return non-converged status
-        assertThat(result.isConverged())
+        assertThat(result.isSuccessful())
                 .as("Optimization should NOT converge when constraints are contradictory")
                 .isFalse();
         
@@ -806,7 +806,7 @@ public class SlsqpIntegrationTest {
         // x[0] is fixed at 0 (bounds [0,0]), x[1] is unbounded
         Bound[] bounds = new Bound[]{ Bound.between(0.0, 0.0), Bound.unbounded() };
 
-        OptimizationResult result = SLSQPProblem.create()
+        OptimizationResult result = new SLSQPProblem()
                 .objective(objective)
                 .initialPoint(0.0, 1.0)
                 .equalityConstraints(equality)
@@ -816,7 +816,7 @@ public class SlsqpIntegrationTest {
                 .functionTolerance(1e-6)
                 .solve();
 
-        assertThat(result.isConverged())
+        assertThat(result.isSuccessful())
                 .as("Optimization should NOT converge with fixed-bound infeasible problem")
                 .isFalse();
         assertThat(result.getIterations())
@@ -829,7 +829,7 @@ public class SlsqpIntegrationTest {
      *
      * Case source: scipy test_inconsistent_inequalities
      *
-     * Objective: f(x) = -x[0] + 4*x[1]
+     * Cost: f(x) = -x[0] + 4*x[1]
      * Constraint 1: x[1] - x[0] - 1 >= 0  (x[1] >= x[0] + 1)
      * Constraint 2: x[0] - x[1] >= 0      (x[0] >= x[1])
      *
@@ -854,7 +854,7 @@ public class SlsqpIntegrationTest {
 
         Bound[] bounds = new Bound[]{ Bound.between(-5.0, 5.0), Bound.between(-5.0, 5.0) };
 
-        OptimizationResult result = SLSQPProblem.create()
+        OptimizationResult result = new SLSQPProblem()
                 .objective(objective)
                 .initialPoint(1.0, 5.0)
                 .inequalityConstraints(cons1, cons2)
@@ -863,7 +863,7 @@ public class SlsqpIntegrationTest {
                 .functionTolerance(1e-6)
                 .solve();
 
-        assertThat(result.isConverged())
+        assertThat(result.isSuccessful())
                 .as("Optimization should NOT converge with inconsistent inequality constraints")
                 .isFalse();
         assertThat(result.getIterations())
@@ -877,7 +877,7 @@ public class SlsqpIntegrationTest {
      *
      * Case source: scipy test_gh1758
      *
-     * Objective: f(x,y) = sqrt(y)
+     * Cost: f(x,y) = sqrt(y)
      * Equality constraint 1: y - (2x)^3 = 0
      * Equality constraint 2: y - (-x+1)^3 = 0
      * Bounds: x in [-0.5, 1], y in [0, 8]
@@ -893,7 +893,7 @@ public class SlsqpIntegrationTest {
         // SLSQP clips x[0]=8 to the upper bound 1.0, so effective start is [1.0, 0.25].
         // We use FORWARD difference to match the Go reference numdiff behavior.
         com.curioloop.numopt4j.optim.slsqp.SLSQPProblem problem =
-                com.curioloop.numopt4j.optim.slsqp.SLSQPProblem.create()
+                new com.curioloop.numopt4j.optim.slsqp.SLSQPProblem()
                 .objective(NumericalGradient.FORWARD, x -> Math.sqrt(Math.max(x[1], 0)))
                 .equalityConstraints(NumericalGradient.FORWARD,
                     x -> x[1] - Math.pow(2 * x[0], 3),
@@ -906,10 +906,10 @@ public class SlsqpIntegrationTest {
 
         OptimizationResult result = problem.solve();
 
-        assertThat(result.isConverged())
+        assertThat(result.isSuccessful())
                 .as("Optimization should converge")
                 .isTrue();
-        assertThat(result.getObjectiveValue())
+        assertThat(result.getCost())
                 .as("Objective value should be close to sqrt(8/27)")
                 .isLessThanOrEqualTo(0.5443310539518 + 1e-4);
         assertThat(result.getIterations())

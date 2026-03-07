@@ -81,9 +81,9 @@ public class TRFBoundsProperties {
         }
 
         OptimizationResult solve(Bound[] bounds, int maxfev) {
-            return TRFProblem.create()
+            return new TRFProblem()
                 .residuals(fn, m).initialPoint(initialGuess.clone())
-                .gradientTolerance(1e-15).coefficientTolerance(1e-15).functionTolerance(1e-15)
+                .gradientTolerance(1e-15).parameterTolerance(1e-15).functionTolerance(1e-15)
                 .bounds(bounds).maxEvaluations(maxfev).solve();
         }
     }

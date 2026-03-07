@@ -306,7 +306,7 @@ public final class LQ implements Decomposition {
     }
 
     @Override
-    public Pool work() {
+    public Pool pool() {
         return pool;
     }
 

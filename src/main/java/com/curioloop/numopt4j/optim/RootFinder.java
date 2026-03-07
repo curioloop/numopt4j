@@ -39,10 +39,10 @@ import com.curioloop.numopt4j.optim.root.HYBRProblem;
 public abstract class RootFinder<F, W, S extends RootFinder<F, W, S>> implements OptimizationProblem<OptimizationResult, W> {
 
     /** Problem dimension (number of variables) */
-    public int dimension = 0;
+    protected int dimension = 0;
 
     /** Initial point (x₀) */
-    public double[] initialPoint;
+    protected double[] initialPoint;
 
     /** Equation / function to solve */
     protected F function;

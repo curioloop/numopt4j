@@ -1152,7 +1152,7 @@ final class TRFCore {
 
         // For LINEAR: return ‖f‖² (RSS), consistent with original behavior.
         // For robust: return scipy cost = 0.5*C²*Σρ(f²/C²).
-        double objectiveValue = (loss == RobustLoss.LINEAR) ? fnorm * fnorm : cost;
-        return new OptimizationResult(objectiveValue, status, iter - 1, nfev);
+        double finalCost = (loss == RobustLoss.LINEAR) ? fnorm * fnorm : cost;
+        return new OptimizationResult(Double.NaN, null, finalCost, status, iter - 1, nfev);
     }
 }

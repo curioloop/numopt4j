@@ -23,7 +23,7 @@ package com.curioloop.numopt4j.optim.trf;
  *
  * <p>Usage:</p>
  * <pre>{@code
- * TRFProblem.create()
+ * new TRFProblem()
  *     .residuals(fn, m)
  *     .initialPoint(x0)
  *     .loss(RobustLoss.SOFT_L1)

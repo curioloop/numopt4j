@@ -64,10 +64,10 @@ public final class BrentqSolver {
 
         // Handle endpoints that are already roots
         if (fpre == 0) {
-            return new OptimizationResult(xpre, null, 0, OptimizationStatus.COEFFICIENT_TOLERANCE_REACHED, 0);
+            return new OptimizationResult(xpre, null, 0, OptimizationStatus.COEFFICIENT_TOLERANCE_REACHED, 0, 0);
         }
         if (fcur == 0) {
-            return new OptimizationResult(xcur, null, 0, OptimizationStatus.COEFFICIENT_TOLERANCE_REACHED, 0);
+            return new OptimizationResult(xcur, null, 0, OptimizationStatus.COEFFICIENT_TOLERANCE_REACHED, 0, 0);
         }
 
         // Bracket condition check
@@ -79,7 +79,7 @@ public final class BrentqSolver {
 
         // Check for NaN/Inf in initial evaluations
         if (!Double.isFinite(fpre) || !Double.isFinite(fcur)) {
-            return new OptimizationResult(xcur, null, Math.abs(fcur), OptimizationStatus.ABNORMAL_TERMINATION, 0);
+            return new OptimizationResult(xcur, null, Math.abs(fcur), OptimizationStatus.ABNORMAL_TERMINATION, 0, 0);
         }
 
         for (int i = 1; i <= maxiter; i++) {
@@ -102,7 +102,7 @@ public final class BrentqSolver {
 
             // Convergence check
             if (fcur == 0 || Math.abs(sbis) < delta) {
-                return new OptimizationResult(xcur, null, Math.abs(fcur), OptimizationStatus.COEFFICIENT_TOLERANCE_REACHED, i);
+                return new OptimizationResult(xcur, null, Math.abs(fcur), OptimizationStatus.COEFFICIENT_TOLERANCE_REACHED, i, i);
             }
 
             // Step selection
@@ -138,10 +138,10 @@ public final class BrentqSolver {
 
             // Check for NaN/Inf after function evaluation
             if (!Double.isFinite(fcur)) {
-                return new OptimizationResult(xcur, null, Math.abs(fcur), OptimizationStatus.ABNORMAL_TERMINATION, i);
+                return new OptimizationResult(xcur, null, Math.abs(fcur), OptimizationStatus.ABNORMAL_TERMINATION, i, i);
             }
         }
 
-        return new OptimizationResult(xcur, null, Math.abs(fcur), OptimizationStatus.MAX_ITERATIONS_REACHED, maxiter);
+        return new OptimizationResult(xcur, null, Math.abs(fcur), OptimizationStatus.MAX_ITERATIONS_REACHED, maxiter, maxiter);
     }
 }

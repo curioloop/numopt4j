@@ -29,7 +29,7 @@ import java.util.function.ToDoubleFunction;
  * <h2>Basic Usage</h2>
  * <pre>{@code
  * // Recommended entry point: ToDoubleFunction lambda (no gradient required)
- * OptimizationResult result = LBFGSBProblem.create()
+ * OptimizationResult result = new LBFGSBProblem()
  *     .objective(x -> x[0]*x[0] + x[1]*x[1])
  *     .initialPoint(1.0, 1.0)
  *     .solve();
@@ -42,7 +42,7 @@ import java.util.function.ToDoubleFunction;
  * <h2>Advanced Usage</h2>
  * <pre>{@code
  * // Bound-constrained with analytical gradient for best performance
- * OptimizationResult result = LBFGSBProblem.create()
+ * OptimizationResult result = new LBFGSBProblem()
  *     .objective((x, g) -> {
  *         double f = x[0]*x[0] + x[1]*x[1];
  *         if (g != null) { g[0] = 2*x[0]; g[1] = 2*x[1]; }
@@ -55,7 +55,7 @@ import java.util.function.ToDoubleFunction;
  *     .solve();
  *
  * // Workspace reuse for high-frequency optimization (e.g., in a loop)
- * LBFGSBProblem problem = LBFGSBProblem.create()
+ * LBFGSBProblem problem = new LBFGSBProblem()
  *     .objective(x -> x[0]*x[0])
  *     .initialPoint(1.0);
  * LBFGSBWorkspace ws = problem.alloc();  // allocate workspace once
@@ -137,11 +137,7 @@ public final class LBFGSBProblem extends Minimizer<Univariate, LBFGSBWorkspace, 
 
     /** Cached workspace for reuse — inherited from {@link Minimizer} */
 
-    private LBFGSBProblem() {}
-
-    public static LBFGSBProblem create() {
-        return new LBFGSBProblem();
-    }
+    public LBFGSBProblem() {}
 
     private void validate() {
         if (objective == null) {
@@ -181,9 +177,14 @@ public final class LBFGSBProblem extends Minimizer<Univariate, LBFGSBWorkspace, 
      * @return optimization result
      */
     @Override
-    public OptimizationResult solve(LBFGSBWorkspace... workspace) {
+    public OptimizationResult solve() {
+        return solve((LBFGSBWorkspace) null);
+    }
+
+    @Override
+    public OptimizationResult solve(LBFGSBWorkspace workspace) {
         validate();
-        LBFGSBWorkspace ws = (workspace != null && workspace.length > 0) ? workspace[0] : null;
+        LBFGSBWorkspace ws = workspace;
         if (ws != null && !ws.ensureCapacity(dimension, corrections)) {
             throw new IllegalArgumentException(
                     "Workspace dimensions (" + ws.getDimension() + ", " + ws.getCorrections() +
@@ -213,13 +214,7 @@ public final class LBFGSBProblem extends Minimizer<Univariate, LBFGSBWorkspace, 
         );
 
         OptimizationStatus status = convertStatus(coreResult.status);
-        return new OptimizationResult(
-                coreResult.f,
-                status,
-                coreResult.iterations,
-                coreResult.evaluations,
-                x
-        );
+        return new OptimizationResult(Double.NaN, x, coreResult.f, status, coreResult.iterations, coreResult.evaluations);
     }
 
     private static OptimizationStatus convertStatus(int statusCode) {

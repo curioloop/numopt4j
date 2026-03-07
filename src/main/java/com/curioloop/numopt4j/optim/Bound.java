@@ -20,8 +20,14 @@ public final class Bound {
 
     /**
      * Creates a bound with specified lower and upper limits.
-     * @param lower Lower bound (use UNBOUNDED for no lower bound)
-     * @param upper Upper bound (use UNBOUNDED for no upper bound)
+     *
+     * <p>Use {@code Double.NaN} to indicate no bound on that side.
+     * Prefer the static factory methods ({@link #between}, {@link #atLeast}, etc.)
+     * for clarity; this constructor is provided for frameworks that require a
+     * public no-arg or full-arg constructor (e.g. serialization, reflection).</p>
+     *
+     * @param lower Lower bound (use {@code Double.NaN} for no lower bound)
+     * @param upper Upper bound (use {@code Double.NaN} for no upper bound)
      */
     public Bound(double lower, double upper) {
         if (!Double.isNaN(lower) && !Double.isNaN(upper) && lower > upper) {
@@ -97,6 +103,24 @@ public final class Bound {
      */
     public static Bound exactly(double value) {
         return new Bound(value, value);
+    }
+
+    /**
+     * Creates a non-negative variable: x ≥ 0.
+     *
+     * @return Bound with lower limit 0
+     */
+    public static Bound nonNegative() {
+        return new Bound(0.0, Double.NaN);
+    }
+
+    /**
+     * Creates a non-positive variable: x ≤ 0.
+     *
+     * @return Bound with upper limit 0
+     */
+    public static Bound nonPositive() {
+        return new Bound(Double.NaN, 0.0);
     }
 
     /**

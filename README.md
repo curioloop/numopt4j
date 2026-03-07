@@ -23,7 +23,7 @@ High-performance numerical optimization library for Java.
 <dependency>
     <groupId>com.curioloop</groupId>
     <artifactId>numopt4j</artifactId>
-    <version>0.0.3</version>
+    <version>0.1.0</version>
 </dependency>
 ```
 
@@ -212,11 +212,10 @@ SVD svdU = Decomposer.svd(A, m, n, SVD.Opts.FULL_U, SVD.Opts.FULL_V);
 GEVD gv2 = Decomposer.gevd(A, B, n, GEVD.Opts.UPPER, GEVD.Opts.TYPE2);
 
 // Workspace reuse
-LU.Pool ws = Decomposer.lu(A, n).work();
+LU.Pool ws = Decomposer.lu(A, n).pool();
 for (double[] mat : matrices) {
     LU result = Decomposer.lu(mat, n, ws);
 }
-```
 
 #### Decomposition result methods
 

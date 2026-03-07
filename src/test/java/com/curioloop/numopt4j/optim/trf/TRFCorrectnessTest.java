@@ -20,9 +20,9 @@ class TRFCorrectnessTest {
 
     private static TRFProblem trf(int m, int n, BiConsumer<double[], double[]> fn,
                                    Bound[] bounds, int maxfev) {
-        TRFProblem p = TRFProblem.create()
+        TRFProblem p = new TRFProblem()
             .residuals(fn, m)
-            .functionTolerance(1e-10).coefficientTolerance(1e-10).gradientTolerance(1e-10)
+            .functionTolerance(1e-10).parameterTolerance(1e-10).gradientTolerance(1e-10)
             .maxEvaluations(maxfev);
         if (bounds != null) p.bounds(bounds);
         return p;
@@ -49,10 +49,10 @@ class TRFCorrectnessTest {
         OptimizationResult r = trf(m, n, fn, null, 200).initialPoint(0.0, 0.0).solve();
         double[] sol = r.getSolution();
 
-        assertThat(r.isConverged()).isTrue();
+        assertThat(r.isSuccessful()).isTrue();
         assertThat(sol[0]).isCloseTo(1.0, within(1e-6));
         assertThat(sol[1]).isCloseTo(3.0, within(1e-6));
-        assertThat(r.getObjectiveValue()).isCloseTo(0.0, within(1e-10));
+        assertThat(r.getCost()).isCloseTo(0.0, within(1e-10));
     }
 
     @Test
@@ -65,7 +65,7 @@ class TRFCorrectnessTest {
         OptimizationResult r = trf(m, n, fn, null, 2000).initialPoint(-1.2, 1.0).solve();
         double[] sol = r.getSolution();
 
-        assertThat(r.isConverged()).isTrue();
+        assertThat(r.isSuccessful()).isTrue();
         assertThat(sol[0]).isCloseTo(1.0, within(1e-5));
         assertThat(sol[1]).isCloseTo(1.0, within(1e-5));
     }
@@ -81,7 +81,7 @@ class TRFCorrectnessTest {
         OptimizationResult r = trf(m, n, fn, bounds, 2000).initialPoint(-1.2, 1.0).solve();
         double[] sol = r.getSolution();
 
-        assertThat(r.isConverged()).isTrue();
+        assertThat(r.isSuccessful()).isTrue();
         assertThat(sol[0]).isCloseTo(1.0, within(1e-5));
         assertThat(sol[1]).isCloseTo(1.0, within(1e-5));
         assertBoundsRespected(sol, bounds);
@@ -98,10 +98,10 @@ class TRFCorrectnessTest {
         OptimizationResult r = trf(m, n, fn, bounds, 2000).initialPoint(-1.2, 1.0).solve();
         double[] sol = r.getSolution();
 
-        assertThat(r.isConverged()).isTrue();
+        assertThat(r.isSuccessful()).isTrue();
         assertThat(sol[0]).isLessThanOrEqualTo(0.5 + 1e-6);
         assertBoundsRespected(sol, bounds);
-        assertThat(r.getObjectiveValue()).isGreaterThan(0).isLessThan(0.3);
+        assertThat(r.getCost()).isGreaterThan(0).isLessThan(0.3);
     }
 
     @Test
@@ -115,7 +115,7 @@ class TRFCorrectnessTest {
         OptimizationResult r = trf(m, n, fn, null, 500).initialPoint(1.0, 1.0).solve();
         double[] sol = r.getSolution();
 
-        assertThat(r.isConverged()).isTrue();
+        assertThat(r.isSuccessful()).isTrue();
         assertThat(sol[0]).isCloseTo(2.0, within(1e-6));
         assertThat(sol[1]).isCloseTo(0.5, within(1e-6));
     }
@@ -132,7 +132,7 @@ class TRFCorrectnessTest {
         OptimizationResult r = trf(m, n, fn, bounds, 500).initialPoint(1.0, 1.0).solve();
         double[] sol = r.getSolution();
 
-        assertThat(r.isConverged()).isTrue();
+        assertThat(r.isSuccessful()).isTrue();
         assertThat(sol[0]).isCloseTo(2.0, within(1e-5));
         assertThat(sol[1]).isCloseTo(0.5, within(1e-5));
         assertBoundsRespected(sol, bounds);
@@ -150,7 +150,7 @@ class TRFCorrectnessTest {
         OptimizationResult r = trf(m, n, fn, bounds, 500).initialPoint(1.0, 1.0).solve();
         double[] sol = r.getSolution();
 
-        assertThat(r.isConverged()).isTrue();
+        assertThat(r.isSuccessful()).isTrue();
         assertBoundsRespected(sol, bounds);
         assertThat(sol[0]).isGreaterThanOrEqualTo(-1e-9);
         assertThat(sol[1]).isGreaterThanOrEqualTo(-1e-9);
@@ -164,7 +164,7 @@ class TRFCorrectnessTest {
         OptimizationResult r = trf(m, n, fn, bounds, 200).initialPoint(1.0).solve();
         double[] sol = r.getSolution();
 
-        assertThat(r.isConverged()).isTrue();
+        assertThat(r.isSuccessful()).isTrue();
         assertThat(sol[0]).isCloseTo(3.0, within(1e-6));
         assertBoundsRespected(sol, bounds);
     }

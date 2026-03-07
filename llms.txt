@@ -14,11 +14,41 @@ numopt4j is a Java numerical optimization library supporting unconstrained optim
 - Multivariate root-finding Jacobian-free → Broyden (`RootFinder.broyden()`)
 - Matrix decompositions → `Decomposer` facade (LU, QR, LQ, SVD, Cholesky, Schur, Eigen, GEVD, GGEVD, GSVD)
 
+## Package Structure
+
+```
+com.curioloop.numopt4j.optim              # Minimizer, RootFinder, Bound, OptimizationResult, OptimizationStatus, OptimizationException
+com.curioloop.numopt4j.optim.lbfgsb      # LBFGSBProblem, LBFGSBWorkspace
+com.curioloop.numopt4j.optim.slsqp       # SLSQPProblem, SLSQPWorkspace
+com.curioloop.numopt4j.optim.trf         # TRFProblem, TRFWorkspace
+com.curioloop.numopt4j.optim.root        # BrentqProblem, HYBRProblem, HYBRWorkspace, BroydenProblem, BroydenWorkspace
+com.curioloop.numopt4j.linalg            # Decomposer, Decomposition
+com.curioloop.numopt4j.linalg.mat        # LU, QR, LQ, SVD, Cholesky, Schur, Eigen, GEVD, GGEVD, GSVD
+```
+
+Typical import for optimization:
+```java
+import com.curioloop.numopt4j.optim.*;
+import com.curioloop.numopt4j.optim.lbfgsb.*;
+import com.curioloop.numopt4j.optim.slsqp.*;
+import com.curioloop.numopt4j.optim.trf.*;
+import com.curioloop.numopt4j.optim.root.*;
+```
+
+Typical import for matrix decompositions:
+```java
+import com.curioloop.numopt4j.linalg.*;
+import com.curioloop.numopt4j.linalg.mat.*;
+```
+
 ## Quick Start
 
 ### Bound-constrained optimization (L-BFGS-B)
 
 ```java
+import com.curioloop.numopt4j.optim.*;
+import com.curioloop.numopt4j.optim.lbfgsb.*;
+
 OptimizationResult r = Minimizer.lbfgsb()
     .objective(x -> x[0]*x[0] + x[1]*x[1])
     .bounds(Bound.atLeast(0.5), Bound.atLeast(0.5))
@@ -35,6 +65,9 @@ if (r.isSuccessful()) {
 ### Equality-constrained optimization (SLSQP)
 
 ```java
+import com.curioloop.numopt4j.optim.*;
+import com.curioloop.numopt4j.optim.slsqp.*;
+
 // minimize x[0] + x[1], subject to x[0]^2 + x[1]^2 = 1
 OptimizationResult r = Minimizer.slsqp()
     .objective(x -> x[0] + x[1])
@@ -46,6 +79,9 @@ OptimizationResult r = Minimizer.slsqp()
 ### Nonlinear least squares (TRF)
 
 ```java
+import com.curioloop.numopt4j.optim.*;
+import com.curioloop.numopt4j.optim.trf.*;
+
 OptimizationResult r = Minimizer.trf()
     .residuals((x, res) -> {
         res[0] = x[0] - 3.0;
@@ -58,6 +94,9 @@ OptimizationResult r = Minimizer.trf()
 ### Scalar root-finding (Brentq)
 
 ```java
+import com.curioloop.numopt4j.optim.*;
+import com.curioloop.numopt4j.optim.root.*;
+
 // Find root of sin(x) in [3, 4] → π
 OptimizationResult r = RootFinder.brentq(Math::sin)
     .bracket(Bound.between(3.0, 4.0))
@@ -68,6 +107,9 @@ double root = r.getRoot(); // ≈ π
 ### Multivariate root-finding (HYBR / Broyden)
 
 ```java
+import com.curioloop.numopt4j.optim.*;
+import com.curioloop.numopt4j.optim.root.*;
+
 // HYBR (Powell hybrid, requires Jacobian — numerical by default)
 OptimizationResult r = RootFinder.hybr((x, f) -> {
         f[0] = x[0]*x[0] - 2;
@@ -137,7 +179,7 @@ Minimizer.trf()
     .initialPoint(double...)
     .bounds(Bound...)
     .functionTolerance(double)              // default 1e-8
-    .coefficientTolerance(double)           // default 1e-8
+    .parameterTolerance(double)             // default 1e-8
     .gradientTolerance(double)              // default 1e-8
     .maxEvaluations(int)                    // default 100 * n
     .loss(RobustLoss)                       // default LINEAR
@@ -171,7 +213,7 @@ RootFinder.brentq(DoubleUnaryOperator f)
 RootFinder.hybr(BiConsumer<double[],double[]> fn, int n)
     .jacobian(NumericalJacobian)    // default FORWARD
     .functionTolerance(double)      // default 1.49e-8
-    .maxIterations(int)             // default 200*(n+1)
+    .maxEvaluations(int)                    // default 200*(n+1)
     .initialPoint(double...)        // required
     .solve()                        // → OptimizationResult
     .alloc()                        // → HYBRWorkspace (for reuse)
@@ -182,7 +224,7 @@ RootFinder.hybr(BiConsumer<double[],double[]> fn, int n)
 ```java
 RootFinder.broyden(BiConsumer<double[],double[]> fn, int n)
     .functionTolerance(double)      // default 1.49e-8
-    .maxIterations(int)             // default 100*(n+1)
+    .maxEvaluations(int)                    // default 100*(n+1)
     .initialPoint(double...)        // required
     .solve()                        // → OptimizationResult
     .alloc()                        // → BroydenWorkspace (for reuse)
@@ -194,13 +236,42 @@ RootFinder.broyden(BiConsumer<double[],double[]> fn, int n)
 result.isSuccessful()       // whether converged
 result.getRoot()            // 1-D root value (NaN for N-D)
 result.getSolution()        // solution vector (null if not set)
-result.getObjectiveValue()  // objective / residual norm value
+result.getCost()            // objective / residual norm value at termination
 result.getIterations()      // iteration count
 result.getEvaluations()     // function evaluation count
 result.getSummary()         // single-line summary string
 result.getErrorMessage()    // reason + suggestion on failure, null otherwise
 result.toString()           // multi-line structured diagnostic output
 ```
+
+### Bound
+
+```java
+Bound.unbounded()           // x ∈ (-∞, +∞), no constraint
+Bound.between(lower, upper) // lower ≤ x ≤ upper
+Bound.atLeast(lower)        // x ≥ lower
+Bound.atMost(upper)         // x ≤ upper
+Bound.exactly(value)        // x = value (fixed variable)
+Bound.nonNegative()         // x ≥ 0
+Bound.nonPositive()         // x ≤ 0
+new Bound(lower, upper)     // public constructor; use Double.NaN for no bound on that side (for serialization / reflection)
+```
+
+### NumericalGradient
+
+| Method | Accuracy | Evals/dim |
+|--------|----------|-----------|
+| `FORWARD` | O(h) | 1 |
+| `BACKWARD` | O(h) | 1 |
+| `CENTRAL` | O(h²) — default | 2 |
+| `FIVE_POINT` | O(h⁴) | 4 |
+
+### NumericalJacobian
+
+| Method | Accuracy | Evals |
+|--------|----------|-------|
+| `FORWARD` | O(h) | n+1 |
+| `CENTRAL` | O(h²) — default | 2n |
 
 ## Decomposer (Matrix Decompositions)
 
@@ -296,7 +367,7 @@ gs.toU(); gs.toV(); gs.toQ();
 gs.rank(); gs.cond();
 
 // Workspace reuse
-LU.Pool ws = Decomposer.lu(A, n).work();
+LU.Pool ws = Decomposer.lu(A, n).pool();
 for (double[] mat : matrices) {
     LU result = Decomposer.lu(mat, n, ws);
 }

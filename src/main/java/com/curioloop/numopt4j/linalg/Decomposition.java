@@ -47,7 +47,7 @@ public interface Decomposition {
 
     boolean ok();
 
-    Workspace work();
+    Workspace pool();
 
     class Workspace {
 
