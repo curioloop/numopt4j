@@ -5,7 +5,7 @@ package com.curioloop.numopt4j.linalg.blas;
 
 /**
  * DLANST: Computes matrix norm of symmetric tridiagonal matrix.
- * Based on LAPACK and gonum implementation.
+ * Based on LAPACK.
  */
 interface Dlanst {
     

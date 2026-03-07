@@ -11,7 +11,6 @@ import static java.lang.Math.*;
  * Also returns the matrices X and Y needed to apply the transformation to the
  * unreduced part of A: A := A - V*Y**T - X*U**T.
  *
- * <p>Reference: gonum/lapack/gonum/dlabrd.go</p>
  */
 interface Dlabrd {
 

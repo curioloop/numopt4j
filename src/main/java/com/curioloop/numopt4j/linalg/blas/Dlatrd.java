@@ -8,7 +8,6 @@ package com.curioloop.numopt4j.linalg.blas;
  * Blocked algorithm - computes the first nb columns of the tridiagonal 
  * matrix T and the matrix W needed to update the unreduced part of A.
  * 
- * Based on gonum implementation, adapted for row-major storage.
  */
 interface Dlatrd {
 

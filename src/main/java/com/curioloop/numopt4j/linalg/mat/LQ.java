@@ -13,16 +13,19 @@ public final class LQ implements Decomposition {
 
     private static final double EPSILON = BLAS.dlamch('E');
 
+    /** Configuration options for LQ decomposition (currently no variants). */
+    public enum Opts {}
+
     public static final class Pool extends Decomposition.Workspace {
         /**
          * Ensure all buffers are allocated for LQ decomposition of an m×n matrix.
          * Layout: work[0..m) = tau, work[m..) = scratch.
-         * Scratch needs: max(m*nb, n + max(m,n)) where nb is the block size.
-         * We use n + max(m,n) as a safe minimum; doDecompose will call ensureWork again
-         * with the actual m*nb once nb is known.
          */
         public Pool ensure(int m, int n) {
-            ensureWork(m + n + max(m, n));
+            // Query dgelqf for optimal scratch size; tau occupies work[0..m)
+            double[] tmp = new double[1];
+            BLAS.dgelqf(m, n, null, 0, n, null, 0, tmp, 0, -1);
+            ensureWork(m + (int) tmp[0]);
             return this;
         }
     }
@@ -35,21 +38,21 @@ public final class LQ implements Decomposition {
 
     private LQ() {}
 
-    public static Decomposition.Workspace workspace(int m, int n) {
+    public static Pool workspace(int m, int n) {
         return new Pool().ensure(m, n);
     }
 
     public static LQ decompose(double[] A, int m, int n) {
-        return decompose(A, m, n, null);
+        return decompose(A, m, n, (Pool) null);
     }
 
-    public static LQ decompose(double[] A, int m, int n, Workspace ws) {
+    public static LQ decompose(double[] A, int m, int n, Pool ws) {
         LQ lq = new LQ();
         lq.doDecompose(A, m, n, ws);
         return lq;
     }
 
-    private void doDecompose(double[] A, int m, int n, Workspace ws) {
+    private void doDecompose(double[] A, int m, int n, Pool ws) {
         if (A == null || A.length < m * n) {
             throw new IllegalArgumentException("Matrix A must have length >= m*n");
         }
@@ -65,24 +68,14 @@ public final class LQ implements Decomposition {
         this.n = n;
         this.ok = false;
 
-        if (ws != null && !(ws instanceof Pool)) {
-            throw new IllegalArgumentException("Workspace must be an instance of LQ.Pool");
-        }
         if (ws == null) {
             ws = new Pool();
         }
-        this.pool = (Pool) ws;
+        this.pool = ws;
 
         pool.ensure(m, n);
 
-        // Query dgelqf for optimal workspace size
-        double[] tmp = new double[1];
-        BLAS.dgelqf(m, n, null, 0, n, null, 0, tmp, 0, -1);
-        int lwork = (int) tmp[0];
-        // work[0..m) = tau, work[m..) = scratch
-        pool.ensureWork(m + lwork);
-
-        BLAS.dgelqf(m, n, A, 0, n, pool.work(), 0, pool.work(), m, lwork);
+        BLAS.dgelqf(m, n, A, 0, n, pool.work(), 0, pool.work(), m, pool.work().length - m);
         this.ok = true;
     }
 
@@ -130,7 +123,6 @@ public final class LQ implements Decomposition {
             x = new double[m];
         }
 
-        // work layout: [0..m) = tau, [m..m+n) = b copy, [m+n..) = dormlq scratch
         double[] work = pool.work();
         int bOff = m;
         int scrOff = m + n;
@@ -189,38 +181,28 @@ public final class LQ implements Decomposition {
         return x;
     }
 
-    @Override
-    public Matrix extract(Part part) {
-        return extract(part, null);
+    /** Returns the L factor as an m×m lower triangular matrix, or null if failed. */
+    public Matrix toL() {
+        if (!ok) return null;
+        double[] dst = new double[m * m];
+        for (int i = 0; i < m; i++) {
+            for (int j = 0; j < m; j++) {
+                dst[i * m + j] = (j <= i) ? LQ[i * n + j] : 0.0;
+            }
+        }
+        return new Matrix(m, m, false, dst);
     }
 
-    @Override
-    public Matrix extract(Part part, double[] dst) {
+    /** Returns the Q factor as an n×n orthogonal matrix, or null if failed. */
+    public Matrix toQ() {
         if (!ok) return null;
-        if (dst == null || dst.length < size(part)) {
-            dst = new double[size(part)];
+        double[] dst = new double[n * n];
+        java.util.Arrays.fill(dst, 0, n * n, 0.0);
+        for (int i = 0; i < m; i++) {
+            System.arraycopy(LQ, i * n, dst, i * n, n);
         }
-        switch (part) {
-            case L: {
-                for (int i = 0; i < m; i++) {
-                    for (int j = 0; j < m; j++) {
-                        dst[i * m + j] = (j <= i) ? LQ[i * n + j] : 0.0;
-                    }
-                }
-                return new Matrix(m, m, false, dst);
-            }
-            case Q: {
-                // Copy LQ rows into n×n dst, padding with zeros
-                java.util.Arrays.fill(dst, 0, n * n, 0.0);
-                for (int i = 0; i < m; i++) {
-                    System.arraycopy(LQ, i * n, dst, i * n, n);
-                }
-                BLAS.dorglq(n, n, m, dst, 0, n, pool.work(), 0, pool.work(), m);
-                return new Matrix(n, n, false, dst);
-            }
-            default:
-                return null;
-        }
+        BLAS.dorglq(n, n, m, dst, 0, n, pool.work(), 0, pool.work(), m);
+        return new Matrix(n, n, false, dst);
     }
 
     public double cond() {
@@ -323,34 +305,8 @@ public final class LQ implements Decomposition {
     }
 
     @Override
-    public Workspace work() {
+    public Pool work() {
         return pool;
-    }
-
-    @Override
-    public int rows(Part part) {
-        if (!ok) throw new IllegalStateException("Decomposition failed");
-        switch (part) {
-            case L:
-                return m;
-            case Q:
-                return n;
-            default:
-                throw new UnsupportedOperationException("Part " + part + " not supported");
-        }
-    }
-
-    @Override
-    public int cols(Part part) {
-        if (!ok) throw new IllegalStateException("Decomposition failed");
-        switch (part) {
-            case L:
-                return m;
-            case Q:
-                return n;
-            default:
-                throw new UnsupportedOperationException("Part " + part + " not supported");
-        }
     }
 
     public int m() {
@@ -360,5 +316,4 @@ public final class LQ implements Decomposition {
     public int n() {
         return n;
     }
-
 }

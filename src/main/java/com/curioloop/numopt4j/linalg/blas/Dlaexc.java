@@ -12,7 +12,6 @@ import static java.lang.Math.max;
  * T must be in Schur canonical form. Returns false if the swap would make T
  * too far from Schur form.
  *
- * <p>Reference: gonum/lapack/gonum/dlaexc.go</p>
  */
 interface Dlaexc {
 

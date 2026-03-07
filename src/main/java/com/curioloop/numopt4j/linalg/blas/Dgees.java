@@ -28,9 +28,65 @@ import static java.lang.Math.max;
 interface Dgees {
 
     /**
+     * Generates the orthogonal matrix Q from Hessenberg reduction (LAPACK DORGHR).
+     * Inlined here since it is only used by Schur-based routines (Dgees, Dgeev, Dggev).
+     *
+     * @param n      order of Q
+     * @param ilo    lower balanced index (0-based, from dgebal)
+     * @param ihi    upper balanced index (0-based inclusive, from dgebal)
+     * @param A      matrix from dgehrd (n×n, row-major), overwritten with Q; aOff is the base offset
+     * @param aOff   offset into A
+     * @param lda    leading dimension of A
+     * @param tau    Householder scalars from dgehrd
+     * @param tauOff offset into tau
+     * @param work   workspace (length >= 2*n)
+     * @param workOff offset into work
+     * @param lwork  workspace size (ignored if -1)
+     */
+    static void dorghr(int n, int ilo, int ihi, double[] A, int aOff, int lda,
+                       double[] tau, int tauOff, double[] work, int workOff, int lwork) {
+        if (n <= 1) return;
+        if (lwork < 2 * n && lwork != -1) return;
+
+        // Initialize to identity
+        for (int i = 0; i < n; i++)
+            for (int j = 0; j < n; j++)
+                A[aOff + i * lda + j] = (i == j) ? 1.0 : 0.0;
+
+        for (int i = ihi - 1; i >= ilo; i--) {
+            int m = ihi - i + 1;
+            if (tau[tauOff + i] != 0.0 && m > 2) {
+                int nrow = n - i;
+                int ncol = m - 1;
+                work[workOff] = 1.0;
+                for (int j = 0; j < ncol - 1; j++)
+                    work[workOff + j + 1] = A[aOff + (i + 2 + j) * lda + i];
+                int wOff = workOff + n;
+                for (int ii = 0; ii < nrow; ii++) {
+                    double sum = 0.0;
+                    for (int jj = 0; jj < ncol; jj++)
+                        sum += A[aOff + (i + ii) * lda + (i + 1 + jj)] * work[workOff + jj];
+                    work[wOff + ii] = sum;
+                }
+                for (int ii = 0; ii < nrow; ii++) {
+                    double coeff = -tau[tauOff + i] * work[wOff + ii];
+                    if (coeff != 0.0)
+                        for (int jj = 0; jj < ncol; jj++)
+                            A[aOff + (i + ii) * lda + (i + 1 + jj)] += coeff * work[workOff + jj];
+                }
+            }
+        }
+    }
+
+    /** Convenience overload with aOff=0. */
+    static void dorghr(int n, int ilo, int ihi, double[] A, int lda,
+                       double[] tau, int tauOff, double[] work, int workOff, int lwork) {
+        dorghr(n, ilo, ihi, A, 0, lda, tau, tauOff, work, workOff, lwork);
+    }
+
+    /**
      * Computes the Schur factorization of a general matrix: A = Z*T*Z^T (LAPACK DGEES).
      * Optionally reorders eigenvalues so that selected ones appear first.
-     * Reference: gonum/lapack/gonum/dgees.go
      *
      * @param jobvs  'V' to compute Schur vectors Z, 'N' otherwise
      * @param sort   'S' to reorder eigenvalues, 'N' otherwise
@@ -152,7 +208,7 @@ interface Dgees {
 
         if (wantvs) {
             Dlamv.dlacpy('L', n, n, A, 0, lda, vs, 0, ldvs);
-            Dorghr.dorghr(n, ilo, ihi, vs, ldvs, work, n, work, iwrk, lwork - iwrk);
+            Dgees.dorghr(n, ilo, ihi, vs, 0, ldvs, work, n, work, iwrk, lwork - iwrk);
         }
 
         int info = 0;

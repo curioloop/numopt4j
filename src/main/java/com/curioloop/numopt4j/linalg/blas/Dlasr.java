@@ -5,7 +5,6 @@ package com.curioloop.numopt4j.linalg.blas;
 
 /**
  * DLASR: Applies a sequence of plane rotations to a matrix.
- * Based on gonum/lapack/gonum/dlasr.go
  * 
  * <p>Note: This implementation uses row-major storage convention:
  * a[row*lda+col] = A[row][col]</p>

@@ -69,7 +69,6 @@ interface Dlaqr {
      *
      * <p>Corresponds to LAPACK DLAQR1.
      *
-     * <p>Differences from gonum: array-offset convention; no input validation.
      *
      * @param n    order of H; must be 2 or 3
      * @param h    upper Hessenberg matrix (row-major, stride ldh)
@@ -158,7 +157,6 @@ interface Dlaqr {
      *
      * <p>Corresponds to LAPACK DLAQR0 (recur &gt; 0) / DLAQR4 (recur == 0).
      *
-     * <p>Differences from gonum: array-offset convention; packed long return from
      * {@link #dlaqr23}; Dlanv2 scratch reuses work[workOff..+9]; no input validation.
      *
      * @param wantt  if true, compute the full Schur form T
@@ -404,7 +402,6 @@ interface Dlaqr {
      *
      * <p>Corresponds to LAPACK DLAQR2 (recur == 0) / DLAQR3 (recur &gt; 0).
      *
-     * <p>Differences from gonum:
      * <ul>
      *   <li>Returns a packed {@code long}: high 32 bits = ns, low 32 bits = nd.</li>
      *   <li>Extra scratch (tauTmp, trexcWork, dlanv2Result) carved from the tail of work[].</li>
@@ -696,7 +693,6 @@ interface Dlaqr {
      *
      * <p>Corresponds to LAPACK DLAQR5.
      *
-     * <p>Differences from gonum: array-offset convention throughout; Dlarfg writes tau
      * into the supplied output slot and returns beta; Dlaqr1 called with explicit offset;
      * no input validation.
      *

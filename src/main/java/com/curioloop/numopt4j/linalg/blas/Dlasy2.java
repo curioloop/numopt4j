@@ -21,7 +21,6 @@ import static java.lang.Math.max;
  *
  * <p>isgn must be 1 or -1, and n1 and n2 must be 0, 1, or 2.</p>
  *
- * <p>Reference: gonum/lapack/gonum/dlasy2.go</p>
  *
  * <p>x array layout (size &gt;= 6):</p>
  * <ul>

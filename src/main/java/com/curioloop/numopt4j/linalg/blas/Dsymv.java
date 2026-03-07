@@ -15,7 +15,6 @@ package com.curioloop.numopt4j.linalg.blas;
  *   <li>Separated code paths for upper/lower triangular</li>
  * </ul>
  * 
- * <p>Based on gonum implementation with optimizations.</p>
  */
 interface Dsymv {
 

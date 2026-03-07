@@ -7,7 +7,6 @@ package com.curioloop.numopt4j.linalg.blas;
  * BLAS DSYR2K: Symmetric rank-2k update.
  * C := alpha*A*B^T + alpha*B*A^T + beta*C
  * 
- * Based on gonum implementation.
  */
 interface Dsyr2k {
 

@@ -4,7 +4,6 @@
 package com.curioloop.numopt4j.linalg.mat;
 
 import com.curioloop.numopt4j.linalg.Decomposition;
-import com.curioloop.numopt4j.linalg.Decomposition.Part;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -914,11 +913,11 @@ class SVDTest {
         }
 
         SVD svd = SVD.decompose(A.clone(), m, n);
-        assertThat(svd.rows(Part.S)).isEqualTo(3);
-        assertThat(svd.rows(Part.U)).isEqualTo(5);
-        assertThat(svd.rows(Part.V)).isEqualTo(3);
-        assertThat(svd.cols(Part.U)).isEqualTo(3);
-        assertThat(svd.cols(Part.V)).isEqualTo(3);
+        assertThat(svd.singularValues()).hasSize(Math.min(m, n));
+        assertThat(svd.m()).isEqualTo(m);
+        assertThat(svd.n()).isEqualTo(n);
+        assertThat(svd.uCols()).isEqualTo(Math.min(m, n));
+        assertThat(svd.vtRows()).isEqualTo(Math.min(m, n));
     }
 
     @Test
@@ -956,7 +955,7 @@ class SVDTest {
         };
         int n = 2;
 
-        SVD svd = SVD.decompose(A.clone(), n, n, SVD.SVD_NONE);
+        SVD svd = SVD.decompose(A.clone(), n, n, SVD.SVD_NONE, null);
 
         assertThat(svd.ok()).isTrue();
         assertThat(svd.kind()).isEqualTo(SVD.SVD_NONE);
@@ -974,7 +973,7 @@ class SVDTest {
         };
         int m = 3, n = 3;
 
-        SVD svd = SVD.decompose(A.clone(), m, n, SVD.SVD_WANT_U);
+        SVD svd = SVD.decompose(A.clone(), m, n, SVD.SVD_WANT_U, null);
 
         assertThat(svd.ok()).isTrue();
         assertThat(svd.kind()).isEqualTo(SVD.SVD_WANT_U);
@@ -993,7 +992,7 @@ class SVDTest {
         };
         int m = 3, n = 3;
 
-        SVD svd = SVD.decompose(A.clone(), m, n, SVD.SVD_WANT_V);
+        SVD svd = SVD.decompose(A.clone(), m, n, SVD.SVD_WANT_V, null);
 
         assertThat(svd.ok()).isTrue();
         assertThat(svd.kind()).isEqualTo(SVD.SVD_WANT_V);
@@ -1011,7 +1010,7 @@ class SVDTest {
         };
         int m = 2, n = 3;
 
-        SVD svd = SVD.decompose(A.clone(), m, n, SVD.SVD_ALL);
+        SVD svd = SVD.decompose(A.clone(), m, n, SVD.SVD_ALL, null);
 
         assertThat(svd.ok()).isTrue();
         assertThat(svd.kind()).isEqualTo(SVD.SVD_ALL);
@@ -1032,7 +1031,7 @@ class SVDTest {
         };
         int m = 3, n = 3;
 
-        SVD svd = SVD.decompose(A.clone(), m, n, SVD.SVD_WANT_U | SVD.SVD_FULL_U);
+        SVD svd = SVD.decompose(A.clone(), m, n, SVD.SVD_WANT_U | SVD.SVD_FULL_U, null);
 
         assertThat(svd.ok()).isTrue();
         assertThat(svd.U()).isNotNull();
@@ -1049,7 +1048,7 @@ class SVDTest {
         };
         int m = 2, n = 3;
 
-        SVD svd = SVD.decompose(A.clone(), m, n, SVD.SVD_WANT_V | SVD.SVD_FULL_V);
+        SVD svd = SVD.decompose(A.clone(), m, n, SVD.SVD_WANT_V | SVD.SVD_FULL_V, null);
 
         assertThat(svd.ok()).isTrue();
         assertThat(svd.U()).isNull();
@@ -1067,7 +1066,7 @@ class SVDTest {
         };
         int m = 3, n = 2;
 
-        SVD svd = SVD.decompose(A.clone(), m, n, SVD.SVD_WANT_U | SVD.SVD_FULL_U);
+        SVD svd = SVD.decompose(A.clone(), m, n, SVD.SVD_WANT_U | SVD.SVD_FULL_U, null);
 
         assertThat(svd.ok()).isTrue();
         assertThat(svd.U()).isNotNull();
@@ -1084,7 +1083,7 @@ class SVDTest {
         };
         int m = 3, n = 2;
 
-        SVD svd = SVD.decompose(A.clone(), m, n, SVD.SVD_WANT_V | SVD.SVD_FULL_V);
+        SVD svd = SVD.decompose(A.clone(), m, n, SVD.SVD_WANT_V | SVD.SVD_FULL_V, null);
 
         assertThat(svd.ok()).isTrue();
         assertThat(svd.VT()).isNotNull();
@@ -1101,7 +1100,7 @@ class SVDTest {
         };
         int n = 3;
 
-        SVD svd = SVD.decompose(A.clone(), n, n, SVD.SVD_WANT_U | SVD.SVD_FULL_U);
+        SVD svd = SVD.decompose(A.clone(), n, n, SVD.SVD_WANT_U | SVD.SVD_FULL_U, null);
 
         double[] U = svd.U();
         

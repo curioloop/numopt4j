@@ -7,7 +7,6 @@ package com.curioloop.numopt4j.linalg.blas;
  * Computes some or all of the right and/or left eigenvectors of an n×n
  * upper quasi-triangular matrix T in Schur canonical form.
  *
- * <p>Reference: gonum/lapack/gonum/dtrevc3.go</p>
  */
 interface Dtrevc3 {
 

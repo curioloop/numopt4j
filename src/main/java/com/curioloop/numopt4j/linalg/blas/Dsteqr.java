@@ -7,7 +7,6 @@ package com.curioloop.numopt4j.linalg.blas;
  * LAPACK DSTEQR: Computes all eigenvalues and optionally eigenvectors of a
  * symmetric tridiagonal matrix using implicit QL/QR method.
  * 
- * Based on gonum implementation.
  */
 interface Dsteqr {
 

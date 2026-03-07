@@ -27,7 +27,6 @@ interface Dlasq3 {
      * </ul>
      *
      * <p>LAPACK routine: DLASQ3
-     * <p>Go reference: gonum/lapack/gonum/dlasq3.go
      */
     static void dlasq3(int[] istate, int iOff, double[] dstate, int dOff, double[] z, int zOff) {
         double eps = Dlamch.dlamch('P');

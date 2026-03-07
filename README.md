@@ -8,6 +8,7 @@ High-performance numerical optimization library for Java.
 - **SLSQP**: Sequential Least Squares Programming with equality/inequality constraints
 - **TRF**: Trust Region Reflective for nonlinear least squares
 - **Root finding**: Brentq (1-D), HYBR and Broyden (N-D) via `RootFinder`
+- **Matrix decompositions**: LU, QR, LQ, SVD, Cholesky/LDLᵀ, Schur, Eigen, GEVD, GGEVD, GSVD via `Decomposer`
 - Workspace reuse for high-frequency optimization scenarios
 - Multiple numerical gradient/Jacobian methods with different accuracy/speed tradeoffs
 
@@ -181,6 +182,56 @@ RootFinder.brentq(DoubleUnaryOperator f)                    // → BrentqProblem
 RootFinder.hybr(BiConsumer<double[],double[]> fn, int n)    // → HYBRProblem
 RootFinder.broyden(BiConsumer<double[],double[]> fn, int n) // → BroydenProblem
 ```
+
+### Decomposer (facade — matrix decompositions)
+
+All methods accept an optional `Pool` for workspace reuse and optional `Opts` enums for configuration.
+Input matrices are overwritten in place (row-major, `double[]`).
+
+```java
+// Standard decompositions
+LU       lu  = Decomposer.lu(A, n);                          // LU with partial pivoting
+QR       qr  = Decomposer.qr(A, m, n);                      // QR (or rank-revealing with PIVOTING)
+LQ       lq  = Decomposer.lq(A, m, n);                      // LQ (m <= n)
+SVD      svd = Decomposer.svd(A, m, n);                      // SVD, thin U and Vᵀ by default
+Cholesky ch  = Decomposer.cholesky(A, n);                    // Cholesky (or LDLᵀ with PIVOTING)
+Schur    sc  = Decomposer.schur(A, n);                       // Real Schur: A = Z·T·Zᵀ
+
+// Eigenvalue decompositions
+Eigen    eg  = Decomposer.eigen(A, n);                       // General eigen (right vectors)
+Eigen    egs = Decomposer.eigen(A, n, Eigen.Opts.SYMMETRIC_LOWER); // Symmetric eigen
+GEVD     gv  = Decomposer.gevd(A, B, n);                    // Generalized symmetric-definite
+GGEVD    gg  = Decomposer.ggevd(A, B, n);                   // Generalized non-symmetric
+
+// Generalized SVD
+GSVD     gs  = Decomposer.gsvd(A, m, n, B, p);              // GSVD of A (m×n) and B (p×n)
+
+// With options
+QR  qrp  = Decomposer.qr(A, m, n, QR.Opts.PIVOTING);
+SVD svdU = Decomposer.svd(A, m, n, SVD.Opts.FULL_U, SVD.Opts.FULL_V);
+GEVD gv2 = Decomposer.gevd(A, B, n, GEVD.Opts.UPPER, GEVD.Opts.TYPE2);
+
+// Workspace reuse
+LU.Pool ws = Decomposer.lu(A, n).work();
+for (double[] mat : matrices) {
+    LU result = Decomposer.lu(mat, n, ws);
+}
+```
+
+#### Decomposition result methods
+
+| Class | Key result methods |
+|---|---|
+| `LU` | `toL()`, `toU()`, `toP()`, `solve(b,x)`, `inverse(Ainv)`, `determinant()`, `cond()` |
+| `QR` | `toQ()`, `toR()`, `toP()`, `solve(b,x)`, `leastSquares(b,x)`, `rank()`, `cond()` |
+| `LQ` | `toL()`, `toQ()`, `solve(b,x)`, `leastSquares(b,x)`, `cond()` |
+| `SVD` | `toU()`, `toVT()`, `singularValues()`, `solve(b,x)`, `rank()`, `cond()` |
+| `Cholesky` | `toL()`, `toD()` (LDLᵀ only), `solve(b,x)`, `inverse(Ainv)`, `determinant()`, `cond()` |
+| `Schur` | `toT()`, `toZ()`, `toS()`, `eigenvalues()`, `lyapunov(Q)`, `lyapunov(Q,sign)`, `discreteLyapunov(A,Q)` |
+| `Eigen` | `toV()`, `toS()`, `eigenvalues()`, `eigenvector(j)`, `cond()` |
+| `GEVD` | `toV()`, `toS()`, `eigenvalues()`, `cond()` |
+| `GGEVD` | `toVR()`, `toVL()`, `toS()`, `alphar()`, `alphai()`, `beta()` |
+| `GSVD` | `toU()`, `toV()`, `toQ()`, `toS()`, `sigma()`, `rank()`, `cond()` |
 
 ### Bound
 

@@ -20,7 +20,6 @@ import static java.lang.Math.*;
  * <p>For upper triangular: computes A = U^T * U; for lower triangular: A = L * L^T.
  * Returns false (or positive info) if the matrix is not positive definite.</p>
  *
- * <p>Go reference: gonum/lapack/gonum/dpotf2.go, dpotrf.go, dpotri.go, dpotrs.go, dpocon.go</p>
  */
 interface Dpotr {
 

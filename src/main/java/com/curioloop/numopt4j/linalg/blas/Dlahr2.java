@@ -10,7 +10,6 @@ import static java.lang.Math.min;
  * so that elements below the k-th subdiagonal are zero. Returns matrices V, T
  * (block reflector I - V*T*V**T) and Y = A*V*T for updating the unreduced part.
  *
- * <p>Reference: gonum/lapack/gonum/dlahr2.go</p>
  */
 interface Dlahr2 {
 

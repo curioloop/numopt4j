@@ -16,6 +16,16 @@ public final class GSVD implements Decomposition {
     public static final int GSVD_Q = 4;
     public static final int GSVD_ALL = GSVD_U | GSVD_V | GSVD_Q;
 
+    /** Configuration options for GSVD. */
+    public enum Opts {
+        /** Compute left singular vectors U. */
+        WANT_U,
+        /** Compute left singular vectors V. */
+        WANT_V,
+        /** Compute orthogonal matrix Q. */
+        WANT_Q
+    }
+
     /**
      * Pool extends Workspace with result arrays for alpha, beta, sigma, U, V, Q.
      *
@@ -48,8 +58,17 @@ public final class GSVD implements Decomposition {
             if (wantV && (V == null || V.length < p * p)) V = new double[p * p];
             if (wantQ && (Q == null || Q.length < n * n)) Q = new double[n * n];
 
-            // work[0..n) = tau region, work[n..) = scratch; total = n + scratch
-            ensureWork(n + 2 * n + max(max(n, m), p) + 3);
+            // Query dggsvp3 for optimal scratch size; work[0..n) = tau, work[n..) = scratch
+            // dtgsja needs work[0..2n) (Fortran: LWORK >= 2*N)
+            // Java dlags2 writes 6 values to work[workOff..workOff+5]
+            // Java dlapll uses work[workOff..workOff+2*l] where l<=n, so needs 2*n+1
+            double[] tmp = new double[1];
+            BLAS.dggsvp3(BLAS.GsvdJob.Compute, BLAS.GsvdJob.Compute, BLAS.GsvdJob.Compute,
+                         m, p, n, null, 0, n, null, 0, n, 0, 0,
+                         null, 0, m, null, 0, p, null, 0, n,
+                         null, null, tmp, 0, -1);
+            int need = Math.max(n + (int) tmp[0], Math.max(2 * n + 2, 6));
+            ensureWork(need);
             ensureIwork(n);
             return this;
         }
@@ -68,7 +87,7 @@ public final class GSVD implements Decomposition {
 
     private GSVD() {}
 
-    public static Workspace workspace(int m, int p, int n) {
+    public static Pool workspace(int m, int p, int n) {
         return new Pool().ensure(m, p, n, GSVD_ALL);
     }
 
@@ -80,7 +99,24 @@ public final class GSVD implements Decomposition {
         return decompose(A, m, n, B, p, kind, null);
     }
 
-    public static GSVD decompose(double[] A, int m, int n, double[] B, int p, int kind, Workspace ws) {
+    /** Opts-based entry point. */
+    public static GSVD decompose(double[] A, int m, int n, double[] B, int p, Pool ws, Opts... opts) {
+        int kind = GSVD_NONE;
+        if (opts == null || opts.length == 0) {
+            kind = GSVD_ALL;
+        } else {
+            for (Opts o : opts) {
+                switch (o) {
+                    case WANT_U: kind |= GSVD_U; break;
+                    case WANT_V: kind |= GSVD_V; break;
+                    case WANT_Q: kind |= GSVD_Q; break;
+                }
+            }
+        }
+        return decompose(A, m, n, B, p, kind, ws);
+    }
+
+    public static GSVD decompose(double[] A, int m, int n, double[] B, int p, int kind, Pool ws) {
         GSVD gsvd = new GSVD();
         gsvd.m = m;
         gsvd.p = p;
@@ -90,7 +126,7 @@ public final class GSVD implements Decomposition {
         return gsvd;
     }
 
-    private void doDecompose(double[] A, int m, int n, double[] B, int p, int kind, Workspace ws) {
+    private void doDecompose(double[] A, int m, int n, double[] B, int p, int kind, Pool ws) {
 
         boolean wantU = (kind & GSVD_U) != 0;
         boolean wantV = (kind & GSVD_V) != 0;
@@ -101,12 +137,9 @@ public final class GSVD implements Decomposition {
         BLAS.GsvdJob jobQ = wantQ ? BLAS.GsvdJob.Compute : BLAS.GsvdJob.None;
 
         if (ws == null) {
-            ws = workspace(m, p, n);
+            ws = (Pool) workspace(m, p, n);
         }
-        if (!(ws instanceof Pool)) {
-            throw new IllegalArgumentException("Workspace must be an instance of GSVD.Pool");
-        }
-        this.pool = (Pool) ws;
+        this.pool = ws;
         this.pool.ensure(m, p, n, kind);
 
         double anorm = BLAS.dlange('F', m, n, A, 0, n);
@@ -117,21 +150,18 @@ public final class GSVD implements Decomposition {
         double tola = max(m, n) * max(anorm, safmin) * eps;
         double tolb = max(p, n) * max(bnorm, safmin) * eps;
 
-        // Resolve U/V/Q arrays (null when not requested)
         double[] U = wantU ? pool.U : null;
         double[] V = wantV ? pool.V : null;
         double[] Q = wantQ ? pool.Q : null;
 
         double[] work = pool.work();
-        // work[0..n) = tau region; work[n..) = scratch
-        int scratchOff = n;
-        int lwork = work.length - scratchOff;
+        int lwork = work.length - n;
 
         int[] kl = BLAS.dggsvp3(jobU, jobV, jobQ, m, p, n,
                                  A, 0, n, B, 0, n,
                                  tola, tolb,
                                  U, 0, m, V, 0, p, Q, 0, n,
-                                 pool.iwork(), work, work, scratchOff, lwork);
+                                 pool.iwork(), work, work, n, lwork);
 
         k = kl[0];
         l = kl[1];
@@ -141,7 +171,7 @@ public final class GSVD implements Decomposition {
                          tola, tolb,
                          pool.alpha, 0, pool.beta, 0,
                          U, 0, m, V, 0, p, Q, 0, n,
-                         work, scratchOff);
+                         work, 0);
 
         if (ok) {
             int kl_sum = k + l;
@@ -181,89 +211,33 @@ public final class GSVD implements Decomposition {
         return sMax / sMin;
     }
 
-    public double[] generalizedSingularValues() {
-        if (pool == null || pool.alpha == null || pool.beta == null) return null;
-        double[] gsv = new double[k + l];
-        for (int i = 0; i < k + l; i++) {
-            if (pool.beta[i] != 0) gsv[i] = pool.alpha[i] / pool.beta[i];
-            else if (pool.alpha[i] != 0) gsv[i] = Double.POSITIVE_INFINITY;
-            else gsv[i] = 0;
-        }
-        return gsv;
+    @Override
+    public Pool work() { return pool; }
+
+    /** Returns generalized singular values as a (k+l)×1 matrix, or null if failed. */
+    public Matrix toS() {
+        if (!ok || pool == null || pool.sigma == null) return null;
+        int len = k + l;
+        double[] dst = new double[len];
+        System.arraycopy(pool.sigma, 0, dst, 0, len);
+        return new Matrix(len, 1, false, dst);
     }
 
-    @Override
-    public Workspace work() { return pool; }
-
-    @Override
-    public Matrix extract(Part part) {
-        return extract(part, null);
+    /** Returns left singular vectors U as an m×m matrix, or null if not computed. */
+    public Matrix toU() {
+        if (!ok || pool == null || pool.U == null) return null;
+        return new Matrix(m, m, false, pool.U);
     }
 
-    @Override
-    public Matrix extract(Part part, double[] dst) {
-        if (!ok) return null;
-        switch (part) {
-            case S: {
-                if (pool == null || pool.sigma == null) return null;
-                int len = k + l;
-                if (dst == null) {
-                    return new Matrix(len, 1, false, pool.sigma);
-                }
-                if (dst.length < len) throw new IllegalArgumentException("dst.length < " + len);
-                System.arraycopy(pool.sigma, 0, dst, 0, len);
-                return new Matrix(len, 1, false, dst);
-            }
-            case U: {
-                if (pool == null || pool.U == null) return null;
-                int size = m * m;
-                if (dst == null) dst = new double[size];
-                else if (dst.length < size) throw new IllegalArgumentException("dst.length < " + size);
-                System.arraycopy(pool.U, 0, dst, 0, size);
-                return new Matrix(m, m, false, dst);
-            }
-            case V: {
-                if (pool == null || pool.V == null) return null;
-                int size = p * p;
-                if (dst == null) dst = new double[size];
-                else if (dst.length < size) throw new IllegalArgumentException("dst.length < " + size);
-                System.arraycopy(pool.V, 0, dst, 0, size);
-                return new Matrix(p, p, false, dst);
-            }
-            case Q: {
-                if (pool == null || pool.Q == null) return null;
-                int size = n * n;
-                if (dst == null) dst = new double[size];
-                else if (dst.length < size) throw new IllegalArgumentException("dst.length < " + size);
-                System.arraycopy(pool.Q, 0, dst, 0, size);
-                return new Matrix(n, n, false, dst);
-            }
-            default:
-                return null;
-        }
+    /** Returns left singular vectors V as a p×p matrix, or null if not computed. */
+    public Matrix toV() {
+        if (!ok || pool == null || pool.V == null) return null;
+        return new Matrix(p, p, false, pool.V);
     }
 
-    @Override
-    public int rows(Part part) {
-        if (!ok) throw new IllegalStateException("Decomposition failed");
-        switch (part) {
-            case Q: return n;
-            case U: return m;
-            case V: return p;
-            case S: return k + l;
-            default: throw new UnsupportedOperationException("Part " + part + " not supported");
-        }
-    }
-
-    @Override
-    public int cols(Part part) {
-        if (!ok) throw new IllegalStateException("Decomposition failed");
-        switch (part) {
-            case Q: return n;
-            case U: return m;
-            case V: return p;
-            case S: return 1;
-            default: throw new UnsupportedOperationException("Part " + part + " not supported");
-        }
+    /** Returns orthogonal matrix Q as an n×n matrix, or null if not computed. */
+    public Matrix toQ() {
+        if (!ok || pool == null || pool.Q == null) return null;
+        return new Matrix(n, n, false, pool.Q);
     }
 }

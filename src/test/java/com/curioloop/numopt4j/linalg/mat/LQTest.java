@@ -3,7 +3,6 @@
  */
 package com.curioloop.numopt4j.linalg.mat;
 
-import com.curioloop.numopt4j.linalg.Decomposition.Part;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -25,9 +24,9 @@ class LQTest {
 
         assertThat(lq.ok()).isTrue();
 
-        double[] L = lq.extract(Part.L).data;
+        double[] L = lq.toL().data;
 
-        double[] Q = lq.extract(Part.Q).data;
+        double[] Q = lq.toQ().data;
 
         double[] reconstructed = new double[6];
         for (int i = 0; i < 2; i++) {
@@ -110,7 +109,7 @@ class LQTest {
         LQ lq = LQ.decompose(A, 3, 4);
         assertThat(lq.ok()).isTrue();
 
-        double[] Q = lq.extract(Part.Q).data;
+        double[] Q = lq.toQ().data;
 
         double[] QtQ = new double[16];
         for (int i = 0; i < 4; i++) {
@@ -159,9 +158,9 @@ class LQTest {
         LQ lq = LQ.decompose(A, 3, 3);
         assertThat(lq.ok()).isTrue();
 
-        double[] L = lq.extract(Part.L).data;
+        double[] L = lq.toL().data;
 
-        double[] Q = lq.extract(Part.Q).data;
+        double[] Q = lq.toQ().data;
 
         double[] reconstructed = new double[9];
         for (int i = 0; i < 3; i++) {

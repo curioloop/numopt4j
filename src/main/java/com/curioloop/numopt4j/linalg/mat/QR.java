@@ -12,14 +12,18 @@ public final class QR implements Decomposition {
 
     private static final double EPSILON = BLAS.dlamch('E');
 
+    /** Decomposition options for QR. */
+    public enum Opts {
+        /** Enable column pivoting (rank-revealing QR). */
+        PIVOTING
+    }
+
     public static final class Pool extends Decomposition.Workspace {
         /** Householder reflection factors */
         public double[] tau;
 
         /**
          * Ensure all buffers are allocated for QR decomposition of an m×n matrix.
-         * pivoting=true:  work >= 3n+1, iwork >= n (used as jpvt)
-         * pivoting=false: work >= 2n,   iwork >= n (used for dtrcon)
          */
         public Pool ensure(int m, int n, boolean pivoting) {
             int k = Math.min(m, n);
@@ -27,10 +31,16 @@ public final class QR implements Decomposition {
                 tau = new double[k];
             }
             if (pivoting) {
-                ensureWork(3 * n + 1);
+                // Query dgeqp3 for optimal work size
+                double[] tmp = new double[1];
+                BLAS.dgeqp3(m, n, null, 0, n, null, null, tmp, 0, -1);
+                ensureWork((int) tmp[0]);
                 ensureIwork(n);
             } else {
-                ensureWork(2 * n);
+                // Query dgeqrf for optimal work size
+                double[] tmp = new double[1];
+                BLAS.dgeqrf(m, n, null, 0, n, null, 0, tmp, 0, -1);
+                ensureWork(Math.max(n, (int) tmp[0]));
                 ensureIwork(n);
             }
             return this;
@@ -47,31 +57,31 @@ public final class QR implements Decomposition {
 
     private QR() {}
 
-    public static Decomposition.Workspace workspace(int m, int n) {
+    public static Pool workspace(int m, int n) {
         return new Pool().ensure(m, n, false);
     }
 
-    public static Decomposition.Workspace workspace(int m, int n, boolean pivoting) {
+    public static Pool workspace(int m, int n, boolean pivoting) {
         return new Pool().ensure(m, n, pivoting);
     }
 
     public static QR decompose(double[] A, int m, int n) {
-        return decompose(A, m, n, (Workspace) null);
+        return decompose(A, m, n, (Pool) null);
     }
 
-    public static QR decompose(double[] A, int m, int n, Workspace ws) {
+    public static QR decompose(double[] A, int m, int n, Pool ws) {
         QR qr = new QR();
         qr.doDecompose(A, m, n, false, ws);
         return qr;
     }
 
-    public static QR decompose(double[] A, int m, int n, boolean pivoting, Workspace ws) {
+    public static QR decompose(double[] A, int m, int n, boolean pivoting, Pool ws) {
         QR qr = new QR();
         qr.doDecompose(A, m, n, pivoting, ws);
         return qr;
     }
 
-    private void doDecompose(double[] A, int m, int n, boolean pivoting, Workspace ws) {
+    private void doDecompose(double[] A, int m, int n, boolean pivoting, Pool ws) {
         if (A == null || A.length < m * n) {
             throw new IllegalArgumentException("Matrix A must have length >= m*n");
         }
@@ -85,30 +95,22 @@ public final class QR implements Decomposition {
         this.pivoting = pivoting;
         this.ok = false;
 
-        if (ws != null && !(ws instanceof Pool)) {
-            throw new IllegalArgumentException("Workspace must be an instance of QR.Pool");
-        }
         if (ws == null) {
             ws = new Pool();
         }
-        this.pool = (Pool) ws;
-
+        this.pool = ws;
         pool.ensure(m, n, pivoting);
 
         if (pivoting) {
             int[] jpvt = pool.iwork();
-
             for (int j = 0; j < n; j++) {
                 jpvt[j] = 0;
             }
-
             double[] work = pool.work();
-
             int result = BLAS.dgeqp3(m, n, A, 0, n, jpvt, pool.tau, work, 0, work.length);
             if (result != 0) {
                 return;
             }
-
             this.rank = computeRank();
         } else {
             BLAS.dgeqr2(m, n, A, 0, n, pool.tau, 0, pool.work(), 0);
@@ -121,17 +123,18 @@ public final class QR implements Decomposition {
     private int computeRank() {
         int k = Math.min(m, n);
         if (k == 0) return 0;
-
         double tol = EPSILON * Math.max(m, n) * abs(QR[0]);
         int r = 0;
         for (int i = 0; i < k; i++) {
-            if (abs(QR[i * n + i]) > tol) {
-                r++;
-            } else {
-                break;
-            }
+            if (abs(QR[i * n + i]) > tol) r++;
+            else break;
         }
         return r;
+    }
+
+    @Override
+    public Pool work() {
+        return pool;
     }
 
     public int rank() {
@@ -141,12 +144,9 @@ public final class QR implements Decomposition {
     public int rank(double tol) {
         int k = Math.min(m, n);
         if (k == 0) return 0;
-
         int r = 0;
         for (int i = 0; i < k; i++) {
-            if (abs(QR[i * n + i]) > tol) {
-                r++;
-            }
+            if (abs(QR[i * n + i]) > tol) r++;
         }
         return r;
     }
@@ -167,23 +167,17 @@ public final class QR implements Decomposition {
         if (x == null || x.length < n) {
             x = new double[n];
         }
-
         int k = Math.min(m, n);
         double[] work = pool.work();
         if (x != b) {
             System.arraycopy(b, 0, x, 0, Math.min(b.length, x.length));
         }
         applyQt(x, k, work, 0);
-
         if (pivoting) {
-            if (!backSubstituteRank(x, rank)) {
-                return null;
-            }
+            if (!backSubstituteRank(x, rank)) return null;
             unpermute(x);
         } else {
-            if (!backSubstitute(x, n)) {
-                return null;
-            }
+            if (!backSubstitute(x, n)) return null;
         }
         return x;
     }
@@ -196,24 +190,17 @@ public final class QR implements Decomposition {
         if (x == null || x.length < n) {
             x = new double[n];
         }
-
         int k = Math.min(m, n);
         double[] work = pool.work();
         applyQt(b, k, work, 0);
-
         if (pivoting) {
             BLAS.dset(n, 0.0, x, 0, 1);
             BLAS.dcopy(rank, b, 0, 1, x, 0, 1);
-
-            if (!backSubstituteRank(x, rank)) {
-                return null;
-            }
+            if (!backSubstituteRank(x, rank)) return null;
             unpermute(x);
         } else {
             BLAS.dcopy(k, b, 0, 1, x, 0, 1);
-            if (!backSubstitute(x, k)) {
-                return null;
-            }
+            if (!backSubstitute(x, k)) return null;
         }
         return x;
     }
@@ -226,71 +213,53 @@ public final class QR implements Decomposition {
         if (Ainv == null || Ainv.length < n * n) {
             Ainv = new double[n * n];
         }
-
         double[] work = pool.work();
         for (int col = 0; col < n; col++) {
             BLAS.dset(n, 0.0, work, 0, 1);
             work[col] = 1.0;
-
             applyQt(work, n, work, n);
-
-            if (!backSubstitute(work, n)) {
-                return null;
-            }
-
+            if (!backSubstitute(work, n)) return null;
             for (int i = 0; i < n; i++) {
                 Ainv[i * n + col] = work[i];
             }
         }
-
         return Ainv;
     }
 
-    @Override
-    public Matrix extract(Part part) {
-        return extract(part, null);
+    /** Returns the orthogonal matrix Q (m×n). Returns null if decomposition failed. */
+    public Matrix toQ() {
+        if (!ok) return null;
+        int k = Math.min(m, n);
+        double[] dst = new double[m * n];
+        BLAS.dlacpy('A', m, n, QR, 0, n, dst, 0, n);
+        BLAS.dorg2r(m, n, k, dst, 0, n, pool.tau, 0, pool.work(), 0);
+        return new Matrix(m, n, false, dst);
     }
 
-    @Override
-    public Matrix extract(Part part, double[] dst) {
+    /** Returns the upper triangular matrix R (min(m,n)×n). Returns null if decomposition failed. */
+    public Matrix toR() {
         if (!ok) return null;
-        // Early return for unsupported or inapplicable parts
-        if (part != Part.R && part != Part.Q && part != Part.P) return null;
-        if (part == Part.P && !pivoting) return null;
-        int needed = size(part);
-        if (dst == null || dst.length < needed) dst = new double[needed];
         int k = Math.min(m, n);
-        switch (part) {
-            case R: {
-                // Extract upper triangle of QR into dst (min(m,n) x n)
-                for (int i = 0; i < k; i++) {
-                    // zero lower triangle
-                    for (int j = 0; j < i; j++) {
-                        dst[i * n + j] = 0.0;
-                    }
-                    // copy upper triangle (including diagonal)
-                    BLAS.dcopy(n - i, QR, i * n + i, 1, dst, i * n + i, 1);
-                }
-                return new Matrix(k, n, false, dst);
-            }
-            case Q: {
-                // Copy QR buffer and call dorg2r to generate Q (m x n)
-                BLAS.dlacpy('A', m, n, QR, 0, n, dst, 0, n);
-                BLAS.dorg2r(m, n, k, dst, 0, n, pool.tau, 0, pool.work(), 0);
-                return new Matrix(m, n, false, dst);
-            }
-            case P: {
-                // Construct permutation matrix from jpvt (0-indexed)
-                int[] jpvt = pool.iwork();
-                java.util.Arrays.fill(dst, 0, n * n, 0.0);
-                for (int j = 0; j < n; j++) {
-                    dst[jpvt[j] * n + j] = 1.0;
-                }
-                return new Matrix(n, n, false, dst);
-            }
-            default:
-                return null;
+        double[] dst = new double[k * n];
+        for (int i = 0; i < k; i++) {
+            BLAS.dcopy(n - i, QR, i * n + i, 1, dst, i * n + i, 1);
         }
+        return new Matrix(k, n, false, dst);
+    }
+
+    /**
+     * Returns the column permutation matrix P (n×n) such that A*P = Q*R.
+     * Returns null if not in pivoting mode or if decomposition failed.
+     */
+    public Matrix toP() {
+        if (!ok || !pivoting) return null;
+        double[] dst = new double[n * n];
+        int[] jpvt = pool.iwork();
+        java.util.Arrays.fill(dst, 0.0);
+        for (int j = 0; j < n; j++) {
+            dst[jpvt[j] * n + j] = 1.0;
+        }
+        return new Matrix(n, n, false, dst);
     }
 
     public double[] solveMultiple(double[] B, int nrhs) {
@@ -301,31 +270,24 @@ public final class QR implements Decomposition {
         if (pivoting) {
             throw new UnsupportedOperationException("Multi-RHS solve not yet supported for pivoting QR");
         }
-
         int k = Math.min(m, n);
         for (int j = 0; j < nrhs; j++) {
             applyQtCol(B, k, pool.work(), 0, j, nrhs);
         }
-
-        if (!backSubstituteMultiple(B, n, nrhs)) {
-            return null;
-        }
+        if (!backSubstituteMultiple(B, n, nrhs)) return null;
         return B;
     }
 
     public double cond() {
         if (!ok || n == 0) return Double.NaN;
-
         double[] work = pool.work();
         double rcond;
-        
         if (pivoting) {
             if (rank == 0) return Double.NaN;
             rcond = BLAS.dtrcon('1', BLAS.Uplo.Upper, BLAS.Diag.NonUnit, rank, QR, n, work, pool.iwork());
         } else {
             rcond = BLAS.dtrcon('1', BLAS.Uplo.Upper, BLAS.Diag.NonUnit, n, QR, n, work, pool.iwork());
         }
-        
         if (rcond == 0) return Double.POSITIVE_INFINITY;
         return 1.0 / rcond;
     }
@@ -335,56 +297,9 @@ public final class QR implements Decomposition {
         return ok;
     }
 
-    @Override
-    public Pool work() {
-        return pool;
-    }
-
-    @Override
-    public int rows(Part part) {
-        if (!ok) throw new IllegalStateException("Decomposition failed");
-        switch (part) {
-            case Q:
-                return m;
-            case R:
-                return Math.min(m, n);
-            case P:
-                return n;
-            default:
-                throw new UnsupportedOperationException("Part " + part + " not supported");
-        }
-    }
-
-    @Override
-    public int cols(Part part) {
-        if (!ok) throw new IllegalStateException("Decomposition failed");
-        switch (part) {
-            case Q:
-                return n;
-            case R:
-                return n;
-            case P:
-                return n;
-            default:
-                throw new UnsupportedOperationException("Part " + part + " not supported");
-        }
-    }
-
-    public int m() {
-        return m;
-    }
-
-    public int n() {
-        return n;
-    }
-
-    public double[] QR() {
-        return QR;
-    }
-
-    public double[] tau() {
-        return pool.tau;
-    }
+    public int m() { return m; }
+    public int n() { return n; }
+    public double[] tau() { return pool.tau; }
 
     private void applyQt(double[] x, int k, double[] work, int workOff) {
         double[] tau = pool.tau;
@@ -410,9 +325,7 @@ public final class QR implements Decomposition {
 
     private boolean backSubstitute(double[] b, int n) {
         for (int i = 0; i < n; i++) {
-            if (Math.abs(QR[i * n + i]) < EPSILON) {
-                return false;
-            }
+            if (Math.abs(QR[i * n + i]) < EPSILON) return false;
         }
         BLAS.dtrsm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit, n, 1, 1.0, QR, 0, n, b, 0, 1);
         return true;
@@ -420,9 +333,7 @@ public final class QR implements Decomposition {
 
     private boolean backSubstituteMultiple(double[] B, int n, int nrhs) {
         for (int i = 0; i < n; i++) {
-            if (Math.abs(QR[i * n + i]) < EPSILON) {
-                return false;
-            }
+            if (Math.abs(QR[i * n + i]) < EPSILON) return false;
         }
         BLAS.dtrsm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit, n, nrhs, 1.0, QR, 0, n, B, 0, nrhs);
         return true;
@@ -430,9 +341,7 @@ public final class QR implements Decomposition {
 
     private boolean backSubstituteRank(double[] b, int rank) {
         for (int i = 0; i < rank; i++) {
-            if (abs(QR[i * n + i]) < EPSILON) {
-                return false;
-            }
+            if (abs(QR[i * n + i]) < EPSILON) return false;
         }
         for (int i = rank - 1; i >= 0; i--) {
             b[i] /= QR[i * n + i];

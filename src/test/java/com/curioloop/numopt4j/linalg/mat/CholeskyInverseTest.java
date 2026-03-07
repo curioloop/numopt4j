@@ -3,6 +3,7 @@
  */
 package com.curioloop.numopt4j.linalg.mat;
 
+import com.curioloop.numopt4j.linalg.blas.BLAS;
 import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -77,7 +78,7 @@ public class CholeskyInverseTest {
         };
         double[] A_orig = A.clone();
         
-        Cholesky cholesky = Cholesky.decompose(A, 3, 'L');
+        Cholesky cholesky = Cholesky.decompose(A, 3, BLAS.Uplo.Lower);
         assertThat(cholesky.ok()).isTrue();
         
         double[] inv = cholesky.inverse(null);
@@ -104,7 +105,7 @@ public class CholeskyInverseTest {
         };
         double[] A_orig = A.clone();
         
-        Cholesky cholesky = Cholesky.decompose(A, 3, 'U');
+        Cholesky cholesky = Cholesky.decompose(A, 3, BLAS.Uplo.Upper);
         assertThat(cholesky.ok()).isTrue();
         
         double[] inv = cholesky.inverse(null);

@@ -4,7 +4,6 @@
 package com.curioloop.numopt4j.linalg.mat;
 
 import com.curioloop.numopt4j.linalg.Decomposition;
-import com.curioloop.numopt4j.linalg.Decomposition.Part;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.*;
@@ -108,7 +107,7 @@ class QRPivotTest {
         };
         
         QR qr = QR.decompose(A, 2, 2, true, null);
-        double[] R = qr.extract(Part.R).data;
+        double[] R = qr.toR().data;
         
         assertThat(R[0]).isNotCloseTo(0.0, offset(EPSILON));
         assertThat(R[3]).isNotCloseTo(0.0, offset(EPSILON));
@@ -149,7 +148,7 @@ class QRPivotTest {
         };
         
         QR qr = QR.decompose(A, 2, 2, true, null);
-        double[] P = qr.extract(Part.P).data;
+        double[] P = qr.toP().data;
         
         int[] jpvt = qr.piv();
         for (int i = 0; i < 2; i++) {
@@ -166,7 +165,7 @@ class QRPivotTest {
             3.0, 4.0
         };
         
-        Decomposition.Workspace ws = QR.workspace(2, 2, true);
+        QR.Pool ws = (QR.Pool) QR.workspace(2, 2, true);
         QR qr = QR.decompose(A, 2, 2, true, ws);
         
         assertThat(qr.ok()).isTrue();
@@ -184,7 +183,7 @@ class QRPivotTest {
             7.0, 8.0
         };
         
-        Decomposition.Workspace ws = QR.workspace(2, 2, false);
+        QR.Pool ws = (QR.Pool) QR.workspace(2, 2, false);
         
         QR qr1 = QR.decompose(A1, 2, 2, ws);
         assertThat(qr1.ok()).isTrue();

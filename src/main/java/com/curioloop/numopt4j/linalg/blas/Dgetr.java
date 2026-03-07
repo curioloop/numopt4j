@@ -21,7 +21,6 @@ import static java.lang.Math.*;
  * L is unit lower triangular, and U is upper triangular. Row interchanges are
  * recorded in {@code ipiv} (0-indexed).</p>
  *
- * <p>Go reference: gonum/lapack/gonum/dgetf2.go, dgetrf.go, dgetri.go, dgetrs.go, dgecon.go</p>
  */
 interface Dgetr {
 
@@ -122,13 +121,20 @@ interface Dgetr {
 
     static boolean dgetri(int n, double[] A, int aOff, int lda, int[] ipiv, int ipivOff,
                           double[] work, int workOff, int lwork) {
-        if (n == 0) return true;
+        if (n == 0) {
+            work[workOff] = 1;
+            return true;
+        }
+
+        int nb = Ilaenv.ilaenv(1, "DGETRI", " ", n, -1, -1, -1);
+        if (lwork == -1) {
+            work[workOff] = n * nb;
+            return true;
+        }
 
         if (Dtrtri.dtrtri(BLAS.Uplo.Upper, BLAS.Diag.NonUnit, n, A, aOff, lda) != 0) {
             return false;
         }
-
-        int nb = Ilaenv.ilaenv(1, "DGETRI", " ", n, -1, -1, -1);
         int nbmin = 2;
         int ldwork = nb;
 

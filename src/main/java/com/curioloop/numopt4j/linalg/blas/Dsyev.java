@@ -6,7 +6,7 @@ package com.curioloop.numopt4j.linalg.blas;
 /**
  * LAPACK DSYEV: Computes all eigenvalues and optionally eigenvectors of a symmetric matrix.
  * 
- * Based on LAPACK and gonum implementation, adapted for row-major storage.
+ * Based on LAPACK.
  * 
  * <p>Optimizations:
  * <ul>
@@ -42,7 +42,7 @@ public interface Dsyev {
         boolean wantz = Character.toUpperCase(jobz) == 'V';
         boolean upper = Character.toUpperCase(uplo) == 'U';
 
-        // Compute optimal workspace size (gonum pattern)
+        // Compute optimal workspace size
         int nb = Ilaenv.ilaenv(1, "DSYTRD", String.valueOf(uplo), n, 0, 0, -1);
         int lworkopt = Math.max(1, (nb + 2) * n);
 
@@ -100,7 +100,6 @@ public interface Dsyev {
             Dlamv.dlascl(kind, 0, 0, 1.0, sigma, n, n, A, 0, lda);
         }
 
-        // Gonum workspace layout (zero-allocation pattern):
         // work[0:n] = e (off-diagonal for Dsterf/Dsteqr) - n elements for Dsytrd
         // work[n:2n] = tau (Householder scalars)  
         // work[2n:] = work for Dsytrd
@@ -110,24 +109,20 @@ public interface Dsyev {
         int llwork = lwork - indwork;
         
         // Reduce to tridiagonal form
-        // Gonum: w = eigenvalues (diagonal), work[inde:] = e, work[indtau:] = tau, work[indwork:] = work
         Dsytrd.dsytrd(upper ? BLAS.Uplo.Upper : BLAS.Uplo.Lower, n, A, lda, w, wOff, work, inde, work, indtau, work, indwork, llwork);
                 
         // Compute eigenvalues
         boolean ok;
         if (!wantz) {
             // Eigenvalues only: use DSTERF
-            // Gonum: Dsterf(n, w, work[inde:])
             ok = Dsterf.dsterf(n, w, wOff, work, inde);
             // w already contains eigenvalues from Dsytrd
         } else {
             // Eigenvalues and eigenvectors
             // Generate orthogonal matrix Q from tridiagonalization
-            // Gonum: Dorgtr(uplo, n, a, lda, work[indtau:], work[indwork:], llwork)
             Dorgtr.dorgtr(upper ? BLAS.Uplo.Upper : BLAS.Uplo.Lower, n, A, lda, work, indtau, work, indwork, llwork);
             
             // Compute eigenvectors from tridiagonal form
-            // Gonum: Dsteqr(jobz, n, w, work[inde:], a, lda, work[indtau:])
             ok = Dsteqr.dsteqr('V', n, w, wOff, work, inde, A, 0, lda, work, indtau) == 0;
             // w already contains eigenvalues from Dsteqr
         }
@@ -136,7 +131,7 @@ public interface Dsyev {
             return 1;
         }
 
-        // If matrix was scaled, rescale eigenvalues using BLAS (gonum pattern)
+        // If matrix was scaled, rescale eigenvalues using BLAS
         if (scaled) {
             // w = w / sigma using BLAS dscal
             BLAS.dscal(n, 1.0 / sigma, w, wOff, 1);

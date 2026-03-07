@@ -7,16 +7,15 @@ import com.curioloop.numopt4j.linalg.Decomposition;
 import com.curioloop.numopt4j.linalg.blas.BLAS;
 import com.curioloop.numopt4j.linalg.blas.Dlange;
 
-import static java.lang.Math.abs;
-
 public final class LU implements Decomposition {
-
-    private static final int BLOCK_SIZE = 64;
 
     public static final class Pool extends Decomposition.Workspace {
         /** Allocate/expand work and iwork on demand; ipiv and piv both reuse iwork (first n for ipiv, next n for piv) */
         public Pool ensure(int n) {
-            ensureWork(Math.max(n, n * BLOCK_SIZE));
+            // Query dgetri for optimal work size
+            double[] tmp = new double[1];
+            BLAS.dgetri(n, null, 0, n, null, 0, tmp, 0, -1);
+            ensureWork(Math.max(n, (int) tmp[0]));
             ensureIwork(2 * n);
             return this;
         }
@@ -30,7 +29,7 @@ public final class LU implements Decomposition {
 
     private LU() {}
 
-    public static Decomposition.Workspace workspace(int n) {
+    public static Pool workspace(int n) {
         return new Pool().ensure(n);
     }
 
@@ -40,16 +39,16 @@ public final class LU implements Decomposition {
     }
 
     public static LU decompose(double[] A, int n) {
-        return decompose(A, n, null);
+        return decompose(A, n, (Pool) null);
     }
 
-    public static LU decompose(double[] A, int n, Workspace ws) {
+    public static LU decompose(double[] A, int n, Pool ws) {
         LU lu = new LU();
         lu.doDecompose(A, n, ws);
         return lu;
     }
 
-    private void doDecompose(double[] A, int n, Workspace ws) {
+    private void doDecompose(double[] A, int n, Pool ws) {
         if (A == null || A.length < n * n) {
             throw new IllegalArgumentException("Matrix A must have length >= n*n");
         }
@@ -62,14 +61,10 @@ public final class LU implements Decomposition {
         this.ok = false;
         this.anorm = Dlange.dlange('1', n, n, A, 0, n);
 
-        if (ws != null && !(ws instanceof Pool)) {
-            throw new IllegalArgumentException("Workspace must be an instance of LU.Pool");
-        }
         if (ws == null) {
             ws = new Pool();
         }
-        this.pool = (Pool) ws;
-
+        this.pool = ws;
         pool.ensure(n);
 
         this.ok = BLAS.dgetrf(n, n, A, 0, n, pool.iwork(), n) == 0;
@@ -78,7 +73,6 @@ public final class LU implements Decomposition {
     }
 
     private void updatePivots() {
-        // piv (permutation vector) stored in iwork[0..n), ipiv in iwork[n..2n)
         int[] iwork = pool.iwork();
         for (int i = 0; i < n; i++) {
             iwork[i] = i;
@@ -89,6 +83,12 @@ public final class LU implements Decomposition {
             iwork[i] = iwork[v];
             iwork[v] = tmp;
         }
+    }
+
+    /** Pre-allocate workspace for reuse in high-frequency scenarios. */
+    @Override
+    public Pool work() {
+        return pool;
     }
 
     public double[] solve(double[] b, double[] x) {
@@ -166,97 +166,45 @@ public final class LU implements Decomposition {
         return ok;
     }
 
-    @Override
-    public Pool work() {
-        return pool;
-    }
-
-    @Override
-    public int rows(Part part) {
-        if (!ok) throw new IllegalStateException("Decomposition failed");
-        switch (part) {
-            case L:
-            case U:
-            case P:
-                return n;
-            default:
-                throw new UnsupportedOperationException("Part " + part + " not supported");
-        }
-    }
-
-    @Override
-    public int cols(Part part) {
-        if (!ok) throw new IllegalStateException("Decomposition failed");
-        switch (part) {
-            case L:
-            case U:
-            case P:
-                return n;
-            default:
-                throw new UnsupportedOperationException("Part " + part + " not supported");
-        }
-    }
-
-    public double[] LU() {
-        return LU;
-    }
-
     public int[] piv() {
         return pool.iwork();
     }
 
-    @Override
-    public Matrix extract(Part part) {
-        return extract(part, null);
+    /** Returns the lower triangular matrix L (n×n). Returns null if decomposition failed. */
+    public Matrix toL() {
+        if (!ok) return null;
+        double[] dst = new double[n * n];
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                if (i > j)       dst[i * n + j] = LU[i * n + j];
+                else if (i == j) dst[i * n + j] = 1.0;
+                // else 0.0 (already zero)
+            }
+        }
+        return new Matrix(n, n, false, dst);
     }
 
-    @Override
-    public Matrix extract(Part part, double[] dst) {
+    /** Returns the upper triangular matrix U (n×n). Returns null if decomposition failed. */
+    public Matrix toU() {
         if (!ok) return null;
-        switch (part) {
-            case L:
-            case U:
-            case P:
-                break;
-            default:
-                return null;
+        double[] dst = new double[n * n];
+        for (int i = 0; i < n; i++) {
+            for (int j = i; j < n; j++) {
+                dst[i * n + j] = LU[i * n + j];
+            }
         }
-        int size = size(part);
-        if (dst == null || dst.length < size) dst = new double[size];
-        switch (part) {
-            case L: {
-                for (int i = 0; i < n; i++) {
-                    for (int j = 0; j < n; j++) {
-                        if (i > j) {
-                            dst[i * n + j] = LU[i * n + j];
-                        } else if (i == j) {
-                            dst[i * n + j] = 1.0;
-                        } else {
-                            dst[i * n + j] = 0.0;
-                        }
-                    }
-                }
-                return new Matrix(n, n, false, dst);
-            }
-            case U: {
-                for (int i = 0; i < n; i++) {
-                    for (int j = 0; j < n; j++) {
-                        dst[i * n + j] = (i <= j) ? LU[i * n + j] : 0.0;
-                    }
-                }
-                return new Matrix(n, n, false, dst);
-            }
-            case P: {
-                // piv stored in iwork[0..n) (0-indexed), computed by updatePivots()
-                int[] piv = pool.iwork();
-                for (int i = 0; i < n; i++) {
-                    dst[i * n + piv[i]] = 1.0;
-                }
-                return new Matrix(n, n, false, dst);
-            }
-            default:
-                return null;
+        return new Matrix(n, n, false, dst);
+    }
+
+    /** Returns the permutation matrix P (n×n) such that PA = LU. Returns null if decomposition failed. */
+    public Matrix toP() {
+        if (!ok) return null;
+        double[] dst = new double[n * n];
+        int[] piv = pool.iwork();
+        for (int i = 0; i < n; i++) {
+            dst[i * n + piv[i]] = 1.0;
         }
+        return new Matrix(n, n, false, dst);
     }
 
     public int n() {

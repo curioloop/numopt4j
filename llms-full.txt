@@ -52,6 +52,7 @@ Have a residual function (least squares)?
 | Nonlinear least squares | `TRFProblem` | min ½‖f(x)‖² |
 | 1-D root finding | `BrentqProblem` | Brentq, requires `Bound.between(a,b)` bracket |
 | N-D root finding | `HYBRProblem` / `BroydenProblem` | HYBR (with Jacobian) or Broyden (Jacobian-free) |
+| Matrix decomposition | `Decomposer` | LU, QR, LQ, SVD, Cholesky, Schur, Eigen, GEVD, GGEVD, GSVD |
 
 
 ## 3. Minimize Class (Unified Entry Point with Automatic Algorithm Selection)
@@ -817,4 +818,626 @@ for (double[] startPoint : startPoints) {
     OptimizationResult r = problem.initialPoint(startPoint).solve(ws);
     // process r
 }
+```
+
+
+## 15. Decomposer (Matrix Decompositions)
+
+`com.curioloop.numopt4j.linalg.Decomposer`
+
+Unified facade for all matrix decompositions. All methods accept an optional `Pool` for workspace reuse and optional `Opts` enums for configuration. Input matrices are overwritten in place (row-major `double[]`).
+
+### Package
+
+```
+com.curioloop.numopt4j.linalg          # Decomposer facade, Decomposition interface
+com.curioloop.numopt4j.linalg.mat      # LU, QR, LQ, SVD, Cholesky, Schur, Eigen, GEVD, GGEVD, GSVD
+```
+
+### Decomposition Selection
+
+| Problem | Class | Entry point |
+|---|---|---|
+| Solve Ax=b, inverse, determinant | `LU` | `Decomposer.lu(A, n)` |
+| Least squares, rank, solve overdetermined | `QR` | `Decomposer.qr(A, m, n)` |
+| Minimum-norm solution (m≤n) | `LQ` | `Decomposer.lq(A, m, n)` |
+| Singular values, low-rank approx, pseudoinverse | `SVD` | `Decomposer.svd(A, m, n)` |
+| Symmetric positive-definite solve | `Cholesky` | `Decomposer.cholesky(A, n)` |
+| Eigenvalues of general or symmetric matrix | `Eigen` | `Decomposer.eigen(A, n)` |
+| Schur form, Lyapunov equations | `Schur` | `Decomposer.schur(A, n)` |
+| Generalized eigen, A sym + B sym pos-def | `GEVD` | `Decomposer.gevd(A, B, n)` |
+| Generalized eigen, A and B general | `GGEVD` | `Decomposer.ggevd(A, B, n)` |
+| Generalized SVD of two matrices | `GSVD` | `Decomposer.gsvd(A, m, n, B, p)` |
+
+### Common Conventions
+
+- All input matrices are row-major `double[]`, overwritten in place during decomposition.
+- `work()` returns the `Pool` (workspace) for reuse.
+- `ok()` returns true if decomposition succeeded.
+- `toX()` methods return a `Matrix` wrapper (copies data); raw arrays are accessible via `pool` fields.
+- Pool fields: uppercase names (e.g. `U`, `VT`, `Z`) are matrices; lowercase names (e.g. `s`, `wr`, `wi`) are vectors.
+
+
+## 16. LU Decomposition
+
+`com.curioloop.numopt4j.linalg.mat.LU`
+
+Performs LU decomposition with partial pivoting: PA = LU.
+
+### Factory Methods
+
+```java
+Decomposer.lu(A, n)           // decompose n×n matrix A
+Decomposer.lu(A, n, ws)       // with workspace reuse
+LU.Pool ws = LU.workspace(n)  // pre-allocate workspace
+```
+
+### Result Methods
+
+```java
+lu.ok()                  // true if decomposition succeeded
+lu.toL()                 // n×n lower triangular L (unit diagonal)
+lu.toU()                 // n×n upper triangular U
+lu.toP()                 // n×n permutation matrix P (PA = LU)
+lu.solve(b, x)           // solve Ax = b, returns x
+lu.inverse(Ainv)         // compute A⁻¹ into Ainv
+lu.determinant()         // det(A)
+lu.logDet()              // double[]{log|det|, sign}
+lu.cond()                // condition number (1-norm)
+lu.piv()                 // int[] permutation indices
+lu.work()                // LU.Pool for reuse
+```
+
+### Example
+
+```java
+double[] A = {4,3, 6,3};  // 2×2 row-major
+LU lu = Decomposer.lu(A, 2);
+double[] x = lu.solve(new double[]{10, 12}, null);  // solve Ax = b
+double det = lu.determinant();
+
+// Workspace reuse
+LU.Pool ws = LU.workspace(n);
+for (double[] mat : matrices) {
+    LU result = Decomposer.lu(mat, n, ws);
+    result.solve(b, x);
+}
+```
+
+
+## 17. QR Decomposition
+
+`com.curioloop.numopt4j.linalg.mat.QR`
+
+Performs QR decomposition of an m×n matrix. Supports column pivoting for rank-revealing QR.
+
+### Options
+
+```java
+QR.Opts.PIVOTING   // enable column pivoting (rank-revealing QR, A·P = Q·R)
+```
+
+### Factory Methods
+
+```java
+Decomposer.qr(A, m, n)                    // standard QR
+Decomposer.qr(A, m, n, QR.Opts.PIVOTING) // rank-revealing QR
+Decomposer.qr(A, m, n, ws)               // with workspace reuse
+QR.Pool ws = QR.workspace(m, n)
+QR.Pool ws = QR.workspace(m, n, pivoting)
+```
+
+### Result Methods
+
+```java
+qr.ok()
+qr.toQ()                 // m×n orthogonal matrix Q
+qr.toR()                 // min(m,n)×n upper triangular R
+qr.toP()                 // n×n permutation P (pivoting only; A·P = Q·R)
+qr.solve(b, x)           // solve square system Rx = Qᵀb
+qr.leastSquares(b, x)    // min‖Ax-b‖ (overdetermined)
+qr.solveMultiple(B, nrhs)// multiple right-hand sides
+qr.rank()                // numerical rank (pivoting mode)
+qr.rank(tol)             // rank with custom tolerance
+qr.cond()                // condition number of R
+qr.piv()                 // int[] column permutation (pivoting only)
+qr.isPivoting()
+qr.work()                // QR.Pool for reuse
+```
+
+### Example
+
+```java
+// Least squares: min‖Ax - b‖
+double[] A = {1,1, 1,2, 1,3};  // 3×2
+double[] b = {6, 5, 7};
+QR qr = Decomposer.qr(A.clone(), 3, 2);
+double[] x = qr.leastSquares(b, null);
+
+// Rank-revealing QR
+QR qrp = Decomposer.qr(A.clone(), 3, 2, QR.Opts.PIVOTING);
+int rank = qrp.rank();
+```
+
+
+## 18. LQ Decomposition
+
+`com.curioloop.numopt4j.linalg.mat.LQ`
+
+Performs LQ decomposition of an m×n matrix (requires m ≤ n): A = L·Q.
+Used for minimum-norm solutions to underdetermined systems.
+
+### Factory Methods
+
+```java
+Decomposer.lq(A, m, n)       // decompose m×n matrix (m <= n)
+Decomposer.lq(A, m, n, ws)   // with workspace reuse
+LQ.Pool ws = LQ.workspace(m, n)
+```
+
+### Result Methods
+
+```java
+lq.ok()
+lq.toL()                 // m×m lower triangular L
+lq.toQ()                 // n×n orthogonal matrix Q
+lq.solve(b, x)           // solve Ax = b (square system, m=n)
+lq.solveTranspose(b, x)  // solve Aᵀx = b
+lq.leastSquares(b, x)    // minimum-norm solution min‖x‖ s.t. Ax=b
+lq.cond()                // condition number
+lq.work()                // LQ.Pool for reuse
+```
+
+
+## 19. SVD
+
+`com.curioloop.numopt4j.linalg.mat.SVD`
+
+Performs singular value decomposition: A = U·diag(s)·Vᵀ.
+
+### Options
+
+```java
+SVD.Opts.WANT_U   // compute thin U (m × min(m,n))  — default
+SVD.Opts.FULL_U   // compute full U (m × m)
+SVD.Opts.WANT_V   // compute thin Vᵀ (min(m,n) × n) — default
+SVD.Opts.FULL_V   // compute full Vᵀ (n × n)
+```
+
+Default (no opts): thin U and thin Vᵀ.
+
+### Factory Methods
+
+```java
+Decomposer.svd(A, m, n)                              // thin U and Vᵀ
+Decomposer.svd(A, m, n, SVD.Opts.FULL_U, SVD.Opts.FULL_V)
+Decomposer.svd(A, m, n, ws)                          // with workspace reuse
+SVD.Pool ws = SVD.workspace(m, n)
+SVD.Pool ws = SVD.workspace(m, n, kindMask)          // kindMask: SVD_WANT_U | SVD_WANT_V | SVD_FULL_U | SVD_FULL_V
+```
+
+### Result Methods
+
+```java
+svd.ok()
+svd.singularValues()     // double[] s (descending order, length min(m,n))
+svd.toU()                // m × uCols matrix U
+svd.toVT()               // vtRows × n matrix Vᵀ
+svd.solve(b, x)          // pseudoinverse solve: x = V·diag(1/s)·Uᵀ·b
+svd.rank()               // numerical rank
+svd.rank(tol)            // rank with custom tolerance
+svd.cond()               // s[0] / s[min-1]
+svd.norm2()              // largest singular value s[0]
+svd.uCols()              // columns of U
+svd.vtRows()             // rows of Vᵀ
+svd.work()               // SVD.Pool for reuse
+```
+
+### Example
+
+```java
+double[] A = {1,2,3, 4,5,6};  // 2×3
+SVD svd = Decomposer.svd(A, 2, 3);
+double[] s = svd.singularValues();
+int rank = svd.rank();
+double[] x = svd.solve(b, null);  // pseudoinverse
+```
+
+
+## 20. Cholesky / LDLᵀ Decomposition
+
+`com.curioloop.numopt4j.linalg.mat.Cholesky`
+
+Performs Cholesky decomposition (A = LLᵀ or A = UᵀU) for symmetric positive-definite matrices,
+or pivoted LDLᵀ decomposition for indefinite symmetric matrices.
+
+### Options
+
+```java
+Cholesky.Opts.LOWER     // use lower triangle (default)
+Cholesky.Opts.UPPER     // use upper triangle
+Cholesky.Opts.PIVOTING  // use pivoted LDLᵀ instead of standard Cholesky
+```
+
+### Factory Methods
+
+```java
+Decomposer.cholesky(A, n)                              // standard Cholesky, lower triangle
+Decomposer.cholesky(A, n, Cholesky.Opts.UPPER)         // upper triangle
+Decomposer.cholesky(A, n, Cholesky.Opts.PIVOTING)      // LDLᵀ
+Decomposer.cholesky(A, n, ws)                          // with workspace reuse
+Cholesky.Pool ws = Cholesky.workspace(n)
+Cholesky.Pool ws = Cholesky.workspace(n, pivoting)
+```
+
+### Result Methods
+
+```java
+ch.ok()
+ch.toL()                 // n×n Cholesky factor L (or L from LDLᵀ)
+ch.toD()                 // n×n block-diagonal D (LDLᵀ only)
+ch.solve(b, x)           // solve Ax = b
+ch.inverse(Ainv)         // compute A⁻¹ (Cholesky only)
+ch.determinant()         // det(A)
+ch.logDet()              // log|det(A)|
+ch.cond()                // condition number
+ch.piv()                 // int[] pivot indices (LDLᵀ only)
+ch.isPivoting()
+ch.work()                // Cholesky.Pool for reuse
+```
+
+### Example
+
+```java
+// Symmetric positive-definite solve
+double[] A = {4,2, 2,3};  // 2×2 SPD
+Cholesky ch = Decomposer.cholesky(A, 2);
+double[] x = ch.solve(new double[]{2, 1}, null);
+double logdet = ch.logDet();
+
+// Indefinite symmetric (LDLᵀ)
+Cholesky ldl = Decomposer.cholesky(A, n, Cholesky.Opts.PIVOTING);
+ldl.solve(b, x);
+```
+
+
+## 21. Schur Decomposition
+
+`com.curioloop.numopt4j.linalg.mat.Schur`
+
+Performs real Schur decomposition: A = Z·T·Zᵀ, where T is quasi-upper-triangular (real Schur form)
+and Z is orthogonal. Also provides Lyapunov equation solvers.
+
+### Options
+
+```java
+Schur.Opts.WANT_Z       // compute orthogonal matrix Z (default: not computed)
+Schur.Opts.SORT_LHP     // sort eigenvalues: left half plane (Re(λ) < 0)
+Schur.Opts.SORT_RHP     // sort eigenvalues: right half plane (Re(λ) >= 0)
+Schur.Opts.SORT_IUC     // sort eigenvalues: inside unit circle (|λ| <= 1)
+Schur.Opts.SORT_OUC     // sort eigenvalues: outside unit circle (|λ| > 1)
+```
+
+### Factory Methods
+
+```java
+Decomposer.schur(A, n)                              // no Z, no sorting
+Decomposer.schur(A, n, Schur.Opts.WANT_Z)           // with Z
+Decomposer.schur(A, n, Schur.Opts.WANT_Z, Schur.Opts.SORT_LHP)  // with Z, sort stable first
+Decomposer.schur(A, n, ws)                          // with workspace reuse
+Schur.Pool ws = Schur.workspace(n)
+```
+
+### Result Methods
+
+```java
+sc.ok()
+sc.toT()                 // n×n quasi-upper-triangular Schur form T
+sc.toZ()                 // n×n orthogonal matrix Z (null if WITHOUT_Z)
+sc.toS()                 // n×1 complex eigenvalue matrix (interleaved re,im)
+sc.eigenvalues()         // double[] real parts of eigenvalues
+sc.eigenvaluesImag()     // double[] imaginary parts
+sc.sdim()                // number of selected eigenvalues (after sorting)
+sc.isStable()            // all Re(λ) < 0
+sc.isDiscreteStable()    // all |λ| <= 1
+sc.invariantSubspace()   // n×sdim matrix of selected invariant subspace
+sc.unstableSubspace()    // n×(n-sdim) matrix of unselected subspace
+sc.reorder(sort)         // reorder eigenvalues in place
+sc.lyapunov(Q)                   // solve AX + XAᵀ = Q (overwrites Q with X)
+sc.lyapunov(Q, sign)             // solve AX + XAᵀ = sign*Q
+sc.discreteLyapunov(A, Q)        // solve AXAᵀ - X = Q (overwrites Q with X)
+sc.cond()
+sc.work()                // Schur.Pool for reuse
+```
+
+### Example
+
+```java
+// Stability analysis
+Schur sc = Decomposer.schur(A.clone(), n, Schur.Opts.WANT_Z, Schur.Opts.SORT_LHP);
+boolean stable = sc.isStable();
+double[] stableSubspace = sc.invariantSubspace();  // columns span stable subspace
+
+// Continuous Lyapunov: AX + XAᵀ = Q (requires WANT_Z)
+Schur sc2 = Decomposer.schur(A.clone(), n, Schur.Opts.WANT_Z);
+sc2.lyapunov(Q);  // Q overwritten with solution X
+
+// Discrete Lyapunov: AXAᵀ - X = Q (requires WANT_Z)
+sc2.discreteLyapunov(A.clone(), Q);
+```
+
+
+## 22. Eigen Decomposition
+
+`com.curioloop.numopt4j.linalg.mat.Eigen`
+
+Performs eigenvalue decomposition of a real matrix. Supports both symmetric (dsyev) and
+general non-symmetric (dgeev) paths in a single class.
+
+### Options
+
+```java
+Eigen.Opts.SYMMETRIC_LOWER  // symmetric matrix, use lower triangle (dsyev)
+Eigen.Opts.SYMMETRIC_UPPER  // symmetric matrix, use upper triangle (dsyev)
+Eigen.Opts.WANT_LEFT         // compute left eigenvectors (general only)
+Eigen.Opts.WANT_RIGHT        // compute right eigenvectors (general only)
+```
+
+Default (no opts): general non-symmetric, eigenvalues only (no eigenvectors).
+For symmetric input, eigenvectors are computed only when `WANT_RIGHT` is passed.
+
+### Factory Methods
+
+```java
+Decomposer.eigen(A, n)                                    // general, eigenvalues only
+Decomposer.eigen(A, n, Eigen.Opts.WANT_RIGHT)             // general, right eigenvectors
+Decomposer.eigen(A, n, Eigen.Opts.SYMMETRIC_LOWER)        // symmetric, eigenvalues only
+Decomposer.eigen(A, n, Eigen.Opts.SYMMETRIC_LOWER, Eigen.Opts.WANT_RIGHT)  // symmetric + vectors
+Decomposer.eigen(A, n, Eigen.Opts.WANT_LEFT, Eigen.Opts.WANT_RIGHT)  // both vectors
+Decomposer.eigen(A, n, ws)                                // with workspace reuse
+Eigen.Pool ws = Eigen.workspace(n)
+Eigen.Pool ws = Eigen.workspace(n, symmetric, kind)
+```
+
+### Result Methods
+
+```java
+eg.ok()
+eg.eigenvalues()         // double[] real parts (ascending for symmetric)
+eg.eigenvaluesImag()     // double[] imaginary parts (null for symmetric)
+eg.toV()                 // n×n right eigenvector matrix
+eg.toS()                 // n×1 eigenvalue matrix (real for symmetric, complex for general)
+eg.eigenvector(j)        // double[2n] interleaved (re,im) for j-th eigenvector
+eg.eigenvectors()        // double[n*n] raw right eigenvector array
+eg.leftEigenvectors()    // double[n*n] raw left eigenvector array (if WANT_LEFT)
+eg.isSymmetric()
+eg.cond()
+eg.work()                // Eigen.Pool for reuse
+```
+
+### Pool Fields
+
+```java
+pool.wr    // double[] real parts of eigenvalues (length n)
+pool.wi    // double[] imaginary parts (null for symmetric)
+pool.vr    // double[n*n] right eigenvectors (null if not requested)
+pool.vl    // double[n*n] left eigenvectors (null if not requested)
+```
+
+### Example
+
+```java
+// Symmetric eigenvalue decomposition
+double[] A = {2,1, 1,2};  // 2×2 symmetric
+Eigen es = Decomposer.eigen(A, 2, Eigen.Opts.SYMMETRIC_LOWER);
+double[] eigenvalues = es.eigenvalues();  // [1.0, 3.0]
+Matrix V = es.toV();                      // eigenvector columns
+
+// General eigenvalue decomposition
+Eigen eg = Decomposer.eigen(A, n);
+double[] wr = eg.eigenvalues();
+double[] wi = eg.eigenvaluesImag();
+Matrix toS = eg.toS();  // n×1 complex matrix
+```
+
+
+## 23. GEVD — Generalized Symmetric-Definite Eigenvalue Decomposition
+
+`com.curioloop.numopt4j.linalg.mat.GEVD`
+
+Solves generalized eigenproblems where A is symmetric and B is symmetric positive-definite.
+Algorithm: Cholesky(B) → dsygst → dsyev → back-transform.
+
+### Problem Types
+
+| Type | Problem |
+|---|---|
+| 1 (default) | A·x = λ·B·x |
+| 2 | A·B·x = λ·x |
+| 3 | B·A·x = λ·x |
+
+### Options
+
+```java
+GEVD.Opts.LOWER   // use lower triangle (default)
+GEVD.Opts.UPPER   // use upper triangle
+GEVD.Opts.TYPE1   // A·x = λ·B·x (default)
+GEVD.Opts.TYPE2   // A·B·x = λ·x
+GEVD.Opts.TYPE3   // B·A·x = λ·x
+GEVD.Opts.WANT_V  // compute eigenvectors (default: eigenvalues only)
+```
+
+### Factory Methods
+
+```java
+Decomposer.gevd(A, B, n)                                   // type 1, lower triangle, eigenvalues only
+Decomposer.gevd(A, B, n, GEVD.Opts.WANT_V)                 // with eigenvectors
+Decomposer.gevd(A, B, n, GEVD.Opts.UPPER, GEVD.Opts.TYPE2)
+Decomposer.gevd(A, B, n, ws)                               // with workspace reuse
+GEVD.Pool ws = (GEVD.Pool) GEVD.workspace(n)
+```
+
+### Result Methods
+
+```java
+gv.ok()
+gv.eigenvalues()         // double[] (real, ascending order)
+gv.toS()                 // n×1 real eigenvalue matrix
+gv.toV()                 // n×n eigenvector matrix (column j = j-th eigenvector)
+gv.cond()                // condition number based on eigenvalues
+gv.type()                // problem type (1, 2, or 3)
+gv.work()                // GEVD.Pool for reuse
+```
+
+### Notes
+
+- A is overwritten with eigenvectors; B is overwritten with the Cholesky factor.
+- Returns `ok() == false` if B is not positive-definite.
+- Eigenvalues are always real (symmetric problem).
+
+### Example
+
+```java
+// Solve A·x = λ·B·x
+double[] A = {2,1, 1,3};  // symmetric
+double[] B = {1,0, 0,2};  // symmetric positive-definite
+GEVD gv = Decomposer.gevd(A, B, 2);
+double[] lambda = gv.eigenvalues();
+Matrix V = gv.toV();  // eigenvectors as columns
+```
+
+
+## 24. GGEVD — Generalized Non-Symmetric Eigenvalue Decomposition
+
+`com.curioloop.numopt4j.linalg.mat.GGEVD`
+
+Solves A·x = λ·B·x where A and B are general (non-symmetric) real matrices.
+Eigenvalues are represented as (alphar[i] + i·alphai[i]) / beta[i] to handle infinite eigenvalues.
+Algorithm: dgebal → dgehrd → QR(B) → dgghrd → dhgeqz → dtgevc → dgebak.
+
+### Options
+
+```java
+GGEVD.Opts.WANT_VL   // compute left eigenvectors
+GGEVD.Opts.WANT_VR   // compute right eigenvectors
+```
+
+Default (no opts): eigenvalues only (no eigenvectors).
+
+### Factory Methods
+
+```java
+Decomposer.ggevd(A, B, n)                                  // eigenvalues only
+Decomposer.ggevd(A, B, n, GGEVD.Opts.WANT_VR)             // right eigenvectors only
+Decomposer.ggevd(A, B, n, GGEVD.Opts.WANT_VL, GGEVD.Opts.WANT_VR)  // both
+Decomposer.ggevd(A, B, n, ws)                              // with workspace reuse
+GGEVD.Pool ws = GGEVD.workspace(n)
+```
+
+### Result Methods
+
+```java
+gg.ok()
+gg.alphar()              // double[] real parts of alpha (numerators)
+gg.alphai()              // double[] imaginary parts of alpha
+gg.beta()                // double[] beta (denominators); beta[i]=0 → infinite eigenvalue
+gg.eigenvalues()         // double[2n] interleaved (re,im) pairs; Inf for infinite eigenvalues
+gg.toS()                 // n×1 complex eigenvalue matrix
+gg.toVR()                // n×n right eigenvector matrix (null if not requested)
+gg.toVL()                // n×n left eigenvector matrix (null if not requested)
+gg.work()                // GGEVD.Pool for reuse
+```
+
+### Pool Fields
+
+```java
+pool.alphar   // double[] real parts of alpha (length n)
+pool.alphai   // double[] imaginary parts of alpha (length n)
+pool.beta     // double[] denominators (length n)
+pool.VL       // double[n*n] left eigenvectors (null if not requested)
+pool.VR       // double[n*n] right eigenvectors (null if not requested)
+```
+
+### Eigenvector Storage Convention
+
+For a real eigenvalue at index j: column j of VR/VL holds the eigenvector.
+For a complex conjugate pair at indices j, j+1:
+- column j = real part of eigenvector
+- column j+1 = imaginary part of eigenvector
+
+### Example
+
+```java
+double[] A = {1,2, 3,4};
+double[] B = {2,1, 1,3};
+GGEVD gg = Decomposer.ggevd(A, B, 2);
+double[] ev = gg.eigenvalues();  // [re0, im0, re1, im1]
+Matrix VR = gg.toVR();
+
+// Access raw alpha/beta
+double[] ar = gg.alphar(), ai = gg.alphai(), b = gg.beta();
+for (int i = 0; i < n; i++) {
+    double re = b[i] != 0 ? ar[i]/b[i] : Double.POSITIVE_INFINITY;
+    double im = b[i] != 0 ? ai[i]/b[i] : 0;
+}
+```
+
+
+## 25. GSVD — Generalized Singular Value Decomposition
+
+`com.curioloop.numopt4j.linalg.mat.GSVD`
+
+Computes the GSVD of A (m×n) and B (p×n):
+- A = U · diag(alpha) · R
+- B = V · diag(beta)  · R
+
+where U (m×m) and V (p×p) are orthogonal, R is upper triangular, and
+generalized singular values are sigma[i] = alpha[i] / beta[i].
+
+### Options
+
+```java
+GSVD.Opts.WANT_U   // compute U
+GSVD.Opts.WANT_V   // compute V
+GSVD.Opts.WANT_Q   // compute orthogonal matrix Q
+```
+
+Default (no opts): compute U, V, and Q.
+
+### Factory Methods
+
+```java
+Decomposer.gsvd(A, m, n, B, p)                             // all matrices
+Decomposer.gsvd(A, m, n, B, p, GSVD.Opts.WANT_U)          // U only
+Decomposer.gsvd(A, m, n, B, p, ws)                         // with workspace reuse
+GSVD.Pool ws = GSVD.workspace(m, p, n)
+```
+
+### Result Methods
+
+```java
+gs.ok()
+gs.sigma()               // double[] generalized singular values (length k+l)
+gs.alpha()               // double[] alpha values (length n)
+gs.beta()                // double[] beta values (length n)
+gs.toS()                 // (k+l)×1 matrix of generalized singular values
+gs.toU()                 // m×m orthogonal matrix U
+gs.toV()                 // p×p orthogonal matrix V
+gs.toQ()                 // n×n orthogonal matrix Q
+gs.k()                   // rank parameter k
+gs.l()                   // rank parameter l
+gs.rank()                // k + l
+gs.cond()                // condition number
+gs.work()                // GSVD.Pool for reuse
+```
+
+### Example
+
+```java
+double[] A = {1,2,3, 4,5,6};  // 2×3
+double[] B = {7,8,9};          // 1×3
+GSVD gs = Decomposer.gsvd(A, 2, 3, B, 1);
+double[] sigma = gs.sigma();
+Matrix U = gs.toU();
+Matrix V = gs.toV();
 ```

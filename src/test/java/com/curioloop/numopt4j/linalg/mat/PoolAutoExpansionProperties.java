@@ -80,7 +80,7 @@ class PoolAutoExpansionProperties {
 
         // Verify pool is too small for big dimensions
         int bigMinMN = Math.min(bigM, bigN);
-        boolean sOk  = pool.S  != null && pool.S.length  >= bigMinMN;
+        boolean sOk  = pool.s  != null && pool.s.length  >= bigMinMN;
         boolean uvOk = pool.UV != null && pool.UV.length >= Math.max(bigM * bigMinMN, bigMinMN * bigN);
         assertFalse(sOk && uvOk,
                 "Pool initialized with small dims should not be compatible with big dims");

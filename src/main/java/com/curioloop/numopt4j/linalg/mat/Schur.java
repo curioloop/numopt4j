@@ -104,6 +104,20 @@ public final class Schur implements Decomposition {
         }
     }
 
+    /** Configuration options for Schur decomposition. */
+    public enum Opts {
+        /** Compute the orthogonal matrix Z. Default: not computed. */
+        WANT_Z,
+        /** Sort eigenvalues: left half plane (real part &lt; 0). */
+        SORT_LHP,
+        /** Sort eigenvalues: right half plane (real part &ge; 0). */
+        SORT_RHP,
+        /** Sort eigenvalues: inside unit circle (|λ| &le; 1). */
+        SORT_IUC,
+        /** Sort eigenvalues: outside unit circle (|λ| &gt; 1). */
+        SORT_OUC
+    }
+
     /**
      * Left Half Plane selector: selects eigenvalues with negative real part (wr &lt; 0).
      * Used for continuous-time system stability analysis.
@@ -136,17 +150,34 @@ public final class Schur implements Decomposition {
     private Schur() {}
 
     public static Pool workspace(int n) {
-        int minWork = max(10, 3 * n);
-        minWork = max(minWork, n + 10);
-        int maxWork = 2 * n + n * 64;
         Pool pool = new Pool();
-        pool.ensureWork(max(minWork, maxWork));
+        // Query dgees for optimal work size
+        double[] tmp = new double[1];
+        BLAS.dgees('V', 'N', null, n, null, n, null, null, null, n, tmp, 0, -1, null);
+        pool.ensureWork((int) tmp[0]);
         pool.ensureBwork(n);
         return pool;
     }
 
+    /** Opts-based entry point. */
+    public static Schur decompose(double[] A, int n, Workspace ws, Opts... opts) {
+        boolean computeZ = contains(opts, Opts.WANT_Z);
+        Select sort = null;
+        if (contains(opts, Opts.SORT_LHP))      sort = LHP;
+        else if (contains(opts, Opts.SORT_RHP)) sort = RHP;
+        else if (contains(opts, Opts.SORT_IUC)) sort = IUC;
+        else if (contains(opts, Opts.SORT_OUC)) sort = OUC;
+        return decompose(A, n, computeZ, sort, ws);
+    }
+
+    private static boolean contains(Opts[] opts, Opts target) {
+        if (opts == null) return false;
+        for (Opts o : opts) if (o == target) return true;
+        return false;
+    }
+
     public static Schur decompose(double[] A, int n) {
-        return decompose(A, n, true, null, null);
+        return decompose(A, n, false, null, null);
     }
 
     public static Schur decompose(double[] A, int n, boolean computeZ) {
@@ -189,12 +220,14 @@ public final class Schur implements Decomposition {
         this.pool = (Pool) ws;
 
         Pool pool = (Pool) ws;
-        int wsSize = max(max(10, 3 * n), max(n + 10, 2 * n + n * 64));
-        pool.ensureWork(wsSize);
-        pool.ensureBwork(n);
+        char sortChar = (sort != null) ? 'S' : 'N';
+        // Query dgees for optimal work size
+        double[] tmp = new double[1];
+        BLAS.dgees(computeZ ? 'V' : 'N', sortChar, sort, n, null, n, null, null, null, n, tmp, 0, -1, null);
+        pool.ensureWork((int) tmp[0]);
+        if (sort != null) pool.ensureBwork(n);
         pool.ensure(n, computeZ);
 
-        char sortChar = (sort != null) ? 'S' : 'N';
         int info = BLAS.dgees(computeZ ? 'V' : 'N', sortChar, sort, n, A, n, pool.wr, pool.wi, pool.Z, n, pool.work(), 0, pool.work().length, pool.bwork());
         this.sdim = (int) pool.work()[0];
         this.ok = (info == 0);
@@ -332,7 +365,7 @@ public final class Schur implements Decomposition {
      * @return true on success
      * @throws IllegalStateException if decomposition was not completed or Z is not available
      */
-    public boolean solveContinuousLyapunov(double[] Q, double sign) {
+    public boolean lyapunov(double[] Q, double sign) {
         if (!ok) {
             throw new IllegalStateException("Schur decomposition not completed or failed");
         }
@@ -369,14 +402,14 @@ public final class Schur implements Decomposition {
     /**
      * Solves the continuous Lyapunov equation: AX + XA^T = Q (Bartels-Stewart algorithm).
      *
-     * <p>Convenience overload equivalent to {@code solveContinuousLyapunov(Q, 1.0)}.</p>
+     * <p>Convenience overload equivalent to {@code lyapunov(Q, 1.0)}.</p>
      *
      * @param Q n×n right-hand side (row-major, overwritten with solution X)
      * @return true on success
      * @throws IllegalStateException if decomposition was not completed or Z is not available
      */
-    public boolean solveContinuousLyapunov(double[] Q) {
-        return solveContinuousLyapunov(Q, 1.0);
+    public boolean lyapunov(double[] Q) {
+        return lyapunov(Q, 1.0);
     }
 
     /**
@@ -397,7 +430,7 @@ public final class Schur implements Decomposition {
      * @return true on success; false if LU factorization is singular
      * @throws IllegalStateException if this Schur decomposition was not completed or Z is not available
      */
-    public boolean solveDiscreteLyapunov(double[] A, double[] Q) {
+    public boolean discreteLyapunov(double[] A, double[] Q) {
         if (!ok) {
             throw new IllegalStateException("Schur decomposition not completed or failed");
         }
@@ -444,11 +477,11 @@ public final class Schur implements Decomposition {
         BLAS.dgetrs(BLAS.Transpose.NoTrans, n, n, at, 0, n, ipiv, 0, A, 0, n);
         transposeSquare(A, n);
 
-        // Phase 3: Schur decompose B (stored in A), pass pool so solveContinuousLyapunov
+        // Phase 3: Schur decompose B (stored in A), pass pool so lyapunov()
         // reuses pool.lyap as tmp buffer (zero extra allocation)
         Schur bSchur = Schur.decompose(A, n, true, null, pool);
         if (!bSchur.ok()) return false;
-        return bSchur.solveContinuousLyapunov(Q, 2.0);
+        return bSchur.lyapunov(Q, 2.0);
     }
 
     /** In-place transpose of an n×n square matrix (row-major). */
@@ -463,60 +496,28 @@ public final class Schur implements Decomposition {
     }
 
     @Override
-    public Workspace work() { return pool; }
+    public Pool work() { return pool; }
 
-    @Override
-    public int size(Part part) {
-        if (!ok) throw new IllegalStateException("Decomposition failed");
-        if (part == Part.S) return n * 2; // interleaved [wr0,wi0,wr1,wi1,...]
-        return rows(part) * cols(part);
-    }
-
-    @Override
-    public Matrix extract(Part part) {
-        return extract(part, null);
-    }
-
-    @Override
-    public Matrix extract(Part part, double[] dst) {
+    /** Returns the quasi-upper-triangular Schur form T as an n×n matrix. */
+    public Matrix toT() {
         if (!ok) return null;
-        switch (part) {
-            case T:
-                return new Matrix(n, n, false, T);
-            case Z:
-                return pool.Z == null ? null : new Matrix(n, n, false, pool.Z);
-            case S: {
-                if (pool.wr == null) return null;
-                // Interleaved complex: [wr0,wi0,wr1,wi1,...]
-                int needed = n * 2;
-                if (dst == null || dst.length < needed) dst = new double[needed];
-                for (int i = 0; i < n; i++) {
-                    dst[i * 2]     = pool.wr[i];
-                    dst[i * 2 + 1] = pool.wi != null ? pool.wi[i] : 0.0;
-                }
-                return new Matrix(n, 1, true, dst);
-            }
-            default:
-                return null;
-        }
+        return new Matrix(n, n, false, T);
     }
 
-    @Override
-    public int rows(Part part) {
-        if (!ok) throw new IllegalStateException("Decomposition failed");
-        switch (part) {
-            case T: case Z: case S: return n;
-            default: throw new UnsupportedOperationException("Part " + part + " not supported");
-        }
+    /** Returns the orthogonal matrix Z as an n×n matrix, or null if not computed. */
+    public Matrix toZ() {
+        if (!ok || pool.Z == null) return null;
+        return new Matrix(n, n, false, pool.Z);
     }
 
-    @Override
-    public int cols(Part part) {
-        if (!ok) throw new IllegalStateException("Decomposition failed");
-        switch (part) {
-            case T: case Z: return n;
-            case S: return 1;
-            default: throw new UnsupportedOperationException("Part " + part + " not supported");
+    /** Returns eigenvalues as an n×1 complex matrix (interleaved [wr0,wi0,...]), or null if failed. */
+    public Matrix toS() {
+        if (!ok || pool.wr == null) return null;
+        double[] dst = new double[n * 2];
+        for (int i = 0; i < n; i++) {
+            dst[i * 2]     = pool.wr[i];
+            dst[i * 2 + 1] = pool.wi != null ? pool.wi[i] : 0.0;
         }
+        return new Matrix(n, 1, true, dst);
     }
 }

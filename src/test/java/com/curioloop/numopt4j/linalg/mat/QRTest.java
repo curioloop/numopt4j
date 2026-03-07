@@ -3,7 +3,6 @@
  */
 package com.curioloop.numopt4j.linalg.mat;
 
-import com.curioloop.numopt4j.linalg.Decomposition.Part;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -77,7 +76,7 @@ class QRTest {
         QR qr = QR.decompose(A, m, n);
         assertThat(qr.ok()).isTrue();
 
-        double[] R = qr.extract(Part.R).data;
+        double[] R = qr.toR().data;
 
         for (int i = 0; i < n; i++) {
             for (int j = 0; j < i; j++) {
@@ -155,9 +154,9 @@ class QRTest {
             QR qr = QR.decompose(A, n, n);
             assertThat(qr.ok()).isTrue();
 
-            double[] R = qr.extract(Part.R).data;
+            double[] R = qr.toR().data;
 
-            double[] Q = qr.extract(Part.Q).data;
+            double[] Q = qr.toQ().data;
 
             double[] QR = new double[n * n];
             for (int i = 0; i < n; i++) {
@@ -188,7 +187,7 @@ class QRTest {
             QR qr = QR.decompose(A, n, n);
             assertThat(qr.ok()).isTrue();
 
-            double[] Q = qr.extract(Part.Q).data;
+            double[] Q = qr.toQ().data;
 
             double[] QtQ = new double[n * n];
             for (int i = 0; i < n; i++) {

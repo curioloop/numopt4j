@@ -7,7 +7,6 @@ package com.curioloop.numopt4j.linalg.blas;
  * LAPACK DSTERF: Computes all eigenvalues of a symmetric tridiagonal matrix
  * using the Pal-Walker-Kahan variant of the QL or QR algorithm.
  * 
- * Based on gonum implementation.
  */
 interface Dsterf {
 

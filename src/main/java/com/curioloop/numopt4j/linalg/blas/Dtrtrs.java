@@ -2,7 +2,6 @@
  * Copyright (c) 2025 curioloop. All rights reserved.
  *
  * LAPACK-style triangular solve.
- * Reference: gonum/lapack/gonum (Go implementation of LAPACK)
  */
 package com.curioloop.numopt4j.linalg.blas;
 

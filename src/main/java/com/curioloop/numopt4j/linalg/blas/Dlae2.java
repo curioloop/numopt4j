@@ -8,7 +8,6 @@ package com.curioloop.numopt4j.linalg.blas;
  * Returns the eigenvalue with larger absolute value as rt1, smaller as rt2.
  * Also provides DLAEV2 which additionally computes the eigenvectors.
  *
- * <p>Reference: gonum/lapack/gonum/dlae2.go</p>
  */
 interface Dlae2 {
 

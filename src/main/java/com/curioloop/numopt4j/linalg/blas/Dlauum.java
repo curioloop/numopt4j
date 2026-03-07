@@ -13,7 +13,6 @@ import static java.lang.Math.*;
  * algorithm (BLOCK_SIZE) that calls the unblocked {@code dlauu2} for small blocks.</p>
  *
  * <p>Corresponds to LAPACK routine DLAUUM.
- * Go reference: gonum/lapack/gonum/dlauum.go</p>
  */
 interface Dlauum {
 

@@ -4,6 +4,7 @@
 package com.curioloop.numopt4j.linalg.mat;
 
 import com.curioloop.numopt4j.linalg.Decomposition;
+import com.curioloop.numopt4j.linalg.blas.BLAS;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.*;
@@ -19,10 +20,10 @@ class LDLTest {
             2.0, 3.0
         };
         
-        Cholesky ldl = Cholesky.decompose(A, 2, 'L', true, null);
+        Cholesky ldl = Cholesky.decompose(A, 2, BLAS.Uplo.Lower, true, null);
         
         assertThat(ldl.ok()).isTrue();
-        assertThat(ldl.uplo()).isEqualTo('L');
+        assertThat(ldl.uplo()).isEqualTo(BLAS.Uplo.Lower);
         assertThat(ldl.isPivoting()).isTrue();
     }
 
@@ -33,10 +34,10 @@ class LDLTest {
             0.0, 3.0
         };
         
-        Cholesky ldl = Cholesky.decompose(A, 2, 'U', true, null);
+        Cholesky ldl = Cholesky.decompose(A, 2, BLAS.Uplo.Upper, true, null);
         
         assertThat(ldl.ok()).isTrue();
-        assertThat(ldl.uplo()).isEqualTo('U');
+        assertThat(ldl.uplo()).isEqualTo(BLAS.Uplo.Upper);
         assertThat(ldl.isPivoting()).isTrue();
     }
 
@@ -47,10 +48,10 @@ class LDLTest {
             0.0, -1.0
         };
         
-        Cholesky ldl = Cholesky.decompose(A, 2, 'L', true, null);
+        Cholesky ldl = Cholesky.decompose(A, 2, BLAS.Uplo.Lower, true, null);
         
         assertThat(ldl.ok()).isTrue();
-        assertThat(ldl.extract(Decomposition.Part.D)).isNotNull();
+        assertThat(ldl.toD()).isNotNull();
     }
 
     @Test
@@ -60,7 +61,7 @@ class LDLTest {
             2.0, 1.0
         };
         
-        Cholesky ldl = Cholesky.decompose(A, 2, 'L', true, null);
+        Cholesky ldl = Cholesky.decompose(A, 2, BLAS.Uplo.Lower, true, null);
         
         assertThat(ldl.ok()).isTrue();
         assertThat(ldl.piv()).isNotNull();
@@ -74,10 +75,10 @@ class LDLTest {
             0.0, 1.0
         };
         
-        Cholesky ldl = Cholesky.decompose(A, 2, 'L', true, null);
+        Cholesky ldl = Cholesky.decompose(A, 2, BLAS.Uplo.Lower, true, null);
         
         assertThat(ldl.ok()).isTrue();
-        double[] D = ldl.extract(Decomposition.Part.D).data;
+        double[] D = ldl.toD().data;
         assertThat(D[0]).isCloseTo(1.0, offset(EPSILON));
         assertThat(D[3]).isCloseTo(1.0, offset(EPSILON));
     }
@@ -89,7 +90,7 @@ class LDLTest {
             2.0, 1.0
         };
         
-        Cholesky ldl = Cholesky.decompose(A, 2, 'L', true, null);
+        Cholesky ldl = Cholesky.decompose(A, 2, BLAS.Uplo.Lower, true, null);
         
         assertThat(ldl.ok()).isTrue();
         
@@ -104,11 +105,11 @@ class LDLTest {
             2.0, 3.0
         };
         
-        Cholesky ldl = Cholesky.decompose(A, 2, 'L', true, null);
+        Cholesky ldl = Cholesky.decompose(A, 2, BLAS.Uplo.Lower, true, null);
         
         assertThat(ldl.ok()).isTrue();
         
-        double[] D = ldl.extract(Decomposition.Part.D).data;
+        double[] D = ldl.toD().data;
         assertThat(D[0]).isGreaterThan(0);
         assertThat(D[3]).isGreaterThan(0);
     }
@@ -121,7 +122,7 @@ class LDLTest {
             1.0, 3.0, 6.0
         };
         
-        Cholesky ldl = Cholesky.decompose(A, 3, 'L', true, null);
+        Cholesky ldl = Cholesky.decompose(A, 3, BLAS.Uplo.Lower, true, null);
         
         assertThat(ldl.ok()).isTrue();
         assertThat(ldl.n()).isEqualTo(3);
@@ -137,7 +138,7 @@ class LDLTest {
         double[] b = {3.0, 1.0};
         double[] b_orig = b.clone();
         
-        Cholesky ldl = Cholesky.decompose(A, 2, 'L', true, null);
+        Cholesky ldl = Cholesky.decompose(A, 2, BLAS.Uplo.Lower, true, null);
         assertThat(ldl.ok()).isTrue();
         
         double[] x = ldl.solve(b, null);
@@ -159,7 +160,7 @@ class LDLTest {
         double[] b = {3.0, 1.0};
         double[] b_orig = b.clone();
         
-        Cholesky ldl = Cholesky.decompose(A, 2, 'U', true, null);
+        Cholesky ldl = Cholesky.decompose(A, 2, BLAS.Uplo.Upper, true, null);
         assertThat(ldl.ok()).isTrue();
         
         double[] x = ldl.solve(b, null);
@@ -178,7 +179,7 @@ class LDLTest {
             2.0, 1.0
         };
         
-        Cholesky ldl = Cholesky.decompose(A, 2, 'L', true, null);
+        Cholesky ldl = Cholesky.decompose(A, 2, BLAS.Uplo.Lower, true, null);
         assertThat(ldl.ok()).isTrue();
         
         double det = ldl.determinant();
@@ -190,11 +191,11 @@ class LDLTest {
     @Test
     void testWorkspaceReuse() {
         int n = 5;
-        Decomposition.Workspace ws = Cholesky.workspace(n, true);
+        Cholesky.Pool ws = (Cholesky.Pool) Cholesky.workspace(n, true);
         
         for (int i = 0; i < 3; i++) {
             double[] A = createRandomSymmetric(n);
-            Cholesky ldl = Cholesky.decompose(A, n, 'L', true, ws);
+            Cholesky ldl = Cholesky.decompose(A, n, BLAS.Uplo.Lower, true, ws);
             assertThat(ldl.ok()).isTrue();
         }
     }
@@ -209,8 +210,8 @@ class LDLTest {
         double[] A1 = A.clone();
         double[] A2 = A.clone();
         
-        Cholesky chol = Cholesky.decompose(A1, 2, 'L', false, null);
-        Cholesky ldl = Cholesky.decompose(A2, 2, 'L', true, null);
+        Cholesky chol = Cholesky.decompose(A1, 2, BLAS.Uplo.Lower, false, null);
+        Cholesky ldl = Cholesky.decompose(A2, 2, BLAS.Uplo.Lower, true, null);
         
         assertThat(chol.ok()).isTrue();
         assertThat(ldl.ok()).isTrue();

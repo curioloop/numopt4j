@@ -49,41 +49,6 @@ public interface Decomposition {
 
     Workspace work();
 
-    Matrix extract(Part part);
-
-    Matrix extract(Part part, double[] dst);
-
-    int rows(Part part);
-
-    int cols(Part part);
-
-    default int size(Part part) {
-        return rows(part) * cols(part);
-    }
-
-    enum Part {
-        /** Lower triangular matrix */
-        L,
-        /** Upper triangular matrix */
-        U,
-        /** Orthogonal matrix from QR decomposition */
-        Q,
-        /** Upper triangular matrix from QR decomposition */
-        R,
-        /** Diagonal matrix */
-        D,
-        /** Permutation matrix */
-        P,
-        /** Singular values or eigenvalues */
-        S,
-        /** Right singular vectors matrix */
-        V,
-        /** Schur form matrix */
-        T,
-        /** Transformation matrix */
-        Z
-    }
-
     class Workspace {
 
         protected double[] work;

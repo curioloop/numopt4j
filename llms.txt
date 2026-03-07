@@ -12,6 +12,7 @@ numopt4j is a Java numerical optimization library supporting unconstrained optim
 - Scalar root-finding → Brentq (`RootFinder.brentq()`)
 - Multivariate root-finding with Jacobian → HYBR (`RootFinder.hybr()`)
 - Multivariate root-finding Jacobian-free → Broyden (`RootFinder.broyden()`)
+- Matrix decompositions → `Decomposer` facade (LU, QR, LQ, SVD, Cholesky, Schur, Eigen, GEVD, GGEVD, GSVD)
 
 ## Quick Start
 
@@ -199,6 +200,106 @@ result.getEvaluations()     // function evaluation count
 result.getSummary()         // single-line summary string
 result.getErrorMessage()    // reason + suggestion on failure, null otherwise
 result.toString()           // multi-line structured diagnostic output
+```
+
+## Decomposer (Matrix Decompositions)
+
+`com.curioloop.numopt4j.linalg.Decomposer`
+
+Unified facade for all matrix decompositions. All methods accept an optional `Pool` for workspace reuse and optional `Opts` enums. Input matrices are overwritten in place (row-major `double[]`).
+
+### Decomposition Selection
+
+| Problem | Class | Entry point |
+|---|---|---|
+| Solve Ax=b, inverse, determinant | `LU` | `Decomposer.lu(A, n)` |
+| Least squares, rank, solve overdetermined | `QR` | `Decomposer.qr(A, m, n)` |
+| Minimum-norm solution (m≤n) | `LQ` | `Decomposer.lq(A, m, n)` |
+| Singular values, low-rank approx, pseudoinverse | `SVD` | `Decomposer.svd(A, m, n)` |
+| Symmetric positive-definite solve | `Cholesky` | `Decomposer.cholesky(A, n)` |
+| Eigenvalues of general or symmetric matrix | `Eigen` | `Decomposer.eigen(A, n)` |
+| Schur form, Lyapunov equations | `Schur` | `Decomposer.schur(A, n)` |
+| Generalized eigen, A sym + B sym pos-def | `GEVD` | `Decomposer.gevd(A, B, n)` |
+| Generalized eigen, A and B general | `GGEVD` | `Decomposer.ggevd(A, B, n)` |
+| Generalized SVD of two matrices | `GSVD` | `Decomposer.gsvd(A, m, n, B, p)` |
+
+### Quick Reference
+
+```java
+// LU — solve, inverse, determinant
+LU lu = Decomposer.lu(A, n);
+lu.solve(b, x);          // solve Ax = b
+lu.inverse(Ainv);        // compute A⁻¹
+lu.determinant();        // det(A)
+lu.cond();               // condition number
+lu.toL(); lu.toU(); lu.toP();
+
+// QR — least squares, rank-revealing
+QR qr = Decomposer.qr(A, m, n);                        // standard
+QR qrp = Decomposer.qr(A, m, n, QR.Opts.PIVOTING);     // rank-revealing
+qr.solve(b, x);          // solve square system
+qr.leastSquares(b, x);   // min‖Ax-b‖
+qr.rank();               // numerical rank (pivoting mode)
+qr.toQ(); qr.toR(); qr.toP();
+
+// SVD — singular values, pseudoinverse
+SVD svd = Decomposer.svd(A, m, n);                      // thin U and Vᵀ
+SVD svdF = Decomposer.svd(A, m, n, SVD.Opts.FULL_U, SVD.Opts.FULL_V);
+svd.singularValues();    // double[] s
+svd.solve(b, x);         // pseudoinverse solve
+svd.rank(); svd.cond();
+svd.toU(); svd.toVT();
+
+// Cholesky — symmetric positive-definite
+Cholesky ch = Decomposer.cholesky(A, n);                // standard
+Cholesky ldl = Decomposer.cholesky(A, n, Cholesky.Opts.PIVOTING); // LDLᵀ
+ch.solve(b, x);
+ch.determinant(); ch.logDet(); ch.cond();
+ch.toL(); ldl.toD();     // D only for LDLᵀ
+
+// Eigen — symmetric or general
+Eigen es = Decomposer.eigen(A, n, Eigen.Opts.SYMMETRIC_LOWER);
+Eigen eg = Decomposer.eigen(A, n);                      // general, right vectors
+Eigen el = Decomposer.eigen(A, n, Eigen.Opts.WANT_LEFT, Eigen.Opts.WANT_RIGHT);
+es.eigenvalues();        // double[] (real, ascending for symmetric)
+eg.eigenvalues();        // double[] real parts; eigenvaluesImag() for imaginary
+es.toV();                // n×n eigenvector matrix
+es.toS();                // n×1 eigenvalue matrix (complex for general)
+
+// Schur — A = Z·T·Zᵀ, Lyapunov solvers
+Schur sc = Decomposer.schur(A, n);
+Schur scLHP = Decomposer.schur(A, n, Schur.Opts.SORT_LHP); // sort stable eigenvalues first
+sc.toT(); sc.toZ(); sc.toS();
+sc.lyapunov(Q);          // AX + XAᵀ = Q
+sc.discreteLyapunov(A, Q);  // AXAᵀ - X = Q
+
+// GEVD — generalized symmetric-definite: A·x = λ·B·x
+// Requires A symmetric, B symmetric positive-definite
+GEVD gv = Decomposer.gevd(A, B, n);                     // type 1, lower triangle
+GEVD gv2 = Decomposer.gevd(A, B, n, GEVD.Opts.UPPER, GEVD.Opts.TYPE2);
+gv.eigenvalues();        // double[] (real, ascending)
+gv.toV();                // n×n eigenvector matrix
+gv.toS();                // n×1 eigenvalue matrix
+
+// GGEVD — generalized non-symmetric: A·x = λ·B·x
+// A and B are general matrices; eigenvalues may be complex
+GGEVD gg = Decomposer.ggevd(A, B, n);
+gg.alphar(); gg.alphai(); gg.beta();  // eigenvalue = (alphar+i*alphai)/beta
+gg.eigenvalues();        // double[2n] interleaved (re,im) pairs
+gg.toS();                // n×1 complex matrix
+gg.toVR(); gg.toVL();    // right/left eigenvector matrices
+
+// GSVD — generalized SVD of A (m×n) and B (p×n)
+GSVD gs = Decomposer.gsvd(A, m, n, B, p);
+gs.sigma();              // generalized singular values
+gs.toU(); gs.toV(); gs.toQ();
+gs.rank(); gs.cond();
+
+// Workspace reuse
+LU.Pool ws = Decomposer.lu(A, n).work();
+for (double[] mat : matrices) {
+    LU result = Decomposer.lu(mat, n, ws);
+}
 ```
 
 ## Documentation

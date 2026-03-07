@@ -13,7 +13,6 @@ package com.curioloop.numopt4j.linalg.blas;
  *   <li>Scaling: Apply diagonal similarity D such that D^{-1}*B*D has row and column norms nearly equal</li>
  * </ul>
  *
- * <p>Based on gonum/lapack/gonum/dgebal.go</p>
  */
 interface Dgebal {
 

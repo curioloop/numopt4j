@@ -29,7 +29,6 @@ interface Dlasq2 {
      * </ul>
      *
      * <p>LAPACK routine: DLASQ2
-     * <p>Go reference: gonum/lapack/gonum/dlasq2.go
      *
      * @param n       order of the matrix (number of eigenvalues)
      * @param z       qd array of length at least 4*n; must not contain negative elements

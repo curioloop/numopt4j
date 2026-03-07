@@ -16,7 +16,6 @@ package com.curioloop.numopt4j.linalg.blas;
  *   <li>V = P D^{-1} V  if side == 'L' (left eigenvectors)</li>
  * </ul>
  *
- * <p>Based on gonum/lapack/gonum/dgebak.go</p>
  */
 interface Dgebak {
 

@@ -13,7 +13,6 @@ package com.curioloop.numopt4j.linalg.blas;
  * real matrix, w is a scalar, real if nw == 1, complex if nw == 2, and X and B
  * are na×1 matrices, real if w is real, complex if w is complex.
  *
- * <p>Reference: gonum/lapack/gonum/dlaln2.go</p>
  *
  * <p>x array layout (size >= 6):</p>
  * <ul>

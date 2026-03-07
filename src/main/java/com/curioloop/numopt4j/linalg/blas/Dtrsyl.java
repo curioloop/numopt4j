@@ -21,7 +21,6 @@ import static java.lang.Math.min;
  * <p>A and B are both upper quasi-triangular (Schur canonical form).
  * A is m×m and B is n×n, C and X are m×n.</p>
  *
- * <p>Reference: gonum/lapack/gonum/dtrsyl.go</p>
  */
 public interface Dtrsyl {
 

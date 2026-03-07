@@ -810,7 +810,12 @@ public interface BLAS {
      */
     static void dorghr(int n, int ilo, int ihi, double[] A, int lda,
                         double[] tau, int tauOff, double[] work, int workOff, int lwork) {
-        Dorghr.dorghr(n, ilo, ihi, A, lda, tau, tauOff, work, workOff, lwork);
+        Dgees.dorghr(n, ilo, ihi, A, 0, lda, tau, tauOff, work, workOff, lwork);
+    }
+
+    static void dorghr(int n, int ilo, int ihi, double[] A, int aOff, int lda,
+                        double[] tau, int tauOff, double[] work, int workOff, int lwork) {
+        Dgees.dorghr(n, ilo, ihi, A, aOff, lda, tau, tauOff, work, workOff, lwork);
     }
 
     // ==================== Dlaset ====================
@@ -1504,6 +1509,64 @@ public interface BLAS {
         return Dpotr.dpocon(uplo, n, A, lda, anorm, work, iwork);
     }
 
+    // ==================== Dsymm ====================
+
+    /**
+     * Symmetric matrix-matrix multiplication: C := alpha*A*B + beta*C or C := alpha*B*A + beta*C (BLAS DSYMM).
+     *
+     * @param side  {@link Side#Left} for A*B, {@link Side#Right} for B*A
+     * @param uplo  {@link Uplo#Upper} or {@link Uplo#Lower} — which triangle of A to use
+     * @param m     rows of C and B
+     * @param n     columns of C and B
+     * @param alpha scalar
+     * @param A     symmetric matrix (row-major); m×m for Left, n×n for Right
+     * @param aOff  offset into A
+     * @param lda   leading dimension of A
+     * @param B     general matrix (m×n, row-major)
+     * @param bOff  offset into B
+     * @param ldb   leading dimension of B
+     * @param beta  scalar for C
+     * @param C     result matrix (m×n, row-major), modified in place
+     * @param cOff  offset into C
+     * @param ldc   leading dimension of C
+     */
+    static void dsymm(Side side, Uplo uplo, int m, int n,
+                      double alpha,
+                      double[] A, int aOff, int lda,
+                      double[] B, int bOff, int ldb,
+                      double beta,
+                      double[] C, int cOff, int ldc) {
+        Dsymm.dsymm(side, uplo, m, n, alpha, A, aOff, lda, B, bOff, ldb, beta, C, cOff, ldc);
+    }
+
+    // ==================== Dsygst (Generalized eigenproblem reduction) ====================
+
+    /**
+     * Reduces a real symmetric-definite generalized eigenproblem to standard form (LAPACK DSYGST).
+     *
+     * <p>Given the Cholesky factor of B (from dpotrf), overwrites A:
+     * <ul>
+     *   <li>Type 1: A ← inv(L)·A·inv(Lᵀ)  (lower) — for A·x = λ·B·x</li>
+     *   <li>Type 2/3: A ← Lᵀ·A·L           (lower) — for A·B·x = λ·x or B·A·x = λ·x</li>
+     * </ul>
+     *
+     * @param itype problem type: 1, 2, or 3
+     * @param uplo  {@link Uplo#Lower} or {@link Uplo#Upper}
+     * @param n     order of A and B
+     * @param A     symmetric matrix (n×n, row-major), overwritten with reduced form
+     * @param aOff  offset into A
+     * @param lda   leading dimension of A
+     * @param B     Cholesky factor from dpotrf (n×n, row-major)
+     * @param bOff  offset into B
+     * @param ldb   leading dimension of B
+     * @return 0 on success
+     */
+    static int dsygst(int itype, Uplo uplo, int n,
+                      double[] A, int aOff, int lda,
+                      double[] B, int bOff, int ldb) {
+        return Dsygst.dsygst(itype, uplo, n, A, aOff, lda, B, bOff, ldb);
+    }
+
     // ==================== Dtrtri (Triangular matrix inverse) ====================
 
     /**
@@ -1960,7 +2023,7 @@ public interface BLAS {
      * @param ipivOff offset into ipiv
      * @param anorm   1-norm of the original matrix A
      * @param work    workspace (length 2*n)
-     * @param iwork   integer workspace (length n)
+     * @param iwork   integer workspace (length n); must not overlap ipiv
      * @return reciprocal condition number estimate (0 if singular)
      */
     static double dsycon(Uplo uplo, int n, double[] A, int aOff, int lda, int[] ipiv, int ipivOff,
@@ -2037,6 +2100,122 @@ public interface BLAS {
                           double[] work, int lwork,
                           int[] iwork, int liwork) {
         return Dtrsen.dtrsen(job, wantq, selects, n, t, tOff, ldt, q, qOff, ldq, wr, wi, work, lwork, iwork, liwork);
+    }
+
+    // ==================== Dhgeqz (QZ iteration) ====================
+
+    /**
+     * QZ iteration for generalized upper Hessenberg matrix pair (LAPACK DHGEQZ).
+     * Computes eigenvalues (alphar, alphai, beta) and optionally Schur vectors Q, Z.
+     *
+     * @param job    'E' eigenvalues only, 'S' Schur form
+     * @param compq  'N' no Q, 'I' initialize Q=I, 'V' accumulate into Q
+     * @param compz  'N' no Z, 'I' initialize Z=I, 'V' accumulate into Z
+     * @param n      order of H and T
+     * @param ilo    lower index of active submatrix (0-based)
+     * @param ihi    upper index of active submatrix (0-based inclusive)
+     * @param H      upper Hessenberg matrix (n×n, row-major), overwritten
+     * @param hOff   offset into H
+     * @param ldh    leading dimension of H
+     * @param T      upper triangular matrix (n×n, row-major), overwritten
+     * @param tOff   offset into T
+     * @param ldt    leading dimension of T
+     * @param alphar real parts of alpha (output, length n)
+     * @param alphai imaginary parts of alpha (output, length n)
+     * @param beta   beta values (output, length n)
+     * @param Q      orthogonal Q (n×n, row-major); used if compq != 'N'
+     * @param qOff   offset into Q
+     * @param ldq    leading dimension of Q
+     * @param Z      orthogonal Z (n×n, row-major); used if compz != 'N'
+     * @param zOff   offset into Z
+     * @param ldz    leading dimension of Z
+     * @param work   workspace
+     * @param workOff offset into work
+     * @param lwork  workspace size; -1 for query
+     * @return 0 on success; positive = number of eigenvalues not computed
+     */
+    static int dhgeqz(char job, char compq, char compz, int n, int ilo, int ihi,
+                      double[] H, int hOff, int ldh,
+                      double[] T, int tOff, int ldt,
+                      double[] alphar, double[] alphai, double[] beta,
+                      double[] Q, int qOff, int ldq,
+                      double[] Z, int zOff, int ldz,
+                      double[] work, int workOff, int lwork) {
+        return Dhgeqz.dhgeqz(job, compq, compz, n, ilo, ihi,
+                              H, hOff, ldh, T, tOff, ldt,
+                              alphar, alphai, beta,
+                              Q, qOff, ldq, Z, zOff, ldz,
+                              work, workOff, lwork);
+    }
+
+    // ==================== Dtgevc (Generalized eigenvectors) ====================
+
+    /**
+     * Computes right and/or left generalized eigenvectors of (S, P) (LAPACK DTGEVC).
+     *
+     * @param side   'R' right only, 'L' left only, 'B' both
+     * @param howmny 'A' all, 'B' backtransform, 'S' selected
+     * @param select boolean array (length n); used if howmny='S'
+     * @param n      order of S and P
+     * @param S      quasi-upper-triangular matrix (n×n, row-major)
+     * @param sOff   offset into S
+     * @param lds    leading dimension of S
+     * @param P      upper triangular matrix (n×n, row-major)
+     * @param pOff   offset into P
+     * @param ldp    leading dimension of P
+     * @param VL     left eigenvectors (n×mm, row-major); used if side='L' or 'B'
+     * @param vlOff  offset into VL
+     * @param ldvl   leading dimension of VL
+     * @param VR     right eigenvectors (n×mm, row-major); used if side='R' or 'B'
+     * @param vrOff  offset into VR
+     * @param ldvr   leading dimension of VR
+     * @param mm     number of columns in VL/VR
+     * @param work   workspace (length 6*n)
+     * @param workOff offset into work
+     * @return number of eigenvectors computed
+     */
+    static int dtgevc(char side, char howmny, boolean[] select, int n,
+                      double[] S, int sOff, int lds,
+                      double[] P, int pOff, int ldp,
+                      double[] VL, int vlOff, int ldvl,
+                      double[] VR, int vrOff, int ldvr,
+                      int mm, double[] work, int workOff) {
+        return Dtgevc.dtgevc(side, howmny, select, n, S, sOff, lds, P, pOff, ldp,
+                             VL, vlOff, ldvl, VR, vrOff, ldvr, mm, work, workOff);
+    }
+
+    // ==================== Dggev (Non-symmetric generalized eigenvalue) ====================
+
+    /**
+     * Computes eigenvalues and optionally eigenvectors of A*x = lambda*B*x (LAPACK DGGEV).
+     *
+     * @param wantVL  true to compute left eigenvectors
+     * @param wantVR  true to compute right eigenvectors
+     * @param n       order of A and B
+     * @param A       matrix A (n×n, row-major), overwritten
+     * @param lda     leading dimension of A
+     * @param B       matrix B (n×n, row-major), overwritten
+     * @param ldb     leading dimension of B
+     * @param alphar  real parts of alpha (output, length n)
+     * @param alphai  imaginary parts of alpha (output, length n)
+     * @param beta    beta values (output, length n)
+     * @param VL      left eigenvectors (n×n, row-major); used if wantVL=true
+     * @param ldvl    leading dimension of VL
+     * @param VR      right eigenvectors (n×n, row-major); used if wantVR=true
+     * @param ldvr    leading dimension of VR
+     * @param work    workspace
+     * @param workOff offset into work
+     * @param lwork   workspace size; -1 for query
+     * @return 0 on success; positive = number of eigenvalues not computed
+     */
+    static int dggev(boolean wantVL, boolean wantVR, int n,
+                     double[] A, int lda, double[] B, int ldb,
+                     double[] alphar, double[] alphai, double[] beta,
+                     double[] VL, int ldvl, double[] VR, int ldvr,
+                     double[] work, int workOff, int lwork) {
+        return Dggev.dggev(wantVL, wantVR, n, A, lda, B, ldb,
+                           alphar, alphai, beta, VL, ldvl, VR, ldvr,
+                           work, workOff, lwork);
     }
 
 }

@@ -4,6 +4,7 @@
 package com.curioloop.numopt4j.linalg.mat;
 
 import com.curioloop.numopt4j.linalg.Decomposition;
+import com.curioloop.numopt4j.linalg.Decomposer;
 import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -29,7 +30,7 @@ public class EigenTest {
             0, 0, 1
         };
 
-        Eigen eigen = Eigen.symmetric(A, n, 'L');
+        Eigen eigen = Decomposer.eigen(A, n, Eigen.Opts.SYMMETRIC_LOWER);
 
         assertThat(eigen.ok()).isTrue();
         assertThat(eigen.eigenvalues()).containsExactly(1.0, 1.0, 1.0);
@@ -45,7 +46,7 @@ public class EigenTest {
             0, 0, 0, 1
         };
 
-        Eigen eigen = Eigen.symmetric(A, n, 'L');
+        Eigen eigen = Decomposer.eigen(A, n, Eigen.Opts.SYMMETRIC_LOWER);
 
         assertThat(eigen.ok()).isTrue();
         assertThat(eigen.eigenvalues()[0]).isCloseTo(1.0, assertWithPrecision(EPSILON));
@@ -59,7 +60,7 @@ public class EigenTest {
         int n = 2;
         double[] A = {2, 1, 1, 2};
 
-        Eigen eigen = Eigen.symmetric(A, n, 'L');
+        Eigen eigen = Decomposer.eigen(A, n, Eigen.Opts.SYMMETRIC_LOWER);
 
         assertThat(eigen.ok()).isTrue();
         double min = Math.min(eigen.eigenvalues()[0], eigen.eigenvalues()[1]);
@@ -73,7 +74,7 @@ public class EigenTest {
         int n = 1;
         double[] A = {5.0};
 
-        Eigen eigen = Eigen.symmetric(A, n, 'L');
+        Eigen eigen = Decomposer.eigen(A, n, Eigen.Opts.SYMMETRIC_LOWER);
 
         assertThat(eigen.ok()).isTrue();
         assertThat(eigen.eigenvalues()[0]).isCloseTo(5.0, assertWithPrecision(EPSILON));
@@ -89,7 +90,7 @@ public class EigenTest {
         };
         double[] Aorig = A.clone();
 
-        Eigen eigen = Eigen.symmetric(A, n, 'L');
+        Eigen eigen = Decomposer.eigen(A, n, Eigen.Opts.SYMMETRIC_LOWER, Eigen.Opts.WANT_RIGHT);
         assertThat(eigen.ok()).isTrue();
 
         double[] eigenvalues = eigen.eigenvalues();
@@ -124,7 +125,7 @@ public class EigenTest {
             0, 1, 3
         };
 
-        Eigen eigen = Eigen.symmetric(A, n, 'L');
+        Eigen eigen = Decomposer.eigen(A, n, Eigen.Opts.SYMMETRIC_LOWER, Eigen.Opts.WANT_RIGHT);
         assertThat(eigen.ok()).isTrue();
 
         double[] eigenvectors = eigen.eigenvectors();
@@ -149,7 +150,7 @@ public class EigenTest {
         int n = 2;
         double[] A = {-1, 2, 2, -1};
 
-        Eigen eigen = Eigen.symmetric(A, n, 'L');
+        Eigen eigen = Decomposer.eigen(A, n, Eigen.Opts.SYMMETRIC_LOWER);
 
         assertThat(eigen.ok()).isTrue();
         double min = Math.min(eigen.eigenvalues()[0], eigen.eigenvalues()[1]);
@@ -167,7 +168,7 @@ public class EigenTest {
             3, 6, 9
         };
 
-        Eigen eigen = Eigen.symmetric(A, n, 'L');
+        Eigen eigen = Decomposer.eigen(A, n, Eigen.Opts.SYMMETRIC_LOWER);
 
         assertThat(eigen.ok()).isTrue();
         int zeroCount = 0;
@@ -187,7 +188,7 @@ public class EigenTest {
             A[i * n + i] = i + 1;
         }
 
-        Eigen eigen = Eigen.symmetric(A, n, 'L');
+        Eigen eigen = Decomposer.eigen(A, n, Eigen.Opts.SYMMETRIC_LOWER);
 
         assertThat(eigen.ok()).isTrue();
 
@@ -205,7 +206,7 @@ public class EigenTest {
         int n = 3;
         double[] A = {1, 0, 0, 0, 2, 0, 0, 0, 3};
 
-        Eigen eigen = Eigen.general(A, n);
+        Eigen eigen = Decomposer.eigen(A, n);
 
         assertThat(eigen.ok()).isTrue();
         assertThat(eigen.eigenvalues()).containsExactly(1.0, 2.0, 3.0);
@@ -217,7 +218,7 @@ public class EigenTest {
         int n = 2;
         double[] A = {0, -1, 1, 0};
 
-        Eigen eigen = Eigen.general(A, n);
+        Eigen eigen = Decomposer.eigen(A, n);
 
         assertThat(eigen.ok()).isTrue();
         assertThat(eigen.eigenvalues()[0]).isCloseTo(0.0, assertWithPrecision(EPSILON));
@@ -233,7 +234,7 @@ public class EigenTest {
         int n = 1;
         double[] A = {3.5};
 
-        Eigen eigen = Eigen.general(A, n);
+        Eigen eigen = Decomposer.eigen(A, n);
 
         assertThat(eigen.ok()).isTrue();
         assertThat(eigen.eigenvalues()[0]).isCloseTo(3.5, assertWithPrecision(EPSILON));
@@ -245,7 +246,7 @@ public class EigenTest {
         int n = 2;
         double[] A = {4, 2, 1, 3};
 
-        Eigen eigen = Eigen.general(A, n);
+        Eigen eigen = Decomposer.eigen(A, n);
 
         assertThat(eigen.ok()).isTrue();
         assertThat(Math.abs(eigen.eigenvaluesImag()[0])).isLessThan(EPSILON);
@@ -257,7 +258,7 @@ public class EigenTest {
         int n = 2;
         double[] A = {1, -1, 1, 1};
 
-        Eigen eigen = Eigen.general(A, n);
+        Eigen eigen = Decomposer.eigen(A, n);
 
         assertThat(eigen.ok()).isTrue();
         assertThat(eigen.eigenvalues()[0]).isCloseTo(1.0, assertWithPrecision(EPSILON));
@@ -273,7 +274,7 @@ public class EigenTest {
         double lambda = 5.0;
         double[] A = {lambda, 1, 0, lambda};
 
-        Eigen eigen = Eigen.general(A, n);
+        Eigen eigen = Decomposer.eigen(A, n);
 
         assertThat(eigen.ok()).isTrue();
         assertThat(eigen.eigenvalues()[0]).isCloseTo(lambda, assertWithPrecision(EPSILON));
@@ -289,7 +290,7 @@ public class EigenTest {
             0, 1, 2
         };
 
-        Eigen eigen = Eigen.general(A, n, false, true, null);
+        Eigen eigen = Decomposer.eigen(A, n, Eigen.Opts.WANT_RIGHT);
 
         assertThat(eigen.ok()).isTrue();
         assertThat(eigen.eigenvectors()).isNotNull();
@@ -304,7 +305,7 @@ public class EigenTest {
             0, 0, 3
         };
 
-        Eigen eigen = Eigen.symmetric(A, n, 'L');
+        Eigen eigen = Decomposer.eigen(A, n, Eigen.Opts.SYMMETRIC_LOWER);
 
         assertThat(eigen.ok()).isTrue();
         double cond = eigen.cond();
@@ -316,7 +317,7 @@ public class EigenTest {
         int n = 3;
         double[] A = new double[n * n];
 
-        Eigen eigen = Eigen.symmetric(A, n, 'L');
+        Eigen eigen = Decomposer.eigen(A, n, Eigen.Opts.SYMMETRIC_LOWER);
 
         assertThat(eigen.ok()).isTrue();
         for (double ev : eigen.eigenvalues()) {
@@ -339,7 +340,7 @@ public class EigenTest {
             A[i * n + i] += n;
         }
 
-        Eigen eigen = Eigen.symmetric(A, n, 'L');
+        Eigen eigen = Decomposer.eigen(A, n, Eigen.Opts.SYMMETRIC_LOWER);
 
         assertThat(eigen.ok()).isTrue();
         for (double ev : eigen.eigenvalues()) {
@@ -366,7 +367,7 @@ public class EigenTest {
             0, 0, 3
         };
 
-        Eigen eigen = Eigen.symmetric(A, n, 'U');
+        Eigen eigen = Decomposer.eigen(A, n, Eigen.Opts.SYMMETRIC_UPPER);
 
         assertThat(eigen.ok()).isTrue();
         assertThat(eigen.eigenvalues()[0]).isCloseTo(1.0, assertWithPrecision(EPSILON));
@@ -383,7 +384,7 @@ public class EigenTest {
             0, 0, 3
         };
 
-        Eigen eigen = Eigen.general(A, n, false, true, null);
+        Eigen eigen = Decomposer.eigen(A, n, Eigen.Opts.WANT_RIGHT);
 
         assertThat(eigen.ok()).isTrue();
         assertThat(eigen.eigenvectors()).isNotNull();
@@ -398,7 +399,7 @@ public class EigenTest {
             3, 6, 9
         };
 
-        Eigen eigen = Eigen.symmetric(A, n, 'L');
+        Eigen eigen = Decomposer.eigen(A, n, Eigen.Opts.SYMMETRIC_LOWER);
 
         assertThat(eigen.ok()).isTrue();
         double cond = eigen.cond();
@@ -431,7 +432,7 @@ public class EigenTest {
             A[i * n + i] += n;
         }
 
-        Eigen eigen = Eigen.general(A, n, false, false, null);
+        Eigen eigen = Decomposer.eigen(A, n);
 
         assertThat(eigen.ok()).isTrue();
         assertThat(eigen.eigenvalues()).hasSize(n);
@@ -447,7 +448,7 @@ public class EigenTest {
         };
         double trace = A[0] + A[4] + A[8];
 
-        Eigen eigen = Eigen.symmetric(A, n, 'L');
+        Eigen eigen = Decomposer.eigen(A, n, Eigen.Opts.SYMMETRIC_LOWER);
 
         assertThat(eigen.ok()).isTrue();
         double sum = 0;
@@ -466,7 +467,7 @@ public class EigenTest {
             0, 1, 2
         };
 
-        Eigen eigen = Eigen.symmetric(A, n, 'L');
+        Eigen eigen = Decomposer.eigen(A, n, Eigen.Opts.SYMMETRIC_LOWER);
 
         assertThat(eigen.ok()).isTrue();
         double det = 1;
@@ -485,7 +486,7 @@ public class EigenTest {
             0, 0, 3
         };
 
-        Eigen eigen = Eigen.general(A, n);
+        Eigen eigen = Decomposer.eigen(A, n);
 
         assertThat(eigen.ok()).isTrue();
         assertThat(eigen.eigenvalues()[0]).isCloseTo(2.0, assertWithPrecision(EPSILON));
@@ -513,7 +514,7 @@ public class EigenTest {
             3.0, 4.0
         };
 
-        Eigen eigen = Eigen.general(A.clone(), n, Eigen.EIGEN_NONE, null);
+        Eigen eigen = Decomposer.eigen(A.clone(), n);
 
         assertThat(eigen.ok()).isTrue();
         assertThat(eigen.kind()).isEqualTo(Eigen.EIGEN_NONE);
@@ -530,7 +531,7 @@ public class EigenTest {
             3.0, 4.0
         };
 
-        Eigen eigen = Eigen.general(A.clone(), n, Eigen.EIGEN_LEFT, null);
+        Eigen eigen = Decomposer.eigen(A.clone(), n, Eigen.Opts.WANT_LEFT);
 
         assertThat(eigen.ok()).isTrue();
         assertThat(eigen.kind()).isEqualTo(Eigen.EIGEN_LEFT);
@@ -547,7 +548,7 @@ public class EigenTest {
             3.0, 4.0
         };
 
-        Eigen eigen = Eigen.general(A.clone(), n, Eigen.EIGEN_RIGHT, null);
+        Eigen eigen = Decomposer.eigen(A.clone(), n, Eigen.Opts.WANT_RIGHT);
 
         assertThat(eigen.ok()).isTrue();
         assertThat(eigen.kind()).isEqualTo(Eigen.EIGEN_RIGHT);
@@ -564,7 +565,7 @@ public class EigenTest {
             3.0, 4.0
         };
 
-        Eigen eigen = Eigen.general(A.clone(), n, Eigen.EIGEN_BOTH, null);
+        Eigen eigen = Decomposer.eigen(A.clone(), n, Eigen.Opts.WANT_LEFT, Eigen.Opts.WANT_RIGHT);
 
         assertThat(eigen.ok()).isTrue();
         assertThat(eigen.kind()).isEqualTo(Eigen.EIGEN_BOTH);
@@ -582,7 +583,7 @@ public class EigenTest {
             1.0, 2.0
         };
 
-        Eigen eigen = Eigen.symmetric(A.clone(), n, 'U');
+        Eigen eigen = Decomposer.eigen(A.clone(), n, Eigen.Opts.SYMMETRIC_UPPER, Eigen.Opts.WANT_RIGHT);
 
         assertThat(eigen.ok()).isTrue();
         assertThat(eigen.kind()).isEqualTo(Eigen.EIGEN_RIGHT);
@@ -599,7 +600,7 @@ public class EigenTest {
             1.0, 0.0, 2.0
         };
 
-        Eigen eigen = Eigen.symmetricValues(A.clone(), n, 'L');
+        Eigen eigen = Decomposer.eigen(A.clone(), n, Eigen.Opts.SYMMETRIC_LOWER);
 
         assertThat(eigen.ok()).isTrue();
         assertThat(eigen.kind()).isEqualTo(Eigen.EIGEN_NONE);
@@ -622,7 +623,7 @@ public class EigenTest {
             3.0, 4.0
         };
 
-        Eigen eigen = Eigen.generalValues(A.clone(), n);
+        Eigen eigen = Decomposer.eigen(A.clone(), n);
 
         assertThat(eigen.ok()).isTrue();
         assertThat(eigen.kind()).isEqualTo(Eigen.EIGEN_NONE);

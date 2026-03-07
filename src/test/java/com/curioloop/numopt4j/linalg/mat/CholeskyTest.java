@@ -26,7 +26,7 @@ public class CholeskyTest {
             double[] A = createRandomPositiveDefinite(n);
             double[] A_original = A.clone();
 
-            Cholesky cholesky = Cholesky.decompose(A, n, 'L');
+            Cholesky cholesky = Cholesky.decompose(A, n, BLAS.Uplo.Lower);
             assertThat(cholesky.ok()).isTrue().as("Decomposition should succeed for n=%d", n);
 
             double[] L = extractLower(A, n);
@@ -43,7 +43,7 @@ public class CholeskyTest {
             double[] A = createRandomPositiveDefinite(n);
             double[] A_original = A.clone();
 
-            Cholesky cholesky = Cholesky.decompose(A, n, 'U');
+            Cholesky cholesky = Cholesky.decompose(A, n, BLAS.Uplo.Upper);
             assertThat(cholesky.ok()).isTrue().as("Decomposition should succeed for n=%d", n);
 
             double[] U = extractUpper(A, n);
@@ -60,10 +60,10 @@ public class CholeskyTest {
             double[] A = createRandomPositiveDefinite(n);
 
             double[] A_lower = A.clone();
-            Cholesky.decompose(A_lower, n, 'L');
+            Cholesky.decompose(A_lower, n, BLAS.Uplo.Lower);
 
             double[] A_upper = A.clone();
-            Cholesky.decompose(A_upper, n, 'U');
+            Cholesky.decompose(A_upper, n, BLAS.Uplo.Upper);
 
             double[] L = extractLower(A_lower, n);
             double[] LLT = multiplyLLT(L, n);
@@ -93,7 +93,7 @@ public class CholeskyTest {
                 }
             }
 
-            double[] x = Cholesky.decompose(A, n, 'L').solve(b, null);
+            double[] x = Cholesky.decompose(A, n, BLAS.Uplo.Lower).solve(b, null);
 
             assertThat(maxDiff(x, x_expected)).isLessThan(EPSILON * 100)
                 .as("x should equal A^-1*b for n=%d", n);
@@ -117,7 +117,7 @@ public class CholeskyTest {
                 }
             }
 
-            double[] x = Cholesky.decompose(A, n, 'U').solve(b, null);
+            double[] x = Cholesky.decompose(A, n, BLAS.Uplo.Upper).solve(b, null);
 
             assertThat(maxDiff(x, x_expected)).isLessThan(EPSILON * 1000)
                 .as("x should equal A^-1*b for n=%d", n);
@@ -131,7 +131,7 @@ public class CholeskyTest {
             double[] A = createRandomPositiveDefinite(n);
             double[] A_original = A.clone();
 
-            double[] inv = Cholesky.decompose(A, n, 'L').inverse(null);
+            double[] inv = Cholesky.decompose(A, n, BLAS.Uplo.Lower).inverse(null);
             expandSymmetric(inv, n, false);
 
             double[] I = multiply(inv, A_original, n);
@@ -147,7 +147,7 @@ public class CholeskyTest {
             double[] A = createRandomPositiveDefinite(n);
             double[] A_original = A.clone();
 
-            double[] inv = Cholesky.decompose(A, n, 'U').inverse(null);
+            double[] inv = Cholesky.decompose(A, n, BLAS.Uplo.Upper).inverse(null);
             expandSymmetric(inv, n, true);
 
             double[] I = multiply(inv, A_original, n);
@@ -163,7 +163,7 @@ public class CholeskyTest {
             double[] A = createRandomPositiveDefinite(n);
             double[] A_original = A.clone();
 
-            Cholesky cholesky = Cholesky.decompose(A, n, 'L');
+            Cholesky cholesky = Cholesky.decompose(A, n, BLAS.Uplo.Lower);
 
             double det = cholesky.determinant();
             double expected = computeDeterminant(A_original, n);
@@ -180,7 +180,7 @@ public class CholeskyTest {
             double[] A = createRandomPositiveDefinite(n);
             double[] A_original = A.clone();
 
-            Cholesky cholesky = Cholesky.decompose(A, n, 'L');
+            Cholesky cholesky = Cholesky.decompose(A, n, BLAS.Uplo.Lower);
 
             double det = cholesky.determinant();
             double logDet = cholesky.logDet();
@@ -199,7 +199,7 @@ public class CholeskyTest {
         }
         double[] A_original = A.clone();
 
-        Cholesky cholesky = Cholesky.decompose(A, n, 'L');
+        Cholesky cholesky = Cholesky.decompose(A, n, BLAS.Uplo.Lower);
         assertThat(cholesky.ok()).isTrue();
 
         double logDet = cholesky.logDet();
@@ -215,7 +215,7 @@ public class CholeskyTest {
         for (int n : sizes) {
             double[] A = createRandomPositiveDefinite(n);
 
-            Cholesky cholesky = Cholesky.decompose(A, n, 'L');
+            Cholesky cholesky = Cholesky.decompose(A, n, BLAS.Uplo.Lower);
             assertThat(cholesky.ok()).isTrue();
 
             double cond = cholesky.cond();
@@ -246,7 +246,7 @@ public class CholeskyTest {
         }
         A[0] *= 1e10;
 
-        Cholesky cholesky = Cholesky.decompose(A, n, 'L');
+        Cholesky cholesky = Cholesky.decompose(A, n, BLAS.Uplo.Lower);
         assertThat(cholesky.ok()).isTrue();
 
         double cond = cholesky.cond();
@@ -257,7 +257,7 @@ public class CholeskyTest {
     void testSingularMatrix() {
         double[] A = {4, 2, 2, 2, 1, 1, 2, 1, 1};
 
-        Cholesky cholesky = Cholesky.decompose(A, 3, 'L');
+        Cholesky cholesky = Cholesky.decompose(A, 3, BLAS.Uplo.Lower);
         assertThat(cholesky.ok()).isFalse();
     }
 
@@ -266,7 +266,7 @@ public class CholeskyTest {
         double[] A = {4.0};
         double[] A_original = A.clone();
 
-        Cholesky cholesky = Cholesky.decompose(A, 1, 'L');
+        Cholesky cholesky = Cholesky.decompose(A, 1, BLAS.Uplo.Lower);
         assertThat(cholesky.ok()).isTrue();
         assertThat(A[0]).isEqualTo(2.0);
         assertThat(maxDiff(multiplyLLT(A, 1), A_original)).isLessThan(EPSILON);
@@ -275,13 +275,13 @@ public class CholeskyTest {
     @Test
     void testWorkspaceReuse() {
         int n = 10;
-        Decomposition.Workspace ws = Cholesky.workspace(n, false);
+        Cholesky.Pool ws = (Cholesky.Pool) Cholesky.workspace(n, false);
         
         for (int i = 0; i < 5; i++) {
             double[] A = createRandomPositiveDefinite(n);
             double[] A_original = A.clone();
 
-            Cholesky cholesky = Cholesky.decompose(A, n, 'L', false, ws);
+            Cholesky cholesky = Cholesky.decompose(A, n, BLAS.Uplo.Lower, false, ws);
             assertThat(cholesky.ok()).isTrue();
 
             double[] L = extractLower(A, n);

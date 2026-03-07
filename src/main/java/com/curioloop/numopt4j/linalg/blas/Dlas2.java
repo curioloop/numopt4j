@@ -10,7 +10,6 @@ import static java.lang.Math.*;
  * Returns ssmin (smaller) and ssmax (larger) singular values.
  * Also provides DLASV2 which additionally computes the singular vectors.
  *
- * <p>Reference: gonum/lapack/gonum/dlas2.go</p>
  */
 interface Dlas2 {
 

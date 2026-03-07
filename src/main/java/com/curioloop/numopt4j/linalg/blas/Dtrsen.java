@@ -29,7 +29,6 @@ import static java.lang.Math.sqrt;
  *   <li>{@code work[2]} = sep (subspace separation, only when job requires it)</li>
  * </ul>
  *
- * <p>Reference: gonum/lapack/gonum/dtrsen.go, LAPACK DTRSEN</p>
  */
 interface Dtrsen {
 

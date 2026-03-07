@@ -5,7 +5,7 @@ package com.curioloop.numopt4j.linalg.blas;
 
 /**
  * DLASRT: Sorts eigenvalues in increasing or decreasing order.
- * Based on LAPACK and gonum implementation.
+ * Based on LAPACK.
  */
 interface Dlasrt {
     

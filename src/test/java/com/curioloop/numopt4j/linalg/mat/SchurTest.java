@@ -24,7 +24,7 @@ class SchurTest {
             7, 8, 9
         };
 
-        Schur schur = Schur.decompose(A.clone(), n);
+        Schur schur = Schur.decompose(A.clone(), n, true);
         assertTrue(schur.ok(), "Schur decomposition should succeed");
         assertEquals(n, schur.n());
 
@@ -84,7 +84,7 @@ class SchurTest {
             1, 0
         };
 
-        Schur schur = Schur.decompose(A.clone(), n);
+        Schur schur = Schur.decompose(A.clone(), n, true);
         assertTrue(schur.ok(), "Schur decomposition should succeed");
 
         double[] wr = schur.eigenvalues();
@@ -107,7 +107,7 @@ class SchurTest {
             0, 0, 1
         };
 
-        Schur schur = Schur.decompose(A.clone(), n);
+        Schur schur = Schur.decompose(A.clone(), n, true);
         assertTrue(schur.ok(), "Schur decomposition should succeed");
 
         double[] wr = schur.eigenvalues();
@@ -129,7 +129,7 @@ class SchurTest {
             0, 0, 1
         };
 
-        Schur schur = Schur.decompose(A.clone(), n);
+        Schur schur = Schur.decompose(A.clone(), n, true);
         assertTrue(schur.ok(), "Schur decomposition should succeed");
 
         double[] wr = schur.eigenvalues();
@@ -151,7 +151,7 @@ class SchurTest {
             0, 0, -3
         };
 
-        Schur schur = Schur.decompose(A.clone(), n);
+        Schur schur = Schur.decompose(A.clone(), n, true);
         assertTrue(schur.ok());
         assertTrue(schur.isStable(), "Matrix with negative eigenvalues should be stable");
         assertFalse(schur.isDiscreteStable(), "Eigenvalues outside unit circle");
@@ -167,7 +167,7 @@ class SchurTest {
             0, 0, 3
         };
 
-        Schur schur = Schur.decompose(A.clone(), n);
+        Schur schur = Schur.decompose(A.clone(), n, true);
         assertTrue(schur.ok());
         assertFalse(schur.isStable(), "Matrix with positive eigenvalues should be unstable");
     }
@@ -181,7 +181,7 @@ class SchurTest {
             0, 0.3
         };
 
-        Schur schur = Schur.decompose(A.clone(), n);
+        Schur schur = Schur.decompose(A.clone(), n, true);
         assertTrue(schur.ok());
         assertTrue(schur.isDiscreteStable(), "Matrix with eigenvalues inside unit circle should be discrete stable");
         assertFalse(schur.isStable(), "Eigenvalues are positive");
@@ -335,7 +335,7 @@ class SchurTest {
             3, 2, 1, 7
         };
 
-        Schur schur = Schur.decompose(A.clone(), n);
+        Schur schur = Schur.decompose(A.clone(), n, true);
         assertTrue(schur.ok());
 
         double[] Z = schur.Z();
@@ -380,7 +380,7 @@ class SchurTest {
         int n = 1;
         double[] A = {5.0};
 
-        Schur schur = Schur.decompose(A.clone(), n);
+        Schur schur = Schur.decompose(A.clone(), n, true);
         assertTrue(schur.ok());
         assertEquals(5.0, schur.eigenvalues()[0], EPS);
         assertEquals(0.0, schur.eigenvaluesImag()[0], EPS);
@@ -398,7 +398,7 @@ class SchurTest {
 
         double traceOrig = A[0] + A[4] + A[8];
 
-        Schur schur = Schur.decompose(A.clone(), n);
+        Schur schur = Schur.decompose(A.clone(), n, true);
         assertTrue(schur.ok());
 
         double[] T = schur.T();
@@ -466,8 +466,8 @@ class SchurTest {
         double[] A = { -1, 0,  0, -2 };
         double[] Q = {  1, 0,  0,  1 };
 
-        Schur schur = Schur.decompose(A.clone(), n);
-        assertTrue(schur.solveContinuousLyapunov(Q));
+        Schur schur = Schur.decompose(A.clone(), n, true);
+        assertTrue(schur.lyapunov(Q));
 
         assertEquals(-0.5,  Q[0], 1e-10);
         assertEquals( 0.0,  Q[1], 1e-10);
@@ -492,8 +492,8 @@ class SchurTest {
         double[] Aorig = A.clone();
         double[] Qorig = Q.clone();
 
-        Schur schur = Schur.decompose(A.clone(), n);
-        assertTrue(schur.solveContinuousLyapunov(Q));
+        Schur schur = Schur.decompose(A.clone(), n, true);
+        assertTrue(schur.lyapunov(Q));
 
         double[] R = continuousResidual(Aorig, Q, n);
         assertEquals(0, maxAbs(R, Qorig, n), 1e-9);
@@ -508,8 +508,8 @@ class SchurTest {
         double[] Aorig = A.clone();
         double[] Qorig = Q.clone();
 
-        Schur schur = Schur.decompose(A.clone(), n);
-        assertTrue(schur.solveContinuousLyapunov(Q, -1.0));
+        Schur schur = Schur.decompose(A.clone(), n, true);
+        assertTrue(schur.lyapunov(Q, -1.0));
 
         double[] R = continuousResidual(Aorig, Q, n);
         for (int i = 0; i < n * n; i++) {
@@ -536,8 +536,8 @@ class SchurTest {
         double[] Aorig = A.clone();
         double[] Qorig = Q.clone();
 
-        Schur schur = Schur.decompose(A.clone(), n);
-        assertTrue(schur.solveContinuousLyapunov(Q));
+        Schur schur = Schur.decompose(A.clone(), n, true);
+        assertTrue(schur.lyapunov(Q));
 
         double[] R = continuousResidual(Aorig, Q, n);
         assertEquals(0, maxAbs(R, Qorig, n), 1e-9);
@@ -552,8 +552,8 @@ class SchurTest {
         double[] Aorig = A.clone();
         double[] Qorig = Q.clone();
 
-        Schur schur = Schur.decompose(A.clone(), n);
-        assertTrue(schur.solveDiscreteLyapunov(A.clone(), Q));
+        Schur schur = Schur.decompose(A.clone(), n, true);
+        assertTrue(schur.discreteLyapunov(A.clone(), Q));
 
         double[] R = discreteResidual(Aorig, Q, n);
         assertEquals(0, maxAbs(R, Qorig, n), 1e-9);
@@ -576,8 +576,8 @@ class SchurTest {
         double[] Aorig = A.clone();
         double[] Qorig = Q.clone();
 
-        Schur schur = Schur.decompose(A.clone(), n);
-        assertTrue(schur.solveDiscreteLyapunov(A.clone(), Q));
+        Schur schur = Schur.decompose(A.clone(), n, true);
+        assertTrue(schur.discreteLyapunov(A.clone(), Q));
 
         double[] R = discreteResidual(Aorig, Q, n);
         assertEquals(0, maxAbs(R, Qorig, n), 1e-9);
@@ -602,8 +602,8 @@ class SchurTest {
         double[] Aorig = A.clone();
         double[] Qorig = Q.clone();
 
-        Schur schur = Schur.decompose(A.clone(), n);
-        assertTrue(schur.solveDiscreteLyapunov(A.clone(), Q));
+        Schur schur = Schur.decompose(A.clone(), n, true);
+        assertTrue(schur.discreteLyapunov(A.clone(), Q));
 
         double[] R = discreteResidual(Aorig, Q, n);
         assertEquals(0, maxAbs(R, Qorig, n), 1e-9);
@@ -615,8 +615,8 @@ class SchurTest {
         // Continuous: a*x + x*a = q  =>  2*a*x = q  =>  x = q/(2*a)
         double[] A = { -3.0 };
         double[] Q = {  6.0 };
-        Schur schur = Schur.decompose(A.clone(), 1);
-        assertTrue(schur.solveContinuousLyapunov(Q));
+        Schur schur = Schur.decompose(A.clone(), 1, true);
+        assertTrue(schur.lyapunov(Q));
         assertEquals(6.0 / (2.0 * -3.0), Q[0], 1e-10); // = -1.0
 
         // Discrete: a*x*a - x = q
@@ -624,13 +624,13 @@ class SchurTest {
         double[] Q2 = { 1.0 };
         double[] A2orig = A2.clone();
         double[] Q2orig = Q2.clone();
-        Schur schur2 = Schur.decompose(A2.clone(), 1);
-        assertTrue(schur2.solveDiscreteLyapunov(A2.clone(), Q2));
+        Schur schur2 = Schur.decompose(A2.clone(), 1, true);
+        assertTrue(schur2.discreteLyapunov(A2.clone(), Q2));
         double[] R = discreteResidual(A2orig, Q2, 1);
         assertEquals(0, maxAbs(R, Q2orig, 1), 1e-10);
     }
 
-    // ==================== Instance method tests for solveContinuousLyapunov ====================
+    // ==================== Instance method tests for lyapunov ====================
 
     @Test
     @DisplayName("Lyapunov continuous (instance): stable 2x2 diagonal A")
@@ -639,9 +639,9 @@ class SchurTest {
         double[] A = { -1, 0,  0, -2 };
         double[] Q = {  1, 0,  0,  1 };
 
-        Schur schur = Schur.decompose(A.clone(), n);
+        Schur schur = Schur.decompose(A.clone(), n, true);
         assertTrue(schur.ok());
-        assertTrue(schur.solveContinuousLyapunov(Q));
+        assertTrue(schur.lyapunov(Q));
 
         // X[0,0] = 1/(2*(-1)) = -0.5, X[1,1] = 1/(2*(-2)) = -0.25
         assertEquals(-0.5,  Q[0], 1e-10);
@@ -667,9 +667,9 @@ class SchurTest {
         double[] Aorig = A.clone();
         double[] Qorig = Q.clone();
 
-        Schur schur = Schur.decompose(A.clone(), n);
+        Schur schur = Schur.decompose(A.clone(), n, true);
         assertTrue(schur.ok());
-        assertTrue(schur.solveContinuousLyapunov(Q));
+        assertTrue(schur.lyapunov(Q));
 
         double[] R = continuousResidual(Aorig, Q, n);
         double machEps = Math.ulp(1.0);
@@ -687,9 +687,9 @@ class SchurTest {
         double[] Aorig = A.clone();
         double[] Qorig = Q.clone();
 
-        Schur schur = Schur.decompose(A.clone(), n);
+        Schur schur = Schur.decompose(A.clone(), n, true);
         assertTrue(schur.ok());
-        assertTrue(schur.solveContinuousLyapunov(Q, -1.0));
+        assertTrue(schur.lyapunov(Q, -1.0));
 
         double[] R = continuousResidual(Aorig, Q, n);
         for (int i = 0; i < n * n; i++) {
@@ -716,9 +716,9 @@ class SchurTest {
         double[] Aorig = A.clone();
         double[] Qorig = Q.clone();
 
-        Schur schur = Schur.decompose(A.clone(), n);
+        Schur schur = Schur.decompose(A.clone(), n, true);
         assertTrue(schur.ok());
-        assertTrue(schur.solveContinuousLyapunov(Q));
+        assertTrue(schur.lyapunov(Q));
 
         double[] R = continuousResidual(Aorig, Q, n);
         double machEps = Math.ulp(1.0);
@@ -739,8 +739,8 @@ class SchurTest {
         assertTrue(schur.ok());
         assertNull(schur.Z(), "Z should be null when computeZ=false");
 
-        assertThrows(IllegalStateException.class, () -> schur.solveContinuousLyapunov(Q));
-        assertThrows(IllegalStateException.class, () -> schur.solveContinuousLyapunov(Q, 1.0));
+        assertThrows(IllegalStateException.class, () -> schur.lyapunov(Q));
+        assertThrows(IllegalStateException.class, () -> schur.lyapunov(Q, 1.0));
     }
 
     @Test
@@ -751,9 +751,9 @@ class SchurTest {
         double[] A = { -3.0 };
         double[] Q = {  6.0 };
 
-        Schur schur = Schur.decompose(A.clone(), n);
+        Schur schur = Schur.decompose(A.clone(), n, true);
         assertTrue(schur.ok());
-        assertTrue(schur.solveContinuousLyapunov(Q));
+        assertTrue(schur.lyapunov(Q));
 
         // x = 6.0 / (2 * -3.0) = -1.0
         assertEquals(-1.0, Q[0], 1e-10);
@@ -766,7 +766,7 @@ class SchurTest {
         assertEquals(0, maxAbs(R, Qorig, n), 10.0 * n * machEps * Math.abs(Qorig[0]) + 1e-12);
     }
 
-    // ==================== Instance method tests for solveDiscreteLyapunov ====================
+    // ==================== Instance method tests for discreteLyapunov ====================
 
     @Test
     @DisplayName("Lyapunov discrete (instance): stable 2x2 diagonal A")
@@ -777,9 +777,9 @@ class SchurTest {
         double[] Aorig = A.clone();
         double[] Qorig = Q.clone();
 
-        Schur schur = Schur.decompose(A.clone(), n);
+        Schur schur = Schur.decompose(A.clone(), n, true);
         assertTrue(schur.ok());
-        assertTrue(schur.solveDiscreteLyapunov(A.clone(), Q));
+        assertTrue(schur.discreteLyapunov(A.clone(), Q));
 
         double[] R = discreteResidual(Aorig, Q, n);
         assertEquals(0, maxAbs(R, Qorig, n), 1e-9);
@@ -798,9 +798,9 @@ class SchurTest {
         double[] Aorig = A.clone();
         double[] Qorig = Q.clone();
 
-        Schur schur = Schur.decompose(A.clone(), n);
+        Schur schur = Schur.decompose(A.clone(), n, true);
         assertTrue(schur.ok());
-        assertTrue(schur.solveDiscreteLyapunov(A.clone(), Q));
+        assertTrue(schur.discreteLyapunov(A.clone(), Q));
 
         double[] R = discreteResidual(Aorig, Q, n);
         assertEquals(0, maxAbs(R, Qorig, n), 1e-9);
@@ -820,9 +820,9 @@ class SchurTest {
         double[] Aorig = A.clone();
         double[] Qorig = Q.clone();
 
-        Schur schur = Schur.decompose(A.clone(), n);
+        Schur schur = Schur.decompose(A.clone(), n, true);
         assertTrue(schur.ok());
-        assertTrue(schur.solveDiscreteLyapunov(A.clone(), Q));
+        assertTrue(schur.discreteLyapunov(A.clone(), Q));
 
         double[] R = discreteResidual(Aorig, Q, n);
         assertEquals(0, maxAbs(R, Qorig, n), 1e-9);
@@ -839,7 +839,7 @@ class SchurTest {
         assertTrue(schur.ok());
         assertNull(schur.Z());
 
-        assertThrows(IllegalStateException.class, () -> schur.solveDiscreteLyapunov(A.clone(), Q));
+        assertThrows(IllegalStateException.class, () -> schur.discreteLyapunov(A.clone(), Q));
     }
 }
 

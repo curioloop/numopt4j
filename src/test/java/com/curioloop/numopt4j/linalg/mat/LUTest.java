@@ -3,7 +3,6 @@
  */
 package com.curioloop.numopt4j.linalg.mat;
 
-import com.curioloop.numopt4j.linalg.Decomposition.Part;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
@@ -332,7 +331,7 @@ class LUTest {
         LU lu = LU.decompose(A, 2);
         assertTrue(lu.ok());
 
-        double[] L = lu.extract(Part.L).data;
+        double[] L = lu.toL().data;
 
         assertEquals(1.0, L[0], TOLERANCE);
         assertEquals(0.0, L[1], TOLERANCE);
@@ -349,7 +348,7 @@ class LUTest {
         LU lu = LU.decompose(A, 2);
         assertTrue(lu.ok());
 
-        double[] U = lu.extract(Part.U).data;
+        double[] U = lu.toU().data;
 
         assertTrue(Math.abs(U[0]) > 0);
         assertTrue(Math.abs(U[1]) > 0);
@@ -370,8 +369,8 @@ class LUTest {
         LU lu = LU.decompose(A, 3);
         assertTrue(lu.ok());
 
-        double[] L = lu.extract(Part.L).data;
-        double[] U = lu.extract(Part.U).data;
+        double[] L = lu.toL().data;
+        double[] U = lu.toU().data;
         int[] piv = lu.piv();
 
         double[] LU_reconstructed = new double[9];

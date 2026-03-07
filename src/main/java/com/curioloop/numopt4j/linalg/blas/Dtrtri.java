@@ -16,7 +16,6 @@ import static java.lang.Math.*;
  * (triangular matrix condition number estimate).</p>
  *
  * <p>Corresponds to LAPACK routine DTRTRI.
- * Go reference: gonum/lapack/gonum/dtrtri.go</p>
  */
 interface Dtrtri {
 

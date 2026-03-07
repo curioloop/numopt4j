@@ -9,7 +9,6 @@ package com.curioloop.numopt4j.linalg.blas;
  * 
  * <p>Q = H_{k-1} * ... * H_1 * H_0</p>
  * 
- * <p>Based on gonum/lapack implementation.</p>
  */
 interface Dorgql {
 
