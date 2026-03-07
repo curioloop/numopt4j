@@ -174,7 +174,8 @@ interface Dggev {
         // --- Step 8: Compute eigenvectors via dtgevc ---
         if (wantVL || wantVR) {
             // tmpVL/tmpVR are carved from work — no heap allocation
-            Dtgevc.dtgevc('B', 'A', null, n,
+            char side = (wantVL && wantVR) ? 'B' : (wantVL ? 'L' : 'R');
+            Dtgevc.dtgevc(side, 'A', null, n,
                           A, 0, lda, B, 0, ldb,
                           wantVL ? work : null, tmpVLOff, n,
                           wantVR ? work : null, tmpVROff, n,

@@ -253,7 +253,7 @@ class DecomposerTest {
 
     @Test
     void gevdFacadeBasicCall() {
-        GEVD eg = Decomposer.gevd(A2.clone(), B2.clone(), 2);
+        GEVD eg = Decomposer.gevd(A2.clone(), B2.clone(), 2, GEVD.Opts.WANT_V);
         assertThat(eg.ok()).isTrue();
         assertThat(eg.toS()).isNotNull();
         assertThat(eg.toV()).isNotNull();
@@ -333,7 +333,7 @@ class DecomposerTest {
     @Test
     void gevdEigenvectorsOrthonormal() {
         // For type 1 with B=I, eigenvectors should be orthonormal
-        GEVD eg = Decomposer.gevd(A2.clone(), B2.clone(), 2);
+        GEVD eg = Decomposer.gevd(A2.clone(), B2.clone(), 2, GEVD.Opts.WANT_V);
         assertThat(eg.ok()).isTrue();
         double[] Q = eg.toV().data;
         // Q^T * Q = I  (columns are orthonormal)

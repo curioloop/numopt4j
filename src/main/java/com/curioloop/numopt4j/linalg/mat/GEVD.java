@@ -86,6 +86,7 @@ public final class GEVD implements Decomposition {
     private int n;
     private int type;
     private boolean ok;
+    private boolean hasV;
 
     private GEVD() {}
 
@@ -185,6 +186,8 @@ public final class GEVD implements Decomposition {
 
         if (!ok || valuesOnly) return;
 
+        this.hasV = true;
+
         // Step 5: Back-transform eigenvectors
         if (lower) {
             if (type == 1 || type == 2) {
@@ -250,7 +253,7 @@ public final class GEVD implements Decomposition {
      * Equivalently, {@code toV().get(i, j)} returns the i-th component of the j-th eigenvector.
      */
     public Matrix toV() {
-        if (!ok || A == null) return null;
+        if (!ok || !hasV || A == null) return null;
         return new Matrix(n, n, false, A);
     }
 

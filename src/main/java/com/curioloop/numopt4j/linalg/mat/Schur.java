@@ -233,13 +233,13 @@ public final class Schur implements Decomposition {
         this.ok = (info == 0);
     }
 
-    public double[] T() { return T; }
+    public double[] T() { return ok ? T : null; }
 
-    public double[] Z() { return pool.Z; }
+    public double[] Z() { return ok ? pool.Z : null; }
 
-    public double[] eigenvalues() { return pool.wr; }
+    public double[] eigenvalues() { return ok ? pool.wr : null; }
 
-    public double[] eigenvaluesImag() { return pool.wi; }
+    public double[] eigenvaluesImag() { return ok ? pool.wi : null; }
 
     public int sdim() { return sdim; }
 

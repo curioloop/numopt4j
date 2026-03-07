@@ -241,11 +241,11 @@ public final class Eigen implements Decomposition {
     }
 
     public double[] eigenvalues() {
-        return pool != null ? pool.wr : null;
+        return ok && pool != null ? pool.wr : null;
     }
 
     public double[] eigenvaluesImag() {
-        return pool != null ? pool.wi : null;
+        return ok && pool != null ? pool.wi : null;
     }
 
     public int kind() {
@@ -341,6 +341,7 @@ public final class Eigen implements Decomposition {
 
     public double[] eigenvector(int j, double[] dst) {
         if (!ok || j < 0 || j >= n) return null;
+        if (symmetric && (kind & EIGEN_RIGHT) == 0) return null;
         if (dst == null || dst.length < n * 2) {
             dst = new double[n * 2];
         }
@@ -361,6 +362,7 @@ public final class Eigen implements Decomposition {
                 dst[i * 2 + 1] = 0;
             }
         } else if (wi[j] > 0) {
+            if (j + 1 >= n) return null; // complex pair must have a conjugate at j+1
             for (int i = 0; i < n; i++) {
                 dst[i * 2] = vr[i * n + j];
                 dst[i * 2 + 1] = vr[i * n + j + 1];

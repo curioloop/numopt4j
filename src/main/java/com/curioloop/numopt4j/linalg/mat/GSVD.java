@@ -185,8 +185,8 @@ public final class GSVD implements Decomposition {
 
     // -------------------------------------------------------------------------
 
-    public double[] alpha()  { return pool != null ? pool.alpha : null; }
-    public double[] beta()   { return pool != null ? pool.beta  : null; }
+    public double[] alpha()  { return ok && pool != null ? pool.alpha : null; }
+    public double[] beta()   { return ok && pool != null ? pool.beta  : null; }
     public double[] sigma()  { return ok && pool != null ? pool.sigma : null; }
     public double[] U()      { return ok && pool != null ? pool.U : null; }
     public double[] V()      { return ok && pool != null ? pool.V : null; }

@@ -23,9 +23,10 @@ public final class LQ implements Decomposition {
          */
         public Pool ensure(int m, int n) {
             // Query dgelqf for optimal scratch size; tau occupies work[0..m)
+            // solveTranspose also needs work[m..m+n) as a temp buffer for b
             double[] tmp = new double[1];
             BLAS.dgelqf(m, n, null, 0, n, null, 0, tmp, 0, -1);
-            ensureWork(m + (int) tmp[0]);
+            ensureWork(m + n + (int) tmp[0]);
             return this;
         }
     }

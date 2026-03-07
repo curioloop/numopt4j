@@ -288,10 +288,10 @@ public final class SVD implements Decomposition {
         return ok;
     }
 
-    public double[] singularValues() { return s; }
+    public double[] singularValues() { return ok ? s : null; }
 
-    public double[] U()  { return U; }
-    public double[] VT() { return VT; }
+    public double[] U()  { return ok ? U : null; }
+    public double[] VT() { return ok ? VT : null; }
 
     /** Returns the left singular vectors matrix U. Returns null if decomposition failed or U was not requested. */
     public Matrix toU() {
@@ -323,6 +323,7 @@ public final class SVD implements Decomposition {
 
     public int m() { return m; }
     public int n() { return n; }
+    public int kind() { return ok ? kind : -1; }
 
     public int rank() {
         if (s == null || s.length == 0) return 0;
