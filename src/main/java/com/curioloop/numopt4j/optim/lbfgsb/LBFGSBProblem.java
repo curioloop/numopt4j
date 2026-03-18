@@ -5,7 +5,7 @@ package com.curioloop.numopt4j.optim.lbfgsb;
 
 import com.curioloop.numopt4j.optim.Minimizer;
 import com.curioloop.numopt4j.optim.NumericalGradient;
-import com.curioloop.numopt4j.optim.OptimizationException;
+import com.curioloop.numopt4j.optim.OptimizationFailure;
 import com.curioloop.numopt4j.optim.OptimizationResult;
 import com.curioloop.numopt4j.optim.OptimizationStatus;
 import com.curioloop.numopt4j.optim.Univariate;
@@ -141,17 +141,17 @@ public final class LBFGSBProblem extends Minimizer<Univariate, LBFGSBWorkspace, 
 
     private void validate() {
         if (objective == null) {
-            throw new OptimizationException("MISSING_PARAM",
+            throw new OptimizationFailure("MISSING_PARAM",
                 "objective is required. Call .objective(fn) before .solve().");
         }
         if (initialPoint == null || initialPoint.length == 0) {
-            throw new OptimizationException("MISSING_PARAM",
+            throw new OptimizationFailure("MISSING_PARAM",
                 "initialPoint is required. Call .initialPoint(x0) before .solve().");
         }
         for (int i = 0; i < initialPoint.length; i++) {
             double v = initialPoint[i];
             if (Double.isNaN(v) || Double.isInfinite(v)) {
-                throw new OptimizationException("INVALID_INPUT",
+                throw new OptimizationFailure("INVALID_INPUT",
                     "initialPoint[" + i + "] is " + v + ". All initial values must be finite.");
             }
         }

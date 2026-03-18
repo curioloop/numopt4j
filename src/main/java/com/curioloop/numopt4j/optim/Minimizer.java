@@ -4,6 +4,7 @@
 package com.curioloop.numopt4j.optim;
 
 import com.curioloop.numopt4j.optim.lbfgsb.LBFGSBProblem;
+import com.curioloop.numopt4j.optim.subplex.SubplexProblem;
 import com.curioloop.numopt4j.optim.slsqp.SLSQPProblem;
 import com.curioloop.numopt4j.optim.trf.TRFProblem;
 
@@ -19,6 +20,12 @@ import com.curioloop.numopt4j.optim.trf.TRFProblem;
  *
  * <p>Use the static factory methods as the primary entry point:</p>
  * <pre>{@code
+ * // Derivative-free (Nelder-Mead)
+ * OptimizationResult r = Minimizer.subplex()
+ *     .objective(x -> x[0]*x[0] + x[1]*x[1])
+ *     .initialPoint(1.0, 1.0)
+ *     .solve();
+ *
  * // Bound-constrained (L-BFGS-B)
  * OptimizationResult r = Minimizer.lbfgsb()
  *     .objective(x -> x[0]*x[0] + x[1]*x[1])
@@ -39,9 +46,11 @@ import com.curioloop.numopt4j.optim.trf.TRFProblem;
  *     .solve();
  * }</pre>
  *
- * @param <O> objective function type ({@link Univariate} or {@link Multivariate})
+ * @param <O> objective function type ({@link Univariate}, {@link Multivariate},
+ *            or {@code ToDoubleFunction<double[]>} for derivative-free solvers)
  * @param <W> workspace type
  * @param <S> self type for fluent builder chaining
+ * @see SubplexProblem
  * @see LBFGSBProblem
  * @see SLSQPProblem
  * @see TRFProblem
@@ -149,5 +158,17 @@ public abstract class Minimizer<O, W, S extends Minimizer<O, W, S>> implements O
      */
     public static TRFProblem trf() {
         return new TRFProblem();
+    }
+
+    /**
+     * Creates a {@link SubplexProblem} for derivative-free optimization.
+     *
+     * <p>No gradient is required. Uses the Subplex algorithm (Rowan 1990) which
+     * decomposes the problem into low-dimensional Nelder-Mead subproblems.</p>
+     *
+     * @return new {@link SubplexProblem} builder
+     */
+    public static SubplexProblem subplex() {
+        return new SubplexProblem();
     }
 }

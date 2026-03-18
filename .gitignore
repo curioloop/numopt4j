@@ -1,5 +1,6 @@
 .idea/
 .kiro/
+.claude/
 .vscode/
 .qoder/
 build/

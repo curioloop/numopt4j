@@ -4,8 +4,9 @@
 
 ## 1. Library Overview and Installation
 
-numopt4j is a high-performance Java numerical optimization library providing three mainstream optimization algorithms:
+numopt4j is a high-performance Java numerical optimization library providing four mainstream optimization algorithms:
 
+- **Subplex**: Derivative-free optimization (Nelder-Mead + subspace decomposition), suitable when gradients are unavailable
 - **L-BFGS-B**: Bounded quasi-Newton method, suitable for unconstrained or box-constrained optimization
 - **SLSQP**: Sequential Least Squares Programming, suitable for equality/inequality constrained optimization
 - **TRF**: Trust Region Reflective method, suitable for bounded nonlinear least-squares fitting
@@ -23,7 +24,8 @@ numopt4j is a high-performance Java numerical optimization library providing thr
 ### Package Structure
 
 ```
-com.curioloop.numopt4j.optim          # Minimizer, RootFinder, Bound, OptimizationResult, OptimizationStatus, OptimizationException
+com.curioloop.numopt4j.optim          # Minimizer, RootFinder, Bound, OptimizationResult, OptimizationStatus, OptimizationFailure
+com.curioloop.numopt4j.optim.subplex  # SubplexProblem, SubplexWorkspace
 com.curioloop.numopt4j.optim.lbfgsb   # LBFGSBProblem, LBFGSBWorkspace
 com.curioloop.numopt4j.optim.slsqp    # SLSQPProblem, SLSQPWorkspace
 com.curioloop.numopt4j.optim.trf      # TRFProblem, TRFWorkspace
@@ -40,12 +42,15 @@ Have a residual function (least squares)?
             ├─ Yes → RootFinder.brentq() (1-D) or RootFinder.hybr() / RootFinder.broyden() (N-D)
             └─ No  → Have equality/inequality constraints?
                       ├─ Yes → SLSQPProblem via Minimizer.slsqp()
-                      └─ No  → LBFGSBProblem via Minimizer.lbfgsb()
+                      └─ No  → Gradient available?
+                                ├─ Yes → LBFGSBProblem via Minimizer.lbfgsb()
+                                └─ No  → SubplexProblem via Minimizer.subplex()
 ```
 
 | Problem Type | Recommended Class | Notes |
 |---|---|---|
-| Unconstrained optimization | `LBFGSBProblem` | Fastest, only needs objective function |
+| Derivative-free optimization | `SubplexProblem` | No gradient needed, works for any dimension |
+| Unconstrained optimization | `LBFGSBProblem` | Fastest when gradient is available |
 | Box-constrained optimization | `LBFGSBProblem` | Supports l ≤ x ≤ u |
 | Equality-constrained optimization | `SLSQPProblem` | c(x) = 0 |
 | Inequality-constrained optimization | `SLSQPProblem` | c(x) ≥ 0 |
@@ -64,6 +69,7 @@ Static factory that creates the appropriate Problem instance for each algorithm.
 ### Static Factory Methods
 
 ```java
+Minimizer.subplex()  // → SubplexProblem (derivative-free)
 Minimizer.lbfgsb()   // → LBFGSBProblem
 Minimizer.slsqp()    // → SLSQPProblem
 Minimizer.trf()      // → TRFProblem
@@ -73,10 +79,27 @@ Minimizer.trf()      // → TRFProblem
 
 ```java
 import com.curioloop.numopt4j.optim.*;
+import com.curioloop.numopt4j.optim.subplex.*;
 import com.curioloop.numopt4j.optim.lbfgsb.*;
 import com.curioloop.numopt4j.optim.slsqp.*;
 import com.curioloop.numopt4j.optim.trf.*;
 import java.util.Arrays;
+
+// Derivative-free optimization (Subplex)
+OptimizationResult r0 = Minimizer.subplex()
+    .objective(x -> x[0]*x[0] + x[1]*x[1])
+    .initialPoint(1.0, 1.0)
+    .solve();
+
+// Derivative-free with bounds and step sizes
+OptimizationResult r0b = Minimizer.subplex()
+    .objective(fn)
+    .initialPoint(x0)
+    .bounds(Bound.between(0, 10), Bound.between(0, 10))
+    .initialStep(1.0, 2.0)
+    .functionTolerance(1e-8)
+    .maxEvaluations(50000)
+    .solve();
 
 // Unconstrained optimization (L-BFGS-B)
 OptimizationResult r1 = Minimizer.lbfgsb()
@@ -119,7 +142,69 @@ OptimizationResult r5 = Minimizer.trf()
 ```
 
 
-## 4. LBFGSBProblem (L-BFGS-B Bounded Quasi-Newton Optimization)
+## 4. SubplexProblem (Subplex Derivative-Free Optimization, Rowan 1990)
+
+`com.curioloop.numopt4j.optim.subplex.SubplexProblem`
+
+Derivative-free optimization using the Subplex algorithm: decomposes high-dimensional problems
+into low-dimensional Nelder-Mead subproblems. Works when gradients are unavailable or expensive.
+Supports optional box constraints (l ≤ x ≤ u).
+
+### Constructor
+
+```java
+new SubplexProblem()
+```
+
+### Fluent API Methods
+
+| Method | Description | Default | Constraint |
+|---|---|---|---|
+| `objective(ToDoubleFunction<double[]> f)` | Set objective function (no gradient needed) | — | f != null |
+| `initialPoint(double... x0)` | Set initial point, also infers dimension n | — | non-null, non-empty, all finite |
+| `bounds(Bound... bounds)` | Set variable bounds | null (unbounded) | length must match n |
+| `initialStep(double... step)` | Per-dimension initial step sizes | auto-computed from bounds/x0 | length must match n |
+| `parameterTolerance(double value)` | Convergence tolerance on x | 1e-4 | > 0 |
+| `functionTolerance(double value)` | Convergence tolerance on f | 1e-4 | > 0 |
+| `maxEvaluations(int value)` | Maximum function evaluations | N * 200 | > 0 |
+| `solve(SubplexWorkspace... ws)` | Execute optimization, return result | — | — |
+| `alloc()` | Pre-allocate workspace (for reuse) | — | — |
+
+### Complete Example
+
+```java
+// Basic usage: derivative-free optimization
+OptimizationResult result = new SubplexProblem()
+    .objective(x -> x[0]*x[0] + x[1]*x[1])
+    .initialPoint(1.0, 1.0)
+    .solve();
+
+// High-dimensional with bounds and custom step sizes
+OptimizationResult result2 = Minimizer.subplex()
+    .objective(x -> {
+        double sum = 0;
+        for (int i = 0; i < x.length - 1; i++)
+            sum += 100 * Math.pow(x[i+1] - x[i]*x[i], 2) + Math.pow(1 - x[i], 2);
+        return sum;
+    })
+    .initialPoint(new double[20])
+    .bounds(...)
+    .initialStep(0.1, 10.0, 0.01, ...)  // different scales per dimension
+    .functionTolerance(1e-8)
+    .maxEvaluations(100000)
+    .solve();
+
+// Workspace reuse for repeated optimizations
+SubplexProblem problem = Minimizer.subplex()
+    .objective(fn)
+    .initialPoint(new double[n]);
+SubplexWorkspace ws = problem.alloc();
+for (double[] x0 : startingPoints) {
+    OptimizationResult r = problem.initialPoint(x0).solve(ws);
+}
+```
+
+## 5. LBFGSBProblem (L-BFGS-B Bounded Quasi-Newton Optimization)
 
 `com.curioloop.numopt4j.optim.lbfgsb.LBFGSBProblem`
 
@@ -186,7 +271,7 @@ for (double[] point : points) {
 ```
 
 
-## 5. SLSQPProblem (SLSQP Sequential Least Squares Programming)
+## 6. SLSQPProblem (SLSQP Sequential Least Squares Programming)
 
 `com.curioloop.numopt4j.optim.slsqp.SLSQPProblem`
 
@@ -246,7 +331,7 @@ OptimizationResult result2 = new SLSQPProblem()
 ```
 
 
-## 6. TRFProblem (TRF Trust Region Reflective Least Squares)
+## 7. TRFProblem (TRF Trust Region Reflective Least Squares)
 
 `com.curioloop.numopt4j.optim.trf.TRFProblem`
 
@@ -305,7 +390,7 @@ OptimizationResult r2 = new TRFProblem()
 ```
 
 
-## 7. RootFinder (Root-Finding Entry Point)
+## 8. RootFinder (Root-Finding Entry Point)
 
 `com.curioloop.numopt4j.optim.RootFinder`
 
@@ -390,7 +475,7 @@ for (double[] pt : points) {
 ```
 
 
-## 8. OptimizationResult API
+## 9. OptimizationResult API
 
 `com.curioloop.numopt4j.optim.OptimizationResult`
 
@@ -449,7 +534,7 @@ When not converged, additionally includes:
 ```
 
 
-## 9. OptimizationStatus Enum
+## 10. OptimizationStatus Enum
 
 `com.curioloop.numopt4j.optim.OptimizationStatus`
 
@@ -482,9 +567,9 @@ boolean isError()          // Whether an error occurred (code < 0)
 ```
 
 
-## 10. OptimizationException
+## 11. OptimizationFailure
 
-`com.curioloop.numopt4j.optim.OptimizationException`
+`com.curioloop.numopt4j.optim.OptimizationFailure`
 
 Extends `RuntimeException`, thrown by Problem.solve() when parameter issues are detected.
 
@@ -525,7 +610,7 @@ try {
         .objective(x -> x[0]*x[0])
         // forgot to set initialPoint
         .solve();
-} catch (OptimizationException e) {
+} catch (OptimizationFailure e) {
     System.out.println(e.getErrorCode()); // "MISSING_PARAM"
     System.out.println(e.getMessage());
     // "[MISSING_PARAM] initialPoint is required. Call .initialPoint(x0) before .solve().
@@ -534,7 +619,7 @@ try {
 ```
 
 
-## 11. Bound Factory Methods
+## 12. Bound Factory Methods
 
 `com.curioloop.numopt4j.optim.Bound`
 
@@ -575,7 +660,7 @@ Bound positive = Bound.nonNegative();
 ```
 
 
-## 12. NumericalGradient
+## 13. NumericalGradient
 
 `com.curioloop.numopt4j.optim.NumericalGradient`
 
@@ -616,7 +701,7 @@ new LBFGSBProblem()
 ```
 
 
-## 13. NumericalJacobian
+## 14. NumericalJacobian
 
 `com.curioloop.numopt4j.optim.NumericalJacobian`
 
@@ -670,7 +755,7 @@ Multivariate eval = NumericalJacobian.CENTRAL.wrap(residuals, 2, 2);
 ```
 
 
-## 14. Common Issues and Error Handling
+## 15. Common Issues and Error Handling
 
 ### Issue 1: Missing Required Parameters
 
@@ -680,7 +765,7 @@ try {
     new LBFGSBProblem()
         .objective(x -> x[0]*x[0])
         .solve();
-} catch (OptimizationException e) {
+} catch (OptimizationFailure e) {
     // [MISSING_PARAM] initialPoint is required. Call .initialPoint(x0) before .solve().
     // See: https://github.com/curioloop/numopt4j/wiki/MISSING_PARAM
 }
@@ -700,7 +785,7 @@ try {
         .objective(x -> x[0]*x[0])
         .initialPoint(Double.NaN)
         .solve();
-} catch (OptimizationException e) {
+} catch (OptimizationFailure e) {
     // [INVALID_INPUT] initialPoint[0] is NaN. All initial values must be finite.
 }
 ```
@@ -804,7 +889,7 @@ for (double[] startPoint : startPoints) {
 ```
 
 
-## 15. Decomposer (Matrix Decompositions)
+## 16. Decomposer (Matrix Decompositions)
 
 `com.curioloop.numopt4j.linalg.Decomposer`
 
@@ -841,7 +926,7 @@ com.curioloop.numopt4j.linalg.mat      # LU, QR, LQ, SVD, Cholesky, Schur, Eigen
 - Pool fields: uppercase names (e.g. `U`, `VT`, `Z`) are matrices; lowercase names (e.g. `s`, `wr`, `wi`) are vectors.
 
 
-## 16. LU Decomposition
+## 17. LU Decomposition
 
 `com.curioloop.numopt4j.linalg.mat.LU`
 
@@ -888,7 +973,7 @@ for (double[] mat : matrices) {
 ```
 
 
-## 17. QR Decomposition
+## 18. QR Decomposition
 
 `com.curioloop.numopt4j.linalg.mat.QR`
 
@@ -943,7 +1028,7 @@ int rank = qrp.rank();
 ```
 
 
-## 18. LQ Decomposition
+## 19. LQ Decomposition
 
 `com.curioloop.numopt4j.linalg.mat.LQ`
 
@@ -972,7 +1057,7 @@ lq.pool()                // LQ.Pool for reuse
 ```
 
 
-## 19. SVD
+## 20. SVD
 
 `com.curioloop.numopt4j.linalg.mat.SVD`
 
@@ -1027,7 +1112,7 @@ double[] x = svd.solve(b, null);  // pseudoinverse
 ```
 
 
-## 20. Cholesky / LDLᵀ Decomposition
+## 21. Cholesky / LDLᵀ Decomposition
 
 `com.curioloop.numopt4j.linalg.mat.Cholesky`
 
@@ -1084,7 +1169,7 @@ ldl.solve(b, x);
 ```
 
 
-## 21. Schur Decomposition
+## 22. Schur Decomposition
 
 `com.curioloop.numopt4j.linalg.mat.Schur`
 
@@ -1150,7 +1235,7 @@ sc2.discreteLyapunov(A.clone(), Q);
 ```
 
 
-## 22. Eigen Decomposition
+## 23. Eigen Decomposition
 
 `com.curioloop.numopt4j.linalg.mat.Eigen`
 
@@ -1224,7 +1309,7 @@ Matrix toS = eg.toS();  // n×1 complex matrix
 ```
 
 
-## 23. GEVD — Generalized Symmetric-Definite Eigenvalue Decomposition
+## 24. GEVD — Generalized Symmetric-Definite Eigenvalue Decomposition
 
 `com.curioloop.numopt4j.linalg.mat.GEVD`
 
@@ -1290,7 +1375,7 @@ Matrix V = gv.toV();  // eigenvectors as columns
 ```
 
 
-## 24. GGEVD — Generalized Non-Symmetric Eigenvalue Decomposition
+## 25. GGEVD — Generalized Non-Symmetric Eigenvalue Decomposition
 
 `com.curioloop.numopt4j.linalg.mat.GGEVD`
 
@@ -1366,7 +1451,7 @@ for (int i = 0; i < n; i++) {
 ```
 
 
-## 25. GSVD — Generalized Singular Value Decomposition
+## 26. GSVD — Generalized Singular Value Decomposition
 
 `com.curioloop.numopt4j.linalg.mat.GSVD`
 

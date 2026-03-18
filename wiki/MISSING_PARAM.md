@@ -4,7 +4,7 @@ A required parameter was not set before calling `.solve()`.
 
 ## Cause
 
-`OptimizationException` with code `MISSING_PARAM` is thrown when:
+`OptimizationFailure` with code `MISSING_PARAM` is thrown when:
 
 - `objective` (or `residuals`) was not provided
 - `initialPoint` was not provided

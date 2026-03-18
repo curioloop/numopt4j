@@ -16,19 +16,19 @@ package com.curioloop.numopt4j.optim;
  * @see OptimizationResult
  * @see OptimizationStatus
  */
-public class OptimizationException extends RuntimeException {
+public class OptimizationFailure extends RuntimeException {
 
     private static final String DEFAULT_BASE_URL =
             "https://github.com/curioloop/numopt4j/wiki/";
 
     private final String errorCode;
 
-    public OptimizationException(String errorCode, String message) {
+    public OptimizationFailure(String errorCode, String message) {
         super(formatMessage(errorCode, message));
         this.errorCode = errorCode;
     }
 
-    public OptimizationException(String errorCode, String message, Throwable cause) {
+    public OptimizationFailure(String errorCode, String message, Throwable cause) {
         super(formatMessage(errorCode, message), cause);
         this.errorCode = errorCode;
     }

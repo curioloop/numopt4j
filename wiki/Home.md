@@ -1,6 +1,6 @@
 # numopt4j Wiki
 
-Error code reference for `OptimizationException`. Each page explains the cause, shows a minimal failing example, and provides a fix.
+Error code reference for `OptimizationFailure`. Each page explains the cause, shows a minimal failing example, and provides a fix.
 
 ## Error Codes
 

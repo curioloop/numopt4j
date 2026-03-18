@@ -6,7 +6,7 @@ package com.curioloop.numopt4j.optim.trf;
 import com.curioloop.numopt4j.optim.Minimizer;
 import com.curioloop.numopt4j.optim.Multivariate;
 import com.curioloop.numopt4j.optim.NumericalJacobian;
-import com.curioloop.numopt4j.optim.OptimizationException;
+import com.curioloop.numopt4j.optim.OptimizationFailure;
 import com.curioloop.numopt4j.optim.OptimizationResult;
 
 import java.util.function.BiConsumer;
@@ -108,22 +108,22 @@ public final class TRFProblem extends Minimizer<Multivariate, TRFWorkspace, TRFP
 
     private void validate() {
         if (objective == null && pendingFn == null) {
-            throw new OptimizationException("MISSING_PARAM",
+            throw new OptimizationFailure("MISSING_PARAM",
                 "residuals/objective is required. Call .residuals(fn, m) before .solve().");
         }
         if (initialPoint == null || initialPoint.length == 0) {
-            throw new OptimizationException("MISSING_PARAM",
+            throw new OptimizationFailure("MISSING_PARAM",
                 "initialPoint is required. Call .initialPoint(x0) before .solve().");
         }
         for (int i = 0; i < initialPoint.length; i++) {
             double v = initialPoint[i];
             if (Double.isNaN(v) || Double.isInfinite(v)) {
-                throw new OptimizationException("INVALID_INPUT",
+                throw new OptimizationFailure("INVALID_INPUT",
                     "initialPoint[" + i + "] is " + v + ". All initial values must be finite.");
             }
         }
         if (numResiduals <= 0) {
-            throw new OptimizationException("MISSING_PARAM",
+            throw new OptimizationFailure("MISSING_PARAM",
                 "number of residuals m must be set. Call .residuals(fn, m) before .solve().");
         }
         if (numResiduals < dimension) {

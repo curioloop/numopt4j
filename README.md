@@ -4,6 +4,7 @@ High-performance numerical optimization library for Java.
 
 ## Features
 
+- **Subplex**: Derivative-free optimization (Nelder-Mead + subspace decomposition, no gradient required)
 - **L-BFGS-B**: Limited-memory BFGS with bound constraints
 - **SLSQP**: Sequential Least Squares Programming with equality/inequality constraints
 - **TRF**: Trust Region Reflective for nonlinear least squares
@@ -27,14 +28,30 @@ High-performance numerical optimization library for Java.
 </dependency>
 ```
 
-## AI 助手使用
+## AI Assistant Integration
 
-如果你在使用 AI 编程助手（如 GitHub Copilot、Cursor、Claude 等），可以通过以下方式获取 numopt4j 的完整 API 文档：
-
-- 在 AI 对话中输入 `use context7` 并提及 numopt4j，AI 助手将自动加载最新文档
-- 或直接引用项目根目录的 `llms.txt` 或 `llms-full.txt` 文件
+If you are using an AI coding assistant (e.g. GitHub Copilot, Cursor, Claude), you can provide the full API documentation by referencing `llms.txt` or `llms-full.txt` in the project root.
 
 ## Quick Start
+
+### Derivative-Free Optimization (Subplex)
+
+```java
+// No gradient required — works for any dimension
+OptimizationResult result = Minimizer.subplex()
+    .objective(x -> x[0]*x[0] + x[1]*x[1])
+    .initialPoint(1.0, 1.0)
+    .solve();
+
+// High-dimensional with bounds
+OptimizationResult result = Minimizer.subplex()
+    .objective(x -> { double s = 0; for (double v : x) s += v*v; return s; })
+    .initialPoint(new double[20])
+    .bounds(...)
+    .functionTolerance(1e-8)
+    .maxEvaluations(50000)
+    .solve();
+```
 
 ### Unconstrained Optimization (L-BFGS-B)
 
@@ -170,6 +187,7 @@ for (double[] x0 : initialPoints) {
 ### Minimizer (facade — static factory entry point)
 
 ```java
+Minimizer.subplex()  // → SubplexProblem (Nelder-Mead)
 Minimizer.lbfgsb()   // → LBFGSBProblem
 Minimizer.slsqp()    // → SLSQPProblem
 Minimizer.trf()      // → TRFProblem

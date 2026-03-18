@@ -1,11 +1,12 @@
 # numopt4j
 
-> High-performance Java numerical optimization library providing L-BFGS-B, SLSQP, TRF, and root-finding algorithms.
+> High-performance Java numerical optimization library providing Subplex, L-BFGS-B, SLSQP, TRF, and root-finding algorithms.
 
-numopt4j is a Java numerical optimization library supporting unconstrained optimization, bound-constrained optimization, equality/inequality constrained optimization, nonlinear least-squares fitting, and root finding.
+numopt4j is a Java numerical optimization library supporting derivative-free optimization, unconstrained/bound-constrained optimization, equality/inequality constrained optimization, nonlinear least-squares fitting, and root finding.
 
 ## Algorithm Selection
 
+- Derivative-free optimization (no gradient) → Subplex (`Minimizer.subplex()`)
 - Unconstrained or bound-constrained optimization → L-BFGS-B (`Minimizer.lbfgsb()`)
 - Equality or inequality constrained optimization → SLSQP (`Minimizer.slsqp()`)
 - Nonlinear least-squares fitting → TRF (`Minimizer.trf()`)
@@ -17,7 +18,8 @@ numopt4j is a Java numerical optimization library supporting unconstrained optim
 ## Package Structure
 
 ```
-com.curioloop.numopt4j.optim              # Minimizer, RootFinder, Bound, OptimizationResult, OptimizationStatus, OptimizationException
+com.curioloop.numopt4j.optim             # Minimizer, RootFinder, Bound, OptimizationResult, OptimizationStatus, OptimizationFailure
+com.curioloop.numopt4j.optim.subplex     # SubplexProblem, SubplexWorkspace
 com.curioloop.numopt4j.optim.lbfgsb      # LBFGSBProblem, LBFGSBWorkspace
 com.curioloop.numopt4j.optim.slsqp       # SLSQPProblem, SLSQPWorkspace
 com.curioloop.numopt4j.optim.trf         # TRFProblem, TRFWorkspace
@@ -29,6 +31,7 @@ com.curioloop.numopt4j.linalg.mat        # LU, QR, LQ, SVD, Cholesky, Schur, Eig
 Typical import for optimization:
 ```java
 import com.curioloop.numopt4j.optim.*;
+import com.curioloop.numopt4j.optim.subplex.*;
 import com.curioloop.numopt4j.optim.lbfgsb.*;
 import com.curioloop.numopt4j.optim.slsqp.*;
 import com.curioloop.numopt4j.optim.trf.*;
@@ -42,6 +45,29 @@ import com.curioloop.numopt4j.linalg.mat.*;
 ```
 
 ## Quick Start
+
+### Derivative-free optimization (Subplex / Nelder-Mead)
+
+```java
+import com.curioloop.numopt4j.optim.*;
+import com.curioloop.numopt4j.optim.subplex.*;
+
+// No gradient required — works for any dimension
+OptimizationResult r = Minimizer.subplex()
+    .objective(x -> x[0]*x[0] + x[1]*x[1])
+    .initialPoint(1.0, 1.0)
+    .solve();
+
+// With bounds and custom step sizes
+OptimizationResult r2 = Minimizer.subplex()
+    .objective(fn)
+    .initialPoint(x0)
+    .bounds(Bound.between(0, 10), Bound.between(0, 10))
+    .initialStep(1.0, 2.0)        // per-dimension step sizes
+    .functionTolerance(1e-8)
+    .maxEvaluations(50000)
+    .solve();
+```
 
 ### Bound-constrained optimization (L-BFGS-B)
 
@@ -131,9 +157,25 @@ RootFinder.hybr(fn, 2).jacobian(NumericalJacobian.CENTRAL).initialPoint(1.0, 1.0
 ### Minimizer (facade — static factory entry point)
 
 ```java
+Minimizer.subplex()  // → SubplexProblem (derivative-free)
 Minimizer.lbfgsb()   // → LBFGSBProblem
 Minimizer.slsqp()    // → SLSQPProblem
 Minimizer.trf()      // → TRFProblem
+```
+
+### SubplexProblem (Subplex derivative-free, Rowan 1990)
+
+```java
+Minimizer.subplex()
+    .objective(ToDoubleFunction<double[]>)   // no gradient needed
+    .initialPoint(double...)                 // sets x₀ and infers dimension
+    .bounds(Bound...)                        // optional, lb ≤ x ≤ ub
+    .initialStep(double...)                  // optional, per-dimension step sizes
+    .parameterTolerance(double)              // default 1e-4
+    .functionTolerance(double)               // default 1e-4
+    .maxEvaluations(int)                     // default N * 200
+    .solve()                                 // → OptimizationResult
+    .alloc()                                 // → SubplexWorkspace (for reuse)
 ```
 
 ### LBFGSBProblem (L-BFGS-B bound-constrained quasi-Newton)
