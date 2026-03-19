@@ -115,22 +115,22 @@ interface Dggev {
         // Copy A (which contains H + Householder reflectors) to work[qOff],
         // then run dorghr in-place on work[qOff] to build Q there.
         // A retains the upper Hessenberg form H for subsequent steps.
-        BLAS.dlacpy('A', n, n, A, 0, lda, work, qOff, n);
+        BLAS.dlacpy(BLAS.Uplo.All, n, n, A, 0, lda, work, qOff, n);
         BLAS.dorghr(n, ilo, ihi, work, qOff, n, work, tauAOff, work, scrOff, scrLen);
         // Q is now in work[qOff..qOff+n*n-1]
 
         // --- Step 4: Initialize Z = I ---
-        BLAS.dlaset('A', n, n, 0.0, 1.0, work, zOff, n);
+        BLAS.dlaset(BLAS.Uplo.All, n, n, 0.0, 1.0, work, zOff, n);
 
         // --- Step 5: QR-factorize B to get upper triangular T ---
         BLAS.dgeqrf(n, n, B, 0, ldb, work, tauBOff, work, scrOff, scrLen);
 
         // Apply Q_B^T to H (A) from the left: A <- Q_B^T * A
-        BLAS.dormqr(BLAS.Side.Left, BLAS.Transpose.Trans, n, n, n,
+        BLAS.dormqr(BLAS.Side.Left, BLAS.Trans.Trans, n, n, n,
                     B, 0, ldb, work, tauBOff, A, 0, lda, work, scrOff, scrLen);
 
         // Apply Q_B^T to Q from the left: Q <- Q_B^T * Q
-        BLAS.dormqr(BLAS.Side.Left, BLAS.Transpose.Trans, n, n, n,
+        BLAS.dormqr(BLAS.Side.Left, BLAS.Trans.Trans, n, n, n,
                     B, 0, ldb, work, tauBOff, work, qOff, n, work, scrOff, scrLen);
 
         // Zero lower triangle of B (now upper triangular T)
@@ -183,13 +183,13 @@ interface Dggev {
 
             // --- Step 9: Back-transform: multiply by Q (left) and Z (right) ---
             if (wantVL) {
-                BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, n, n, n,
+                BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, n, n, n,
                            1.0, work, qOff, n, work, tmpVLOff, n, 0.0, VL, 0, ldvl);
                 BLAS.dgebak('B', BLAS.Side.Left, n, ilo, ihi, work, scaleOff, n, VL, ldvl);
                 normalizeEigvecs(VL, ldvl, n, alphai);
             }
             if (wantVR) {
-                BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, n, n, n,
+                BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, n, n, n,
                            1.0, work, zOff, n, work, tmpVROff, n, 0.0, VR, 0, ldvr);
                 BLAS.dgebak('B', BLAS.Side.Right, n, ilo, ihi, work, scaleOff, n, VR, ldvr);
                 normalizeEigvecs(VR, ldvr, n, alphai);

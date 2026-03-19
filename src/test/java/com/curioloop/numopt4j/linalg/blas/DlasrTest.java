@@ -21,7 +21,7 @@ class DlasrTest {
         double[] c = {0.6, 0.8};
         double[] s = {0.8, 0.6};
 
-        Dlasr.dlasr(BLAS.Side.Left, 'V', 'F', 3, 3, c, s, A, 3);
+        Dlasr.dlasr(BLAS.Side.Left, 'V', 'F', 3, 3, c, 0, s, 0, A, 0, 3);
 
         assertTrue(Double.isFinite(A[0]));
         assertTrue(Double.isFinite(A[1]));
@@ -37,7 +37,7 @@ class DlasrTest {
         double[] c = {0.6, 0.8};
         double[] s = {0.8, 0.6};
 
-        Dlasr.dlasr(BLAS.Side.Right, 'V', 'F', 3, 3, c, s, A, 3);
+        Dlasr.dlasr(BLAS.Side.Right, 'V', 'F', 3, 3, c, 0, s, 0, A, 0, 3);
 
         assertTrue(Double.isFinite(A[0]));
         assertTrue(Double.isFinite(A[1]));
@@ -54,7 +54,7 @@ class DlasrTest {
         double[] c = {1, 1};
         double[] s = {0, 0};
 
-        Dlasr.dlasr(BLAS.Side.Left, 'V', 'F', 3, 3, c, s, A, 3);
+        Dlasr.dlasr(BLAS.Side.Left, 'V', 'F', 3, 3, c, 0, s, 0, A, 0, 3);
 
         for (int i = 0; i < A.length; i++) {
             assertEquals(AOrig[i], A[i], TOL);
@@ -63,7 +63,7 @@ class DlasrTest {
 
     @Test
     void testEmpty() {
-        Dlasr.dlasr(BLAS.Side.Left, 'V', 'F', 0, 0, new double[0], new double[0], new double[0], 0);
+        Dlasr.dlasr(BLAS.Side.Left, 'V', 'F', 0, 0, new double[0], 0, new double[0], 0, new double[0], 0, 0);
     }
 
     @Test
@@ -72,7 +72,7 @@ class DlasrTest {
         double[] c = {1};
         double[] s = {0};
 
-        Dlasr.dlasr(BLAS.Side.Left, 'V', 'F', 1, 3, c, s, A, 3);
+        Dlasr.dlasr(BLAS.Side.Left, 'V', 'F', 1, 3, c, 0, s, 0, A, 0, 3);
 
         assertEquals(1, A[0], TOL);
         assertEquals(2, A[1], TOL);
@@ -85,7 +85,7 @@ class DlasrTest {
         double[] c = {1};
         double[] s = {0};
 
-        Dlasr.dlasr(BLAS.Side.Right, 'V', 'F', 3, 1, c, s, A, 1);
+        Dlasr.dlasr(BLAS.Side.Right, 'V', 'F', 3, 1, c, 0, s, 0, A, 0, 1);
 
         assertEquals(1, A[0], TOL);
         assertEquals(2, A[1], TOL);
@@ -102,7 +102,7 @@ class DlasrTest {
         double[] c = {0.6, 0.8};
         double[] s = {0.8, 0.6};
 
-        Dlasr.dlasr(BLAS.Side.Left, 'V', 'B', 3, 3, c, s, A, 3);
+        Dlasr.dlasr(BLAS.Side.Left, 'V', 'B', 3, 3, c, 0, s, 0, A, 0, 3);
 
         assertTrue(Double.isFinite(A[0]));
         assertTrue(Double.isFinite(A[1]));
@@ -118,7 +118,7 @@ class DlasrTest {
         double[] c = {0.6, 0.8};
         double[] s = {0.8, 0.6};
 
-        Dlasr.dlasr(BLAS.Side.Right, 'V', 'B', 3, 3, c, s, A, 3);
+        Dlasr.dlasr(BLAS.Side.Right, 'V', 'B', 3, 3, c, 0, s, 0, A, 0, 3);
 
         assertTrue(Double.isFinite(A[0]));
         assertTrue(Double.isFinite(A[1]));
@@ -134,7 +134,7 @@ class DlasrTest {
         double[] c = {0.6, 0.8};
         double[] s = {0.8, 0.6};
 
-        Dlasr.dlasr(BLAS.Side.Left, 'T', 'F', 3, 3, c, s, A, 3);
+        Dlasr.dlasr(BLAS.Side.Left, 'T', 'F', 3, 3, c, 0, s, 0, A, 0, 3);
 
         assertTrue(Double.isFinite(A[0]));
         assertTrue(Double.isFinite(A[1]));
@@ -150,7 +150,7 @@ class DlasrTest {
         double[] c = {0.6, 0.8};
         double[] s = {0.8, 0.6};
 
-        Dlasr.dlasr(BLAS.Side.Left, 'T', 'B', 3, 3, c, s, A, 3);
+        Dlasr.dlasr(BLAS.Side.Left, 'T', 'B', 3, 3, c, 0, s, 0, A, 0, 3);
 
         assertTrue(Double.isFinite(A[0]));
         assertTrue(Double.isFinite(A[1]));
@@ -166,7 +166,7 @@ class DlasrTest {
         double[] c = {0.6, 0.8};
         double[] s = {0.8, 0.6};
 
-        Dlasr.dlasr(BLAS.Side.Right, 'T', 'F', 3, 3, c, s, A, 3);
+        Dlasr.dlasr(BLAS.Side.Right, 'T', 'F', 3, 3, c, 0, s, 0, A, 0, 3);
 
         assertTrue(Double.isFinite(A[0]));
         assertTrue(Double.isFinite(A[1]));
@@ -182,7 +182,7 @@ class DlasrTest {
         double[] c = {0.6, 0.8};
         double[] s = {0.8, 0.6};
 
-        Dlasr.dlasr(BLAS.Side.Right, 'T', 'B', 3, 3, c, s, A, 3);
+        Dlasr.dlasr(BLAS.Side.Right, 'T', 'B', 3, 3, c, 0, s, 0, A, 0, 3);
 
         assertTrue(Double.isFinite(A[0]));
         assertTrue(Double.isFinite(A[1]));
@@ -198,7 +198,7 @@ class DlasrTest {
         double[] c = {0.6, 0.8};
         double[] s = {0.8, 0.6};
 
-        Dlasr.dlasr(BLAS.Side.Left, 'B', 'F', 3, 3, c, s, A, 3);
+        Dlasr.dlasr(BLAS.Side.Left, 'B', 'F', 3, 3, c, 0, s, 0, A, 0, 3);
 
         assertTrue(Double.isFinite(A[0]));
         assertTrue(Double.isFinite(A[1]));
@@ -214,7 +214,7 @@ class DlasrTest {
         double[] c = {0.6, 0.8};
         double[] s = {0.8, 0.6};
 
-        Dlasr.dlasr(BLAS.Side.Left, 'B', 'B', 3, 3, c, s, A, 3);
+        Dlasr.dlasr(BLAS.Side.Left, 'B', 'B', 3, 3, c, 0, s, 0, A, 0, 3);
 
         assertTrue(Double.isFinite(A[0]));
         assertTrue(Double.isFinite(A[1]));
@@ -230,7 +230,7 @@ class DlasrTest {
         double[] c = {0.6, 0.8};
         double[] s = {0.8, 0.6};
 
-        Dlasr.dlasr(BLAS.Side.Right, 'B', 'F', 3, 3, c, s, A, 3);
+        Dlasr.dlasr(BLAS.Side.Right, 'B', 'F', 3, 3, c, 0, s, 0, A, 0, 3);
 
         assertTrue(Double.isFinite(A[0]));
         assertTrue(Double.isFinite(A[1]));
@@ -246,7 +246,7 @@ class DlasrTest {
         double[] c = {0.6, 0.8};
         double[] s = {0.8, 0.6};
 
-        Dlasr.dlasr(BLAS.Side.Right, 'B', 'B', 3, 3, c, s, A, 3);
+        Dlasr.dlasr(BLAS.Side.Right, 'B', 'B', 3, 3, c, 0, s, 0, A, 0, 3);
 
         assertTrue(Double.isFinite(A[0]));
         assertTrue(Double.isFinite(A[1]));
@@ -267,7 +267,7 @@ class DlasrTest {
             s[i] = Math.sin(theta);
         }
 
-        Dlasr.dlasr(BLAS.Side.Left, 'V', 'F', m, n, c, s, A, n);
+        Dlasr.dlasr(BLAS.Side.Left, 'V', 'F', m, n, c, 0, s, 0, A, 0, n);
 
         for (int i = 0; i < m * n; i++) {
             assertTrue(Double.isFinite(A[i]));
@@ -289,7 +289,7 @@ class DlasrTest {
             s[i] = Math.sin(theta);
         }
 
-        Dlasr.dlasr(BLAS.Side.Right, 'V', 'F', m, n, c, s, A, n);
+        Dlasr.dlasr(BLAS.Side.Right, 'V', 'F', m, n, c, 0, s, 0, A, 0, n);
 
         for (int i = 0; i < m * n; i++) {
             assertTrue(Double.isFinite(A[i]));
@@ -307,7 +307,7 @@ class DlasrTest {
         double[] c = {Math.cos(theta), Math.cos(theta)};
         double[] s = {Math.sin(theta), Math.sin(theta)};
 
-        Dlasr.dlasr(BLAS.Side.Left, 'V', 'F', 3, 3, c, s, A, 3);
+        Dlasr.dlasr(BLAS.Side.Left, 'V', 'F', 3, 3, c, 0, s, 0, A, 0, 3);
 
         double row0Norm = Math.sqrt(A[0]*A[0] + A[1]*A[1] + A[2]*A[2]);
         double row1Norm = Math.sqrt(A[3]*A[3] + A[4]*A[4] + A[5]*A[5]);
@@ -326,7 +326,7 @@ class DlasrTest {
         double[] c = {Math.cos(theta), Math.cos(theta)};
         double[] s = {Math.sin(theta), Math.sin(theta)};
 
-        Dlasr.dlasr(BLAS.Side.Right, 'V', 'F', 3, 3, c, s, A, 3);
+        Dlasr.dlasr(BLAS.Side.Right, 'V', 'F', 3, 3, c, 0, s, 0, A, 0, 3);
 
         double col0Norm = Math.sqrt(A[0]*A[0] + A[3]*A[3] + A[6]*A[6]);
         double col1Norm = Math.sqrt(A[1]*A[1] + A[4]*A[4] + A[7]*A[7]);

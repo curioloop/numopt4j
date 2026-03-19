@@ -104,11 +104,11 @@ interface Dgetr {
             if (j + jb < n) {
                 BLAS.dlaswp(n - j - jb, A, aOff + j + jb, lda, j, j + jb - 1, ipiv, ipivOff, 1);
 
-                BLAS.dtrsm(BLAS.Side.Left, BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, BLAS.Diag.Unit, jb, n - j - jb, 1.0,
+                BLAS.dtrsm(BLAS.Side.Left, BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.Unit, jb, n - j - jb, 1.0,
                         A, aOff + j * lda + j, lda, A, aOff + j * lda + j + jb, lda);
 
                 if (j + jb < m) {
-                    BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, m - j - jb, n - j - jb, jb, -1.0,
+                    BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, m - j - jb, n - j - jb, jb, -1.0,
                             A, aOff + (j + jb) * lda + j, lda,
                             A, aOff + j * lda + j + jb, lda,
                             1.0, A, aOff + (j + jb) * lda + j + jb, lda);
@@ -176,12 +176,12 @@ interface Dgetr {
                 }
 
                 if (j + jb < n) {
-                    BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, n, jb, n - j - jb, -1.0,
+                    BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, n, jb, n - j - jb, -1.0,
                             A, aOff + j + jb, lda,
                             work, workOff + (j + jb) * ldwork, ldwork,
                             1.0, A, aOff + j, lda);
                 }
-                BLAS.dtrsm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, BLAS.Diag.Unit, n, jb, 1.0,
+                BLAS.dtrsm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.Unit, n, jb, 1.0,
                         work, workOff + j * ldwork, ldwork,
                         A, aOff + j, lda);
             }
@@ -197,17 +197,17 @@ interface Dgetr {
         return true;
     }
 
-    static void dgetrs(BLAS.Transpose trans, int n, int nrhs, double[] A, int aOff, int lda,
+    static void dgetrs(BLAS.Trans trans, int n, int nrhs, double[] A, int aOff, int lda,
                        int[] ipiv, int ipivOff, double[] B, int bOff, int ldb) {
         if (n == 0 || nrhs == 0) return;
 
-        if (trans == BLAS.Transpose.NoTrans) {
+        if (trans == BLAS.Trans.NoTrans) {
             BLAS.dlaswp(nrhs, B, bOff, ldb, 0, n - 1, ipiv, ipivOff, 1);
-            BLAS.dtrsm(BLAS.Side.Left, BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, BLAS.Diag.Unit, n, nrhs, 1.0, A, aOff, lda, B, bOff, ldb);
-            BLAS.dtrsm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit, n, nrhs, 1.0, A, aOff, lda, B, bOff, ldb);
+            BLAS.dtrsm(BLAS.Side.Left, BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.Unit, n, nrhs, 1.0, A, aOff, lda, B, bOff, ldb);
+            BLAS.dtrsm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, n, nrhs, 1.0, A, aOff, lda, B, bOff, ldb);
         } else {
-            BLAS.dtrsm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Transpose.Trans, BLAS.Diag.NonUnit, n, nrhs, 1.0, A, aOff, lda, B, bOff, ldb);
-            BLAS.dtrsm(BLAS.Side.Left, BLAS.Uplo.Lower, BLAS.Transpose.Trans, BLAS.Diag.Unit, n, nrhs, 1.0, A, aOff, lda, B, bOff, ldb);
+            BLAS.dtrsm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Trans.Trans, BLAS.Diag.NonUnit, n, nrhs, 1.0, A, aOff, lda, B, bOff, ldb);
+            BLAS.dtrsm(BLAS.Side.Left, BLAS.Uplo.Lower, BLAS.Trans.Trans, BLAS.Diag.Unit, n, nrhs, 1.0, A, aOff, lda, B, bOff, ldb);
             BLAS.dlaswp(nrhs, B, bOff, ldb, 0, n - 1, ipiv, ipivOff, -1);
         }
     }
@@ -240,11 +240,11 @@ interface Dgetr {
 
             double sl, su;
             if (isave[2] == kase1) {
-                sl = Dlatrs.dlatrs(BLAS.Uplo.Upper, BLAS.Transpose.Trans, BLAS.Diag.NonUnit, normin, n, A, lda, work, 0, work, 2 * n);
-                su = Dlatrs.dlatrs(BLAS.Uplo.Lower, BLAS.Transpose.Trans, BLAS.Diag.Unit, normin, n, A, lda, work, 0, work, 3 * n);
+                sl = Dlatrs.dlatrs(BLAS.Uplo.Upper, BLAS.Trans.Trans, BLAS.Diag.NonUnit, normin, n, A, lda, work, 0, work, 2 * n);
+                su = Dlatrs.dlatrs(BLAS.Uplo.Lower, BLAS.Trans.Trans, BLAS.Diag.Unit, normin, n, A, lda, work, 0, work, 3 * n);
             } else {
-                su = Dlatrs.dlatrs(BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, BLAS.Diag.Unit, normin, n, A, lda, work, 0, work, 3 * n);
-                sl = Dlatrs.dlatrs(BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit, normin, n, A, lda, work, 0, work, 2 * n);
+                su = Dlatrs.dlatrs(BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.Unit, normin, n, A, lda, work, 0, work, 3 * n);
+                sl = Dlatrs.dlatrs(BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, normin, n, A, lda, work, 0, work, 2 * n);
             }
 
             double scale = sl * su;

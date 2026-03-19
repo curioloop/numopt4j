@@ -267,7 +267,7 @@ final class CauchyPoint implements LBFGSBConstants {
         // Calculate p₂ by solving triangular system Jp₂ = v₂ + LD⁻¹v₁
         // J is upper triangular stored in wt
         // Use uplo='U', trans='T' for solving Jᵀx = b (matches Go solveUpperT)
-        if (dtrsl(wt, wtOffset, m, col, p, p2Off, Uplo.Upper, Transpose.Trans) != 0) {
+        if (dtrsl(wt, wtOffset, m, col, p, p2Off, Uplo.Upper, Trans.Trans) != 0) {
             return ERR_SINGULAR_TRIANGULAR;  // Singular triangular matrix
         }
 
@@ -289,7 +289,7 @@ final class CauchyPoint implements LBFGSBConstants {
         // Calculate p₂ by solving Jᵀp₂ = ṗ₂
         // J is upper triangular stored in wt
         // Use uplo='U', trans='N' for solving Jx = b (matches Go solveUpperN)
-        if (dtrsl(wt, wtOffset, m, col, p, p2Off, Uplo.Upper, Transpose.NoTrans) != 0) {
+        if (dtrsl(wt, wtOffset, m, col, p, p2Off, Uplo.Upper, Trans.NoTrans) != 0) {
             return ERR_SINGULAR_TRIANGULAR;  // Singular triangular matrix
         }
 

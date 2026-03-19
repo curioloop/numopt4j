@@ -22,15 +22,6 @@ package com.curioloop.numopt4j.linalg.blas;
  */
 interface Dtrexc {
 
-    /** Original signature — delegates to offset-aware overload with wOff=0. */
-    static boolean dtrexc(boolean wantq, int n,
-                          double[] t, int tOff, int ldt,
-                          double[] q, int qOff, int ldq,
-                          int ifst, int ilst, double[] work) {
-        return dtrexc(wantq, n, t, tOff, ldt, q, qOff, ldq, ifst, ilst, work, 0);
-    }
-
-    /** Offset-aware overload: work[wOff] = ifst_final, work[wOff+1] = ilst_final. */
     static boolean dtrexc(boolean wantq, int n,
                           double[] t, int tOff, int ldt,
                           double[] q, int qOff, int ldq,

@@ -3,8 +3,6 @@
  */
 package com.curioloop.numopt4j.linalg.blas;
 
-import static com.curioloop.numopt4j.linalg.blas.FMA.op;
-
 /**
  * Forms the triangular factor T in a block reflector H = I - V*T*V^T.
  * LAPACK DLARFT algorithm.
@@ -42,11 +40,6 @@ public interface Dlarft {
         }
     }
 
-    static void dlarft(double[] V, int vOff, int ldv, double[] tau, int tauOff,
-                       double[] T, int tOff, int ldt, int m, int k) {
-        dlarftForwardColWise(V, vOff, ldv, tau, tauOff, T, tOff, ldt, m, k);
-    }
-
     static void dlarftForward(double[] V, int vOff, int ldv, double[] tau, int tauOff,
                               double[] T, int tOff, int ldt, int m, int k) {
         dlarftForwardColWise(V, vOff, ldv, tau, tauOff, T, tOff, ldt, m, k);
@@ -79,14 +72,14 @@ public interface Dlarft {
 
             int j = Math.min(lastv, prevlastv);
             if (j > i) {
-                BLAS.dgemv(BLAS.Transpose.Trans, j - i, i, -tau[tauOff + i],
+                BLAS.dgemv(BLAS.Trans.Trans, j - i, i, -tau[tauOff + i],
                            V, vOff + (i + 1) * ldv, ldv,
                            V, vOff + (i + 1) * ldv + i, ldv,
                            1.0, T, tOff + i, ldt);
             }
 
             if (i > 0) {
-                BLAS.dtrmv(BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit, i, T, tOff, ldt, T, tOff + i, ldt);
+                BLAS.dtrmv(BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, i, T, tOff, ldt, T, tOff + i, ldt);
             }
 
             T[tOff + i * ldt + i] = tau[tauOff + i];
@@ -125,14 +118,14 @@ public interface Dlarft {
 
             int j = Math.min(lastv, prevlastv);
             if (j > i) {
-                BLAS.dgemv(BLAS.Transpose.NoTrans, i, j - i, -tau[tauOff + i],
+                BLAS.dgemv(BLAS.Trans.NoTrans, i, j - i, -tau[tauOff + i],
                            V, vOff + i + 1, ldv,
                            V, vOff + i * ldv + i + 1, 1,
                            1.0, T, tOff + i, ldt);
             }
 
             if (i > 0) {
-                BLAS.dtrmv(BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit, i, T, tOff, ldt, T, tOff + i, ldt);
+                BLAS.dtrmv(BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, i, T, tOff, ldt, T, tOff + i, ldt);
             }
 
             T[tOff + i * ldt + i] = tau[tauOff + i];
@@ -173,12 +166,12 @@ public interface Dlarft {
                     T[tOff + j * ldt + i] = -tau[tauOff + i] * V[vOff + (m - k + i) * ldv + j];
                 }
                 int j = Math.max(lastv, prevlastv);
-                BLAS.dgemv(BLAS.Transpose.Trans, m - k + i - j, k - i - 1, -tau[tauOff + i],
+                BLAS.dgemv(BLAS.Trans.Trans, m - k + i - j, k - i - 1, -tau[tauOff + i],
                            V, vOff + j * ldv + i + 1, ldv,
                            V, vOff + j * ldv + i, ldv,
                            1.0, T, tOff + (i + 1) * ldt + i, ldt);
                 
-                BLAS.dtrmv(BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit, k - i - 1,
+                BLAS.dtrmv(BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, k - i - 1,
                            T, tOff + (i + 1) * ldt + i + 1, ldt,
                            T, tOff + (i + 1) * ldt + i, ldt);
                 
@@ -217,12 +210,12 @@ public interface Dlarft {
                     T[tOff + j * ldt + i] = -tau[tauOff + i] * V[vOff + j * ldv + (n - k + i)];
                 }
                 int j = Math.max(lastv, prevlastv);
-                BLAS.dgemv(BLAS.Transpose.NoTrans, k - i - 1, n - k + i - j, -tau[tauOff + i],
+                BLAS.dgemv(BLAS.Trans.NoTrans, k - i - 1, n - k + i - j, -tau[tauOff + i],
                            V, vOff + (i + 1) * ldv + j, ldv,
                            V, vOff + i * ldv + j, 1,
                            1.0, T, tOff + (i + 1) * ldt + i, ldt);
                 
-                BLAS.dtrmv(BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit, k - i - 1,
+                BLAS.dtrmv(BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, k - i - 1,
                            T, tOff + (i + 1) * ldt + i + 1, ldt,
                            T, tOff + (i + 1) * ldt + i, ldt);
                 

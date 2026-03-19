@@ -88,8 +88,8 @@ interface Dtgevc {
         if (ilback) {
             // VL/VR already contain Q/Z; we'll multiply eigvecs by them after computing
         } else if (ilall) {
-            if (compl) BLAS.dlaset('A', n, n, 0.0, 1.0, VL, vlOff, ldvl);
-            if (compr) BLAS.dlaset('A', n, n, 0.0, 1.0, VR, vrOff, ldvr);
+            if (compl) BLAS.dlaset(BLAS.Uplo.All, n, n, 0.0, 1.0, VL, vlOff, ldvl);
+            if (compr) BLAS.dlaset(BLAS.Uplo.All, n, n, 0.0, 1.0, VR, vrOff, ldvr);
         }
 
         // Work array layout: work[0..n-1] = real part, work[n..2n-1] = imag part

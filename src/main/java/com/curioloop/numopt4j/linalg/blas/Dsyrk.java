@@ -39,13 +39,13 @@ interface Dsyrk {
      * @param cOff offset into C
      * @param ldc leading dimension of C
      */
-    static void dsyrk(BLAS.Uplo uplo, BLAS.Transpose trans, int n, int k, double alpha,
+    static void dsyrk(BLAS.Uplo uplo, BLAS.Trans trans, int n, int k, double alpha,
                       double[] A, int aOff, int lda, double beta,
                       double[] C, int cOff, int ldc) {
         if (n == 0 || ((alpha == 0.0 || k == 0) && beta == 1.0)) return;
 
         boolean upper = uplo == BLAS.Uplo.Upper;
-        boolean noTrans = trans == BLAS.Transpose.NoTrans;
+        boolean noTrans = trans == BLAS.Trans.NoTrans;
 
         // Scale C by beta
         if (beta != 1.0) {

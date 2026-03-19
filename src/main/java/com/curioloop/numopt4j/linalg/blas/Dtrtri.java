@@ -42,8 +42,8 @@ interface Dtrtri {
             for (int j = 0; j < n; j += BLOCK_SIZE) {
                 int jb = min(BLOCK_SIZE, n - j);
 
-                BLAS.dtrmm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, unit ? BLAS.Diag.Unit : BLAS.Diag.NonUnit, j, jb, 1.0, A, aOff, lda, A, aOff + j, lda);
-                BLAS.dtrsm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, unit ? BLAS.Diag.Unit : BLAS.Diag.NonUnit, j, jb, -1.0, A, aOff + j * lda + j, lda, A, aOff + j, lda);
+                BLAS.dtrmm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Trans.NoTrans, unit ? BLAS.Diag.Unit : BLAS.Diag.NonUnit, j, jb, 1.0, A, aOff, lda, A, aOff + j, lda);
+                BLAS.dtrsm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.NoTrans, unit ? BLAS.Diag.Unit : BLAS.Diag.NonUnit, j, jb, -1.0, A, aOff + j * lda + j, lda, A, aOff + j, lda);
                 dtrti2(uplo, diag, jb, A, aOff + j * lda + j, lda);
             }
         } else {
@@ -52,10 +52,10 @@ interface Dtrtri {
                 int jb = min(BLOCK_SIZE, n - j);
 
                 if (j + jb <= n - 1) {
-                    BLAS.dtrmm(BLAS.Side.Left, BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, unit ? BLAS.Diag.Unit : BLAS.Diag.NonUnit, n - j - jb, jb, 1.0,
+                    BLAS.dtrmm(BLAS.Side.Left, BLAS.Uplo.Lower, BLAS.Trans.NoTrans, unit ? BLAS.Diag.Unit : BLAS.Diag.NonUnit, n - j - jb, jb, 1.0,
                             A, aOff + (j + jb) * lda + j + jb, lda,
                             A, aOff + (j + jb) * lda + j, lda);
-                    BLAS.dtrsm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, unit ? BLAS.Diag.Unit : BLAS.Diag.NonUnit, n - j - jb, jb, -1.0,
+                    BLAS.dtrsm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.NoTrans, unit ? BLAS.Diag.Unit : BLAS.Diag.NonUnit, n - j - jb, jb, -1.0,
                             A, aOff + j * lda + j, lda,
                             A, aOff + (j + jb) * lda + j, lda);
                 }
@@ -79,7 +79,7 @@ interface Dtrtri {
                 double ajj = unit ? -1.0 : -A[rowJ + j];
 
                 if (j > 0) {
-                    BLAS.dtrmv(BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, diag, j, A, aOff, lda, A, aOff + j, lda);
+                    BLAS.dtrmv(BLAS.Uplo.Upper, BLAS.Trans.NoTrans, diag, j, A, aOff, lda, A, aOff + j, lda);
                     BLAS.dscal(j, ajj, A, aOff + j, lda);
                 }
             }
@@ -92,7 +92,7 @@ interface Dtrtri {
                 double ajj = unit ? -1.0 : -A[rowJ + j];
 
                 if (j < n - 1) {
-                    BLAS.dtrmv(BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, diag, n - j - 1, A, aOff + (j + 1) * lda + j + 1, lda, A, aOff + (j + 1) * lda + j, lda);
+                    BLAS.dtrmv(BLAS.Uplo.Lower, BLAS.Trans.NoTrans, diag, n - j - 1, A, aOff + (j + 1) * lda + j + 1, lda, A, aOff + (j + 1) * lda + j, lda);
                     BLAS.dscal(n - j - 1, ajj, A, aOff + (j + 1) * lda + j, lda);
                 }
             }
@@ -127,9 +127,9 @@ interface Dtrtri {
 
             double scale;
             if (isave[2] == kase1) {
-                scale = Dlatrs.dlatrs(uplo, BLAS.Transpose.Trans, diag, normin, n, A, lda, work, 0, work, 2 * n);
+                scale = Dlatrs.dlatrs(uplo, BLAS.Trans.Trans, diag, normin, n, A, lda, work, 0, work, 2 * n);
             } else {
-                scale = Dlatrs.dlatrs(uplo, BLAS.Transpose.NoTrans, diag, normin, n, A, lda, work, 0, work, 2 * n);
+                scale = Dlatrs.dlatrs(uplo, BLAS.Trans.NoTrans, diag, normin, n, A, lda, work, 0, work, 2 * n);
             }
 
             normin = true;

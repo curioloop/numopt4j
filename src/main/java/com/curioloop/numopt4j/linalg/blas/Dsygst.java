@@ -111,7 +111,7 @@ public interface Dsygst {
 
             // dtrsm(Right, Lower, Trans, NonUnit, rem, kb, 1, B[k,k], ldb, A[k+kb,k], lda)
             // Solves A[k+kb,k] * L[k,k]^T = A[k+kb,k]
-            BLAS.dtrsm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.Trans, BLAS.Diag.NonUnit,
+            BLAS.dtrsm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.Trans, BLAS.Diag.NonUnit,
                     rem, kb, 1.0,
                     B, bOff + k * ldb + k, ldb,
                     A, aBlkOff, lda);
@@ -127,7 +127,7 @@ public interface Dsygst {
 
             // dsyr2k(Lower, NoTrans, rem, kb, -1, A[k+kb,k], lda, B[k+kb,k], ldb, 1, A[k+kb,k+kb], lda)
             // A[k+kb,k+kb] += -1 * (A[k+kb,k]*B[k+kb,k]^T + B[k+kb,k]*A[k+kb,k]^T)
-            BLAS.dsyr2k(BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, rem, kb,
+            BLAS.dsyr2k(BLAS.Uplo.Lower, BLAS.Trans.NoTrans, rem, kb,
                     -1.0,
                     A, aBlkOff, lda,
                     B, bBlkOff, ldb,
@@ -144,7 +144,7 @@ public interface Dsygst {
 
             // dtrsm(Left, Lower, NoTrans, NonUnit, rem, kb, 1, B[k+kb,k+kb], ldb, A[k+kb,k], lda)
             // Solves L[k+kb,k+kb] * A[k+kb,k] = A[k+kb,k]
-            BLAS.dtrsm(BLAS.Side.Left, BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit,
+            BLAS.dtrsm(BLAS.Side.Left, BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit,
                     rem, kb, 1.0,
                     B, bOff + (k + kb) * ldb + (k + kb), ldb,
                     A, aBlkOff, lda);
@@ -191,7 +191,7 @@ public interface Dsygst {
 
             // dtrsm(Left, Upper, Trans, NonUnit, kb, k, 1, B[0,0], ldb, A[k,0], lda)
             // Solves U[0,0]^T * A[k,0] = A[k,0]
-            BLAS.dtrsm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Transpose.Trans, BLAS.Diag.NonUnit,
+            BLAS.dtrsm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Trans.Trans, BLAS.Diag.NonUnit,
                     kb, k, 1.0,
                     B, bOff, ldb,
                     A, aBlkOff, lda);
@@ -207,7 +207,7 @@ public interface Dsygst {
 
             // dsyr2k(Upper, Trans, k, kb, -1, A[k,0], lda, B[k,0], ldb, 1, A[0,0], lda)
             // A[0,0] += -1 * (A[k,0]^T*B[k,0] + B[k,0]^T*A[k,0])
-            BLAS.dsyr2k(BLAS.Uplo.Upper, BLAS.Transpose.Trans, k, kb,
+            BLAS.dsyr2k(BLAS.Uplo.Upper, BLAS.Trans.Trans, k, kb,
                     -1.0,
                     A, aBlkOff, lda,
                     B, bBlkOff, ldb,
@@ -224,7 +224,7 @@ public interface Dsygst {
 
             // dtrsm(Right, Upper, NoTrans, NonUnit, kb, k, 1, B[0,0], ldb, A[k,0], lda)
             // Solves A[k,0] * U[0,0] = A[k,0]
-            BLAS.dtrsm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit,
+            BLAS.dtrsm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit,
                     kb, k, 1.0,
                     B, bOff, ldb,
                     A, aBlkOff, lda);
@@ -262,7 +262,7 @@ public interface Dsygst {
 
                 // dtrmm(Right, Lower, NoTrans, NonUnit, kb, k, 1, B[0,0], ldb, A[k,0], lda)
                 // A[k,0] = A[k,0] * L[0,0]
-                BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit,
+                BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit,
                         kb, k, 1.0,
                         B, bOff, ldb,
                         A, aBlkOff, lda);
@@ -278,7 +278,7 @@ public interface Dsygst {
 
                 // dsyr2k(Lower, Trans, k, kb, 1, A[k,0], lda, B[k,0], ldb, 1, A[0,0], lda)
                 // A[0,0] += A[k,0]^T*B[k,0] + B[k,0]^T*A[k,0]
-                BLAS.dsyr2k(BLAS.Uplo.Lower, BLAS.Transpose.Trans, k, kb,
+                BLAS.dsyr2k(BLAS.Uplo.Lower, BLAS.Trans.Trans, k, kb,
                         1.0,
                         A, aBlkOff, lda,
                         B, bBlkOff, ldb,
@@ -295,7 +295,7 @@ public interface Dsygst {
 
                 // dtrmm(Left, Lower, Trans, NonUnit, kb, k, 1, B[k,k], ldb, A[k,0], lda)
                 // A[k,0] = L[k,k]^T * A[k,0]
-                BLAS.dtrmm(BLAS.Side.Left, BLAS.Uplo.Lower, BLAS.Transpose.Trans, BLAS.Diag.NonUnit,
+                BLAS.dtrmm(BLAS.Side.Left, BLAS.Uplo.Lower, BLAS.Trans.Trans, BLAS.Diag.NonUnit,
                         kb, k, 1.0,
                         B, bOff + k * ldb + k, ldb,
                         A, aBlkOff, lda);
@@ -339,7 +339,7 @@ public interface Dsygst {
 
                 // dtrmm(Left, Upper, NoTrans, NonUnit, k, kb, 1, B[0,0], ldb, A[0,k], lda)
                 // A[0,k] = U[0,0] * A[0,k]
-                BLAS.dtrmm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit,
+                BLAS.dtrmm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit,
                         k, kb, 1.0,
                         B, bOff, ldb,
                         A, aBlkOff, lda);
@@ -355,7 +355,7 @@ public interface Dsygst {
 
                 // dsyr2k(Upper, NoTrans, k, kb, 1, A[0,k], lda, B[0,k], ldb, 1, A[0,0], lda)
                 // A[0,0] += A[0,k]*B[0,k]^T + B[0,k]*A[0,k]^T
-                BLAS.dsyr2k(BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, k, kb,
+                BLAS.dsyr2k(BLAS.Uplo.Upper, BLAS.Trans.NoTrans, k, kb,
                         1.0,
                         A, aBlkOff, lda,
                         B, bBlkOff, ldb,
@@ -372,7 +372,7 @@ public interface Dsygst {
 
                 // dtrmm(Right, Upper, Trans, NonUnit, k, kb, 1, B[k,k], ldb, A[0,k], lda)
                 // A[0,k] = A[0,k] * U[k,k]^T
-                BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.Trans, BLAS.Diag.NonUnit,
+                BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.Trans, BLAS.Diag.NonUnit,
                         k, kb, 1.0,
                         B, bOff + k * ldb + k, ldb,
                         A, aBlkOff, lda);

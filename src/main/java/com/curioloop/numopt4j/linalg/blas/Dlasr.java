@@ -12,11 +12,6 @@ package com.curioloop.numopt4j.linalg.blas;
 interface Dlasr {
     
     static void dlasr(BLAS.Side side, char pivot, char direct, int m, int n,
-                      double[] c, double[] s, double[] a, int lda) {
-        dlasr(side, pivot, direct, m, n, c, 0, s, 0, a, 0, lda);
-    }
-    
-    static void dlasr(BLAS.Side side, char pivot, char direct, int m, int n,
                       double[] c, int cOff, double[] s, int sOff, 
                       double[] a, int aOff, int lda) {
         if (m == 0 || n == 0) {

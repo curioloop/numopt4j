@@ -33,7 +33,7 @@ class DormbrTest {
             C[i] = rand.nextDouble() * 2 - 1;
         }
 
-        int info = Dormbr.dormbr('Q', BLAS.Side.Left, BLAS.Transpose.NoTrans, m, n, k, A, 0, k, tauQ, 0, C, 0, n, work, 0, work.length);
+        int info = Dormbr.dormbr('Q', BLAS.Side.Left, BLAS.Trans.NoTrans, m, n, k, A, 0, k, tauQ, 0, C, 0, n, work, 0, work.length);
 
         assertEquals(0, info);
         assertNotNull(C);
@@ -47,7 +47,7 @@ class DormbrTest {
         double[] C = new double[m * n];
         double[] work = new double[1];
 
-        int info = Dormbr.dormbr('Q', BLAS.Side.Left, BLAS.Transpose.NoTrans, m, n, k, A, 0, k, tauQ, 0, C, 0, n, work, 0, -1);
+        int info = Dormbr.dormbr('Q', BLAS.Side.Left, BLAS.Trans.NoTrans, m, n, k, A, 0, k, tauQ, 0, C, 0, n, work, 0, -1);
 
         assertEquals(0, info);
         assertTrue(work[0] > 0);
@@ -56,7 +56,7 @@ class DormbrTest {
     @Test
     void testDormbrEmpty() {
         double[] work = new double[1];
-        int info = Dormbr.dormbr('Q', BLAS.Side.Left, BLAS.Transpose.NoTrans, 0, 0, 0, new double[0], 0, 1, new double[0], 0, new double[0], 0, 1, work, 0, 1);
+        int info = Dormbr.dormbr('Q', BLAS.Side.Left, BLAS.Trans.NoTrans, 0, 0, 0, new double[0], 0, 1, new double[0], 0, new double[0], 0, 1, work, 0, 1);
         assertEquals(0, info);
     }
 
@@ -79,7 +79,7 @@ class DormbrTest {
             C[i] = rand.nextDouble() * 2 - 1;
         }
 
-        int info = Dormbr.dormqrBlocked(BLAS.Side.Left, BLAS.Transpose.NoTrans, m, n, k, A, 0, k, tau, 0, C, 0, n, work, 0, work.length);
+        int info = Dormbr.dormqrBlocked(BLAS.Side.Left, BLAS.Trans.NoTrans, m, n, k, A, 0, k, tau, 0, C, 0, n, work, 0, work.length);
 
         assertEquals(0, info);
     }

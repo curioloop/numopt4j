@@ -215,7 +215,7 @@ interface Dtrevc3 {
                     }
                 } else if (nb == 1) {
                     if (ki > 0) {
-                        BLAS.dgemv(BLAS.Transpose.NoTrans, n, ki, 1, VR, vrOff, ldvr,
+                        BLAS.dgemv(BLAS.Trans.NoTrans, n, ki, 1, VR, vrOff, ldvr,
                                 work, bOff + iv, ldb, work[bOff + ki * ldb + iv],
                                 VR, vrOff + ki, ldvr);
                     }
@@ -337,10 +337,10 @@ interface Dtrevc3 {
                     }
                 } else if (nb == 1) {
                     if (ki - 1 > 0) {
-                        BLAS.dgemv(BLAS.Transpose.NoTrans, n, ki - 1, 1, VR, vrOff, ldvr,
+                        BLAS.dgemv(BLAS.Trans.NoTrans, n, ki - 1, 1, VR, vrOff, ldvr,
                                 work, bOff + iv - 1, ldb, work[bOff + (ki - 1) * ldb + iv - 1],
                                 VR, vrOff + ki - 1, ldvr);
-                        BLAS.dgemv(BLAS.Transpose.NoTrans, n, ki - 1, 1, VR, vrOff, ldvr,
+                        BLAS.dgemv(BLAS.Trans.NoTrans, n, ki - 1, 1, VR, vrOff, ldvr,
                                 work, bOff + iv, ldb, work[bOff + ki * ldb + iv],
                                 VR, vrOff + ki, ldvr);
                     } else {
@@ -371,7 +371,7 @@ interface Dtrevc3 {
                 if (ip != 0) ki2--;
                 if (iv < 2 || ki2 == 0) {
                     int nbActual = nb - iv;
-                    BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, n, nbActual, ki2 + nbActual,
+                    BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, n, nbActual, ki2 + nbActual,
                             1, VR, vrOff, ldvr, work, bOff + iv, ldb,
                             0, work, bOff + nb + iv, ldb);
 
@@ -548,7 +548,7 @@ interface Dtrevc3 {
                     }
                 } else if (nb == 1) {
                     if (n - ki - 1 > 0) {
-                        BLAS.dgemv(BLAS.Transpose.NoTrans, n, n - ki - 1, 1, VL, vlOff + ki + 1, ldvl,
+                        BLAS.dgemv(BLAS.Trans.NoTrans, n, n - ki - 1, 1, VL, vlOff + ki + 1, ldvl,
                                 work, bOff + (ki + 1) * ldb + iv, ldb, work[bOff + ki * ldb + iv],
                                 VL, vlOff + ki, ldvl);
                     }
@@ -692,10 +692,10 @@ interface Dtrevc3 {
                     }
                 } else if (nb == 1) {
                     if (n - ki - 2 > 0) {
-                        BLAS.dgemv(BLAS.Transpose.NoTrans, n, n - ki - 2, 1, VL, vlOff + ki + 2, ldvl,
+                        BLAS.dgemv(BLAS.Trans.NoTrans, n, n - ki - 2, 1, VL, vlOff + ki + 2, ldvl,
                                 work, bOff + (ki + 2) * ldb + iv, ldb, work[bOff + ki * ldb + iv],
                                 VL, vlOff + ki, ldvl);
-                        BLAS.dgemv(BLAS.Transpose.NoTrans, n, n - ki - 2, 1, VL, vlOff + ki + 2, ldvl,
+                        BLAS.dgemv(BLAS.Trans.NoTrans, n, n - ki - 2, 1, VL, vlOff + ki + 2, ldvl,
                                 work, bOff + (ki + 2) * ldb + iv + 1, ldb, work[bOff + (ki + 1) * ldb + iv + 1],
                                 VL, vlOff + ki + 1, ldvl);
                     } else {
@@ -726,7 +726,7 @@ interface Dtrevc3 {
                 if (ip != 0) ki2++;
                 if (iv >= nb - 2 || ki2 == n - 1) {
                     int nbActual = iv + 1;
-                    BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, n, nbActual, n - ki2 + iv,
+                    BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, n, nbActual, n - ki2 + iv,
                             1, VL, vlOff + (ki2 - iv) * ldvl, ldvl, work, bOff + (ki2 - iv) * ldb, ldb,
                             0, work, bOff + nb, ldb);
 

@@ -28,7 +28,7 @@ public class Dsytd2Test {
         double[] e = new double[n - 1];
         double[] tau = new double[n - 1];
         
-        Dsytd2.dsytd2(BLAS.Uplo.Upper, n, A, lda, d, e, tau);
+        Dsytd2.dsytd2(BLAS.Uplo.Upper, n, A, 0, lda, d, 0, e, 0, tau, 0, null, 0);
         
         // After reduction, A should be in tridiagonal form
         // Check diagonal elements
@@ -60,7 +60,7 @@ public class Dsytd2Test {
         double[] e = new double[n - 1];
         double[] tau = new double[n - 1];
         
-        Dsytd2.dsytd2(BLAS.Uplo.Lower, n, A, lda, d, e, tau);
+        Dsytd2.dsytd2(BLAS.Uplo.Lower, n, A, 0, lda, d, 0, e, 0, tau, 0, null, 0);
         
         // Check diagonal
         for (int i = 0; i < n; i++) {
@@ -88,7 +88,7 @@ public class Dsytd2Test {
         double[] e = new double[n - 1];
         double[] tau = new double[n - 1];
         
-        Dsytd2.dsytd2(BLAS.Uplo.Lower, n, A, lda, d, e, tau);
+        Dsytd2.dsytd2(BLAS.Uplo.Lower, n, A, 0, lda, d, 0, e, 0, tau, 0, null, 0);
         
         // All diagonal should be 1
         for (int i = 0; i < n; i++) {
@@ -115,7 +115,7 @@ public class Dsytd2Test {
         double[] tau = new double[n - 1];
         
         // Use upper case to get correct behavior
-        Dsytd2.dsytd2(BLAS.Uplo.Upper, n, A, lda, d, e, tau);
+        Dsytd2.dsytd2(BLAS.Uplo.Upper, n, A, 0, lda, d, 0, e, 0, tau, 0, null, 0);
         
         // For 2x2 with upper case: d = [2, 2], e = [1], tau = [0]
         assertEquals(2.0, d[0], 1e-10, "d[0]");

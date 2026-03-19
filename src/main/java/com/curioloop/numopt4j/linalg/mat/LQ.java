@@ -108,7 +108,7 @@ public final class LQ implements Decomposition {
             x[i] = 0;
         }
 
-        BLAS.dormlq(BLAS.Side.Left, BLAS.Transpose.Trans, n, 1, m, LQ, 0, n,
+        BLAS.dormlq(BLAS.Side.Left, BLAS.Trans.Trans, n, 1, m, LQ, 0, n,
                 pool.work(), 0, x, 0, 1,
                 pool.work(), m, pool.work().length - m);
 
@@ -129,7 +129,7 @@ public final class LQ implements Decomposition {
         int scrOff = m + n;
         System.arraycopy(b, 0, work, bOff, n);
 
-        BLAS.dormlq(BLAS.Side.Left, BLAS.Transpose.NoTrans, n, 1, m, LQ, 0, n,
+        BLAS.dormlq(BLAS.Side.Left, BLAS.Trans.NoTrans, n, 1, m, LQ, 0, n,
                 work, 0, work, bOff, 1,
                 work, scrOff, work.length - scrOff);
 
@@ -160,7 +160,7 @@ public final class LQ implements Decomposition {
             x[i] = b[i];
         }
 
-        BLAS.dormlq(BLAS.Side.Left, BLAS.Transpose.Trans, n, 1, m, LQ, 0, n,
+        BLAS.dormlq(BLAS.Side.Left, BLAS.Trans.Trans, n, 1, m, LQ, 0, n,
                 pool.work(), 0, x, 0, 1,
                 pool.work(), m, pool.work().length - m);
 

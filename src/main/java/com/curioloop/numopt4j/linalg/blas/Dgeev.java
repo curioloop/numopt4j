@@ -80,7 +80,7 @@ interface Dgeev {
         double smlnum = Math.sqrt(safmin) / eps;
         double bignum = 1.0 / smlnum;
 
-        double anrm = BLAS.dlange('M', n, n, A, 0, lda);
+        double anrm = BLAS.dlange(BLAS.Norm.MaxAbs, n, n, A, 0, lda);
         boolean scalea = false;
         double cscale = 1.0;
 
@@ -108,18 +108,18 @@ interface Dgeev {
 
         if (wantvl) {
             side = 'L';
-            BLAS.dlacpy('L', n, n, A, 0, lda, vl, 0, ldvl);
-            BLAS.dorghr(n, ilo, ihi, vl, ldvl, work, tauOff, work, iwrk, lwork - iwrk);
+            BLAS.dlacpy(BLAS.Uplo.Lower, n, n, A, 0, lda, vl, 0, ldvl);
+            BLAS.dorghr(n, ilo, ihi, vl, 0, ldvl, work, tauOff, work, iwrk, lwork - iwrk);
             iwrk = n;
             info = BLAS.dhseqr('S', 'V', n, ilo, ihi, A, lda, wr, wi, vl, ldvl, work, iwrk, lwork - iwrk);
             if (wantvr) {
                 side = 'B';
-                BLAS.dlacpy('A', n, n, vl, 0, ldvl, vr, 0, ldvr);
+                BLAS.dlacpy(BLAS.Uplo.All, n, n, vl, 0, ldvl, vr, 0, ldvr);
             }
         } else if (wantvr) {
             side = 'R';
-            BLAS.dlacpy('L', n, n, A, 0, lda, vr, 0, ldvr);
-            BLAS.dorghr(n, ilo, ihi, vr, ldvr, work, tauOff, work, iwrk, lwork - iwrk);
+            BLAS.dlacpy(BLAS.Uplo.Lower, n, n, A, 0, lda, vr, 0, ldvr);
+            BLAS.dorghr(n, ilo, ihi, vr, 0, ldvr, work, tauOff, work, iwrk, lwork - iwrk);
             iwrk = n;
             info = BLAS.dhseqr('S', 'V', n, ilo, ihi, A, lda, wr, wi, vr, ldvr, work, iwrk, lwork - iwrk);
         } else {

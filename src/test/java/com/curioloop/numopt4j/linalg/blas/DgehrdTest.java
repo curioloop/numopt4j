@@ -24,7 +24,7 @@ class DgehrdTest {
         double[] tau = new double[n - 1];
         double[] work = new double[n];
         
-        Dgehrd.dgehrd(n, 0, n - 1, A, n, tau, work, n);
+        Dgehrd.dgehrd(n, 0, n - 1, A, 0, n, tau, 0, work, 0, n);
         
         for (int i = 0; i < n; i++) {
             for (int j = 0; j < n; j++) {
@@ -59,7 +59,7 @@ class DgehrdTest {
         double[] tau = new double[n - 1];
         double[] work = new double[n];
         
-        Dgehrd.dgehrd(n, 0, n - 1, A, n, tau, work, n);
+        Dgehrd.dgehrd(n, 0, n - 1, A, 0, n, tau, 0, work, 0, n);
         
         for (int i = 0; i < n; i++) {
             for (int j = 0; j < n; j++) {
@@ -95,7 +95,7 @@ class DgehrdTest {
         double[] tau = new double[n - 1];
         double[] work = new double[n];
         
-        Dgehrd.dgehrd(n, 0, n - 1, A, n, tau, work, n);
+        Dgehrd.dgehrd(n, 0, n - 1, A, 0, n, tau, 0, work, 0, n);
         
         for (int i = 0; i < n; i++) {
             for (int j = 0; j < n; j++) {
@@ -133,7 +133,7 @@ class DgehrdTest {
         double[] tau = new double[n - 1];
         double[] work = new double[n];
         
-        Dgehrd.dgehrd(n, ilo, ihi, A, n, tau, work, n);
+        Dgehrd.dgehrd(n, ilo, ihi, A, 0, n, tau, 0, work, 0, n);
         
         for (int i = ilo; i <= ihi; i++) {
             for (int j = ilo; j <= ihi; j++) {
@@ -158,7 +158,7 @@ class DgehrdTest {
         double[] tau = new double[n - 1];
         double[] work = new double[n];
         
-        Dgehrd.dgehrd(n, 0, n - 1, A, n, tau, work, n);
+        Dgehrd.dgehrd(n, 0, n - 1, A, 0, n, tau, 0, work, 0, n);
         
         assertEquals(AOrig[0], A[0], 1e-14, "A[0,0] should be unchanged");
         assertEquals(AOrig[1], A[1], 1e-14, "A[0,1] should be unchanged");
@@ -175,7 +175,7 @@ class DgehrdTest {
         double[] tau = new double[n];
         double[] work = new double[n];
         
-        Dgehrd.dgehrd(n, 0, 0, A, n, tau, work, n);
+        Dgehrd.dgehrd(n, 0, 0, A, 0, n, tau, 0, work, 0, n);
         
         assertEquals(5.0, A[0], 1e-14, "A[0,0] should be unchanged");
     }
@@ -194,7 +194,7 @@ class DgehrdTest {
         double[] tau = new double[n - 1];
         double[] work = new double[n];
         
-        Dgehrd.dgehrd(n, 0, n - 1, A, n, tau, work, n);
+        Dgehrd.dgehrd(n, 0, n - 1, A, 0, n, tau, 0, work, 0, n);
         
         double[] Q = new double[n * n];
         for (int i = 0; i < n; i++) {
@@ -209,7 +209,7 @@ class DgehrdTest {
             }
             
             double[] work2 = new double[n];
-            Dlarf.dlarf(BLAS.Side.Left, n - i - 1, n, v, i + 1, 1, tau[i], Q, (i + 1) * n, n, work2);
+            Dlarf.dlarf(BLAS.Side.Left, n - i - 1, n, v, i + 1, 1, tau[i], Q, (i + 1) * n, n, work2, 0);
         }
         
         double[] H = new double[n * n];

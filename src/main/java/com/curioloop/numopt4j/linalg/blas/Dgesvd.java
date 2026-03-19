@@ -461,7 +461,7 @@ interface Dgesvd {
             boolean ok = Dbdsqr.dbdsqr(BLAS.Uplo.Upper, n, 0, n, 0, s, sOff, work, workOff + ie, work, workOff, 1,
                                        work, workOff + ir, ldworkr, work, workOff, 1, work, workOff + iwork);
 
-            Dgemm.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, m, n, n, 1, A, aOff, lda, work, workOff + ir, ldworkr, 0, u, uOff, ldu);
+            Dgemm.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, m, n, n, 1, A, aOff, lda, work, workOff + ir, ldworkr, 0, u, uOff, ldu);
 
             return ok ? ie : -ie;
         } else {
@@ -483,7 +483,7 @@ interface Dgesvd {
             Dgebrd.dgebrd(n, n, A, aOff, lda, s, sOff, work, workOff + ie,
                           work, workOff + itauq, work, workOff + itaup, work, workOff + iwork, lwork - iwork);
 
-            Dormbr.dormbr('Q', BLAS.Side.Right, BLAS.Transpose.NoTrans, m, n, n, A, aOff, lda, work, workOff + itauq,
+            Dormbr.dormbr('Q', BLAS.Side.Right, BLAS.Trans.NoTrans, m, n, n, A, aOff, lda, work, workOff + itauq,
                           u, uOff, ldu, work, workOff + iwork, lwork - iwork);
             iwork = ie + n;
 
@@ -533,7 +533,7 @@ interface Dgesvd {
             boolean ok = Dbdsqr.dbdsqr(BLAS.Uplo.Upper, n, n, n, 0, s, sOff, work, workOff + ie, vt, vtOff, ldvt,
                                        work, workOff + iu, ldworku, work, workOff, 1, work, workOff + iwork);
 
-            Dgemm.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, m, n, n, 1, A, aOff, lda, work, workOff + iu, ldworku, 0, u, uOff, ldu);
+            Dgemm.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, m, n, n, 1, A, aOff, lda, work, workOff + iu, ldworku, 0, u, uOff, ldu);
 
             return ok ? ie : -ie;
         } else {
@@ -556,7 +556,7 @@ interface Dgesvd {
             Dgebrd.dgebrd(n, n, vt, vtOff, ldvt, s, sOff, work, workOff + ie,
                           work, workOff + itauq, work, workOff + itaup, work, workOff + iwork, lwork - iwork);
 
-            Dormbr.dormbr('Q', BLAS.Side.Right, BLAS.Transpose.NoTrans, m, n, n, vt, vtOff, ldvt, work, workOff + itauq,
+            Dormbr.dormbr('Q', BLAS.Side.Right, BLAS.Trans.NoTrans, m, n, n, vt, vtOff, ldvt, work, workOff + itauq,
                           u, uOff, ldu, work, workOff + iwork, lwork - iwork);
 
             Dorgbr.dorgbr('P', n, n, n, vt, vtOff, ldvt, work, workOff + itaup,
@@ -606,7 +606,7 @@ interface Dgesvd {
             boolean ok = Dbdsqr.dbdsqr(BLAS.Uplo.Upper, n, 0, n, 0, s, sOff, work, workOff + ie, work, workOff, 1,
                                        work, workOff + ir, ldworkr, work, workOff, 1, work, workOff + iwork);
 
-            Dgemm.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, m, n, n, 1, u, uOff, ldu, work, workOff + ir, ldworkr, 0, A, aOff, lda);
+            Dgemm.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, m, n, n, 1, u, uOff, ldu, work, workOff + ir, ldworkr, 0, A, aOff, lda);
 
             Dlamv.dlacpy('A', m, n, A, aOff, lda, u, uOff, ldu);
 
@@ -630,7 +630,7 @@ interface Dgesvd {
             Dgebrd.dgebrd(n, n, A, aOff, lda, s, sOff, work, workOff + ie,
                           work, workOff + itauq, work, workOff + itaup, work, workOff + iwork, lwork - iwork);
 
-            Dormbr.dormbr('Q', BLAS.Side.Right, BLAS.Transpose.NoTrans, m, n, n, A, aOff, lda, work, workOff + itauq,
+            Dormbr.dormbr('Q', BLAS.Side.Right, BLAS.Trans.NoTrans, m, n, n, A, aOff, lda, work, workOff + itauq,
                           u, uOff, ldu, work, workOff + iwork, lwork - iwork);
             iwork = ie + n;
 
@@ -681,7 +681,7 @@ interface Dgesvd {
             boolean ok = Dbdsqr.dbdsqr(BLAS.Uplo.Upper, n, n, n, 0, s, sOff, work, workOff + ie, vt, vtOff, ldvt,
                                        work, workOff + iu, ldworku, work, workOff, 1, work, workOff + iwork);
 
-            Dgemm.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, m, n, n, 1, u, uOff, ldu, work, workOff + iu, ldworku, 0, A, aOff, lda);
+            Dgemm.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, m, n, n, 1, u, uOff, ldu, work, workOff + iu, ldworku, 0, A, aOff, lda);
 
             Dlamv.dlacpy('A', m, n, A, aOff, lda, u, uOff, ldu);
 
@@ -708,7 +708,7 @@ interface Dgesvd {
             Dgebrd.dgebrd(n, n, vt, vtOff, ldvt, s, sOff, work, workOff + ie,
                           work, workOff + itauq, work, workOff + itaup, work, workOff + iwork, lwork - iwork);
 
-            Dormbr.dormbr('Q', BLAS.Side.Right, BLAS.Transpose.NoTrans, m, n, n, vt, vtOff, ldvt, work, workOff + itauq,
+            Dormbr.dormbr('Q', BLAS.Side.Right, BLAS.Trans.NoTrans, m, n, n, vt, vtOff, ldvt, work, workOff + itauq,
                           u, uOff, ldu, work, workOff + iwork, lwork - iwork);
 
             Dorgbr.dorgbr('P', n, n, n, vt, vtOff, ldvt, work, workOff + itaup,
@@ -830,7 +830,7 @@ interface Dgesvd {
             boolean ok = Dbdsqr.dbdsqr(BLAS.Uplo.Upper, m, m, 0, 0, s, sOff, work, workOff + ie, work, workOff + ir, ldworkr,
                                        work, workOff, 1, work, workOff, 1, work, workOff + iwork);
 
-            Dgemm.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, m, n, m, 1, work, workOff + ir, ldworkr, A, aOff, lda, 0, vt, vtOff, ldvt);
+            Dgemm.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, m, n, m, 1, work, workOff + ir, ldworkr, A, aOff, lda, 0, vt, vtOff, ldvt);
 
             return ok ? ie : -ie;
         } else {
@@ -853,7 +853,7 @@ interface Dgesvd {
             Dgebrd.dgebrd(m, m, A, aOff, lda, s, sOff, work, workOff + ie,
                           work, workOff + itauq, work, workOff + itaup, work, workOff + iwork, lwork - iwork);
 
-            Dormbr.dormbr('P', BLAS.Side.Left, BLAS.Transpose.Trans, m, n, m, A, aOff, lda, work, workOff + itaup,
+            Dormbr.dormbr('P', BLAS.Side.Left, BLAS.Trans.Trans, m, n, m, A, aOff, lda, work, workOff + itaup,
                           vt, vtOff, ldvt, work, workOff + iwork, lwork - iwork);
             iwork = ie + m;
 
@@ -903,7 +903,7 @@ interface Dgesvd {
             boolean ok = Dbdsqr.dbdsqr(BLAS.Uplo.Upper, m, m, m, 0, s, sOff, work, workOff + ie, work, workOff + iu, ldworku,
                                        u, uOff, ldu, work, workOff, 1, work, workOff + iwork);
 
-            Dgemm.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, m, n, m, 1, work, workOff + iu, ldworku, A, aOff, lda, 0, vt, vtOff, ldvt);
+            Dgemm.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, m, n, m, 1, work, workOff + iu, ldworku, A, aOff, lda, 0, vt, vtOff, ldvt);
 
             return ok ? ie : -ie;
         } else {
@@ -927,7 +927,7 @@ interface Dgesvd {
             Dgebrd.dgebrd(m, m, u, uOff, ldu, s, sOff, work, workOff + ie,
                           work, workOff + itauq, work, workOff + itaup, work, workOff + iwork, lwork - iwork);
 
-            Dormbr.dormbr('P', BLAS.Side.Left, BLAS.Transpose.Trans, m, n, m, u, uOff, ldu, work, workOff + itaup,
+            Dormbr.dormbr('P', BLAS.Side.Left, BLAS.Trans.Trans, m, n, m, u, uOff, ldu, work, workOff + itaup,
                           vt, vtOff, ldvt, work, workOff + iwork, lwork - iwork);
 
             Dorgbr.dorgbr('Q', m, m, m, u, uOff, ldu, work, workOff + itauq,
@@ -977,7 +977,7 @@ interface Dgesvd {
             boolean ok = Dbdsqr.dbdsqr(BLAS.Uplo.Upper, m, m, 0, 0, s, sOff, work, workOff + ie, work, workOff + ir, ldworkr,
                                        work, workOff, 1, work, workOff, 1, work, workOff + iwork);
 
-            Dgemm.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, m, n, m, 1, work, workOff + ir, ldworkr, vt, vtOff, ldvt, 0, A, aOff, lda);
+            Dgemm.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, m, n, m, 1, work, workOff + ir, ldworkr, vt, vtOff, ldvt, 0, A, aOff, lda);
 
             Dlamv.dlacpy('A', m, n, A, aOff, lda, vt, vtOff, ldvt);
 
@@ -1001,7 +1001,7 @@ interface Dgesvd {
             Dgebrd.dgebrd(m, m, A, aOff, lda, s, sOff, work, workOff + ie,
                           work, workOff + itauq, work, workOff + itaup, work, workOff + iwork, lwork - iwork);
 
-            Dormbr.dormbr('P', BLAS.Side.Left, BLAS.Transpose.Trans, m, n, m, A, aOff, lda, work, workOff + itaup,
+            Dormbr.dormbr('P', BLAS.Side.Left, BLAS.Trans.Trans, m, n, m, A, aOff, lda, work, workOff + itaup,
                           vt, vtOff, ldvt, work, workOff + iwork, lwork - iwork);
             iwork = ie + m;
 
@@ -1052,7 +1052,7 @@ interface Dgesvd {
             boolean ok = Dbdsqr.dbdsqr(BLAS.Uplo.Upper, m, m, m, 0, s, sOff, work, workOff + ie, work, workOff + iu, ldworku,
                                        u, uOff, ldu, work, workOff, 1, work, workOff + iwork);
 
-            Dgemm.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, m, n, m, 1, work, workOff + iu, ldworku, vt, vtOff, ldvt, 0, A, aOff, lda);
+            Dgemm.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, m, n, m, 1, work, workOff + iu, ldworku, vt, vtOff, ldvt, 0, A, aOff, lda);
 
             Dlamv.dlacpy('A', m, n, A, aOff, lda, vt, vtOff, ldvt);
 
@@ -1077,7 +1077,7 @@ interface Dgesvd {
             Dgebrd.dgebrd(m, m, u, uOff, ldu, s, sOff, work, workOff + ie,
                           work, workOff + itauq, work, workOff + itaup, work, workOff + iwork, lwork - iwork);
 
-            Dormbr.dormbr('P', BLAS.Side.Left, BLAS.Transpose.Trans, m, n, m, u, uOff, ldu, work, workOff + itaup,
+            Dormbr.dormbr('P', BLAS.Side.Left, BLAS.Trans.Trans, m, n, m, u, uOff, ldu, work, workOff + itaup,
                           vt, vtOff, ldvt, work, workOff + iwork, lwork - iwork);
 
             Dorgbr.dorgbr('Q', m, m, m, u, uOff, ldu, work, workOff + itauq,

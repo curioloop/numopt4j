@@ -503,7 +503,7 @@ final class BfgsUpdater implements LBFGSBConstants {
             for (int i = 0; i < col; i++) {
                 buffer[tempColOffset + i] = buffer[wnOffset + i * m2 + js];
             }
-            dtrsl(buffer, wnOffset, m2, col, buffer, tempColOffset, Uplo.Upper, Transpose.Trans);
+            dtrsl(buffer, wnOffset, m2, col, buffer, tempColOffset, Uplo.Upper, Trans.Trans);
             for (int i = 0; i < col; i++) {
                 buffer[wnOffset + i * m2 + js] = buffer[tempColOffset + i];
             }

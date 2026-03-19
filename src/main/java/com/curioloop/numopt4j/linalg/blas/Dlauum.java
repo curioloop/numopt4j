@@ -32,17 +32,17 @@ interface Dlauum {
             for (int i = 0; i < n; i += BLOCK_SIZE) {
                 int ib = min(BLOCK_SIZE, n - i);
 
-                BLAS.dtrmm(BLAS.Side.Left, BLAS.Uplo.Lower, BLAS.Transpose.Trans, BLAS.Diag.NonUnit, ib, i, 1.0,
+                BLAS.dtrmm(BLAS.Side.Left, BLAS.Uplo.Lower, BLAS.Trans.Trans, BLAS.Diag.NonUnit, ib, i, 1.0,
                         A, aOff + i * lda + i, lda,
                         A, aOff + i * lda, lda);
                 dlauu2(uplo, ib, A, aOff + i * lda + i, lda);
 
                 if (n - i - ib > 0) {
-                    BLAS.dgemm(BLAS.Transpose.Trans, BLAS.Transpose.NoTrans, ib, i, n - i - ib, 1.0,
+                    BLAS.dgemm(BLAS.Trans.Trans, BLAS.Trans.NoTrans, ib, i, n - i - ib, 1.0,
                             A, aOff + (i + ib) * lda + i, lda,
                             A, aOff + (i + ib) * lda, lda,
                             1.0, A, aOff + i * lda, lda);
-                    BLAS.dsyrk(BLAS.Uplo.Lower, BLAS.Transpose.Trans, ib, n - i - ib, 1.0,
+                    BLAS.dsyrk(BLAS.Uplo.Lower, BLAS.Trans.Trans, ib, n - i - ib, 1.0,
                             A, aOff + (i + ib) * lda + i, lda,
                             1.0, A, aOff + i * lda + i, lda);
                 }
@@ -51,17 +51,17 @@ interface Dlauum {
             for (int i = 0; i < n; i += BLOCK_SIZE) {
                 int ib = min(BLOCK_SIZE, n - i);
 
-                BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.Trans, BLAS.Diag.NonUnit, i, ib, 1.0,
+                BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.Trans, BLAS.Diag.NonUnit, i, ib, 1.0,
                         A, aOff + i * lda + i, lda,
                         A, aOff + i, lda);
                 dlauu2(uplo, ib, A, aOff + i * lda + i, lda);
 
                 if (n - i - ib > 0) {
-                    BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.Trans, i, ib, n - i - ib, 1.0,
+                    BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.Trans, i, ib, n - i - ib, 1.0,
                             A, aOff + i + ib, lda,
                             A, aOff + i * lda + i + ib, lda,
                             1.0, A, aOff + i, lda);
-                    BLAS.dsyrk(BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, ib, n - i - ib, 1.0,
+                    BLAS.dsyrk(BLAS.Uplo.Upper, BLAS.Trans.NoTrans, ib, n - i - ib, 1.0,
                             A, aOff + i * lda + i + ib, lda,
                             1.0, A, aOff + i * lda + i, lda);
                 }
@@ -78,7 +78,7 @@ interface Dlauum {
                 double aii = A[rowI + i];
                 if (i < n - 1) {
                     A[rowI + i] = BLAS.ddot(n - i, A, rowI + i, lda, A, rowI + i, lda);
-                    BLAS.dgemv(BLAS.Transpose.Trans, n - i - 1, i, 1.0,
+                    BLAS.dgemv(BLAS.Trans.Trans, n - i - 1, i, 1.0,
                             A, aOff + (i + 1) * lda, lda,
                             A, aOff + (i + 1) * lda + i, lda,
                             aii, A, rowI, 1);
@@ -92,7 +92,7 @@ interface Dlauum {
                 double aii = A[rowI + i];
                 if (i < n - 1) {
                     A[rowI + i] = BLAS.ddot(n - i, A, rowI + i, 1, A, rowI + i, 1);
-                    BLAS.dgemv(BLAS.Transpose.NoTrans, i, n - i - 1, 1.0,
+                    BLAS.dgemv(BLAS.Trans.NoTrans, i, n - i - 1, 1.0,
                             A, aOff + i + 1, lda,
                             A, rowI + i + 1, 1,
                             aii, A, aOff + i, lda);

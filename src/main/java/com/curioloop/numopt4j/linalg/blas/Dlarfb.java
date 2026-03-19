@@ -143,23 +143,23 @@ public interface Dlarfb {
         }
 
         // W = W * V1 (V1 is unit lower triangular)
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, BLAS.Diag.Unit, n, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.Unit, n, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
 
         // W = W + C2^T * V2 (if m > k)
         if (m > k) {
-            BLAS.dgemm(BLAS.Transpose.Trans, BLAS.Transpose.NoTrans, n, k, m - k, 1.0, C, cOff + k * ldc, ldc, V, vOff + k * ldv, ldv, 1.0, work, wOff, ldwork);
+            BLAS.dgemm(BLAS.Trans.Trans, BLAS.Trans.NoTrans, n, k, m - k, 1.0, C, cOff + k * ldc, ldc, V, vOff + k * ldv, ldv, 1.0, work, wOff, ldwork);
         }
 
         // W = W * T^T (T is upper triangular for forward direction)
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.Trans, BLAS.Diag.NonUnit, n, k, 1.0, T, tOff, ldt, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.Trans, BLAS.Diag.NonUnit, n, k, 1.0, T, tOff, ldt, work, wOff, ldwork);
 
         // C2 = C2 - V2 * W^T (if m > k)
         if (m > k) {
-            BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.Trans, m - k, n, k, -1.0, V, vOff + k * ldv, ldv, work, wOff, ldwork, 1.0, C, cOff + k * ldc, ldc);
+            BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.Trans, m - k, n, k, -1.0, V, vOff + k * ldv, ldv, work, wOff, ldwork, 1.0, C, cOff + k * ldc, ldc);
         }
 
         // W = W * V1^T
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.Trans, BLAS.Diag.Unit, n, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.Trans, BLAS.Diag.Unit, n, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
 
         // C1 = C1 - W^T
         for (int i = 0; i < n; i++) {
@@ -186,23 +186,23 @@ public interface Dlarfb {
         }
 
         // W = W * V1
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, BLAS.Diag.Unit, n, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.Unit, n, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
 
         // W = W + C2^T * V2
         if (m > k) {
-            BLAS.dgemm(BLAS.Transpose.Trans, BLAS.Transpose.NoTrans, n, k, m - k, 1.0, C, cOff + k * ldc, ldc, V, vOff + k * ldv, ldv, 1.0, work, wOff, ldwork);
+            BLAS.dgemm(BLAS.Trans.Trans, BLAS.Trans.NoTrans, n, k, m - k, 1.0, C, cOff + k * ldc, ldc, V, vOff + k * ldv, ldv, 1.0, work, wOff, ldwork);
         }
 
         // W = W * T (not T^T for transpose case)
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit, n, k, 1.0, T, tOff, ldt, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, n, k, 1.0, T, tOff, ldt, work, wOff, ldwork);
 
         // C2 = C2 - V2 * W^T
         if (m > k) {
-            BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.Trans, m - k, n, k, -1.0, V, vOff + k * ldv, ldv, work, wOff, ldwork, 1.0, C, cOff + k * ldc, ldc);
+            BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.Trans, m - k, n, k, -1.0, V, vOff + k * ldv, ldv, work, wOff, ldwork, 1.0, C, cOff + k * ldc, ldc);
         }
 
         // W = W * V1^T
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.Trans, BLAS.Diag.Unit, n, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.Trans, BLAS.Diag.Unit, n, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
 
         // C1 = C1 - W^T
         for (int i = 0; i < n; i++) {
@@ -229,23 +229,23 @@ public interface Dlarfb {
         }
 
         // W = W * V1 (V1 is k x k unit lower triangular)
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, BLAS.Diag.Unit, m, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.Unit, m, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
 
         // W = W + C2 * V2^T
         if (n > k) {
-            BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, m, k, n - k, 1.0, C, cOff + k, ldc, V, vOff + k * ldv, ldv, 1.0, work, wOff, ldwork);
+            BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, m, k, n - k, 1.0, C, cOff + k, ldc, V, vOff + k * ldv, ldv, 1.0, work, wOff, ldwork);
         }
 
         // W = W * T
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit, m, k, 1.0, T, tOff, ldt, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, m, k, 1.0, T, tOff, ldt, work, wOff, ldwork);
 
         // C2 = C2 - W * V2^T
         if (n > k) {
-            BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.Trans, m, n - k, k, -1.0, work, wOff, ldwork, V, vOff + k * ldv, ldv, 1.0, C, cOff + k, ldc);
+            BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.Trans, m, n - k, k, -1.0, work, wOff, ldwork, V, vOff + k * ldv, ldv, 1.0, C, cOff + k, ldc);
         }
 
         // W = W * V1^T
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.Trans, BLAS.Diag.Unit, m, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.Trans, BLAS.Diag.Unit, m, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
 
         // C1 = C1 - W
         for (int i = 0; i < m; i++) {
@@ -272,23 +272,23 @@ public interface Dlarfb {
         }
 
         // W = W * V1
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, BLAS.Diag.Unit, m, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.Unit, m, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
 
         // W = W + C2 * V2^T
         if (n > k) {
-            BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, m, k, n - k, 1.0, C, cOff + k, ldc, V, vOff + k * ldv, ldv, 1.0, work, wOff, ldwork);
+            BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, m, k, n - k, 1.0, C, cOff + k, ldc, V, vOff + k * ldv, ldv, 1.0, work, wOff, ldwork);
         }
 
         // W = W * T^T
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.Trans, BLAS.Diag.NonUnit, m, k, 1.0, T, tOff, ldt, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.Trans, BLAS.Diag.NonUnit, m, k, 1.0, T, tOff, ldt, work, wOff, ldwork);
 
         // C2 = C2 - W * V2^T
         if (n > k) {
-            BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.Trans, m, n - k, k, -1.0, work, wOff, ldwork, V, vOff + k * ldv, ldv, 1.0, C, cOff + k, ldc);
+            BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.Trans, m, n - k, k, -1.0, work, wOff, ldwork, V, vOff + k * ldv, ldv, 1.0, C, cOff + k, ldc);
         }
 
         // W = W * V1^T
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.Trans, BLAS.Diag.Unit, m, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.Trans, BLAS.Diag.Unit, m, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
 
         // C1 = C1 - W
         for (int i = 0; i < m; i++) {
@@ -321,23 +321,23 @@ public interface Dlarfb {
         }
 
         // W = W * V2 (V2 is unit upper triangular)
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.Unit, n, k, 1.0, V, v2Off, ldv, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.Unit, n, k, 1.0, V, v2Off, ldv, work, wOff, ldwork);
 
         // W = W + C1^T * V1 (if m > k)
         if (m > k) {
-            BLAS.dgemm(BLAS.Transpose.Trans, BLAS.Transpose.NoTrans, n, k, m - k, 1.0, C, cOff, ldc, V, vOff, ldv, 1.0, work, wOff, ldwork);
+            BLAS.dgemm(BLAS.Trans.Trans, BLAS.Trans.NoTrans, n, k, m - k, 1.0, C, cOff, ldc, V, vOff, ldv, 1.0, work, wOff, ldwork);
         }
 
         // W = W * T^T (T is lower triangular for backward direction, trans=NoTrans means use T^T)
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.Trans, BLAS.Diag.NonUnit, n, k, 1.0, T, tOff, ldt, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.Trans, BLAS.Diag.NonUnit, n, k, 1.0, T, tOff, ldt, work, wOff, ldwork);
 
         // C1 = C1 - V1 * W^T (if m > k)
         if (m > k) {
-            BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.Trans, m - k, n, k, -1.0, V, vOff, ldv, work, wOff, ldwork, 1.0, C, cOff, ldc);
+            BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.Trans, m - k, n, k, -1.0, V, vOff, ldv, work, wOff, ldwork, 1.0, C, cOff, ldc);
         }
 
         // W = W * V2^T
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.Trans, BLAS.Diag.Unit, n, k, 1.0, V, v2Off, ldv, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.Trans, BLAS.Diag.Unit, n, k, 1.0, V, v2Off, ldv, work, wOff, ldwork);
 
         // C2 = C2 - W^T
         for (int i = 0; i < n; i++) {
@@ -366,23 +366,23 @@ public interface Dlarfb {
         }
 
         // W = W * V2
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.Unit, n, k, 1.0, V, v2Off, ldv, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.Unit, n, k, 1.0, V, v2Off, ldv, work, wOff, ldwork);
 
         // W = W + C1^T * V1
         if (m > k) {
-            BLAS.dgemm(BLAS.Transpose.Trans, BLAS.Transpose.NoTrans, n, k, m - k, 1.0, C, cOff, ldc, V, vOff, ldv, 1.0, work, wOff, ldwork);
+            BLAS.dgemm(BLAS.Trans.Trans, BLAS.Trans.NoTrans, n, k, m - k, 1.0, C, cOff, ldc, V, vOff, ldv, 1.0, work, wOff, ldwork);
         }
 
         // W = W * T (trans=Trans means use T, not T^T)
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit, n, k, 1.0, T, tOff, ldt, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, n, k, 1.0, T, tOff, ldt, work, wOff, ldwork);
 
         // C1 = C1 - V1 * W^T
         if (m > k) {
-            BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.Trans, m - k, n, k, -1.0, V, vOff, ldv, work, wOff, ldwork, 1.0, C, cOff, ldc);
+            BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.Trans, m - k, n, k, -1.0, V, vOff, ldv, work, wOff, ldwork, 1.0, C, cOff, ldc);
         }
 
         // W = W * V2^T
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.Trans, BLAS.Diag.Unit, n, k, 1.0, V, v2Off, ldv, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.Trans, BLAS.Diag.Unit, n, k, 1.0, V, v2Off, ldv, work, wOff, ldwork);
 
         // C2 = C2 - W^T
         for (int i = 0; i < n; i++) {
@@ -411,23 +411,23 @@ public interface Dlarfb {
         }
 
         // W = W * V2 (V2 is unit upper triangular)
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.Unit, m, k, 1.0, V, v2Off, ldv, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.Unit, m, k, 1.0, V, v2Off, ldv, work, wOff, ldwork);
 
         // W = W + C1 * V1^T
         if (n > k) {
-            BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, m, k, n - k, 1.0, C, cOff, ldc, V, vOff, ldv, 1.0, work, wOff, ldwork);
+            BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, m, k, n - k, 1.0, C, cOff, ldc, V, vOff, ldv, 1.0, work, wOff, ldwork);
         }
 
         // W = W * T
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit, m, k, 1.0, T, tOff, ldt, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, m, k, 1.0, T, tOff, ldt, work, wOff, ldwork);
 
         // C1 = C1 - W * V1^T
         if (n > k) {
-            BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.Trans, m, n - k, k, -1.0, work, wOff, ldwork, V, vOff, ldv, 1.0, C, cOff, ldc);
+            BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.Trans, m, n - k, k, -1.0, work, wOff, ldwork, V, vOff, ldv, 1.0, C, cOff, ldc);
         }
 
         // W = W * V2^T
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.Trans, BLAS.Diag.Unit, m, k, 1.0, V, v2Off, ldv, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.Trans, BLAS.Diag.Unit, m, k, 1.0, V, v2Off, ldv, work, wOff, ldwork);
 
         // C2 = C2 - W
         for (int i = 0; i < m; i++) {
@@ -453,23 +453,23 @@ public interface Dlarfb {
         }
 
         // W = W * V2
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.Unit, m, k, 1.0, V, v2Off, ldv, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.Unit, m, k, 1.0, V, v2Off, ldv, work, wOff, ldwork);
 
         // W = W + C1 * V1^T
         if (n > k) {
-            BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, m, k, n - k, 1.0, C, cOff, ldc, V, vOff, ldv, 1.0, work, wOff, ldwork);
+            BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, m, k, n - k, 1.0, C, cOff, ldc, V, vOff, ldv, 1.0, work, wOff, ldwork);
         }
 
         // W = W * T^T
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.Trans, BLAS.Diag.NonUnit, m, k, 1.0, T, tOff, ldt, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.Trans, BLAS.Diag.NonUnit, m, k, 1.0, T, tOff, ldt, work, wOff, ldwork);
 
         // C1 = C1 - W * V1^T
         if (n > k) {
-            BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.Trans, m, n - k, k, -1.0, work, wOff, ldwork, V, vOff, ldv, 1.0, C, cOff, ldc);
+            BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.Trans, m, n - k, k, -1.0, work, wOff, ldwork, V, vOff, ldv, 1.0, C, cOff, ldc);
         }
 
         // W = W * V2^T
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.Trans, BLAS.Diag.Unit, m, k, 1.0, V, v2Off, ldv, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.Trans, BLAS.Diag.Unit, m, k, 1.0, V, v2Off, ldv, work, wOff, ldwork);
 
         // C2 = C2 - W
         for (int i = 0; i < m; i++) {
@@ -500,23 +500,23 @@ public interface Dlarfb {
         }
 
         // W = W * V1^T (V1 is unit upper triangular)
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.Trans, BLAS.Diag.Unit, n, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.Trans, BLAS.Diag.Unit, n, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
 
         // W = W + C2^T * V2^T
         if (m > k) {
-            BLAS.dgemm(BLAS.Transpose.Trans, BLAS.Transpose.Trans, n, k, m - k, 1.0, C, cOff + k * ldc, ldc, V, vOff + k, ldv, 1.0, work, wOff, ldwork);
+            BLAS.dgemm(BLAS.Trans.Trans, BLAS.Trans.Trans, n, k, m - k, 1.0, C, cOff + k * ldc, ldc, V, vOff + k, ldv, 1.0, work, wOff, ldwork);
         }
 
         // W = W * T^T
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.Trans, BLAS.Diag.NonUnit, n, k, 1.0, T, tOff, ldt, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.Trans, BLAS.Diag.NonUnit, n, k, 1.0, T, tOff, ldt, work, wOff, ldwork);
 
         // C2 = C2 - V2^T * W^T
         if (m > k) {
-            BLAS.dgemm(BLAS.Transpose.Trans, BLAS.Transpose.Trans, m - k, n, k, -1.0, V, vOff + k, ldv, work, wOff, ldwork, 1.0, C, cOff + k * ldc, ldc);
+            BLAS.dgemm(BLAS.Trans.Trans, BLAS.Trans.Trans, m - k, n, k, -1.0, V, vOff + k, ldv, work, wOff, ldwork, 1.0, C, cOff + k * ldc, ldc);
         }
 
         // W = W * V1
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.Unit, n, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.Unit, n, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
 
         // C1 = C1 - W^T
         for (int i = 0; i < n; i++) {
@@ -543,23 +543,23 @@ public interface Dlarfb {
         }
 
         // W = W * V1^T
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.Trans, BLAS.Diag.Unit, n, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.Trans, BLAS.Diag.Unit, n, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
 
         // W = W + C2^T * V2^T
         if (m > k) {
-            BLAS.dgemm(BLAS.Transpose.Trans, BLAS.Transpose.Trans, n, k, m - k, 1.0, C, cOff + k * ldc, ldc, V, vOff + k, ldv, 1.0, work, wOff, ldwork);
+            BLAS.dgemm(BLAS.Trans.Trans, BLAS.Trans.Trans, n, k, m - k, 1.0, C, cOff + k * ldc, ldc, V, vOff + k, ldv, 1.0, work, wOff, ldwork);
         }
 
         // W = W * T
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit, n, k, 1.0, T, tOff, ldt, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, n, k, 1.0, T, tOff, ldt, work, wOff, ldwork);
 
         // C2 = C2 - V2^T * W^T
         if (m > k) {
-            BLAS.dgemm(BLAS.Transpose.Trans, BLAS.Transpose.Trans, m - k, n, k, -1.0, V, vOff + k, ldv, work, wOff, ldwork, 1.0, C, cOff + k * ldc, ldc);
+            BLAS.dgemm(BLAS.Trans.Trans, BLAS.Trans.Trans, m - k, n, k, -1.0, V, vOff + k, ldv, work, wOff, ldwork, 1.0, C, cOff + k * ldc, ldc);
         }
 
         // W = W * V1
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.Unit, n, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.Unit, n, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
 
         // C1 = C1 - W^T
         for (int i = 0; i < n; i++) {
@@ -586,23 +586,23 @@ public interface Dlarfb {
         }
 
         // W = W * V1^T
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.Trans, BLAS.Diag.Unit, m, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.Trans, BLAS.Diag.Unit, m, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
 
         // W = W + C2 * V2
         if (n > k) {
-            BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.Trans, m, k, n - k, 1.0, C, cOff + k, ldc, V, vOff + k, ldv, 1.0, work, wOff, ldwork);
+            BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.Trans, m, k, n - k, 1.0, C, cOff + k, ldc, V, vOff + k, ldv, 1.0, work, wOff, ldwork);
         }
 
         // W = W * T
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit, m, k, 1.0, T, tOff, ldt, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, m, k, 1.0, T, tOff, ldt, work, wOff, ldwork);
 
         // C2 = C2 - W * V2
         if (n > k) {
-            BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, m, n - k, k, -1.0, work, wOff, ldwork, V, vOff + k, ldv, 1.0, C, cOff + k, ldc);
+            BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, m, n - k, k, -1.0, work, wOff, ldwork, V, vOff + k, ldv, 1.0, C, cOff + k, ldc);
         }
 
         // W = W * V1
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.Unit, m, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.Unit, m, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
 
         // C1 = C1 - W
         for (int i = 0; i < m; i++) {
@@ -629,23 +629,23 @@ public interface Dlarfb {
         }
 
         // W = W * V1^T
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.Trans, BLAS.Diag.Unit, m, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.Trans, BLAS.Diag.Unit, m, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
 
         // W = W + C2 * V2
         if (n > k) {
-            BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.Trans, m, k, n - k, 1.0, C, cOff + k, ldc, V, vOff + k, ldv, 1.0, work, wOff, ldwork);
+            BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.Trans, m, k, n - k, 1.0, C, cOff + k, ldc, V, vOff + k, ldv, 1.0, work, wOff, ldwork);
         }
 
         // W = W * T^T (Right side Forward Trans uses T^T)
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.Trans, BLAS.Diag.NonUnit, m, k, 1.0, T, tOff, ldt, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.Trans, BLAS.Diag.NonUnit, m, k, 1.0, T, tOff, ldt, work, wOff, ldwork);
 
         // C2 = C2 - W * V2
         if (n > k) {
-            BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, m, n - k, k, -1.0, work, wOff, ldwork, V, vOff + k, ldv, 1.0, C, cOff + k, ldc);
+            BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, m, n - k, k, -1.0, work, wOff, ldwork, V, vOff + k, ldv, 1.0, C, cOff + k, ldc);
         }
 
         // W = W * V1
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.Unit, m, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.Unit, m, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
 
         // C1 = C1 - W
         for (int i = 0; i < m; i++) {
@@ -678,23 +678,23 @@ public interface Dlarfb {
         }
 
         // W = W * V2^T (V2 is unit lower triangular)
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.Trans, BLAS.Diag.Unit, n, k, 1.0, V, v2Off, ldv, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.Trans, BLAS.Diag.Unit, n, k, 1.0, V, v2Off, ldv, work, wOff, ldwork);
 
         // W = W + C1^T * V1^T
         if (m > k) {
-            BLAS.dgemm(BLAS.Transpose.Trans, BLAS.Transpose.Trans, n, k, m - k, 1.0, C, cOff, ldc, V, vOff, ldv, 1.0, work, wOff, ldwork);
+            BLAS.dgemm(BLAS.Trans.Trans, BLAS.Trans.Trans, n, k, m - k, 1.0, C, cOff, ldc, V, vOff, ldv, 1.0, work, wOff, ldwork);
         }
 
         // W = W * T^T
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.Trans, BLAS.Diag.NonUnit, n, k, 1.0, T, tOff, ldt, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.Trans, BLAS.Diag.NonUnit, n, k, 1.0, T, tOff, ldt, work, wOff, ldwork);
 
         // C1 = C1 - V1^T * W^T
         if (m > k) {
-            BLAS.dgemm(BLAS.Transpose.Trans, BLAS.Transpose.Trans, m - k, n, k, -1.0, V, vOff, ldv, work, wOff, ldwork, 1.0, C, cOff, ldc);
+            BLAS.dgemm(BLAS.Trans.Trans, BLAS.Trans.Trans, m - k, n, k, -1.0, V, vOff, ldv, work, wOff, ldwork, 1.0, C, cOff, ldc);
         }
 
         // W = W * V2
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, BLAS.Diag.Unit, n, k, 1.0, V, v2Off, ldv, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.Unit, n, k, 1.0, V, v2Off, ldv, work, wOff, ldwork);
 
         // C2 = C2 - W^T
         for (int i = 0; i < n; i++) {
@@ -723,23 +723,23 @@ public interface Dlarfb {
         }
 
         // W = W * V2^T
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.Trans, BLAS.Diag.Unit, n, k, 1.0, V, v2Off, ldv, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.Trans, BLAS.Diag.Unit, n, k, 1.0, V, v2Off, ldv, work, wOff, ldwork);
 
         // W = W + C1^T * V1^T
         if (m > k) {
-            BLAS.dgemm(BLAS.Transpose.Trans, BLAS.Transpose.Trans, n, k, m - k, 1.0, C, cOff, ldc, V, vOff, ldv, 1.0, work, wOff, ldwork);
+            BLAS.dgemm(BLAS.Trans.Trans, BLAS.Trans.Trans, n, k, m - k, 1.0, C, cOff, ldc, V, vOff, ldv, 1.0, work, wOff, ldwork);
         }
 
         // W = W * T
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit, n, k, 1.0, T, tOff, ldt, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, n, k, 1.0, T, tOff, ldt, work, wOff, ldwork);
 
         // C1 = C1 - V1^T * W^T
         if (m > k) {
-            BLAS.dgemm(BLAS.Transpose.Trans, BLAS.Transpose.Trans, m - k, n, k, -1.0, V, vOff, ldv, work, wOff, ldwork, 1.0, C, cOff, ldc);
+            BLAS.dgemm(BLAS.Trans.Trans, BLAS.Trans.Trans, m - k, n, k, -1.0, V, vOff, ldv, work, wOff, ldwork, 1.0, C, cOff, ldc);
         }
 
         // W = W * V2
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, BLAS.Diag.Unit, n, k, 1.0, V, v2Off, ldv, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.Unit, n, k, 1.0, V, v2Off, ldv, work, wOff, ldwork);
 
         // C2 = C2 - W^T
         for (int i = 0; i < n; i++) {
@@ -769,23 +769,23 @@ public interface Dlarfb {
         // W *= V2ᵀ.
         // V2 is the last k columns of V, stored as k×k lower unit triangular.
         // v[n-k:] points to the start of V2, with stride ldv
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.Trans, BLAS.Diag.Unit, m, k, 1.0, V, vOff + n - k, ldv, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.Trans, BLAS.Diag.Unit, m, k, 1.0, V, vOff + n - k, ldv, work, wOff, ldwork);
 
         // W = W + C1 * V1^T
         if (n > k) {
-            BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.Trans, m, k, n - k, 1.0, C, cOff, ldc, V, vOff, ldv, 1.0, work, wOff, ldwork);
+            BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.Trans, m, k, n - k, 1.0, C, cOff, ldc, V, vOff, ldv, 1.0, work, wOff, ldwork);
         }
 
         // W = W * T (T is lower triangular for backward direction)
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit, m, k, 1.0, T, tOff, ldt, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, m, k, 1.0, T, tOff, ldt, work, wOff, ldwork);
 
         // C1 = C1 - W * V1
         if (n > k) {
-            BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, m, n - k, k, -1.0, work, wOff, ldwork, V, vOff, ldv, 1.0, C, cOff, ldc);
+            BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, m, n - k, k, -1.0, work, wOff, ldwork, V, vOff, ldv, 1.0, C, cOff, ldc);
         }
 
         // W *= V2.
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, BLAS.Diag.Unit, m, k, 1.0, V, vOff + n - k, ldv, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.Unit, m, k, 1.0, V, vOff + n - k, ldv, work, wOff, ldwork);
 
         // C2 = C2 - W
         for (int i = 0; i < m; i++) {
@@ -814,23 +814,23 @@ public interface Dlarfb {
         }
 
         // W = W * V2^T (V2 is unit lower triangular)
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.Trans, BLAS.Diag.NonUnit, m, k, 1.0, V, v2Off, ldv, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.Trans, BLAS.Diag.NonUnit, m, k, 1.0, V, v2Off, ldv, work, wOff, ldwork);
 
         // W = W + C1 * V1
         if (n > k) {
-            BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.Trans, m, k, n - k, 1.0, C, cOff, ldc, V, vOff, ldv, 1.0, work, wOff, ldwork);
+            BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.Trans, m, k, n - k, 1.0, C, cOff, ldc, V, vOff, ldv, 1.0, work, wOff, ldwork);
         }
 
         // W = W * T^T (Right side Backward Trans uses T^T)
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.Trans, BLAS.Diag.NonUnit, m, k, 1.0, T, tOff, ldt, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.Trans, BLAS.Diag.NonUnit, m, k, 1.0, T, tOff, ldt, work, wOff, ldwork);
 
         // C1 = C1 - W * V1
         if (n > k) {
-            BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, m, n - k, k, -1.0, work, wOff, ldwork, V, vOff, ldv, 1.0, C, cOff, ldc);
+            BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, m, n - k, k, -1.0, work, wOff, ldwork, V, vOff, ldv, 1.0, C, cOff, ldc);
         }
 
         // W = W * V2 (V2 is unit lower triangular)
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit, m, k, 1.0, V, v2Off, ldv, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, m, k, 1.0, V, v2Off, ldv, work, wOff, ldwork);
 
         // C2 = C2 - W
         for (int i = 0; i < m; i++) {
@@ -840,82 +840,4 @@ public interface Dlarfb {
         }
     }
 
-    // ==================== Legacy convenience methods ====================
-
-    static void dlarfbLeft(double[] V, int vOff, int ldv,
-                           double[] T, int tOff, int ldt,
-                           double[] C, int cOff, int ldc,
-                           double[] work, int wOff, int ldwork, int m, int nC, int k) {
-        dlarfbLeftForwardColWise(V, vOff, ldv, T, tOff, ldt, C, cOff, ldc, work, wOff, ldwork, m, nC, k);
-    }
-
-    static void dlarfbLeft(double[] V, int vOff, int ldv,
-                           double[] T, int tOff, int ldt,
-                           double[] C, int cOff, int ldc,
-                           double[] work, int wOff, int m, int nC, int k) {
-        dlarfbLeftForwardColWise(V, vOff, ldv, T, tOff, ldt, C, cOff, ldc, work, wOff, k, m, nC, k);
-    }
-
-    static void dlarfbLeftTrans(double[] V, int vOff, int ldv,
-                                double[] T, int tOff, int ldt,
-                                double[] C, int cOff, int ldc,
-                                double[] work, int wOff, int ldwork, int m, int nC, int k) {
-        dlarfbLeftTransForwardColWise(V, vOff, ldv, T, tOff, ldt, C, cOff, ldc, work, wOff, ldwork, m, nC, k);
-    }
-
-    static void dlarfbLeftTrans(double[] V, int vOff, int ldv,
-                                double[] T, int tOff, int ldt,
-                                double[] C, int cOff, int ldc,
-                                double[] work, int wOff, int m, int nC, int k) {
-        dlarfbLeftTransForwardColWise(V, vOff, ldv, T, tOff, ldt, C, cOff, ldc, work, wOff, k, m, nC, k);
-    }
-
-    static void dlarfbLeftTranspose(double[] V, int vOff, int ldv,
-                                    double[] T, int tOff, int ldt,
-                                    double[] C, int cOff, int ldc,
-                                    double[] work, int wOff, int m, int nC, int k) {
-        dlarfbLeftTransForwardColWise(V, vOff, ldv, T, tOff, ldt, C, cOff, ldc, work, wOff, k, m, nC, k);
-    }
-
-    static void dlarfbRight(double[] V, int vOff, int ldv,
-                            double[] T, int tOff, int ldt,
-                            double[] C, int cOff, int ldc,
-                            double[] work, int wOff, int ldwork, int m, int nC, int k) {
-        dlarfbRightForwardColWise(V, vOff, ldv, T, tOff, ldt, C, cOff, ldc, work, wOff, ldwork, m, nC, k);
-    }
-
-    static void dlarfbRight(double[] V, int vOff, int ldv,
-                            double[] T, int tOff, int ldt,
-                            double[] C, int cOff, int ldc,
-                            double[] work, int wOff, int m, int nC, int k) {
-        dlarfbRightForwardColWise(V, vOff, ldv, T, tOff, ldt, C, cOff, ldc, work, wOff, k, m, nC, k);
-    }
-
-    static void dlarfbRightTrans(double[] V, int vOff, int ldv,
-                                 double[] T, int tOff, int ldt,
-                                 double[] C, int cOff, int ldc,
-                                 double[] work, int wOff, int ldwork, int m, int nC, int k) {
-        dlarfbRightTransForwardColWise(V, vOff, ldv, T, tOff, ldt, C, cOff, ldc, work, wOff, ldwork, m, nC, k);
-    }
-
-    static void dlarfbRightTrans(double[] V, int vOff, int ldv,
-                                 double[] T, int tOff, int ldt,
-                                 double[] C, int cOff, int ldc,
-                                 double[] work, int wOff, int m, int nC, int k) {
-        dlarfbRightTransForwardColWise(V, vOff, ldv, T, tOff, ldt, C, cOff, ldc, work, wOff, k, m, nC, k);
-    }
-
-    static void dlarfbLeftBackward(double[] V, int vOff, int ldv,
-                                   double[] T, int tOff, int ldt,
-                                   double[] C, int cOff, int ldc,
-                                   double[] work, int wOff, int ldwork, int m, int nC, int k) {
-        dlarfbLeftBackwardColWise(V, vOff, ldv, T, tOff, ldt, C, cOff, ldc, work, wOff, ldwork, m, nC, k);
-    }
-
-    static void dlarfbLeftBackward(double[] V, int vOff, int ldv,
-                                   double[] T, int tOff, int ldt,
-                                   double[] C, int cOff, int ldc,
-                                   double[] work, int wOff, int m, int nC, int k) {
-        dlarfbLeftBackwardColWise(V, vOff, ldv, T, tOff, ldt, C, cOff, ldc, work, wOff, k, m, nC, k);
-    }
 }

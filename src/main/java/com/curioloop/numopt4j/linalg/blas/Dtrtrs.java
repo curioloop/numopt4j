@@ -28,11 +28,11 @@ interface Dtrtrs {
      * @param ldb leading dimension of B
      * @return true if successful, false if singular
      */
-    static boolean dtrtrs(BLAS.Uplo uplo, BLAS.Transpose trans, BLAS.Diag diag, int n, int nrhs,
-                                 double[] A, int aOff, int lda,
-                                 double[] B, int bOff, int ldb) {
+    static boolean dtrtrs(BLAS.Uplo uplo, BLAS.Trans trans, BLAS.Diag diag, int n, int nrhs,
+                          double[] A, int aOff, int lda,
+                          double[] B, int bOff, int ldb) {
         boolean upper = (uplo == BLAS.Uplo.Upper);
-        boolean transpose = (trans == BLAS.Transpose.Trans || trans == BLAS.Transpose.ConjTrans);
+        boolean transpose = (trans == BLAS.Trans.Trans || trans == BLAS.Trans.Conj);
         boolean unitDiag = (diag == BLAS.Diag.Unit);
 
         // Quick return for empty problems
@@ -63,13 +63,13 @@ interface Dtrtrs {
                     int i0 = ii - ib;
 
                     // Solve diagonal block: A[i0:i0+ib-1, i0:i0+ib-1] * X[i0] = B[i0]
-                    Dtrsm.dtrsm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, diagEnum, ib, nrhs,
+                    Dtrsm.dtrsm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Trans.NoTrans, diagEnum, ib, nrhs,
                                  1.0, A, aOff + i0 * lda + i0, lda,
                                  B, bOff + i0 * ldb, ldb);
 
                     // Update above blocks: B[0:i0-1,:] -= A[0:i0-1, i0:i0+ib-1] * X[i0]
                     if (i0 > 0) {
-                        Dgemm.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, i0, nrhs, ib,
+                        Dgemm.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, i0, nrhs, ib,
                                      -1.0,
                                      A, aOff + i0, lda,
                                      B, bOff + i0 * ldb, ldb,
@@ -83,14 +83,14 @@ interface Dtrtrs {
                     int ib = Math.min(NB, n - i0);
 
                     // Solve diagonal block
-                    Dtrsm.dtrsm(BLAS.Side.Left, BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, diagEnum, ib, nrhs,
+                    Dtrsm.dtrsm(BLAS.Side.Left, BLAS.Uplo.Lower, BLAS.Trans.NoTrans, diagEnum, ib, nrhs,
                                  1.0, A, aOff + i0 * lda + i0, lda,
                                  B, bOff + i0 * ldb, ldb);
 
                     // Update below blocks: B[i0+ib:n-1,:] -= A[i0+ib:n-1, i0:i0+ib-1] * X[i0]
                     int r0 = i0 + ib;
                     if (r0 < n) {
-                        Dgemm.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, n - r0, nrhs, ib,
+                        Dgemm.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, n - r0, nrhs, ib,
                                      -1.0,
                                      A, aOff + r0 * lda + i0, lda,
                                      B, bOff + i0 * ldb, ldb,
@@ -107,14 +107,14 @@ interface Dtrtrs {
                     int ib = Math.min(NB, n - i0);
 
                     // Solve diagonal block: op(A_block) = A_block^T
-                    Dtrsm.dtrsm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Transpose.Trans, diagEnum, ib, nrhs,
+                    Dtrsm.dtrsm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Trans.Trans, diagEnum, ib, nrhs,
                                  1.0, A, aOff + i0 * lda + i0, lda,
                                  B, bOff + i0 * ldb, ldb);
 
                     // Update trailing blocks: B[i0+ib:n-1,:] -= A[i0, i0+ib:n-1]^T * X[i0]
                     int r0 = i0 + ib;
                     if (r0 < n) {
-                        Dgemm.dgemm(BLAS.Transpose.Trans, BLAS.Transpose.NoTrans, n - r0, nrhs, ib,
+                        Dgemm.dgemm(BLAS.Trans.Trans, BLAS.Trans.NoTrans, n - r0, nrhs, ib,
                                      -1.0,
                                      A, aOff + i0 * lda + r0, lda,
                                      B, bOff + i0 * ldb, ldb,
@@ -129,13 +129,13 @@ interface Dtrtrs {
                     int i0 = ii - ib;
 
                     // Solve diagonal block: op(A_block) = A_block^T
-                    Dtrsm.dtrsm(BLAS.Side.Left, BLAS.Uplo.Lower, BLAS.Transpose.Trans, diagEnum, ib, nrhs,
+                    Dtrsm.dtrsm(BLAS.Side.Left, BLAS.Uplo.Lower, BLAS.Trans.Trans, diagEnum, ib, nrhs,
                                  1.0, A, aOff + i0 * lda + i0, lda,
                                  B, bOff + i0 * ldb, ldb);
 
                     // Update above blocks: B[0:i0-1,:] -= A[i0, 0:i0-1]^T * X[i0]
                     if (i0 > 0) {
-                        Dgemm.dgemm(BLAS.Transpose.Trans, BLAS.Transpose.NoTrans, i0, nrhs, ib,
+                        Dgemm.dgemm(BLAS.Trans.Trans, BLAS.Trans.NoTrans, i0, nrhs, ib,
                                      -1.0,
                                      A, aOff + i0 * lda, lda,
                                      B, bOff + i0 * ldb, ldb,

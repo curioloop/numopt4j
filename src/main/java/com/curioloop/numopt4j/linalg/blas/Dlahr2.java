@@ -26,22 +26,22 @@ interface Dlahr2 {
         double ei = 0;
         for (int i = 0; i < nb; i++) {
             if (i > 0) {
-                Dgemv.dgemv(BLAS.Transpose.NoTrans, n - k, i, -1.0, y, yOff + k * ldy, ldy, a, aOff + (k + i - 1) * lda, 1, 1.0, a, aOff + k * lda + i, lda);
+                Dgemv.dgemv(BLAS.Trans.NoTrans, n - k, i, -1.0, y, yOff + k * ldy, ldy, a, aOff + (k + i - 1) * lda, 1, 1.0, a, aOff + k * lda + i, lda);
 
                 Dlamv.dcopy(i, a, aOff + k * lda + i, lda, t, tOff + nb - 1, ldt);
-                Dtrmv.dtrmv(BLAS.Uplo.Lower, BLAS.Transpose.Trans, BLAS.Diag.Unit, i, a, aOff + k * lda, lda, t, tOff + nb - 1, ldt);
+                Dtrmv.dtrmv(BLAS.Uplo.Lower, BLAS.Trans.Trans, BLAS.Diag.Unit, i, a, aOff + k * lda, lda, t, tOff + nb - 1, ldt);
 
                 if (n - k - i > 0) {
-                    Dgemv.dgemv(BLAS.Transpose.Trans, n - k - i, i, 1.0, a, aOff + (k + i) * lda, lda, a, aOff + (k + i) * lda + i, lda, 1.0, t, tOff + nb - 1, ldt);
+                    Dgemv.dgemv(BLAS.Trans.Trans, n - k - i, i, 1.0, a, aOff + (k + i) * lda, lda, a, aOff + (k + i) * lda + i, lda, 1.0, t, tOff + nb - 1, ldt);
                 }
 
-                Dtrmv.dtrmv(BLAS.Uplo.Upper, BLAS.Transpose.Trans, BLAS.Diag.NonUnit, i, t, tOff, ldt, t, tOff + nb - 1, ldt);
+                Dtrmv.dtrmv(BLAS.Uplo.Upper, BLAS.Trans.Trans, BLAS.Diag.NonUnit, i, t, tOff, ldt, t, tOff + nb - 1, ldt);
 
                 if (n - k - i > 0) {
-                    Dgemv.dgemv(BLAS.Transpose.NoTrans, n - k - i, i, -1.0, a, aOff + (k + i) * lda, lda, t, tOff + nb - 1, ldt, 1.0, a, aOff + (k + i) * lda + i, lda);
+                    Dgemv.dgemv(BLAS.Trans.NoTrans, n - k - i, i, -1.0, a, aOff + (k + i) * lda, lda, t, tOff + nb - 1, ldt, 1.0, a, aOff + (k + i) * lda + i, lda);
                 }
 
-                Dtrmv.dtrmv(BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, BLAS.Diag.Unit, i, a, aOff + k * lda, lda, t, tOff + nb - 1, ldt);
+                Dtrmv.dtrmv(BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.Unit, i, a, aOff + k * lda, lda, t, tOff + nb - 1, ldt);
                 Daxpy.daxpy(i, -1.0, t, tOff + nb - 1, ldt, a, aOff + k * lda + i, lda);
 
                 a[aOff + (k + i - 1) * lda + i - 1] = ei;
@@ -51,16 +51,16 @@ interface Dlahr2 {
             a[aOff + (k + i) * lda + i] = 1.0;
 
             if (n - k - i - 1 > 0) {
-                Dgemv.dgemv(BLAS.Transpose.NoTrans, n - k, n - k - i - 1, 1.0, a, aOff + k * lda + i + 1, lda, a, aOff + (k + i) * lda + i, lda, 0.0, y, yOff + k * ldy + i, ldy);
+                Dgemv.dgemv(BLAS.Trans.NoTrans, n - k, n - k - i - 1, 1.0, a, aOff + k * lda + i + 1, lda, a, aOff + (k + i) * lda + i, lda, 0.0, y, yOff + k * ldy + i, ldy);
             }
 
-            Dgemv.dgemv(BLAS.Transpose.Trans, n - k - i, i, 1.0, a, aOff + (k + i) * lda, lda, a, aOff + (k + i) * lda + i, lda, 0.0, t, tOff + i, ldt);
-            Dgemv.dgemv(BLAS.Transpose.NoTrans, n - k, i, -1.0, y, yOff + k * ldy, ldy, t, tOff + i, ldt, 1.0, y, yOff + k * ldy + i, ldy);
+            Dgemv.dgemv(BLAS.Trans.Trans, n - k - i, i, 1.0, a, aOff + (k + i) * lda, lda, a, aOff + (k + i) * lda + i, lda, 0.0, t, tOff + i, ldt);
+            Dgemv.dgemv(BLAS.Trans.NoTrans, n - k, i, -1.0, y, yOff + k * ldy, ldy, t, tOff + i, ldt, 1.0, y, yOff + k * ldy + i, ldy);
 
             Dscal.dscal(n - k, tau[tauOff + i], y, yOff + k * ldy + i, ldy);
 
             Dscal.dscal(i, -tau[tauOff + i], t, tOff + i, ldt);
-            Dtrmv.dtrmv(BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit, i, t, tOff, ldt, t, tOff + i, ldt);
+            Dtrmv.dtrmv(BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, i, t, tOff, ldt, t, tOff + i, ldt);
 
             t[tOff + i * ldt + i] = tau[tauOff + i];
         }
@@ -68,11 +68,11 @@ interface Dlahr2 {
 
         if (k > 0) {
             Dlamv.dlacpy('A', k, nb, a, aOff + 1, lda, y, yOff, ldy);
-            Dtrmm.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, BLAS.Diag.Unit, k, nb, 1.0, a, aOff + k * lda, lda, y, yOff, ldy);
+            Dtrmm.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.Unit, k, nb, 1.0, a, aOff + k * lda, lda, y, yOff, ldy);
             if (n > k + nb) {
-                Dgemm.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, k, nb, n - k - nb, 1.0, a, aOff + 1 + nb, lda, a, aOff + (k + nb) * lda, lda, 1.0, y, yOff, ldy);
+                Dgemm.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, k, nb, n - k - nb, 1.0, a, aOff + 1 + nb, lda, a, aOff + (k + nb) * lda, lda, 1.0, y, yOff, ldy);
             }
-            Dtrmm.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit, k, nb, 1.0, t, tOff, ldt, y, yOff, ldy);
+            Dtrmm.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, k, nb, 1.0, t, tOff, ldt, y, yOff, ldy);
         }
     }
 }

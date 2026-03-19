@@ -16,7 +16,7 @@ import static java.lang.Math.*;
  * @see #dgerqf(int, int, double[], int, int, double[], int, double[], int, int)
  * @see #dgerq2(int, int, double[], int, int, double[], int, double[], int)
  * @see #dorgrq(int, int, int, double[], int, int, double[], int, double[], int, int)
- * @see #dormrq(BLAS.Side, BLAS.Transpose, int, int, int, double[], int, int, double[], int, double[], int, int, double[], int, int)
+ * @see #dormrq(BLAS.Side, BLAS.Trans, int, int, int, double[], int, int, double[], int, double[], int, int, double[], int, int)
  */
 interface Dgerq {
 
@@ -40,13 +40,13 @@ interface Dgerq {
         }
     }
 
-    static void dormr2(BLAS.Side side, BLAS.Transpose trans, int m, int n, int k,
+    static void dormr2(BLAS.Side side, BLAS.Trans trans, int m, int n, int k,
                        double[] A, int aOff, int lda, double[] tau, int tauOff,
                        double[] C, int cOff, int ldc, double[] work, int workOff) {
         if (m < 0 || n < 0 || k < 0 || k > min(m, n)) return;
 
         boolean left = (side == BLAS.Side.Left);
-        boolean notran = (trans == BLAS.Transpose.NoTrans);
+        boolean notran = (trans == BLAS.Trans.NoTrans);
 
         if (left) {
             if (notran) {
@@ -291,13 +291,13 @@ interface Dgerq {
         }
     }
 
-    static int dormrq(BLAS.Side side, BLAS.Transpose trans, int m, int n, int k,
+    static int dormrq(BLAS.Side side, BLAS.Trans trans, int m, int n, int k,
                       double[] A, int aOff, int lda,
                       double[] tau, int tauOff,
                       double[] C, int cOff, int ldc,
                       double[] work, int workOff, int lwork) {
         boolean left = side == BLAS.Side.Left;
-        boolean notrans = trans == BLAS.Transpose.NoTrans;
+        boolean notrans = trans == BLAS.Trans.NoTrans;
 
         int nw = left ? n : m;
 

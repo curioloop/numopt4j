@@ -19,7 +19,7 @@ class DtrslTest {
         double[] b = {3, 7, 4};
         int n = 3;
 
-        int info = Dtrsl.dtrsl(A, 0, n, n, b, 0, BLAS.Uplo.Upper, BLAS.Transpose.NoTrans);
+        int info = Dtrsl.dtrsl(A, 0, n, n, b, 0, BLAS.Uplo.Upper, BLAS.Trans.NoTrans);
 
         assertEquals(0, info);
     }
@@ -34,14 +34,14 @@ class DtrslTest {
         double[] b = {2, 4, 8};
         int n = 3;
 
-        int info = Dtrsl.dtrsl(A, 0, n, n, b, 0, BLAS.Uplo.Lower, BLAS.Transpose.NoTrans);
+        int info = Dtrsl.dtrsl(A, 0, n, n, b, 0, BLAS.Uplo.Lower, BLAS.Trans.NoTrans);
 
         assertEquals(0, info);
     }
 
     @Test
     void testEmpty() {
-        int info = Dtrsl.dtrsl(new double[0], 0, 0, 0, new double[0], 0, BLAS.Uplo.Upper, BLAS.Transpose.NoTrans);
+        int info = Dtrsl.dtrsl(new double[0], 0, 0, 0, new double[0], 0, BLAS.Uplo.Upper, BLAS.Trans.NoTrans);
         assertEquals(0, info);
     }
 }

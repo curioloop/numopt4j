@@ -10,11 +10,6 @@ package com.curioloop.numopt4j.linalg.blas;
 interface Dorgtr {
 
     static void dorgtr(BLAS.Uplo uplo, int n, double[] A, int lda,
-                       double[] tau, double[] work, int lwork) {
-        dorgtr(uplo, n, A, lda, tau, 0, work, 0, lwork);
-    }
-    
-    static void dorgtr(BLAS.Uplo uplo, int n, double[] A, int lda,
                        double[] tau, int tauOff, double[] work, int workOff, int lwork) {
         if (n <= 0) {
             return;

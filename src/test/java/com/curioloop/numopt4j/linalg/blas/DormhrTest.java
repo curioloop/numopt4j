@@ -22,7 +22,7 @@ class DormhrTest {
         double[] c = new double[m * n];
         double[] work = new double[1];
 
-        Dgehrd.dormhr(BLAS.Side.Left, BLAS.Transpose.NoTrans, m, n, ilo, ihi,
+        Dgehrd.dormhr(BLAS.Side.Left, BLAS.Trans.NoTrans, m, n, ilo, ihi,
                       a, 0, m, tau, 0, c, 0, n, work, 0, -1);
 
         assertThat(work[0]).isGreaterThanOrEqualTo(1.0);
@@ -38,7 +38,7 @@ class DormhrTest {
         double[] c = new double[m * n];
         double[] work = new double[100];
 
-        Dgehrd.dormhr(BLAS.Side.Left, BLAS.Transpose.NoTrans, m, n, ilo, ihi,
+        Dgehrd.dormhr(BLAS.Side.Left, BLAS.Trans.NoTrans, m, n, ilo, ihi,
                       a, 0, m, tau, 0, c, 0, n, work, 0, 100);
 
         for (int i = 0; i < c.length; i++) {
@@ -66,7 +66,7 @@ class DormhrTest {
         }
         double[] cOrig = c.clone();
 
-        Dgehrd.dormhr(BLAS.Side.Left, BLAS.Transpose.NoTrans, m, n, ilo, ihi,
+        Dgehrd.dormhr(BLAS.Side.Left, BLAS.Trans.NoTrans, m, n, ilo, ihi,
                       a, 0, m, tau, 0, c, 0, n, work, 0, 100);
 
         for (int i = 0; i < c.length; i++) {
@@ -94,7 +94,7 @@ class DormhrTest {
         }
         double[] cOrig = c.clone();
 
-        Dgehrd.dormhr(BLAS.Side.Left, BLAS.Transpose.NoTrans, m, n, ilo, ihi,
+        Dgehrd.dormhr(BLAS.Side.Left, BLAS.Trans.NoTrans, m, n, ilo, ihi,
                       a, 0, m, tau, 0, c, 0, n, work, 0, 100);
 
         for (int i = 0; i < c.length; i++) {
@@ -110,7 +110,7 @@ class DormhrTest {
         double[] c = new double[0];
         double[] work = new double[1];
 
-        Dgehrd.dormhr(BLAS.Side.Left, BLAS.Transpose.NoTrans, m, n, 0, 0,
+        Dgehrd.dormhr(BLAS.Side.Left, BLAS.Trans.NoTrans, m, n, 0, 0,
                       a, 0, 1, tau, 0, c, 0, n, work, 0, 1);
 
         assertThat(work[0]).isEqualTo(1.0);

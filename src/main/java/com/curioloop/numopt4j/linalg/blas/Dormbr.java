@@ -23,7 +23,7 @@ import static java.lang.Math.*;
  */
 interface Dormbr {
 
-    static int dormbr(char vect, BLAS.Side side, BLAS.Transpose trans, int m, int n, int k,
+    static int dormbr(char vect, BLAS.Side side, BLAS.Trans trans, int m, int n, int k,
                       double[] A, int aOff, int lda,
                       double[] tau, int tauOff,
                       double[] C, int cOff, int ldc,
@@ -66,7 +66,7 @@ interface Dormbr {
             return 0;
         }
 
-        String opts = (left ? "L" : "R") + (trans == BLAS.Transpose.Trans ? "T" : "N");
+        String opts = (left ? "L" : "R") + (trans == BLAS.Trans.Trans ? "T" : "N");
         int nb;
         if (applyQ) {
             if (left) {
@@ -113,7 +113,7 @@ interface Dormbr {
             return 0;
         }
 
-        BLAS.Transpose transt = (trans == BLAS.Transpose.NoTrans) ? BLAS.Transpose.Trans : BLAS.Transpose.NoTrans;
+        BLAS.Trans transt = (trans == BLAS.Trans.NoTrans) ? BLAS.Trans.Trans : BLAS.Trans.NoTrans;
 
         if (nq > k) {
             return Dgelq.dormlq(side, transt, m, n, k, A, aOff, lda, tau, tauOff, C, cOff, ldc, work, workOff, lwork);
@@ -138,13 +138,13 @@ interface Dormbr {
         return 0;
     }
 
-    static int dormqrBlocked(BLAS.Side side, BLAS.Transpose trans, int m, int n, int k,
+    static int dormqrBlocked(BLAS.Side side, BLAS.Trans trans, int m, int n, int k,
                              double[] A, int aOff, int lda,
                              double[] tau, int tauOff,
                              double[] C, int cOff, int ldc,
                              double[] work, int workOff, int lwork) {
         boolean left = side == BLAS.Side.Left;
-        boolean notrans = trans == BLAS.Transpose.NoTrans;
+        boolean notrans = trans == BLAS.Trans.NoTrans;
 
         int nw = left ? n : m;
 
@@ -209,25 +209,25 @@ interface Dormbr {
         if (left && notrans) {
             for (int i = 0; i < k; i += nb) {
                 int ib = min(nb, k - i);
-                Dlarft.dlarft(A, aOff + i * lda + i, lda, tau, tauOff + i, work, tOff, ldt, m - i, ib);
-                Dlarfb.dlarfbLeft(A, aOff + i * lda + i, lda, work, tOff, ldt, C, cOff + i * ldc, ldc, work, wrkOff, ldwork, m - i, n, ib);
+                Dlarft.dlarftForward(A, aOff + i * lda + i, lda, tau, tauOff + i, work, tOff, ldt, m - i, ib);
+                Dlarfb.dlarfbLeftForwardColWise(A, aOff + i * lda + i, lda, work, tOff, ldt, C, cOff + i * ldc, ldc, work, wrkOff, ldwork, m - i, n, ib);
             }
         } else if (left) {
             for (int i = ((k - 1) / nb) * nb; i >= 0; i -= nb) {
                 int ib = min(nb, k - i);
-                Dlarft.dlarft(A, aOff + i * lda + i, lda, tau, tauOff + i, work, tOff, ldt, m - i, ib);
-                Dlarfb.dlarfbLeftTrans(A, aOff + i * lda + i, lda, work, tOff, ldt, C, cOff + i * ldc, ldc, work, wrkOff, ldwork, m - i, n, ib);
+                Dlarft.dlarftForward(A, aOff + i * lda + i, lda, tau, tauOff + i, work, tOff, ldt, m - i, ib);
+                Dlarfb.dlarfbLeftTransForwardColWise(A, aOff + i * lda + i, lda, work, tOff, ldt, C, cOff + i * ldc, ldc, work, wrkOff, ldwork, m - i, n, ib);
             }
         } else if (notrans) {
             for (int i = 0; i < k; i += nb) {
                 int ib = min(nb, k - i);
-                Dlarft.dlarft(A, aOff + i * lda + i, lda, tau, tauOff + i, work, tOff, ldt, m, ib);
+                Dlarft.dlarftForward(A, aOff + i * lda + i, lda, tau, tauOff + i, work, tOff, ldt, m, ib);
                 dlarfbRight(A, aOff + i * lda + i, lda, work, tOff, ldt, C, cOff + i, ldc, work, wrkOff, ldwork, m, n - i, ib);
             }
         } else {
             for (int i = ((k - 1) / nb) * nb; i >= 0; i -= nb) {
                 int ib = min(nb, k - i);
-                Dlarft.dlarft(A, aOff + i * lda + i, lda, tau, tauOff + i, work, tOff, ldt, m, ib);
+                Dlarft.dlarftForward(A, aOff + i * lda + i, lda, tau, tauOff + i, work, tOff, ldt, m, ib);
                 dlarfbRightTrans(A, aOff + i * lda + i, lda, work, tOff, ldt, C, cOff + i, ldc, work, wrkOff, ldwork, m, n - i, ib);
             }
         }
@@ -236,13 +236,13 @@ interface Dormbr {
         return 0;
     }
 
-    static void dormqrUnblocked(BLAS.Side side, BLAS.Transpose trans, int m, int n, int k,
+    static void dormqrUnblocked(BLAS.Side side, BLAS.Trans trans, int m, int n, int k,
                                 double[] A, int aOff, int lda,
                                 double[] tau, int tauOff,
                                 double[] C, int cOff, int ldc,
                                 double[] work, int workOff) {
         boolean left = side == BLAS.Side.Left;
-        boolean notrans = trans == BLAS.Transpose.NoTrans;
+        boolean notrans = trans == BLAS.Trans.NoTrans;
 
         if (m == 0 || n == 0 || k == 0) {
             return;
@@ -295,25 +295,25 @@ interface Dormbr {
             }
         }
 
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, BLAS.Diag.Unit, m, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.Unit, m, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
 
         if (nC > k) {
-            BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, m, k, nC - k,
+            BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, m, k, nC - k,
                     1.0, C, cOff + k, ldc,
                     V, vOff + k * ldv, ldv,
                     1.0, work, wOff, ldwork);
         }
 
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit, m, k, 1.0, T, tOff, ldt, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, m, k, 1.0, T, tOff, ldt, work, wOff, ldwork);
 
         if (nC > k) {
-            BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.Trans, m, nC - k, k,
+            BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.Trans, m, nC - k, k,
                     -1.0, work, wOff, ldwork,
                     V, vOff + k * ldv, ldv,
                     1.0, C, cOff + k, ldc);
         }
 
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.Trans, BLAS.Diag.Unit, m, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.Trans, BLAS.Diag.Unit, m, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
 
         for (int i = 0; i < m; i++) {
             for (int j = 0; j < k; j++) {
@@ -334,25 +334,25 @@ interface Dormbr {
             }
         }
 
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, BLAS.Diag.Unit, m, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.Unit, m, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
 
         if (nC > k) {
-            BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, m, k, nC - k,
+            BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, m, k, nC - k,
                     1.0, C, cOff + k, ldc,
                     V, vOff + k * ldv, ldv,
                     1.0, work, wOff, ldwork);
         }
 
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.Trans, BLAS.Diag.NonUnit, m, k, 1.0, T, tOff, ldt, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.Trans, BLAS.Diag.NonUnit, m, k, 1.0, T, tOff, ldt, work, wOff, ldwork);
 
         if (nC > k) {
-            BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.Trans, m, nC - k, k,
+            BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.Trans, m, nC - k, k,
                     -1.0, work, wOff, ldwork,
                     V, vOff + k * ldv, ldv,
                     1.0, C, cOff + k, ldc);
         }
 
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.Trans, BLAS.Diag.Unit, m, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.Trans, BLAS.Diag.Unit, m, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
 
         for (int i = 0; i < m; i++) {
             for (int j = 0; j < k; j++) {

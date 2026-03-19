@@ -31,10 +31,10 @@ public interface BLAS {
 
     // ========== Enum Types ==========
 
-    enum Transpose {
-        NoTrans('N'), Trans('T'), ConjTrans('C');
+    enum Trans {
+        NoTrans('N'), Trans('T'), Conj('C');
         final char code;
-        Transpose(char code) { this.code = code; }
+        Trans(char code) { this.code = code; }
     }
 
     enum Uplo {
@@ -55,10 +55,28 @@ public interface BLAS {
         Diag(char code) { this.code = code; }
     }
 
+    enum Direct {
+        Forward('F'), Backward('B');
+        final char code;
+        Direct(char code) { this.code = code; }
+    }
+
+    enum Wise {
+        Row('R'), Col('C');
+        final char code;
+        Wise(char code) { this.code = code; }
+    }
+
     enum GsvdJob {
         None(0), Compute(1), Initialize(2);
         final int code;
         GsvdJob(int code) { this.code = code; }
+    }
+
+    enum Norm {
+        MaxAbs('M'), One('1'), Inf('I'), Frobenius('F');
+        final char code;
+        Norm(char code) { this.code = code; }
     }
 
     // ========== BLAS Level 1: Vector-Vector Operations ==========
@@ -280,7 +298,7 @@ public interface BLAS {
      * @param yOff offset into y
      * @param incY stride in y
      */
-    static void dgemv(Transpose trans, int m, int n, double alpha,
+    static void dgemv(Trans trans, int m, int n, double alpha,
                       double[] A, int aOff, int lda,
                       double[] x, int xOff, int incX, double beta,
                       double[] y, int yOff, int incY) {
@@ -322,18 +340,30 @@ public interface BLAS {
      * @param b     the right hand side vector (modified in place with solution)
      * @param bOff  offset into array b
      * @param uplo  {@link Uplo#Upper} for upper triangular, {@link Uplo#Lower} for lower triangular
-     * @param trans {@link Transpose#NoTrans} for T*x = b, {@link Transpose#Trans} for Tᵀ*x = b
+     * @param trans {@link Trans#NoTrans} for T*x = b, {@link Trans#Trans} for Tᵀ*x = b
      * @return 0 if the system is nonsingular, otherwise the index of the first
      *         zero diagonal element of t
      */
-    static int dtrsl(double[] t, int tOff, int ldt, int n, double[] b, int bOff, Uplo uplo, Transpose trans) {
+    static int dtrsl(double[] t, int tOff, int ldt, int n, double[] b, int bOff, Uplo uplo, Trans trans) {
         return Dtrsl.dtrsl(t, tOff, ldt, n, b, bOff, uplo, trans);
     }
 
     // ==================== Dlange ====================
 
-    static double dlange(char norm, int m, int n, double[] A, int aOff, int lda) {
-        return Dlange.dlange(norm, m, n, A, aOff, lda);
+    /**
+     * Returns the value of the specified norm of a general rectangular matrix (LAPACK DLANGE).
+     *
+     * @param norm  norm type: {@link Norm#MaxAbs} max abs, {@link Norm#One} 1-norm,
+     *              {@link Norm#Inf} inf-norm, {@link Norm#Frobenius} Frobenius norm
+     * @param m     number of rows
+     * @param n     number of columns
+     * @param A     matrix (m × n, row-major)
+     * @param aOff  offset into A
+     * @param lda   leading dimension of A
+     * @return computed norm value
+     */
+    static double dlange(Norm norm, int m, int n, double[] A, int aOff, int lda) {
+        return Dlange.dlange(norm.code, m, n, A, aOff, lda);
     }
 
     // ========== BLAS Level 3: Matrix-Matrix Operations ==========
@@ -345,7 +375,7 @@ public interface BLAS {
      * Only the upper or lower triangular part of C is updated.
      *
      * @param uplo  {@link Uplo#Upper} or {@link Uplo#Lower} — which triangle of C to update
-     * @param trans {@link Transpose#NoTrans} for A*A^T, {@link Transpose#Trans} for A^T*A
+     * @param trans {@link Trans#NoTrans} for A*A^T, {@link Trans#Trans} for A^T*A
      * @param n     order of matrix C
      * @param k     number of columns of A (NoTrans) or rows of A (Trans)
      * @param alpha scalar
@@ -357,7 +387,7 @@ public interface BLAS {
      * @param cOff  offset into C
      * @param ldc   leading dimension of C
      */
-    static void dsyrk(Uplo uplo, Transpose trans, int n, int k, double alpha,
+    static void dsyrk(Uplo uplo, Trans trans, int n, int k, double alpha,
                       double[] A, int aOff, int lda, double beta,
                       double[] C, int cOff, int ldc) {
         Dsyrk.dsyrk(uplo, trans, n, k, alpha, A, aOff, lda, beta, C, cOff, ldc);
@@ -383,7 +413,7 @@ public interface BLAS {
      * @param cOff offset into C
      * @param ldc leading dimension of C
      */
-    static void dgemm(Transpose transA, Transpose transB, int m, int n, int k,
+    static void dgemm(Trans transA, Trans transB, int m, int n, int k,
                       double alpha, double[] A, int aOff, int lda,
                       double[] B, int bOff, int ldb,
                       double beta, double[] C, int cOff, int ldc) {
@@ -407,7 +437,7 @@ public interface BLAS {
      * @param bOff offset into B
      * @param ldb leading dimension of B
      */
-    static void dtrmm(Side side, Uplo uplo, Transpose trans, Diag diag,
+    static void dtrmm(Side side, Uplo uplo, Trans trans, Diag diag,
                       int m, int n, double alpha,
                       double[] A, int aOff, int lda,
                       double[] B, int bOff, int ldb) {
@@ -438,7 +468,7 @@ public interface BLAS {
      * @param bOff offset into B
      * @param ldb leading dimension of B
      */
-    static void dtrsm(Side side, Uplo uplo, Transpose trans, Diag diag,
+    static void dtrsm(Side side, Uplo uplo, Trans trans, Diag diag,
                       int m, int n, double alpha,
                       double[] A, int aOff, int lda,
                       double[] B, int bOff, int ldb) {
@@ -462,7 +492,7 @@ public interface BLAS {
      * @param xOff offset into x
      * @param incX stride of x
      */
-    static void dtrmv(Uplo uplo, Transpose trans, Diag diag, int n,
+    static void dtrmv(Uplo uplo, Trans trans, Diag diag, int n,
                       double[] A, int aOff, int lda,
                       double[] x, int xOff, int incX) {
         Dtrmv.dtrmv(uplo, trans, diag, n, A, aOff, lda, x, xOff, incX);
@@ -474,47 +504,57 @@ public interface BLAS {
      * Forms the triangular factor T in a block reflector H = I - V*T*V^T.
      * LAPACK DLARFT.
      *
-     * @param V matrix of Householder vectors (m × k, lower triangular with unit diagonal)
-     * @param vOff offset into V
-     * @param ldv leading dimension of V
-     * @param tau Householder scalars (length k)
-     * @param tauOff offset into tau
-     * @param T output upper triangular T matrix (k × k)
-     * @param tOff offset into T
-     * @param ldt leading dimension of T
-     * @param m number of rows in V
-     * @param k number of reflectors
+     * @param direct  'F' for forward (H = H_0*H_1*...*H_{k-1}), 'B' for backward
+     * @param storev  'C' for column-wise storage, 'R' for row-wise storage
+     * @param m       number of rows in V
+     * @param k       number of reflectors
+     * @param V       matrix of Householder vectors
+     * @param vOff    offset into V
+     * @param ldv     leading dimension of V
+     * @param tau     Householder scalars (length k)
+     * @param tauOff  offset into tau
+     * @param T       output triangular factor (k × k)
+     * @param tOff    offset into T
+     * @param ldt     leading dimension of T
      */
-    static void dlarft(double[] V, int vOff, int ldv, double[] tau, int tauOff,
-                       double[] T, int tOff, int ldt, int m, int k) {
-        Dlarft.dlarft(V, vOff, ldv, tau, tauOff, T, tOff, ldt, m, k);
+    static void dlarft(Direct direct, Wise storev, int m, int k,
+                       double[] V, int vOff, int ldv,
+                       double[] tau, int tauOff,
+                       double[] T, int tOff, int ldt) {
+        Dlarft.dlarft(direct.code, storev.code, m, k, V, vOff, ldv, tau, tauOff, T, tOff, ldt);
     }
 
     /**
-     * Applies a block reflector H = I - V*T*V^T from the left.
+     * Applies a block reflector H = I - V*T*V^T (or its transpose) to a matrix C.
      * LAPACK DLARFB.
      *
-     * @param V Householder vectors (m × k)
-     * @param vOff offset into V
-     * @param ldv leading dimension of V
-     * @param T triangular factor (k × k upper triangular)
-     * @param tOff offset into T
-     * @param ldt leading dimension of T
-     * @param C matrix to update (m × nC)
-     * @param cOff offset into C
-     * @param ldc leading dimension of C
-     * @param work workspace
+     * @param side    'L' to apply from the left (H*C or H^T*C), 'R' from the right (C*H or C*H^T)
+     * @param trans   'N' to apply H, 'T' to apply H^T
+     * @param direct  'F' for forward direction, 'B' for backward direction
+     * @param storev  'C' for column-wise storage of V, 'R' for row-wise storage
+     * @param m       number of rows in C
+     * @param n       number of columns in C
+     * @param k       number of reflectors
+     * @param V       matrix of Householder vectors
+     * @param vOff    offset into V
+     * @param ldv     leading dimension of V
+     * @param T       triangular factor from dlarft (k × k)
+     * @param tOff    offset into T
+     * @param ldt     leading dimension of T
+     * @param C       matrix to update (m × n)
+     * @param cOff    offset into C
+     * @param ldc     leading dimension of C
+     * @param work    workspace
      * @param workOff offset into work
-     * @param ldwork leading dimension of work
-     * @param m number of rows
-     * @param nC number of columns in C
-     * @param k number of reflectors
+     * @param ldwork  leading dimension of work
      */
-    static void dlarfb(double[] V, int vOff, int ldv,
+    static void dlarfb(Side side, Trans trans, Direct direct, Wise storev,
+                       int m, int n, int k,
+                       double[] V, int vOff, int ldv,
                        double[] T, int tOff, int ldt,
                        double[] C, int cOff, int ldc,
-                       double[] work, int workOff, int ldwork, int m, int nC, int k) {
-        Dlarfb.dlarfbLeft(V, vOff, ldv, T, tOff, ldt, C, cOff, ldc, work, workOff, ldwork, m, nC, k);
+                       double[] work, int workOff, int ldwork) {
+        Dlarfb.dlarfb(side.code, trans.code, direct.code, storev.code, m, n, k, V, vOff, ldv, T, tOff, ldt, C, cOff, ldc, work, workOff, ldwork);
     }
 
     // ==================== Dlarfg ====================
@@ -543,7 +583,6 @@ public interface BLAS {
      * Applies a Householder reflection (LAPACK DLARF).
      *
      * @param side   'L' to apply from left, 'R' to apply from right
-     * @param trans  'N' for no transpose, 'T' for transpose
      * @param m      number of rows of C
      * @param n      number of columns of C
      * @param v      the Householder vector v
@@ -578,7 +617,7 @@ public interface BLAS {
      */
     static int dsteqr(char jobz, int n, double[] d, double[] e,
                       double[] z, int ldz, double[] work) {
-        return Dsteqr.dsteqr(jobz, n, d, e, z, ldz, work);
+        return Dsteqr.dsteqr(jobz, n, d, 0, e, 0, z, 0, ldz, work, 0);
     }
 
     // ==================== Dsymv ====================
@@ -626,17 +665,11 @@ public interface BLAS {
      * @param cOff  offset into C
      * @param ldc   leading dimension of C
      */
-    static void dsyr2k(Uplo uplo, Transpose trans, int n, int k, double alpha,
+    static void dsyr2k(Uplo uplo, Trans trans, int n, int k, double alpha,
                        double[] A, int aOff, int lda, double[] B, int bOff, int ldb,
                        double beta, double[] C, int cOff, int ldc) {
         Dsyr2k.dsyr2k(uplo, trans, n, k, alpha, A, aOff, lda, B, bOff, ldb, beta, C, cOff, ldc);
     }
-
-    // ========== LAPACK Routines ==========
-
-    // ==================== Dsytd2 ====================
-
-    // ==================== Dlatrd ====================
 
     /**
      * Reduces a symmetric matrix to banded form (LAPACK DLATRD) with matrix offset.
@@ -679,7 +712,7 @@ public interface BLAS {
     static void dsytrd(Uplo uplo, int n, double[] A, int lda,
                        double[] d, double[] e, double[] tau,
                        double[] work, int lwork) {
-        Dsytrd.dsytrd(uplo, n, A, lda, d, e, tau, work, lwork);
+        Dsytrd.dsytrd(uplo, n, A, lda, d, 0, e, 0, tau, 0, work, lwork);
     }
 
     // ==================== Dorgtr ====================
@@ -760,7 +793,7 @@ public interface BLAS {
      */
     static int dgehrd(int n, int ilo, int ihi, double[] A, int lda,
                       double[] tau, int tauOff, double[] work, int workOff, int lwork) {
-        return Dgehrd.dgehrd(n, ilo, ihi, A, lda, tau, tauOff, work, workOff, lwork);
+        return Dgehrd.dgehrd(n, ilo, ihi, A, 0, lda, tau, tauOff, work, workOff, lwork);
     }
 
     // ==================== Dhseqr ====================
@@ -801,6 +834,7 @@ public interface BLAS {
      * @param ilo     lower index of the balanced submatrix (1-based)
      * @param ihi     upper index of the balanced submatrix (1-based)
      * @param A       matrix from DGEHRD (n × n, row-major), overwritten with Q
+     * @param aOff    offset into A
      * @param lda     leading dimension of A
      * @param tau     Householder scalars from DGEHRD
      * @param tauOff  offset into tau
@@ -808,11 +842,6 @@ public interface BLAS {
      * @param workOff offset into work; if lwork=-1, workspace query writes optimal size to work[workOff]
      * @param lwork   size of work; use -1 for workspace query
      */
-    static void dorghr(int n, int ilo, int ihi, double[] A, int lda,
-                        double[] tau, int tauOff, double[] work, int workOff, int lwork) {
-        Dgees.dorghr(n, ilo, ihi, A, 0, lda, tau, tauOff, work, workOff, lwork);
-    }
-
     static void dorghr(int n, int ilo, int ihi, double[] A, int aOff, int lda,
                         double[] tau, int tauOff, double[] work, int workOff, int lwork) {
         Dgees.dorghr(n, ilo, ihi, A, aOff, lda, tau, tauOff, work, workOff, lwork);
@@ -833,9 +862,9 @@ public interface BLAS {
      * @param aOff offset into A
      * @param lda  leading dimension of A
      */
-    static void dlaset(char uplo, int m, int n, double alpha, double beta,
+    static void dlaset(Uplo uplo, int m, int n, double alpha, double beta,
                        double[] A, int aOff, int lda) {
-        Dlamv.dlaset(uplo, m, n, alpha, beta, A, aOff, lda);
+        Dlamv.dlaset(uplo.code, m, n, alpha, beta, A, aOff, lda);
     }
 
     // ==================== Dgebal ====================
@@ -893,10 +922,10 @@ public interface BLAS {
      * @param bOff offset into B
      * @param ldb  leading dimension of B
      */
-    static void dlacpy(char uplo, int m, int n,
+    static void dlacpy(Uplo uplo, int m, int n,
                        double[] A, int aOff, int lda,
                        double[] B, int bOff, int ldb) {
-        Dlamv.dlacpy(uplo, m, n, A, aOff, lda, B, bOff, ldb);
+        Dlamv.dlacpy(uplo.code, m, n, A, aOff, lda, B, bOff, ldb);
     }
 
     // ==================== Dgeqr (QR decomposition) ====================
@@ -979,19 +1008,32 @@ public interface BLAS {
         return Dgeqr.dorgqr(m, n, k, A, aOff, lda, tau, tauOff, work, workOff, lwork);
     }
 
-    static int dormqr(Side side, Transpose trans, int m, int n, int k,
+    /**
+     * Applies Q from QR factorization to a matrix (LAPACK DORMQR, blocked).
+     *
+     * @param side    {@link Side#Left} for Q*C or Q^T*C, {@link Side#Right} for C*Q or C*Q^T
+     * @param trans   {@link Trans#NoTrans} for Q, {@link Trans#Trans} for Q^T
+     * @param m       number of rows in C
+     * @param n       number of columns in C
+     * @param k       number of elementary reflectors
+     * @param V       Householder vectors from DGEQRF
+     * @param vOff    offset into V
+     * @param ldv     leading dimension of V
+     * @param tau     scalar factors of reflectors
+     * @param tauOff  offset into tau
+     * @param C       matrix C, overwritten with result
+     * @param cOff    offset into C
+     * @param ldc     leading dimension of C
+     * @param work    workspace
+     * @param workOff offset into work; if lwork=-1, workspace query writes optimal size to work[workOff]
+     * @param lwork   size of work; use -1 for workspace query
+     * @return 0 on success
+     */
+    static int dormqr(Side side, Trans trans, int m, int n, int k,
                       double[] V, int vOff, int ldv, double[] tau, int tauOff,
                       double[] C, int cOff, int ldc, double[] work, int workOff, int lwork) {
         return Dormqr.dormqr(side, trans, m, n, k, V, vOff, ldv, tau, tauOff,
                             C, cOff, ldc, work, workOff, lwork);
-    }
-
-    /** Convenience overload: applies Q^T (or Q) without explicit lwork (uses work.length). */
-    static int dormqr(Side side, Transpose trans, int m, int n, int k,
-                      double[] V, int vOff, int ldv, double[] tau, int tauOff,
-                      double[] C, int cOff, int ldc, double[] work, int workOff) {
-        return Dormqr.dormqr(side, trans, m, n, k, V, vOff, ldv, tau, tauOff,
-                            C, cOff, ldc, work, workOff, work.length - workOff);
     }
 
     /**
@@ -1010,7 +1052,7 @@ public interface BLAS {
      * @param ldb   leading dimension of B
      * @return true if successful, false if singular
      */
-    static boolean dtrtrs(Uplo uplo, Transpose trans, Diag diag, int n, int nrhs,
+    static boolean dtrtrs(Uplo uplo, Trans trans, Diag diag, int n, int nrhs,
                           double[] A, int aOff, int lda,
                           double[] B, int bOff, int ldb) {
         return Dtrtrs.dtrtrs(uplo, trans, diag, n, nrhs, A, aOff, lda, B, bOff, ldb);
@@ -1093,11 +1135,35 @@ public interface BLAS {
 
     // ==================== Dlaln2 ====================
 
-    static boolean dlaln2(boolean trans, int na, int nw, double smin, double ca,
+    /**
+     * Solves a 1×1 or 2×2 linear system with scaling to avoid overflow (LAPACK DLALN2).
+     * Solves (ca*A - wr*I - wi*J) * X = scale*B, where J = [0 1; -1 0].
+     *
+     * @param trans  {@link Trans#Trans} to solve with A^T, {@link Trans#NoTrans} for A
+     * @param na     size of A: 1 or 2
+     * @param nw     number of right-hand sides: 1 (real) or 2 (complex)
+     * @param smin   lower bound on |A| to avoid singularity
+     * @param ca     scalar multiplier for A
+     * @param a      matrix A (na × na, row-major)
+     * @param aOff   offset into a
+     * @param lda    leading dimension of a
+     * @param d1     (1,1) element of diagonal scaling matrix D
+     * @param d2     (2,2) element of diagonal scaling matrix D (used if na=2)
+     * @param b      right-hand side matrix (na × nw, row-major)
+     * @param bOff   offset into b
+     * @param ldb    leading dimension of b
+     * @param wr     real part of shift
+     * @param wi     imaginary part of shift (used if nw=2)
+     * @param x      solution matrix (na × nw, row-major)
+     * @param xOff   offset into x
+     * @param ldx    leading dimension of x
+     * @return true if the system is nearly singular (scale < 1)
+     */
+    static boolean dlaln2(Trans trans, int na, int nw, double smin, double ca,
                           double[] a, int aOff, int lda, double d1, double d2,
                           double[] b, int bOff, int ldb, double wr, double wi,
                           double[] x, int xOff, int ldx) {
-        return Dlaln2.dlaln2(trans, na, nw, smin, ca, a, aOff, lda, d1, d2, b, bOff, ldb, wr, wi, x, xOff, ldx);
+        return Dlaln2.dlaln2(trans.code == Trans.Trans.code, na, nw, smin, ca, a, aOff, lda, d1, d2, b, bOff, ldb, wr, wi, x, xOff, ldx);
     }
 
     // ==================== Dtrevc3 ====================
@@ -1272,7 +1338,7 @@ public interface BLAS {
      * Multiplies a matrix by Q from LQ factorization (LAPACK DORMLQ).
      *
      * @param side    {@link Side#Left} for Q*C, {@link Side#Right} for C*Q
-     * @param trans   {@link Transpose#NoTrans} for Q, {@link Transpose#Trans} for Q^T
+     * @param trans   {@link Trans#NoTrans} for Q, {@link Trans#Trans} for Q^T
      * @param m       number of rows in C
      * @param n       number of columns in C
      * @param k       number of elementary reflectors
@@ -1289,7 +1355,7 @@ public interface BLAS {
      * @param lwork   size of work; use -1 for workspace query
      * @return 0 on success
      */
-    static int dormlq(Side side, Transpose trans, int m, int n, int k,
+    static int dormlq(Side side, Trans trans, int m, int n, int k,
                       double[] A, int aOff, int lda, double[] tau, int tauOff,
                       double[] C, int cOff, int ldc, double[] work, int workOff, int lwork) {
         return Dgelq.dormlq(side, trans, m, n, k, A, aOff, lda, tau, tauOff, C, cOff, ldc, work, workOff, lwork);
@@ -1361,6 +1427,32 @@ public interface BLAS {
 
     // ==================== Dbdsqr ====================
 
+    /**
+     * Computes the SVD of a real bidiagonal matrix using the QR algorithm (LAPACK DBDSQR).
+     * Computes singular values and optionally updates matrices U, V^T, and C.
+     *
+     * @param uplo   {@link Uplo#Upper} for upper bidiagonal, {@link Uplo#Lower} for lower
+     * @param n      order of the bidiagonal matrix
+     * @param ncvt   number of columns in V^T (0 if not wanted)
+     * @param nru    number of rows in U (0 if not wanted)
+     * @param ncc    number of columns in C (0 if not wanted)
+     * @param d      diagonal elements (length n), overwritten with singular values
+     * @param dOff   offset into d
+     * @param e      off-diagonal elements (length n-1), overwritten on exit
+     * @param eOff   offset into e
+     * @param vt     matrix V^T (n × ncvt, row-major); updated if ncvt > 0
+     * @param vtOff  offset into vt
+     * @param ldvt   leading dimension of vt
+     * @param u      matrix U (nru × n, row-major); updated if nru > 0
+     * @param uOff   offset into u
+     * @param ldu    leading dimension of u
+     * @param c      matrix C (n × ncc, row-major); updated if ncc > 0
+     * @param cOff   offset into c
+     * @param ldc    leading dimension of c
+     * @param work   workspace (length 4*n)
+     * @param workOff offset into work
+     * @return true on success, false if convergence failed
+     */
     static boolean dbdsqr(Uplo uplo, int n, int ncvt, int nru, int ncc,
                           double[] d, int dOff, double[] e, int eOff,
                           double[] vt, int vtOff, int ldvt,
@@ -1410,7 +1502,7 @@ public interface BLAS {
     /**
      * Solves a system of linear equations using LU factorization: A*X = B (LAPACK DGETRS).
      *
-     * @param trans   {@link Transpose#NoTrans} for A*X=B, {@link Transpose#Trans} for A^T*X=B
+     * @param trans   {@link Trans#NoTrans} for A*X=B, {@link Trans#Trans} for A^T*X=B
      * @param n       order of A
      * @param nrhs    number of right-hand sides
      * @param A       LU factorization from DGETRF (n × n, row-major)
@@ -1422,7 +1514,7 @@ public interface BLAS {
      * @param bOff    offset into B
      * @param ldb     leading dimension of B
      */
-    static void dgetrs(Transpose trans, int n, int nrhs, double[] A, int aOff, int lda,
+    static void dgetrs(Trans trans, int n, int nrhs, double[] A, int aOff, int lda,
                        int[] ipiv, int ipivOff, double[] B, int bOff, int ldb) {
         Dgetr.dgetrs(trans, n, nrhs, A, aOff, lda, ipiv, ipivOff, B, bOff, ldb);
     }
@@ -1439,9 +1531,9 @@ public interface BLAS {
      * @param iwork integer workspace (length n)
      * @return reciprocal condition number estimate (0 if singular)
      */
-    static double dgecon(char norm, int n, double[] A, int lda, double anorm,
+    static double dgecon(Norm norm, int n, double[] A, int lda, double anorm,
                          double[] work, int[] iwork) {
-        return Dgetr.dgecon(norm, n, A, lda, anorm, work, iwork);
+        return Dgetr.dgecon(norm.code, n, A, lda, anorm, work, iwork);
     }
 
     // ==================== Dpotr (Cholesky decomposition) ====================
@@ -1597,9 +1689,9 @@ public interface BLAS {
      * @param iwork integer workspace (length n)
      * @return reciprocal condition number estimate (0 if singular)
      */
-    static double dtrcon(char norm, Uplo uplo, Diag diag, int n,
+    static double dtrcon(Norm norm, Uplo uplo, Diag diag, int n,
                          double[] A, int lda, double[] work, int[] iwork) {
-        return Dtrtri.dtrcon(norm, uplo, diag, n, A, lda, work, iwork);
+        return Dtrtri.dtrcon(norm.code, uplo, diag, n, A, lda, work, iwork);
     }
 
     // ==================== Dlauum (Cholesky inverse multiplication) ====================
@@ -1774,7 +1866,7 @@ public interface BLAS {
      * Applies Q from RQ factorization to a matrix (LAPACK DORMR2, unblocked).
      *
      * @param side    {@link Side#Left} for Q*C, {@link Side#Right} for C*Q
-     * @param trans   {@link Transpose#NoTrans} for Q, {@link Transpose#Trans} for Q^T
+     * @param trans   {@link Trans#NoTrans} for Q, {@link Trans#Trans} for Q^T
      * @param m       number of rows in C
      * @param n       number of columns in C
      * @param k       number of elementary reflectors
@@ -1789,7 +1881,7 @@ public interface BLAS {
      * @param work    workspace (length n or m)
      * @param workOff offset into work
      */
-    static void dormr2(Side side, Transpose trans, int m, int n, int k,
+    static void dormr2(Side side, Trans trans, int m, int n, int k,
                        double[] A, int aOff, int lda, double[] tau, int tauOff,
                        double[] C, int cOff, int ldc, double[] work, int workOff) {
         Dgerq.dormr2(side, trans, m, n, k, A, aOff, lda, tau, tauOff, C, cOff, ldc, work, workOff);
@@ -1799,7 +1891,7 @@ public interface BLAS {
      * Applies Q from RQ factorization to a matrix (LAPACK DORMRQ, blocked).
      *
      * @param side    {@link Side#Left} for Q*C, {@link Side#Right} for C*Q
-     * @param trans   {@link Transpose#NoTrans} for Q, {@link Transpose#Trans} for Q^T
+     * @param trans   {@link Trans#NoTrans} for Q, {@link Trans#Trans} for Q^T
      * @param m       number of rows in C
      * @param n       number of columns in C
      * @param k       number of elementary reflectors
@@ -1816,7 +1908,7 @@ public interface BLAS {
      * @param lwork   size of work; use -1 for workspace query
      * @return 0 on success
      */
-    static int dormrq(Side side, Transpose trans, int m, int n, int k,
+    static int dormrq(Side side, Trans trans, int m, int n, int k,
                       double[] A, int aOff, int lda, double[] tau, int tauOff,
                       double[] C, int cOff, int ldc, double[] work, int workOff, int lwork) {
         return Dgerq.dormrq(side, trans, m, n, k, A, aOff, lda, tau, tauOff, C, cOff, ldc, work, workOff, lwork);
@@ -1847,7 +1939,7 @@ public interface BLAS {
      * Applies Q from QR factorization to a matrix (LAPACK DORM2R, unblocked).
      *
      * @param side    {@link Side#Left} for Q*C, {@link Side#Right} for C*Q
-     * @param trans   {@link Transpose#NoTrans} for Q, {@link Transpose#Trans} for Q^T
+     * @param trans   {@link Trans#NoTrans} for Q, {@link Trans#Trans} for Q^T
      * @param m       number of rows in C
      * @param n       number of columns in C
      * @param k       number of elementary reflectors
@@ -1862,7 +1954,7 @@ public interface BLAS {
      * @param work    workspace (length n or m)
      * @param workOff offset into work
      */
-    static void dorm2r(Side side, Transpose trans, int m, int n, int k,
+    static void dorm2r(Side side, Trans trans, int m, int n, int k,
                        double[] A, int aOff, int lda, double[] tau, int tauOff,
                        double[] C, int cOff, int ldc, double[] work, int workOff) {
         Dormqr.dorm2r(side, trans, m, n, k, A, aOff, lda, tau, tauOff, C, cOff, ldc, work, workOff);
@@ -2216,6 +2308,241 @@ public interface BLAS {
         return Dggev.dggev(wantVL, wantVR, n, A, lda, B, ldb,
                            alphar, alphai, beta, VL, ldvl, VR, ldvr,
                            work, workOff, lwork);
+    }
+
+    // ==================== Symmetric Eigenvalue ====================
+
+    /**
+     * Computes all eigenvalues and optionally eigenvectors of a real symmetric matrix.
+     * LAPACK DSYEV.
+     *
+     * @param jobz    'N' eigenvalues only, 'V' eigenvalues and eigenvectors
+     * @param uplo    'U' upper triangle, 'L' lower triangle
+     * @param n       order of A
+     * @param A       symmetric matrix (n×n, row-major), overwritten on exit
+     * @param lda     leading dimension of A
+     * @param w       eigenvalues output (length n)
+     * @param wOff    offset into w
+     * @param work    workspace (length lwork)
+     * @param workOff offset into work
+     * @param lwork   workspace size (>= 3*n-1, or -1 for query)
+     * @return 0 on success
+     */
+    static int dsyev(char jobz, char uplo, int n, double[] A, int lda,
+                     double[] w, int wOff, double[] work, int workOff, int lwork) {
+        return Dsyev.dsyev(jobz, uplo, n, A, lda, w, wOff, work, workOff, lwork);
+    }
+
+    // ==================== Matrix Norms ====================
+
+    /**
+     * Returns the value of the specified norm of a real symmetric matrix.
+     * LAPACK DLANSY.
+     *
+     * @param norm  'M' max abs, '1'/'O' 1-norm, 'I' inf-norm, 'F'/'E' Frobenius
+     * @param uplo  upper or lower triangle
+     * @param n     order of A
+     * @param A     symmetric matrix (n×n, row-major)
+     * @param lda   leading dimension of A
+     * @param work  workspace (required for 1-norm or inf-norm)
+     * @return computed norm
+     */
+    static double dlansy(Norm norm, Uplo uplo, int n, double[] A, int lda, double[] work) {
+        return Dlansy.dlansy(norm.code, uplo, n, A, lda, work);
+    }
+
+    /**
+     * Returns the value of the specified norm of a real triangular matrix.
+     * LAPACK DLANTR.
+     *
+     * @param norm  'M' max abs, '1'/'O' 1-norm, 'I' inf-norm, 'F'/'E' Frobenius
+     * @param uplo  upper or lower triangle
+     * @param diag  unit or non-unit diagonal
+     * @param m     number of rows
+     * @param n     number of columns
+     * @param A     triangular matrix (row-major)
+     * @param lda   leading dimension of A
+     * @param work  workspace (required for 1-norm or inf-norm)
+     * @return computed norm
+     */
+    static double dlantr(Norm norm, Uplo uplo, Diag diag, int m, int n,
+                         double[] A, int lda, double[] work) {
+        return Dlantr.dlantr(norm.code, uplo, diag, m, n, A, lda, work);
+    }
+
+    /**
+     * Returns the value of the specified norm of a real symmetric tridiagonal matrix.
+     * LAPACK DLANST.
+     *
+     * @param norm  'M' max abs, '1'/'O' 1-norm, 'F'/'E' Frobenius
+     * @param n     order of matrix
+     * @param d     diagonal elements
+     * @param dOff  offset into d
+     * @param e     off-diagonal elements
+     * @param eOff  offset into e
+     * @return computed norm
+     */
+    static double dlanst(Norm norm, int n, double[] d, int dOff, double[] e, int eOff) {
+        return Dlanst.dlanst(norm.code, n, d, dOff, e, eOff);
+    }
+
+    // ==================== Tridiagonal Eigenvalue ====================
+
+    /**
+     * Computes all eigenvalues of a real symmetric tridiagonal matrix (no eigenvectors).
+     * LAPACK DSTERF.
+     *
+     * @param n    order of matrix
+     * @param d    diagonal elements (overwritten with eigenvalues on exit)
+     * @param dOff offset into d
+     * @param e    off-diagonal elements (overwritten on exit)
+     * @param eOff offset into e
+     * @return true on success
+     */
+    static boolean dsterf(int n, double[] d, int dOff, double[] e, int eOff) {
+        return Dsterf.dsterf(n, d, dOff, e, eOff);
+    }
+
+    // ==================== Hessenberg Reduction ====================
+
+    /**
+     * Reduces a general matrix to upper Hessenberg form (unblocked).
+     * LAPACK DGEHD2.
+     *
+     * @param n       order of A
+     * @param ilo     lower bound of active submatrix (0-based)
+     * @param ihi     upper bound of active submatrix (0-based, inclusive)
+     * @param A       n×n matrix (row-major), overwritten on exit
+     * @param aOff    offset into A
+     * @param lda     leading dimension of A
+     * @param tau     scalar factors of reflectors (length n-1)
+     * @param tauOff  offset into tau
+     * @param work    workspace (length n)
+     * @param workOff offset into work
+     */
+    static void dgehd2(int n, int ilo, int ihi, double[] A, int aOff, int lda,
+                       double[] tau, int tauOff, double[] work, int workOff) {
+        Dgehd2.dgehd2(n, ilo, ihi, A, aOff, lda, tau, tauOff, work, workOff);
+    }
+
+    // ==================== Orthogonal Matrix Generation ====================
+
+    /**
+     * Generates the m×n matrix Q from a QL factorization (last n columns of a product of k reflectors).
+     * LAPACK DORGQL.
+     *
+     * @param m       number of rows
+     * @param n       number of columns
+     * @param k       number of reflectors
+     * @param A       matrix containing reflectors, overwritten with Q on exit
+     * @param lda     leading dimension of A
+     * @param aOff    offset into A
+     * @param tau     scalar factors of reflectors
+     * @param tauOff  offset into tau
+     * @param work    workspace
+     * @param workOff offset into work
+     * @param lwork   workspace size (-1 for query)
+     */
+    static void dorgql(int m, int n, int k, double[] A, int lda, int aOff,
+                       double[] tau, int tauOff, double[] work, int workOff, int lwork) {
+        Dorgql.dorgql(m, n, k, A, lda, aOff, tau, tauOff, work, workOff, lwork);
+    }
+
+    // ==================== Orthogonal Transformation ====================
+
+    /**
+     * Applies orthogonal matrix Q or P from a bidiagonal reduction (DGEBRD) to a matrix C.
+     * LAPACK DORMBR.
+     *
+     * @param vect    'Q' to apply Q, 'P' to apply P
+     * @param side    apply from left or right
+     * @param trans   apply Q/P or Q^T/P^T
+     * @param m       rows of C
+     * @param n       columns of C
+     * @param k       number of reflectors used in DGEBRD
+     * @param A       matrix from DGEBRD
+     * @param aOff    offset into A
+     * @param lda     leading dimension of A
+     * @param tau     scalar factors from DGEBRD
+     * @param tauOff  offset into tau
+     * @param C       matrix to transform (overwritten on exit)
+     * @param cOff    offset into C
+     * @param ldc     leading dimension of C
+     * @param work    workspace
+     * @param workOff offset into work
+     * @param lwork   workspace size (-1 for query)
+     * @return 0 on success
+     */
+    static int dormbr(char vect, Side side, Trans trans, int m, int n, int k,
+                      double[] A, int aOff, int lda,
+                      double[] tau, int tauOff,
+                      double[] C, int cOff, int ldc,
+                      double[] work, int workOff, int lwork) {
+        return Dormbr.dormbr(vect, side, trans, m, n, k, A, aOff, lda, tau, tauOff, C, cOff, ldc, work, workOff, lwork);
+    }
+
+    // ==================== Triangular Solve with Scaling ====================
+
+    /**
+     * Solves a triangular system with scaling to prevent overflow.
+     * LAPACK DLATRS.
+     *
+     * @param uplo    upper or lower triangular
+     * @param trans   solve T*x=b or T^T*x=b
+     * @param diag    unit or non-unit diagonal
+     * @param normin  true if cnorm already contains column norms
+     * @param n       order of T
+     * @param A       triangular matrix (row-major)
+     * @param lda     leading dimension of A
+     * @param x       right-hand side on entry, solution on exit
+     * @param xOff    offset into x
+     * @param cnorm   column norms (input if normin=true, output otherwise)
+     * @param cnormOff offset into cnorm
+     * @return scale factor applied to x
+     */
+    static double dlatrs(Uplo uplo, Trans trans, Diag diag, boolean normin,
+                         int n, double[] A, int lda, double[] x, int xOff,
+                         double[] cnorm, int cnormOff) {
+        return Dlatrs.dlatrs(uplo, trans, diag, normin, n, A, lda, x, xOff, cnorm, cnormOff);
+    }
+
+    // ==================== Symmetric Indefinite Factorization (blocked) ====================
+
+    /**
+     * Computes a partial blocked factorization of a real symmetric matrix (Bunch-Kaufman).
+     * LAPACK DLASYF.
+     *
+     * @param uplo    upper or lower triangle
+     * @param n       order of A
+     * @param nb      block size
+     * @param A       symmetric matrix (row-major), partially factored on exit
+     * @param aOff    offset into A
+     * @param lda     leading dimension of A
+     * @param ipiv    pivot indices (output)
+     * @param ipivOff offset into ipiv
+     * @param W       workspace matrix
+     * @param wOff    offset into W
+     * @param ldw     leading dimension of W
+     * @return number of columns factored (kb)
+     */
+    static int dlasyf(Uplo uplo, int n, int nb, double[] A, int aOff, int lda,
+                      int[] ipiv, int ipivOff, double[] W, int wOff, int ldw) {
+        return Dlasyf.dlasyf(uplo, n, nb, A, aOff, lda, ipiv, ipivOff, W, wOff, ldw);
+    }
+
+    // ==================== Dlasrt ====================
+
+    /**
+     * Sorts an array of doubles in increasing or decreasing order (LAPACK DLASRT).
+     * Typically used to sort eigenvalues.
+     *
+     * @param id   'I' for increasing order, 'D' for decreasing order
+     * @param n    number of elements to sort
+     * @param d    array to sort (modified in place)
+     * @param dOff offset into d
+     */
+    static void dlasrt(char id, int n, double[] d, int dOff) {
+        Dlasrt.dlasrt(id, n, d, dOff);
     }
 
 }

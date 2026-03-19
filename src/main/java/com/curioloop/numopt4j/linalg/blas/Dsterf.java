@@ -21,19 +21,6 @@ interface Dsterf {
 
     /**
      * DSTERF computes all eigenvalues of a symmetric tridiagonal matrix
-     * using the QL/QR algorithm.
-     *
-     * @param n order of the matrix
-     * @param d diagonal elements (modified in place, contains eigenvalues on exit)
-     * @param e off-diagonal elements (modified in place)
-     * @return true if successful, false if convergence failure
-     */
-    static boolean dsterf(int n, double[] d, double[] e) {
-        return dsterf(n, d, 0, e, 0);
-    }
-
-    /**
-     * DSTERF computes all eigenvalues of a symmetric tridiagonal matrix
      * using the QL/QR algorithm. This version supports array offsets for
      * workspace reuse.
      *

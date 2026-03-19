@@ -142,8 +142,8 @@ public final class GSVD implements Decomposition {
         this.pool = ws;
         this.pool.ensure(m, p, n, kind);
 
-        double anorm = BLAS.dlange('F', m, n, A, 0, n);
-        double bnorm = BLAS.dlange('F', p, n, B, 0, n);
+        double anorm = BLAS.dlange(BLAS.Norm.Frobenius, m, n, A, 0, n);
+        double bnorm = BLAS.dlange(BLAS.Norm.Frobenius, p, n, B, 0, n);
 
         double eps    = BLAS.eps();
         double safmin = BLAS.safmin();

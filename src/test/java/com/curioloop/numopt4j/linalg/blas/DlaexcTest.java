@@ -12,7 +12,7 @@ class DlaexcTest {
     @Test
     void testEmpty() {
         double[] work = new double[10];
-        boolean ok = Dlaexc.dlaexc(false, 0, new double[0], 0, 0, new double[0], 0, 0, 0, 0, 0, work);
+        boolean ok = Dlaexc.dlaexc(false, 0, new double[0], 0, 0, new double[0], 0, 0, 0, 0, 0, work, 0);
         assertTrue(ok);
     }
 }

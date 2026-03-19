@@ -381,9 +381,9 @@ public final class Schur implements Decomposition {
 
         // F = sign * Z^T * Q * Z  (stored back into Q)
         final double[] tmp = pool.ensureLyap(n).lyap;
-        BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, n, n, n,
+        BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, n, n, n,
                 sign, Q, 0, n, pool.Z, 0, n, 0.0, tmp, 0, n);
-        BLAS.dgemm(BLAS.Transpose.Trans, BLAS.Transpose.NoTrans, n, n, n,
+        BLAS.dgemm(BLAS.Trans.Trans, BLAS.Trans.NoTrans, n, n, n,
                 1.0, pool.Z, 0, n, tmp, 0, n, 0.0, Q, 0, n);
 
         // Solve TY + YT^T = F  (isgn=+1, tranb=true means B^T)
@@ -391,9 +391,9 @@ public final class Schur implements Decomposition {
                 T, 0, n, T, 0, n, Q, 0, n, null);
 
         // X = Z * (scale*Y) * Z^T  (stored back into Q)
-        BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.Trans, n, n, n,
+        BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.Trans, n, n, n,
                 scale, Q, 0, n, pool.Z, 0, n, 0.0, tmp, 0, n);
-        BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, n, n, n,
+        BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, n, n, n,
                 1.0, pool.Z, 0, n, tmp, 0, n, 0.0, Q, 0, n);
 
         return true;
@@ -456,10 +456,10 @@ public final class Schur implements Decomposition {
         }
         if (BLAS.dgetrf(n, n, aa, 0, n, ipiv, 0) != 0) return false;
         // Solve (A+I) * Y^T = Q^T  (Q is symmetric so Q^T = Q)
-        BLAS.dgetrs(BLAS.Transpose.NoTrans, n, n, aa, 0, n, ipiv, 0, Q, 0, n);
+        BLAS.dgetrs(BLAS.Trans.NoTrans, n, n, aa, 0, n, ipiv, 0, Q, 0, n);
         transposeSquare(Q, n);
         // Solve (A+I) * C = Y  →  C = (A+I)^{-1} * Y
-        BLAS.dgetrs(BLAS.Transpose.NoTrans, n, n, aa, 0, n, ipiv, 0, Q, 0, n);
+        BLAS.dgetrs(BLAS.Trans.NoTrans, n, n, aa, 0, n, ipiv, 0, Q, 0, n);
 
         // Phase 1: overwrite pool.lyap with at = A^T+I, compute B
         final double[] at = pool.lyap;
@@ -474,7 +474,7 @@ public final class Schur implements Decomposition {
         }
         if (BLAS.dgetrf(n, n, at, 0, n, ipiv, 0) != 0) return false;
         transposeSquare(A, n);
-        BLAS.dgetrs(BLAS.Transpose.NoTrans, n, n, at, 0, n, ipiv, 0, A, 0, n);
+        BLAS.dgetrs(BLAS.Trans.NoTrans, n, n, at, 0, n, ipiv, 0, A, 0, n);
         transposeSquare(A, n);
 
         // Phase 3: Schur decompose B (stored in A), pass pool so lyapunov()

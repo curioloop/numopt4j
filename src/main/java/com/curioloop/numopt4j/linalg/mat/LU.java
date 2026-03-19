@@ -102,7 +102,7 @@ public final class LU implements Decomposition {
         if (x != b) {
             System.arraycopy(b, 0, x, 0, n);
         }
-        BLAS.dgetrs(BLAS.Transpose.NoTrans, n, 1, LU, 0, n, pool.iwork(), n, x, 0, 1);
+        BLAS.dgetrs(BLAS.Trans.NoTrans, n, 1, LU, 0, n, pool.iwork(), n, x, 0, 1);
         return x;
     }
 
@@ -156,7 +156,7 @@ public final class LU implements Decomposition {
 
     public double cond() {
         if (!ok || n == 0) return Double.NaN;
-        double rcond = BLAS.dgecon('1', n, LU, n, anorm, pool.work(), pool.iwork());
+        double rcond = BLAS.dgecon(BLAS.Norm.One, n, LU, n, anorm, pool.work(), pool.iwork());
         if (rcond == 0) return Double.POSITIVE_INFINITY;
         return 1.0 / rcond;
     }

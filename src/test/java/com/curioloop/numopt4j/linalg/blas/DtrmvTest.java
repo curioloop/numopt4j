@@ -21,7 +21,7 @@ public class DtrmvTest {
         
         double[] x = {1, 2, 3, 4};
         
-        Dtrmv.dtrmv(BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit, 4, A, 0, 4, x, 0, 1);
+        Dtrmv.dtrmv(BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, 4, A, 0, 4, x, 0, 1);
         
         double[] expected = {
             2 * 1,
@@ -46,7 +46,7 @@ public class DtrmvTest {
         
         double[] x = {0, 1, 0, 2, 0, 3, 0, 4};
         
-        Dtrmv.dtrmv(BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit, 4, A, 0, 4, x, 1, 2);
+        Dtrmv.dtrmv(BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, 4, A, 0, 4, x, 1, 2);
         
         double[] expected = {
             0, 2 * 1,
@@ -72,7 +72,7 @@ public class DtrmvTest {
         
         double[] x = {0, 0, 1, 2, 3};
         
-        Dtrmv.dtrmv(BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit, 3, A, 6, 5, x, 2, 1);
+        Dtrmv.dtrmv(BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, 3, A, 6, 5, x, 2, 1);
         
         double[] expected = {
             0, 0,
@@ -98,7 +98,7 @@ public class DtrmvTest {
         
         double[] x = {0, 0, 0, 1, 0, 2, 0, 3, 0};
         
-        Dtrmv.dtrmv(BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit, 3, A, 6, 5, x, 3, 2);
+        Dtrmv.dtrmv(BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, 3, A, 6, 5, x, 3, 2);
         
         double[] expected = {
             0, 0, 0,
@@ -124,7 +124,7 @@ public class DtrmvTest {
         
         double[] x = {1, 2, 3, 4};
         
-        Dtrmv.dtrmv(BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit, 4, A, 0, 4, x, 0, 1);
+        Dtrmv.dtrmv(BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, 4, A, 0, 4, x, 0, 1);
         
         double[] expected = {
             2 * 1 + 1 * 2 + 2 * 3 + 0 * 4,
@@ -149,7 +149,7 @@ public class DtrmvTest {
         
         double[] x = {1, 2, 3, 4};
         
-        Dtrmv.dtrmv(BLAS.Uplo.Lower, BLAS.Transpose.Trans, BLAS.Diag.NonUnit, 4, A, 0, 4, x, 0, 1);
+        Dtrmv.dtrmv(BLAS.Uplo.Lower, BLAS.Trans.Trans, BLAS.Diag.NonUnit, 4, A, 0, 4, x, 0, 1);
         
         double[] expected = {
             2 * 1 + 1 * 2 + 2 * 3 + 0 * 4,
@@ -174,7 +174,7 @@ public class DtrmvTest {
         
         double[] x = {1, 2, 3, 4};
         
-        Dtrmv.dtrmv(BLAS.Uplo.Upper, BLAS.Transpose.Trans, BLAS.Diag.NonUnit, 4, A, 0, 4, x, 0, 1);
+        Dtrmv.dtrmv(BLAS.Uplo.Upper, BLAS.Trans.Trans, BLAS.Diag.NonUnit, 4, A, 0, 4, x, 0, 1);
         
         double[] expected = {
             2 * 1,

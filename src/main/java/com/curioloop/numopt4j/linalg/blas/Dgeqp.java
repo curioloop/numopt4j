@@ -111,7 +111,7 @@ interface Dgeqp {
             Dgeqr.dgeqrf(m, na, A, aOff, lda, tau, 0, work, workOff, lwork);
             iws = max(iws, (int) work[workOff]);
             if (na < n) {
-                Dormqr.dormqr(BLAS.Side.Left, BLAS.Transpose.Trans, m, n - na, na, A, aOff, lda, tau, 0,
+                Dormqr.dormqr(BLAS.Side.Left, BLAS.Trans.Trans, m, n - na, na, A, aOff, lda, tau, 0,
                         A, aOff + na, lda, work, workOff, lwork);
                 iws = max(iws, (int) work[workOff]);
             }
@@ -196,7 +196,7 @@ interface Dgeqp {
             }
 
             if (k > 0) {
-                BLAS.dgemv(BLAS.Transpose.NoTrans, m - rk, k, -1,
+                BLAS.dgemv(BLAS.Trans.NoTrans, m - rk, k, -1,
                         A, aOff + rk * lda, lda,
                         f, fOff + k * ldf, 1,
                         1,
@@ -215,7 +215,7 @@ interface Dgeqp {
             A[aOff + rk * lda + k] = 1;
 
             if (k < n - 1) {
-                BLAS.dgemv(BLAS.Transpose.Trans, m - rk, n - k - 1, tau[tauOff + k],
+                BLAS.dgemv(BLAS.Trans.Trans, m - rk, n - k - 1, tau[tauOff + k],
                         A, aOff + rk * lda + k + 1, lda,
                         A, aOff + rk * lda + k, lda,
                         0,
@@ -227,12 +227,12 @@ interface Dgeqp {
             }
 
             if (k > 0) {
-                BLAS.dgemv(BLAS.Transpose.Trans, m - rk, k, -tau[tauOff + k],
+                BLAS.dgemv(BLAS.Trans.Trans, m - rk, k, -tau[tauOff + k],
                         A, aOff + rk * lda, lda,
                         A, aOff + rk * lda + k, lda,
                         0,
                         auxv, auxvOff, 1);
-                BLAS.dgemv(BLAS.Transpose.NoTrans, n, k, 1,
+                BLAS.dgemv(BLAS.Trans.NoTrans, n, k, 1,
                         f, fOff, ldf,
                         auxv, auxvOff, 1,
                         1,
@@ -240,7 +240,7 @@ interface Dgeqp {
             }
 
             if (k < n - 1) {
-                BLAS.dgemv(BLAS.Transpose.NoTrans, n - k - 1, k + 1, -1,
+                BLAS.dgemv(BLAS.Trans.NoTrans, n - k - 1, k + 1, -1,
                         f, fOff + (k + 1) * ldf, ldf,
                         A, aOff + rk * lda, 1,
                         1,
@@ -271,7 +271,7 @@ interface Dgeqp {
         int rk = offset + kb;
 
         if (kb < min(n, m - offset)) {
-            BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.Trans, m - rk, n - kb, kb, -1,
+            BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.Trans, m - rk, n - kb, kb, -1,
                     A, aOff + rk * lda, lda,
                     f, fOff + kb * ldf, ldf,
                     1,

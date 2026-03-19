@@ -286,7 +286,7 @@ final class SubspaceMinimizer implements LBFGSBConstants {
 
         // Compute L⁻¹v by solving Lx = (Lᵀ)ᵀx = v
         // Lᵀ is upper triangular, so we solve Lᵀᵀ x = v (uplo='U', trans='T' for transpose)
-        if (dtrsl(buffer, wnOffset, m2, col2, buffer, wvOffset, Uplo.Upper, Transpose.Trans) != 0) {
+        if (dtrsl(buffer, wnOffset, m2, col2, buffer, wvOffset, Uplo.Upper, Trans.Trans) != 0) {
             return ERR_SINGULAR_TRIANGULAR;  // Singular triangular matrix
         }
 
@@ -295,7 +295,7 @@ final class SubspaceMinimizer implements LBFGSBConstants {
 
         // Compute L⁻ᵀ(E⁻¹L⁻¹v) by solving Lᵀx = E⁻¹L⁻¹v
         // Lᵀ is upper triangular (uplo='U', trans='N' for no transpose)
-        if (dtrsl(buffer, wnOffset, m2, col2, buffer, wvOffset, Uplo.Upper, Transpose.NoTrans) != 0) {
+        if (dtrsl(buffer, wnOffset, m2, col2, buffer, wvOffset, Uplo.Upper, Trans.NoTrans) != 0) {
             return ERR_SINGULAR_TRIANGULAR;  // Singular triangular matrix
         }
 

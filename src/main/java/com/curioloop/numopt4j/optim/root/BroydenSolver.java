@@ -91,7 +91,7 @@ public final class BroydenSolver {
             // ── Newton step: dx = -H · F ─────────────────────────────────────
             // scipy BroydenFirst.solve(): r = Gm.matvec(f); if not finite → reset H, return Gm.matvec(f)
             // so dx = -H·F, with singular-reset applied before the step is used.
-            BLAS.dgemv(BLAS.Transpose.NoTrans, n, n, 1.0, work, hOff, n, fx, 0, 1, 0.0, work, dxOff, 1);
+            BLAS.dgemv(BLAS.Trans.NoTrans, n, n, 1.0, work, hOff, n, fx, 0, 1, 0.0, work, dxOff, 1);
             boolean finite = true;
             for (int i = 0; i < n; i++) if (!Double.isFinite(work[dxOff + i])) { finite = false; break; }
             if (!finite) {
@@ -99,7 +99,7 @@ public final class BroydenSolver {
                 // H·fx = -resetAlpha·fx, so dx = -H·fx = resetAlpha·fx — no dgemv needed
                 double resetAlpha = 0.5 * Math.max(BLAS.dnrm2(n, x, 0, 1), 1.0)
                                         / Math.max(fnorm, 1e-300);
-                BLAS.dlaset('A', n, n, 0.0, -resetAlpha, work, hOff, n);  // full clear + diagonal
+                BLAS.dlaset(BLAS.Uplo.All, n, n, 0.0, -resetAlpha, work, hOff, n);  // full clear + diagonal
                 BLAS.dcopy(n, fx, 0, 1, work, dxOff, 1);
                 BLAS.dscal(n, -resetAlpha, work, dxOff, 1);
             } else {
@@ -195,9 +195,9 @@ public final class BroydenSolver {
             // Expanded: H₊ = H + (dx - H·dF)·(dxᵀ·H) / (dxᵀ·H·dF)
 
             // dxH = Hᵀ·dx  (rmatvec)
-            BLAS.dgemv(BLAS.Transpose.Trans, n, n, 1.0, work, hOff, n, work, dxOff, 1, 0.0, work, dxHOff, 1);
+            BLAS.dgemv(BLAS.Trans.Trans, n, n, 1.0, work, hOff, n, work, dxOff, 1, 0.0, work, dxHOff, 1);
             // Hdf = H·dF  (matvec), then c = dx - Hdf  reusing Hdf array: Hdf = dx - H·dF
-            BLAS.dgemv(BLAS.Transpose.NoTrans, n, n, -1.0, work, hOff, n, work, dFOff, 1, 0.0, work, HdfOff, 1);
+            BLAS.dgemv(BLAS.Trans.NoTrans, n, n, -1.0, work, hOff, n, work, dFOff, 1, 0.0, work, HdfOff, 1);
             BLAS.daxpy(n, 1.0, work, dxOff, 1, work, HdfOff, 1);  // Hdf = dx - H·dF  (= c)
 
             double denom = BLAS.ddot(n, work, dFOff, 1, work, dxHOff, 1);  // dFᵀ·(Hᵀ·dx) = dxᵀ·H·dF

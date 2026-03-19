@@ -20,7 +20,7 @@ class DtrtrsTest {
         };
         double[] B = {3, 7, 4, 0, 0, 0, 0, 0, 0};
 
-        boolean ok = Dtrtrs.dtrtrs(BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit, 3, 1, A, 0, 3, B, 0, 3);
+        boolean ok = Dtrtrs.dtrtrs(BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, 3, 1, A, 0, 3, B, 0, 3);
 
         assertTrue(ok);
     }
@@ -34,14 +34,14 @@ class DtrtrsTest {
         };
         double[] B = {2, 4, 8, 0, 0, 0, 0, 0, 0};
 
-        boolean ok = Dtrtrs.dtrtrs(BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit, 3, 1, A, 0, 3, B, 0, 3);
+        boolean ok = Dtrtrs.dtrtrs(BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, 3, 1, A, 0, 3, B, 0, 3);
 
         assertTrue(ok);
     }
 
     @Test
     void testEmpty() {
-        boolean ok = Dtrtrs.dtrtrs(BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit, 0, 0, new double[0], 0, 0, new double[0], 0, 0);
+        boolean ok = Dtrtrs.dtrtrs(BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, 0, 0, new double[0], 0, 0, new double[0], 0, 0);
         assertTrue(ok);
     }
 }

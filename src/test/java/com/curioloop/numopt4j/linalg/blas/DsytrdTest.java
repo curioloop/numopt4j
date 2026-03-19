@@ -24,7 +24,7 @@ class DsytrdTest {
         double[] tau = new double[n - 1];
         double[] work = new double[100];
 
-        Dsytrd.dsytrd(BLAS.Uplo.Upper, n, A, n, d, e, tau, work, work.length);
+        Dsytrd.dsytrd(BLAS.Uplo.Upper, n, A, n, d, 0, e, 0, tau, 0, work, work.length);
 
         for (int i = 0; i < n; i++) {
             assertTrue(Double.isFinite(d[i]), "d[" + i + "] should be finite");
@@ -47,7 +47,7 @@ class DsytrdTest {
         double[] tau = new double[n - 1];
         double[] work = new double[100];
 
-        Dsytrd.dsytrd(BLAS.Uplo.Lower, n, A, n, d, e, tau, work, work.length);
+        Dsytrd.dsytrd(BLAS.Uplo.Lower, n, A, n, d, 0, e, 0, tau, 0, work, work.length);
 
         assertEquals(4, d[0], TOL);
     }
@@ -60,14 +60,14 @@ class DsytrdTest {
         double[] tau = new double[2];
         double[] work = new double[1];
 
-        Dsytrd.dsytrd(BLAS.Uplo.Upper, 3, A, 3, d, e, tau, work, -1);
+        Dsytrd.dsytrd(BLAS.Uplo.Upper, 3, A, 3, d, 0, e, 0, tau, 0, work, -1);
 
         assertTrue(work[0] > 0);
     }
 
     @Test
     void testEmpty() {
-        Dsytrd.dsytrd(BLAS.Uplo.Upper, 0, new double[0], 0, new double[0], new double[0], new double[0], new double[1], 0);
+        Dsytrd.dsytrd(BLAS.Uplo.Upper, 0, new double[0], 0, new double[0], 0, new double[0], 0, new double[0], 0, new double[1], 0);
     }
 
     @Test
@@ -78,7 +78,7 @@ class DsytrdTest {
         double[] tau = new double[0];
         double[] work = new double[10];
 
-        Dsytrd.dsytrd(BLAS.Uplo.Upper, 1, A, 1, d, e, tau, work, work.length);
+        Dsytrd.dsytrd(BLAS.Uplo.Upper, 1, A, 1, d, 0, e, 0, tau, 0, work, work.length);
 
         assertEquals(5, d[0], TOL);
     }

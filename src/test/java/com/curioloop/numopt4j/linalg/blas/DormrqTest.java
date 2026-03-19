@@ -33,8 +33,8 @@ class DormrqTest {
         double[] work = new double[lwork];
         double[] work2 = new double[max(m, n)];
 
-        Dgerq.dormrq(BLAS.Side.Left, BLAS.Transpose.NoTrans, m, n, k, A, 0, lda, tau, 0, C, 0, ldc, work, 0, lwork);
-        Dgerq.dormr2(BLAS.Side.Left, BLAS.Transpose.NoTrans, m, n, k, A, 0, lda, tau, 0, C2, 0, ldc, work2, 0);
+        Dgerq.dormrq(BLAS.Side.Left, BLAS.Trans.NoTrans, m, n, k, A, 0, lda, tau, 0, C, 0, ldc, work, 0, lwork);
+        Dgerq.dormr2(BLAS.Side.Left, BLAS.Trans.NoTrans, m, n, k, A, 0, lda, tau, 0, C2, 0, ldc, work2, 0);
 
         assertArrayEquals(C2, C, TOL, "Dormrq Left NoTrans should match Dormr2");
     }
@@ -56,8 +56,8 @@ class DormrqTest {
         double[] work = new double[lwork];
         double[] work2 = new double[max(m, n)];
 
-        Dgerq.dormrq(BLAS.Side.Left, BLAS.Transpose.Trans, m, n, k, A, 0, lda, tau, 0, C, 0, ldc, work, 0, lwork);
-        Dgerq.dormr2(BLAS.Side.Left, BLAS.Transpose.Trans, m, n, k, A, 0, lda, tau, 0, C2, 0, ldc, work2, 0);
+        Dgerq.dormrq(BLAS.Side.Left, BLAS.Trans.Trans, m, n, k, A, 0, lda, tau, 0, C, 0, ldc, work, 0, lwork);
+        Dgerq.dormr2(BLAS.Side.Left, BLAS.Trans.Trans, m, n, k, A, 0, lda, tau, 0, C2, 0, ldc, work2, 0);
 
         assertArrayEquals(C2, C, TOL, "Dormrq Left Trans should match Dormr2");
     }
@@ -79,8 +79,8 @@ class DormrqTest {
         double[] work = new double[lwork];
         double[] work2 = new double[max(m, n)];
 
-        Dgerq.dormrq(BLAS.Side.Right, BLAS.Transpose.NoTrans, m, n, k, A, 0, lda, tau, 0, C, 0, ldc, work, 0, lwork);
-        Dgerq.dormr2(BLAS.Side.Right, BLAS.Transpose.NoTrans, m, n, k, A, 0, lda, tau, 0, C2, 0, ldc, work2, 0);
+        Dgerq.dormrq(BLAS.Side.Right, BLAS.Trans.NoTrans, m, n, k, A, 0, lda, tau, 0, C, 0, ldc, work, 0, lwork);
+        Dgerq.dormr2(BLAS.Side.Right, BLAS.Trans.NoTrans, m, n, k, A, 0, lda, tau, 0, C2, 0, ldc, work2, 0);
 
         assertArrayEquals(C2, C, TOL, "Dormrq Right NoTrans should match Dormr2");
     }
@@ -102,8 +102,8 @@ class DormrqTest {
         double[] work = new double[lwork];
         double[] work2 = new double[max(m, n)];
 
-        Dgerq.dormrq(BLAS.Side.Right, BLAS.Transpose.Trans, m, n, k, A, 0, lda, tau, 0, C, 0, ldc, work, 0, lwork);
-        Dgerq.dormr2(BLAS.Side.Right, BLAS.Transpose.Trans, m, n, k, A, 0, lda, tau, 0, C2, 0, ldc, work2, 0);
+        Dgerq.dormrq(BLAS.Side.Right, BLAS.Trans.Trans, m, n, k, A, 0, lda, tau, 0, C, 0, ldc, work, 0, lwork);
+        Dgerq.dormr2(BLAS.Side.Right, BLAS.Trans.Trans, m, n, k, A, 0, lda, tau, 0, C2, 0, ldc, work2, 0);
 
         assertArrayEquals(C2, C, TOL, "Dormrq Right Trans should match Dormr2");
     }
@@ -128,8 +128,8 @@ class DormrqTest {
             double[] work = new double[lwork];
             double[] work2 = new double[max(m, n)];
 
-            Dgerq.dormrq(BLAS.Side.Left, BLAS.Transpose.NoTrans, m, n, k, A, 0, lda, tau, 0, C, 0, ldc, work, 0, lwork);
-            Dgerq.dormr2(BLAS.Side.Left, BLAS.Transpose.NoTrans, m, n, k, A, 0, lda, tau, 0, C2, 0, ldc, work2, 0);
+            Dgerq.dormrq(BLAS.Side.Left, BLAS.Trans.NoTrans, m, n, k, A, 0, lda, tau, 0, C, 0, ldc, work, 0, lwork);
+            Dgerq.dormr2(BLAS.Side.Left, BLAS.Trans.NoTrans, m, n, k, A, 0, lda, tau, 0, C2, 0, ldc, work2, 0);
 
             assertArrayEquals(C2, C, TOL, "Dormrq Left should match Dormr2 for size " + m + "x" + n);
         }
@@ -155,8 +155,8 @@ class DormrqTest {
             double[] work = new double[lwork];
             double[] work2 = new double[max(m, n)];
 
-            Dgerq.dormrq(BLAS.Side.Right, BLAS.Transpose.NoTrans, m, n, k, A, 0, lda, tau, 0, C, 0, ldc, work, 0, lwork);
-            Dgerq.dormr2(BLAS.Side.Right, BLAS.Transpose.NoTrans, m, n, k, A, 0, lda, tau, 0, C2, 0, ldc, work2, 0);
+            Dgerq.dormrq(BLAS.Side.Right, BLAS.Trans.NoTrans, m, n, k, A, 0, lda, tau, 0, C, 0, ldc, work, 0, lwork);
+            Dgerq.dormr2(BLAS.Side.Right, BLAS.Trans.NoTrans, m, n, k, A, 0, lda, tau, 0, C2, 0, ldc, work2, 0);
 
             assertArrayEquals(C2, C, TOL, "Dormrq Right should match Dormr2 for size " + m + "x" + n);
         }
@@ -174,7 +174,7 @@ class DormrqTest {
         double[] C = generateRandomMatrix(m, n, rnd);
         double[] work = new double[1];
 
-        int result = Dgerq.dormrq(BLAS.Side.Left, BLAS.Transpose.NoTrans, m, n, k, A, 0, lda, tau, 0, C, 0, ldc, work, 0, -1);
+        int result = Dgerq.dormrq(BLAS.Side.Left, BLAS.Trans.NoTrans, m, n, k, A, 0, lda, tau, 0, C, 0, ldc, work, 0, -1);
 
         assertEquals(0, result);
         assertTrue(work[0] > 0, "Workspace query should return positive size");

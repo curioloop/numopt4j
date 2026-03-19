@@ -21,7 +21,7 @@ class DlatrsTest {
         double[] x = {3, 7, 4};
         double[] cnorm = new double[3];
 
-        double scale = Dlatrs.dlatrs(BLAS.Uplo.Upper, BLAS.Transpose.Trans, BLAS.Diag.NonUnit, false, 3, A, 3, x, 0, cnorm, 0);
+        double scale = Dlatrs.dlatrs(BLAS.Uplo.Upper, BLAS.Trans.Trans, BLAS.Diag.NonUnit, false, 3, A, 3, x, 0, cnorm, 0);
 
         assertTrue(scale > 0);
         assertTrue(Double.isFinite(x[0]));
@@ -39,14 +39,14 @@ class DlatrsTest {
         double[] x = {3, 7, 4};
         double[] cnorm = new double[3];
 
-        double scale = Dlatrs.dlatrs(BLAS.Uplo.Lower, BLAS.Transpose.Trans, BLAS.Diag.NonUnit, false, 3, A, 3, x, 0, cnorm, 0);
+        double scale = Dlatrs.dlatrs(BLAS.Uplo.Lower, BLAS.Trans.Trans, BLAS.Diag.NonUnit, false, 3, A, 3, x, 0, cnorm, 0);
 
         assertTrue(scale > 0);
     }
 
     @Test
     void testEmpty() {
-        double scale = Dlatrs.dlatrs(BLAS.Uplo.Upper, BLAS.Transpose.Trans, BLAS.Diag.NonUnit, false, 0, new double[0], 0, new double[0], 0, new double[0], 0);
+        double scale = Dlatrs.dlatrs(BLAS.Uplo.Upper, BLAS.Trans.Trans, BLAS.Diag.NonUnit, false, 0, new double[0], 0, new double[0], 0, new double[0], 0);
         assertEquals(1.0, scale, TOL);
     }
 
@@ -56,7 +56,7 @@ class DlatrsTest {
         double[] x = {3};
         double[] cnorm = new double[1];
 
-        double scale = Dlatrs.dlatrs(BLAS.Uplo.Upper, BLAS.Transpose.Trans, BLAS.Diag.NonUnit, false, 1, A, 1, x, 0, cnorm, 0);
+        double scale = Dlatrs.dlatrs(BLAS.Uplo.Upper, BLAS.Trans.Trans, BLAS.Diag.NonUnit, false, 1, A, 1, x, 0, cnorm, 0);
 
         assertEquals(1.0, scale, TOL);
         assertEquals(0.6, x[0], TOL);

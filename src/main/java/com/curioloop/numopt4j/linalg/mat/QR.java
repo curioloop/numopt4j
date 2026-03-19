@@ -231,7 +231,7 @@ public final class QR implements Decomposition {
         if (!ok) return null;
         int k = Math.min(m, n);
         double[] dst = new double[m * n];
-        BLAS.dlacpy('A', m, n, QR, 0, n, dst, 0, n);
+        BLAS.dlacpy(BLAS.Uplo.All, m, n, QR, 0, n, dst, 0, n);
         BLAS.dorg2r(m, n, k, dst, 0, n, pool.tau, 0, pool.work(), 0);
         return new Matrix(m, n, false, dst);
     }
@@ -284,9 +284,9 @@ public final class QR implements Decomposition {
         double rcond;
         if (pivoting) {
             if (rank == 0) return Double.NaN;
-            rcond = BLAS.dtrcon('1', BLAS.Uplo.Upper, BLAS.Diag.NonUnit, rank, QR, n, work, pool.iwork());
+            rcond = BLAS.dtrcon(BLAS.Norm.One, BLAS.Uplo.Upper, BLAS.Diag.NonUnit, rank, QR, n, work, pool.iwork());
         } else {
-            rcond = BLAS.dtrcon('1', BLAS.Uplo.Upper, BLAS.Diag.NonUnit, n, QR, n, work, pool.iwork());
+            rcond = BLAS.dtrcon(BLAS.Norm.One, BLAS.Uplo.Upper, BLAS.Diag.NonUnit, n, QR, n, work, pool.iwork());
         }
         if (rcond == 0) return Double.POSITIVE_INFINITY;
         return 1.0 / rcond;
@@ -327,7 +327,7 @@ public final class QR implements Decomposition {
         for (int i = 0; i < n; i++) {
             if (Math.abs(QR[i * n + i]) < EPSILON) return false;
         }
-        BLAS.dtrsm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit, n, 1, 1.0, QR, 0, n, b, 0, 1);
+        BLAS.dtrsm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, n, 1, 1.0, QR, 0, n, b, 0, 1);
         return true;
     }
 
@@ -335,7 +335,7 @@ public final class QR implements Decomposition {
         for (int i = 0; i < n; i++) {
             if (Math.abs(QR[i * n + i]) < EPSILON) return false;
         }
-        BLAS.dtrsm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit, n, nrhs, 1.0, QR, 0, n, B, 0, nrhs);
+        BLAS.dtrsm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, n, nrhs, 1.0, QR, 0, n, B, 0, nrhs);
         return true;
     }
 

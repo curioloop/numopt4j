@@ -21,24 +21,6 @@ interface Dsteqr {
 
     /**
      * DSTEQR computes eigenvalues and eigenvectors of symmetric tridiagonal matrix.
-     * 
-     * @param compz 'N': eigenvalues only, 'V': eigenvectors of original matrix,
-     *              'I': eigenvectors of tridiagonal matrix
-     * @param n matrix order
-     * @param d diagonal elements (modified in place)
-     * @param e off-diagonal elements (modified in place)
-     * @param z eigenvector matrix (row-major, n×n)
-     * @param ldz leading dimension of z
-     * @param work workspace (size max(1, 2*n-2) if computing eigenvectors)
-     * @return 0 for success, >0 if convergence failure
-     */
-    static int dsteqr(char compz, int n, double[] d, double[] e,
-                      double[] z, int ldz, double[] work) {
-        return dsteqr(compz, n, d, 0, e, 0, z, 0, ldz, work, 0);
-    }
-
-    /**
-     * DSTEQR computes eigenvalues and eigenvectors of symmetric tridiagonal matrix.
      * This version supports array offsets for workspace reuse.
      * 
      * @param compz 'N': eigenvalues only, 'V': eigenvectors of original matrix,
@@ -382,7 +364,4 @@ interface Dsteqr {
         return 0;
     }
 
-    static int dsteqr(int n, double[] d, double[] e, double[] work) {
-        return dsteqr('N', n, d, e, null, n, work);
-    }
 }

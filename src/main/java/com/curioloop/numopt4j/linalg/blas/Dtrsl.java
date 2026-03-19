@@ -73,9 +73,9 @@ interface Dtrsl {
      *         zero diagonal element of t
      */
     static int dtrsl(double[] t, int tOff, int ldt, int n,
-                     double[] b, int bOff, BLAS.Uplo uplo, BLAS.Transpose trans) {
+                     double[] b, int bOff, BLAS.Uplo uplo, BLAS.Trans trans) {
         boolean upper = (uplo == BLAS.Uplo.Upper);
-        boolean transpose = (trans == BLAS.Transpose.Trans || trans == BLAS.Transpose.ConjTrans);
+        boolean transpose = (trans == BLAS.Trans.Trans || trans == BLAS.Trans.Conj);
 
         if (!upper) {
             if (!transpose) {

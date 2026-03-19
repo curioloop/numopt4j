@@ -82,8 +82,4 @@ interface Dgebak {
         }
     }
 
-    static void dgebak(char job, BLAS.Side side, int n, int ilo, int ihi,
-                        double[] scale, int m, double[] V, int ldv) {
-        dgebak(job, side, n, ilo, ihi, scale, 0, m, V, ldv);
-    }
 }

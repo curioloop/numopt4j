@@ -31,12 +31,6 @@ interface Dsytrd {
      * @param lwork size of work
      */
     static void dsytrd(BLAS.Uplo uplo, int n, double[] A, int lda,
-                       double[] d, double[] e, double[] tau,
-                       double[] work, int lwork) {
-        dsytrd(uplo, n, A, lda, d, 0, e, 0, tau, 0, work, lwork);
-    }
-
-    static void dsytrd(BLAS.Uplo uplo, int n, double[] A, int lda,
                        double[] d, int dOff, double[] e, int eOff, double[] tau, int tauOff,
                        double[] work, int lwork) {
         if (n <= 0) {
@@ -92,7 +86,7 @@ interface Dsytrd {
             for (int i = n - nb; i >= kk; i -= nb) {
                 BLAS.dlatrd(uplo, i + nb, nb, A, i * lda + i, lda, e, eOff, tau, tauOff, work, 0, ldwork);
 
-                BLAS.dsyr2k(BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, i, nb, -1.0,
+                BLAS.dsyr2k(BLAS.Uplo.Upper, BLAS.Trans.NoTrans, i, nb, -1.0,
                             A, i * lda + i, lda,
                             work, 0, ldwork,
                             1.0, A, 0, lda);
@@ -110,7 +104,7 @@ interface Dsytrd {
                 BLAS.dlatrd(uplo, n - i, nb, A, i * lda + i, lda, e, eOff + i, tau, tauOff + i, work, 0, ldwork);
 
                 int remainingRows = n - i - nb;
-                BLAS.dsyr2k(BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, remainingRows, nb, -1.0,
+                BLAS.dsyr2k(BLAS.Uplo.Lower, BLAS.Trans.NoTrans, remainingRows, nb, -1.0,
                             A, (i + nb) * lda + i, lda,
                             work, nb * ldwork, ldwork,
                             1.0, A, (i + nb) * lda + i + nb, lda);
@@ -177,7 +171,7 @@ interface Dsytrd {
             for (int i = n - nb; i >= kk; i -= nb) {
                 BLAS.dlatrd(uplo, i + nb, nb, A, i * lda + i, lda, e, eOff, tau, tauOff, work, workOff, ldwork);
 
-                BLAS.dsyr2k(BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, i, nb, -1.0,
+                BLAS.dsyr2k(BLAS.Uplo.Upper, BLAS.Trans.NoTrans, i, nb, -1.0,
                             A, i * lda + i, lda,
                             work, workOff, ldwork,
                             1.0, A, 0, lda);
@@ -195,7 +189,7 @@ interface Dsytrd {
                 BLAS.dlatrd(uplo, n - i, nb, A, i * lda + i, lda, e, eOff + i, tau, tauOff + i, work, workOff, ldwork);
 
                 int remainingRows = n - i - nb;
-                BLAS.dsyr2k(BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, remainingRows, nb, -1.0,
+                BLAS.dsyr2k(BLAS.Uplo.Lower, BLAS.Trans.NoTrans, remainingRows, nb, -1.0,
                             A, (i + nb) * lda + i, lda,
                             work, workOff + nb * ldwork, ldwork,
                             1.0, A, (i + nb) * lda + i + nb, lda);

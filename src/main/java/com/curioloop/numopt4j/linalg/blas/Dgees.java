@@ -78,12 +78,6 @@ interface Dgees {
         }
     }
 
-    /** Convenience overload with aOff=0. */
-    static void dorghr(int n, int ilo, int ihi, double[] A, int lda,
-                       double[] tau, int tauOff, double[] work, int workOff, int lwork) {
-        dorghr(n, ilo, ihi, A, 0, lda, tau, tauOff, work, workOff, lwork);
-    }
-
     /**
      * Computes the Schur factorization of a general matrix: A = Z*T*Z^T (LAPACK DGEES).
      * Optionally reorders eigenvalues so that selected ones appear first.
@@ -204,7 +198,7 @@ interface Dgees {
         int ihi = (int) work[lwork - 1];
 
         int iwrk = 2 * n;
-        Dgehrd.dgehrd(n, ilo, ihi, A, lda, work, n, work, iwrk, lwork - iwrk);
+        Dgehrd.dgehrd(n, ilo, ihi, A, 0, lda, work, n, work, iwrk, lwork - iwrk);
 
         if (wantvs) {
             Dlamv.dlacpy('L', n, n, A, 0, lda, vs, 0, ldvs);

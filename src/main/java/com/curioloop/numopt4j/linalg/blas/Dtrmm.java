@@ -43,7 +43,7 @@ public interface Dtrmm {
      * @param bOff offset into B
      * @param ldb leading dimension of B
      */
-    static void dtrmm(BLAS.Side side, BLAS.Uplo uplo, BLAS.Transpose trans, BLAS.Diag diag,
+    static void dtrmm(BLAS.Side side, BLAS.Uplo uplo, BLAS.Trans trans, BLAS.Diag diag,
                       int m, int n, double alpha,
                       double[] A, int aOff, int lda,
                       double[] B, int bOff, int ldb) {
@@ -51,7 +51,7 @@ public interface Dtrmm {
         // Normalize parameters
         boolean leftSide = side == BLAS.Side.Left;
         boolean upper = uplo == BLAS.Uplo.Upper;
-        boolean transA = trans == BLAS.Transpose.Trans || trans == BLAS.Transpose.ConjTrans;
+        boolean transA = trans == BLAS.Trans.Trans || trans == BLAS.Trans.Conj;
         boolean unitDiag = diag == BLAS.Diag.Unit;
         
         // Quick returns

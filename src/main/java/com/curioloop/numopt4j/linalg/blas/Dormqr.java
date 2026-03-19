@@ -27,7 +27,7 @@ interface Dormqr {
      * @see Dlarft
      * @see Dlarfb
      */
-    static void dorm2r(BLAS.Side side, BLAS.Transpose trans, int m, int n, int k,
+    static void dorm2r(BLAS.Side side, BLAS.Trans trans, int m, int n, int k,
                        double[] A, int aOff, int lda, double[] tau, int tauOff,
                        double[] C, int cOff, int ldc, double[] work, int workOff) {
         if (m < 0 || n < 0 || k < 0) return;
@@ -36,7 +36,7 @@ interface Dormqr {
         if (left && k > m) return;
         if (!left && k > n) return;
 
-        boolean notran = (trans == BLAS.Transpose.NoTrans);
+        boolean notran = (trans == BLAS.Trans.NoTrans);
 
         if (left) {
             if (notran) {
@@ -89,7 +89,7 @@ interface Dormqr {
         }
     }
 
-    static int dormqr(BLAS.Side side, BLAS.Transpose trans, int m, int n, int k,
+    static int dormqr(BLAS.Side side, BLAS.Trans trans, int m, int n, int k,
                       double[] V, int vOff, int ldv,
                       double[] tau, int tauOff,
                       double[] C, int cOff, int ldc,
@@ -97,7 +97,7 @@ interface Dormqr {
         return dormqr(side, trans, m, n, k, V, vOff, ldv, tau, tauOff, C, cOff, ldc, work, workOff, -1);
     }
 
-    static int dormqr(BLAS.Side side, BLAS.Transpose trans, int m, int n, int k,
+    static int dormqr(BLAS.Side side, BLAS.Trans trans, int m, int n, int k,
                       double[] V, int vOff, int ldv,
                       double[] tau, int tauOff,
                       double[] C, int cOff, int ldc,
@@ -142,7 +142,7 @@ interface Dormqr {
         }
 
         int ldwork = nb;
-        boolean notran = (trans == BLAS.Transpose.NoTrans);
+        boolean notran = (trans == BLAS.Trans.NoTrans);
 
         if (left) {
             if (notran) {
@@ -150,7 +150,7 @@ interface Dormqr {
                     int ib = min(nb, k - i);
                     Dlarft.dlarftForward(V, vOff + i * ldv + i, ldv, tau, tauOff + i,
                                          work, workOff, ldt, m - i, ib);
-                    Dlarfb.dlarfbLeft(V, vOff + i * ldv + i, ldv,
+                    Dlarfb.dlarfbLeftForwardColWise(V, vOff + i * ldv + i, ldv,
                                       work, workOff, ldt,
                                       C, cOff + i * ldc, ldc,
                                       work, workOff + tsize, ldwork, m - i, n, ib);
@@ -160,7 +160,7 @@ interface Dormqr {
                     int ib = min(nb, k - i);
                     Dlarft.dlarftForward(V, vOff + i * ldv + i, ldv, tau, tauOff + i,
                                          work, workOff, ldt, m - i, ib);
-                    Dlarfb.dlarfbLeftTrans(V, vOff + i * ldv + i, ldv,
+                    Dlarfb.dlarfbLeftTransForwardColWise(V, vOff + i * ldv + i, ldv,
                                            work, workOff, ldt,
                                            C, cOff + i * ldc, ldc,
                                            work, workOff + tsize, ldwork, m - i, n, ib);
@@ -172,7 +172,7 @@ interface Dormqr {
                     int ib = min(nb, k - i);
                     Dlarft.dlarftForward(V, vOff + i * ldv + i, ldv, tau, tauOff + i,
                                          work, workOff, ldt, n - i, ib);
-                    Dlarfb.dlarfbRight(V, vOff + i * ldv + i, ldv,
+                    Dlarfb.dlarfbRightForwardColWise(V, vOff + i * ldv + i, ldv,
                                        work, workOff, ldt,
                                        C, cOff + i, ldc,
                                        work, workOff + tsize, ldwork, m, n - i, ib);
@@ -182,7 +182,7 @@ interface Dormqr {
                     int ib = min(nb, k - i);
                     Dlarft.dlarftForward(V, vOff + i * ldv + i, ldv, tau, tauOff + i,
                                          work, workOff, ldt, n - i, ib);
-                    Dlarfb.dlarfbRightTrans(V, vOff + i * ldv + i, ldv,
+                    Dlarfb.dlarfbRightTransForwardColWise(V, vOff + i * ldv + i, ldv,
                                             work, workOff, ldt,
                                             C, cOff + i, ldc,
                                             work, workOff + tsize, ldwork, m, n - i, ib);

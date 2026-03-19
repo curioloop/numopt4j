@@ -199,7 +199,7 @@ class DgetrTest {
         int info = Dgetr.dgetrf(n, n, A, 0, n, ipiv, 0);
         assertEquals(0, info);
 
-        Dgetr.dgetrs(BLAS.Transpose.NoTrans, n, 1, A, 0, n, ipiv, 0, b, 0, 1);
+        Dgetr.dgetrs(BLAS.Trans.NoTrans, n, 1, A, 0, n, ipiv, 0, b, 0, 1);
 
         assertEquals(0.0, b[0], TOL);
         assertEquals(2.5, b[1], TOL);
@@ -220,7 +220,7 @@ class DgetrTest {
         int info = Dgetr.dgetrf(n, n, A, 0, n, ipiv, 0);
         assertEquals(0, info);
 
-        Dgetr.dgetrs(BLAS.Transpose.Trans, n, 1, A, 0, n, ipiv, 0, b, 0, 1);
+        Dgetr.dgetrs(BLAS.Trans.Trans, n, 1, A, 0, n, ipiv, 0, b, 0, 1);
 
         double[] Atb = new double[n];
         for (int i = 0; i < n; i++) {

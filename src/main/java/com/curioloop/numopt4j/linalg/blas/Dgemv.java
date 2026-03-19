@@ -28,25 +28,11 @@ interface Dgemv {
     int THRESHOLD = 32;
     int BLOCK_SIZE = 64;
 
-    static void dgemv(BLAS.Transpose trans, int m, int n, double alpha,
-                      double[] A, int aOff, int lda,
-                      double[] x, int xOff, double beta,
-                      double[] y, int yOff) {
-        dgemv(trans, m, n, alpha, A, aOff, lda, x, xOff, 1, beta, y, yOff, 1);
-    }
-
-    static void dgemv(BLAS.Transpose trans, int m, int n, double alpha,
-                      double[] A, int aOff, int lda,
-                      double[] x, int xOff, int incX, double beta,
-                      double[] y, int yOff) {
-        dgemv(trans, m, n, alpha, A, aOff, lda, x, xOff, incX, beta, y, yOff, 1);
-    }
-
-    static void dgemv(BLAS.Transpose trans, int m, int n, double alpha,
+    static void dgemv(BLAS.Trans trans, int m, int n, double alpha,
                       double[] A, int aOff, int lda,
                       double[] x, int xOff, int incX, double beta,
                       double[] y, int yOff, int incY) {
-        boolean noTrans = (trans == BLAS.Transpose.NoTrans);
+        boolean noTrans = (trans == BLAS.Trans.NoTrans);
         int lenY = noTrans ? m : n;
         
         if (lenY == 0) return;
@@ -71,12 +57,6 @@ interface Dgemv {
         } else {
             gemvTrans(m, n, alpha, A, aOff, lda, x, xOff, incX, y, yOff, incY);
         }
-    }
-
-    static void gemvNoTrans(int m, int n, double alpha,
-                            double[] A, int aOff, int lda,
-                            double[] x, int xOff, double[] y, int yOff) {
-        gemvNoTrans(m, n, alpha, A, aOff, lda, x, xOff, 1, y, yOff, 1);
     }
 
     static void gemvNoTrans(int m, int n, double alpha,
@@ -126,12 +106,6 @@ interface Dgemv {
             gemvNoTransDirect(iEnd - ii, n, alpha, A, aOff + ii * lda, lda, 
                               x, xOff, incx, y, yOff + ii * incy, incy);
         }
-    }
-
-    static void gemvTrans(int m, int n, double alpha,
-                          double[] A, int aOff, int lda,
-                          double[] x, int xOff, double[] y, int yOff) {
-        gemvTrans(m, n, alpha, A, aOff, lda, x, xOff, 1, y, yOff, 1);
     }
 
     static void gemvTrans(int m, int n, double alpha,

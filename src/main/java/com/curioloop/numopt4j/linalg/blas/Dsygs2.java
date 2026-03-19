@@ -115,7 +115,7 @@ interface Dsygs2 {
             // Solve L(k+1:n, k+1:n) * x = A(k+1:n, k)
             // dtrsm(Left, Lower, NoTrans, NonUnit, rem, 1, 1.0, B(k+1,k+1), ldb, A(k+1,k), lda)
             // Treats A(k+1:n, k) as a rem×1 matrix with ldb=lda
-            BLAS.dtrsm(BLAS.Side.Left, BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit,
+            BLAS.dtrsm(BLAS.Side.Left, BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit,
                     rem, 1, 1.0,
                     B, bOff + (k + 1) * ldb + (k + 1), ldb,
                     A, aColOff, lda);
@@ -177,7 +177,7 @@ interface Dsygs2 {
             // Solve U(0:k-1, 0:k-1)^T * x = A(0:k-1, k)
             // dtrsm(Left, Upper, Trans, NonUnit, k, 1, 1.0, B(0,0), ldb, A(0:k-1,k), lda)
             // Treats A(0:k-1, k) as a k×1 matrix with leading dim lda
-            BLAS.dtrsm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Transpose.Trans, BLAS.Diag.NonUnit,
+            BLAS.dtrsm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Trans.Trans, BLAS.Diag.NonUnit,
                     k, 1, 1.0,
                     B, bOff, ldb,
                     A, aColOff, lda);
@@ -216,7 +216,7 @@ interface Dsygs2 {
                 int bRowOff = bOff + k * ldb;
 
                 // A(k, 0:k-1) = L(0:k-1, 0:k-1)^T * A(k, 0:k-1)
-                BLAS.dtrmv(BLAS.Uplo.Lower, BLAS.Transpose.Trans, BLAS.Diag.NonUnit,
+                BLAS.dtrmv(BLAS.Uplo.Lower, BLAS.Trans.Trans, BLAS.Diag.NonUnit,
                         k, B, bOff, ldb, A, aRowOff, 1);
 
                 double ct = 0.5 * akk;
@@ -268,7 +268,7 @@ interface Dsygs2 {
                 int bColOff = bOff + k;
 
                 // A(0:k-1, k) = U(0:k-1, 0:k-1) * A(0:k-1, k)
-                BLAS.dtrmv(BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit,
+                BLAS.dtrmv(BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit,
                         k, B, bOff, ldb, A, aColOff, lda);
 
                 double ct = 0.5 * akk;

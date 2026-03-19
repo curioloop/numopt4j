@@ -27,7 +27,7 @@ class Dsyr2kTest {
         };
         double[] C = new double[9];
 
-        Dsyr2k.dsyr2k(BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, 3, 2, 1.0, A, 2, B, 2, 0.0, C, 3);
+        Dsyr2k.dsyr2k(BLAS.Uplo.Upper, BLAS.Trans.NoTrans, 3, 2, 1.0, A, 0, 2, B, 0, 2, 0.0, C, 0, 3);
 
         // Expected: C[i,j] = A[i,0]*B[j,0] + A[i,1]*B[j,1] + B[i,0]*A[j,0] + B[i,1]*A[j,1]
         // C[0,0] = 1*7 + 2*8 + 7*1 + 8*2 = 7 + 16 + 7 + 16 = 46
@@ -54,7 +54,7 @@ class Dsyr2kTest {
         };
         double[] C = new double[9];
 
-        Dsyr2k.dsyr2k(BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, 3, 2, 1.0, A, 2, B, 2, 0.0, C, 3);
+        Dsyr2k.dsyr2k(BLAS.Uplo.Lower, BLAS.Trans.NoTrans, 3, 2, 1.0, A, 0, 2, B, 0, 2, 0.0, C, 0, 3);
 
         assertEquals(46.0, C[0], TOL);
         assertEquals(82.0, C[3], TOL);
@@ -76,7 +76,7 @@ class Dsyr2kTest {
         };
         double[] C = new double[9];
 
-        Dsyr2k.dsyr2k(BLAS.Uplo.Upper, BLAS.Transpose.Trans, 3, 2, 1.0, A, 3, B, 3, 0.0, C, 3);
+        Dsyr2k.dsyr2k(BLAS.Uplo.Upper, BLAS.Trans.Trans, 3, 2, 1.0, A, 0, 3, B, 0, 3, 0.0, C, 0, 3);
 
         // Expected: C[i,j] = A[0,i]*B[0,j] + A[1,i]*B[1,j] + B[0,i]*A[0,j] + B[1,i]*A[1,j]
         // C[0,0] = 1*7 + 4*10 + 7*1 + 10*4 = 7 + 40 + 7 + 40 = 94
@@ -87,7 +87,7 @@ class Dsyr2kTest {
 
     @Test
     void testEmpty() {
-        Dsyr2k.dsyr2k(BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, 0, 0, 1.0, new double[0], 0, 0, new double[0], 0, 0, 0.0, new double[0], 0, 0);
+        Dsyr2k.dsyr2k(BLAS.Uplo.Upper, BLAS.Trans.NoTrans, 0, 0, 1.0, new double[0], 0, 0, new double[0], 0, 0, 0.0, new double[0], 0, 0);
     }
 
     @Test
@@ -97,7 +97,7 @@ class Dsyr2kTest {
         double[] C = new double[9];
         for (int i = 0; i < 9; i++) C[i] = 1.0;
 
-        Dsyr2k.dsyr2k(BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, 3, 2, 1.0, A, 2, B, 2, 0.5, C, 3);
+        Dsyr2k.dsyr2k(BLAS.Uplo.Upper, BLAS.Trans.NoTrans, 3, 2, 1.0, A, 0, 2, B, 0, 2, 0.5, C, 0, 3);
 
         // C[0,0] = 0.5*1 + 46 = 46.5
         assertEquals(46.5, C[0], TOL);

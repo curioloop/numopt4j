@@ -66,14 +66,14 @@ public interface Dgemm {
      * <p>Branches on transpose parameters once, then dispatches to specialized
      * implementations to avoid branches in hot loops.</p>
      */
-    static void dgemm(BLAS.Transpose transA, BLAS.Transpose transB, int m, int n, int k,
+    static void dgemm(BLAS.Trans transA, BLAS.Trans transB, int m, int n, int k,
                       double alpha, double[] A, int aOff, int lda,
                       double[] B, int bOff, int ldb,
                       double beta, double[] C, int cOff, int ldc) {
         
         // Normalize transpose parameters
-        boolean transAFlag = transA == BLAS.Transpose.Trans || transA == BLAS.Transpose.ConjTrans;
-        boolean transBFlag = transB == BLAS.Transpose.Trans || transB == BLAS.Transpose.ConjTrans;
+        boolean transAFlag = transA == BLAS.Trans.Trans || transA == BLAS.Trans.Conj;
+        boolean transBFlag = transB == BLAS.Trans.Trans || transB == BLAS.Trans.Conj;
         
         // Quick returns
         if (m <= 0 || n <= 0 || ((alpha == 0.0 || k <= 0) && beta == 1.0)) {

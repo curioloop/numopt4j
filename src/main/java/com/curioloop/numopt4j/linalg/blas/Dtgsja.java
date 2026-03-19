@@ -207,9 +207,9 @@ interface Dtgsja {
         }
 
         if (wantv) {
-            BLAS.dlaset('A', p, p, 0, 0, V, vOff, ldv);
+            BLAS.dlaset(BLAS.Uplo.All, p, p, 0, 0, V, vOff, ldv);
             if (p > 1) {
-                BLAS.dlacpy('L', p - 1, min(p, n), B, bOff + ldb, ldb, V, vOff + ldv, ldv);
+                BLAS.dlacpy(BLAS.Uplo.Lower, p - 1, min(p, n), B, bOff + ldb, ldb, V, vOff + ldv, ldv);
             }
             Dgeqr.dorg2r(p, p, min(p, n), V, vOff, ldv, tau, 0, work, workOff);
         }
@@ -220,24 +220,24 @@ interface Dtgsja {
             }
         }
         if (p > l) {
-            BLAS.dlaset('A', p - l, n, 0, 0, B, bOff + l * ldb, ldb);
+            BLAS.dlaset(BLAS.Uplo.All, p - l, n, 0, 0, B, bOff + l * ldb, ldb);
         }
 
         if (wantq) {
-            BLAS.dlaset('A', n, n, 0, 1, Q, qOff, ldq);
+            BLAS.dlaset(BLAS.Uplo.All, n, n, 0, 1, Q, qOff, ldq);
             Dgeqp.dlapmt(true, n, n, Q, qOff, ldq, iwork, 0);
         }
 
         if (p >= l && n != l) {
             Dgerq.dgerq2(l, n, B, bOff, ldb, tau, 0, work, workOff);
 
-            Dgerq.dormr2(BLAS.Side.Right, BLAS.Transpose.Trans, m, n, l, B, bOff, ldb, tau, 0, A, aOff, lda, work, workOff);
+            Dgerq.dormr2(BLAS.Side.Right, BLAS.Trans.Trans, m, n, l, B, bOff, ldb, tau, 0, A, aOff, lda, work, workOff);
 
             if (wantq) {
-                Dgerq.dormr2(BLAS.Side.Right, BLAS.Transpose.Trans, n, n, l, B, bOff, ldb, tau, 0, Q, qOff, ldq, work, workOff);
+                Dgerq.dormr2(BLAS.Side.Right, BLAS.Trans.Trans, n, n, l, B, bOff, ldb, tau, 0, Q, qOff, ldq, work, workOff);
             }
 
-            BLAS.dlaset('A', l, n - l, 0, 0, B, bOff, ldb);
+            BLAS.dlaset(BLAS.Uplo.All, l, n - l, 0, 0, B, bOff, ldb);
             for (int i = 1; i < l; i++) {
                 for (int j = 0; j < i; j++) {
                     B[bOff + i * ldb + (n - l + j)] = 0;
@@ -258,12 +258,12 @@ interface Dtgsja {
             }
         }
 
-        Dormqr.dorm2r(BLAS.Side.Left, BLAS.Transpose.Trans, m, l, min(m, n - l), A, aOff, lda, tau, 0, A, aOff + (n - l), lda, work, workOff);
+        Dormqr.dorm2r(BLAS.Side.Left, BLAS.Trans.Trans, m, l, min(m, n - l), A, aOff, lda, tau, 0, A, aOff + (n - l), lda, work, workOff);
 
         if (wantu) {
-            BLAS.dlaset('A', m, m, 0, 0, U, uOff, ldu);
+            BLAS.dlaset(BLAS.Uplo.All, m, m, 0, 0, U, uOff, ldu);
             if (m > 1) {
-                BLAS.dlacpy('L', m - 1, min(m, n - l), A, aOff + lda, lda, U, uOff + ldu, ldu);
+                BLAS.dlacpy(BLAS.Uplo.Lower, m - 1, min(m, n - l), A, aOff + lda, lda, U, uOff + ldu, ldu);
             }
             int kMin = min(m, n - l);
             Dgeqr.dorg2r(m, m, kMin, U, uOff, ldu, tau, 0, work, workOff);
@@ -279,17 +279,17 @@ interface Dtgsja {
             }
         }
         if (m > k) {
-            BLAS.dlaset('A', m - k, n - l, 0, 0, A, aOff + k * lda, lda);
+            BLAS.dlaset(BLAS.Uplo.All, m - k, n - l, 0, 0, A, aOff + k * lda, lda);
         }
 
         if (n - l > k) {
             Dgerq.dgerq2(k, n - l, A, aOff, lda, tau, 0, work, workOff);
 
             if (wantq) {
-                Dgerq.dormr2(BLAS.Side.Right, BLAS.Transpose.Trans, n, n - l, k, A, aOff, lda, tau, 0, Q, qOff, ldq, work, workOff);
+                Dgerq.dormr2(BLAS.Side.Right, BLAS.Trans.Trans, n, n - l, k, A, aOff, lda, tau, 0, Q, qOff, ldq, work, workOff);
             }
 
-            BLAS.dlaset('A', k, n - l - k, 0, 0, A, aOff, lda);
+            BLAS.dlaset(BLAS.Uplo.All, k, n - l - k, 0, 0, A, aOff, lda);
             for (int i = 1; i < k; i++) {
                 for (int j = 0; j < i; j++) {
                     A[aOff + i * lda + (n - k - l + j)] = 0;
@@ -300,7 +300,7 @@ interface Dtgsja {
         if (m > k) {
             Dgeqr.dgeqr2(m - k, l, A, aOff + k * lda + (n - l), lda, tau, 0, work, workOff);
             if (wantu) {
-                Dormqr.dorm2r(BLAS.Side.Right, BLAS.Transpose.NoTrans, m, m - k, min(m - k, l),
+                Dormqr.dorm2r(BLAS.Side.Right, BLAS.Trans.NoTrans, m, m - k, min(m - k, l),
                               A, aOff + k * lda + (n - l), lda, tau, 0,
                               U, uOff + k, ldu, work, workOff);
             }
@@ -329,13 +329,13 @@ interface Dtgsja {
         boolean wantq = initq || (jobQ == BLAS.GsvdJob.Compute);
 
         if (initu) {
-            BLAS.dlaset('A', m, m, 0, 1, U, uOff, ldu);
+            BLAS.dlaset(BLAS.Uplo.All, m, m, 0, 1, U, uOff, ldu);
         }
         if (initv) {
-            BLAS.dlaset('A', p, p, 0, 1, V, vOff, ldv);
+            BLAS.dlaset(BLAS.Uplo.All, p, p, 0, 1, V, vOff, ldv);
         }
         if (initq) {
-            BLAS.dlaset('A', n, n, 0, 1, Q, qOff, ldq);
+            BLAS.dlaset(BLAS.Uplo.All, n, n, 0, 1, Q, qOff, ldq);
         }
 
         double minTol = min(tola, tolb);

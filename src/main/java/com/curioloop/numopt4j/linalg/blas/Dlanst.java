@@ -10,19 +10,6 @@ package com.curioloop.numopt4j.linalg.blas;
 interface Dlanst {
     
     /**
-     * Compute matrix norm.
-     * 
-     * @param norm 'M' or 'm' - max abs, '1' or 'O' or 'o' - one norm, 'F' or 'f' or 'E' or 'e' - Frobenius norm
-     * @param n matrix order
-     * @param d diagonal elements
-     * @param e off-diagonal elements
-     * @return matrix norm
-     */
-    static double dlanst(char norm, int n, double[] d, double[] e) {
-        return dlanst(norm, n, d, 0, e, 0);
-    }
-    
-    /**
      * Compute matrix norm with offset support.
      * 
      * @param norm 'M' or 'm' - max abs, '1' or 'O' or 'o' - one norm, 'F' or 'f' or 'E' or 'e' - Frobenius norm

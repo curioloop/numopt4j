@@ -10,17 +10,6 @@ package com.curioloop.numopt4j.linalg.blas;
 interface Dlasrt {
     
     /**
-     * Sort eigenvalues.
-     * 
-     * @param id 'I' for increasing, 'D' for decreasing
-     * @param n number of elements
-     * @param d array to sort (modified in place)
-     */
-    static void dlasrt(char id, int n, double[] d) {
-        dlasrt(id, n, d, 0);
-    }
-    
-    /**
      * Sort eigenvalues with offset support.
      * 
      * @param id 'I' for increasing, 'D' for decreasing

@@ -21,13 +21,6 @@ interface Dlaexc {
     static boolean dlaexc(boolean wantq, int n,
                           double[] t, int tOff, int ldt,
                           double[] q, int qOff, int ldq,
-                          int j1, int n1, int n2, double[] work) {
-        return dlaexc(wantq, n, t, tOff, ldt, q, qOff, ldq, j1, n1, n2, work, 0);
-    }
-
-    static boolean dlaexc(boolean wantq, int n,
-                          double[] t, int tOff, int ldt,
-                          double[] q, int qOff, int ldq,
                           int j1, int n1, int n2, double[] work, int wOff) {
         if (n == 0 || n1 == 0 || n2 == 0) {
             return true;

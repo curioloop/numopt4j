@@ -5,8 +5,6 @@ package com.curioloop.numopt4j.linalg.blas;
 
 import org.junit.jupiter.api.Test;
 
-import java.util.Random;
-
 import static org.junit.jupiter.api.Assertions.*;
 
 class DtrsmTest {
@@ -39,7 +37,7 @@ class DtrsmTest {
         };
         
         double[] Bcopy = B.clone();
-        Dtrsm.dtrsm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit, m, n, alpha, A, 0, n, Bcopy, 0, n);
+        Dtrsm.dtrsm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, m, n, alpha, A, 0, n, Bcopy, 0, n);
         
         for (int i = 0; i < m * n; i++) {
             assertEquals(expected[i], Bcopy[i], TOL, "Mismatch at index " + i);
@@ -72,7 +70,7 @@ class DtrsmTest {
         };
         
         double[] Bcopy = B.clone();
-        Dtrsm.dtrsm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, BLAS.Diag.Unit, m, n, alpha, A, 0, n, Bcopy, 0, n);
+        Dtrsm.dtrsm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.Unit, m, n, alpha, A, 0, n, Bcopy, 0, n);
         
         for (int i = 0; i < m * n; i++) {
             assertEquals(expected[i], Bcopy[i], TOL, "Mismatch at index " + i);
@@ -105,7 +103,7 @@ class DtrsmTest {
         };
         
         double[] Bcopy = B.clone();
-        Dtrsm.dtrsm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit, m, n, alpha, A, 0, n, Bcopy, 0, n);
+        Dtrsm.dtrsm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, m, n, alpha, A, 0, n, Bcopy, 0, n);
         
         for (int i = 0; i < m * n; i++) {
             assertEquals(expected[i], Bcopy[i], TOL, "Mismatch at index " + i);
@@ -138,7 +136,7 @@ class DtrsmTest {
         };
         
         double[] Bcopy = B.clone();
-        Dtrsm.dtrsm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.Unit, m, n, alpha, A, 0, n, Bcopy, 0, n);
+        Dtrsm.dtrsm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.Unit, m, n, alpha, A, 0, n, Bcopy, 0, n);
         
         for (int i = 0; i < m * n; i++) {
             assertEquals(expected[i], Bcopy[i], TOL, "Mismatch at index " + i);
@@ -169,7 +167,7 @@ class DtrsmTest {
         };
         
         double[] Bcopy = B.clone();
-        Dtrsm.dtrsm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit, m, n, alpha, A, 0, m, Bcopy, 0, n);
+        Dtrsm.dtrsm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, m, n, alpha, A, 0, m, Bcopy, 0, n);
         
         for (int i = 0; i < m * n; i++) {
             assertEquals(expected[i], Bcopy[i], TOL, "Mismatch at index " + i);
@@ -200,7 +198,7 @@ class DtrsmTest {
         };
         
         double[] Bcopy = B.clone();
-        Dtrsm.dtrsm(BLAS.Side.Left, BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit, m, n, alpha, A, 0, m, Bcopy, 0, n);
+        Dtrsm.dtrsm(BLAS.Side.Left, BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, m, n, alpha, A, 0, m, Bcopy, 0, n);
         
         for (int i = 0; i < m * n; i++) {
             assertEquals(expected[i], Bcopy[i], TOL, "Mismatch at index " + i);
@@ -233,7 +231,7 @@ class DtrsmTest {
         };
         
         double[] Bcopy = B.clone();
-        Dtrsm.dtrsm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.Trans, BLAS.Diag.NonUnit, m, n, alpha, A, 0, n, Bcopy, 0, n);
+        Dtrsm.dtrsm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.Trans, BLAS.Diag.NonUnit, m, n, alpha, A, 0, n, Bcopy, 0, n);
         
         for (int i = 0; i < m * n; i++) {
             assertEquals(expected[i], Bcopy[i], TOL, "Mismatch at index " + i);
@@ -266,7 +264,7 @@ class DtrsmTest {
         };
         
         double[] Bcopy = B.clone();
-        Dtrsm.dtrsm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.Trans, BLAS.Diag.NonUnit, m, n, alpha, A, 0, n, Bcopy, 0, n);
+        Dtrsm.dtrsm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.Trans, BLAS.Diag.NonUnit, m, n, alpha, A, 0, n, Bcopy, 0, n);
         
         for (int i = 0; i < m * n; i++) {
             assertEquals(expected[i], Bcopy[i], TOL, "Mismatch at index " + i);
@@ -294,7 +292,7 @@ class DtrsmTest {
             5.775, 1.65, 5.625
         };
         
-        Dtrsm.dtrsm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit, m, n, alpha, A, 0, lda, B, 0, ldb);
+        Dtrsm.dtrsm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, m, n, alpha, A, 0, lda, B, 0, ldb);
         
         for (int i = 0; i < m; i++) {
             for (int j = 0; j < n; j++) {
@@ -322,7 +320,7 @@ class DtrsmTest {
         
         double[] expected = new double[m * n];
         
-        Dtrsm.dtrsm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit, m, n, alpha, A, 0, n, B, 0, n);
+        Dtrsm.dtrsm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, m, n, alpha, A, 0, n, B, 0, n);
         
         for (int i = 0; i < m * n; i++) {
             assertEquals(expected[i], B[i], TOL, "Mismatch at index " + i);
@@ -353,7 +351,7 @@ class DtrsmTest {
         };
         
         double[] Bcopy = B.clone();
-        Dtrsm.dtrsm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.Unit, m, n, alpha, A, 0, m, Bcopy, 0, n);
+        Dtrsm.dtrsm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.Unit, m, n, alpha, A, 0, m, Bcopy, 0, n);
         
         for (int i = 0; i < m * n; i++) {
             assertEquals(expected[i], Bcopy[i], TOL, "Mismatch at index " + i);
@@ -384,7 +382,7 @@ class DtrsmTest {
         };
         
         double[] Bcopy = B.clone();
-        Dtrsm.dtrsm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Transpose.Trans, BLAS.Diag.NonUnit, m, n, alpha, A, 0, m, Bcopy, 0, n);
+        Dtrsm.dtrsm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Trans.Trans, BLAS.Diag.NonUnit, m, n, alpha, A, 0, m, Bcopy, 0, n);
         
         for (int i = 0; i < m * n; i++) {
             assertEquals(expected[i], Bcopy[i], TOL, "Mismatch at index " + i);
@@ -415,7 +413,7 @@ class DtrsmTest {
         };
         
         double[] Bcopy = B.clone();
-        Dtrsm.dtrsm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Transpose.Trans, BLAS.Diag.Unit, m, n, alpha, A, 0, m, Bcopy, 0, n);
+        Dtrsm.dtrsm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Trans.Trans, BLAS.Diag.Unit, m, n, alpha, A, 0, m, Bcopy, 0, n);
         
         for (int i = 0; i < m * n; i++) {
             assertEquals(expected[i], Bcopy[i], TOL, "Mismatch at index " + i);
@@ -446,7 +444,7 @@ class DtrsmTest {
         };
         
         double[] Bcopy = B.clone();
-        Dtrsm.dtrsm(BLAS.Side.Left, BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, BLAS.Diag.Unit, m, n, alpha, A, 0, m, Bcopy, 0, n);
+        Dtrsm.dtrsm(BLAS.Side.Left, BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.Unit, m, n, alpha, A, 0, m, Bcopy, 0, n);
         
         for (int i = 0; i < m * n; i++) {
             assertEquals(expected[i], Bcopy[i], TOL, "Mismatch at index " + i);
@@ -477,7 +475,7 @@ class DtrsmTest {
         };
         
         double[] Bcopy = B.clone();
-        Dtrsm.dtrsm(BLAS.Side.Left, BLAS.Uplo.Lower, BLAS.Transpose.Trans, BLAS.Diag.NonUnit, m, n, alpha, A, 0, m, Bcopy, 0, n);
+        Dtrsm.dtrsm(BLAS.Side.Left, BLAS.Uplo.Lower, BLAS.Trans.Trans, BLAS.Diag.NonUnit, m, n, alpha, A, 0, m, Bcopy, 0, n);
         
         for (int i = 0; i < m * n; i++) {
             assertEquals(expected[i], Bcopy[i], TOL, "Mismatch at index " + i);
@@ -508,7 +506,7 @@ class DtrsmTest {
         };
         
         double[] Bcopy = B.clone();
-        Dtrsm.dtrsm(BLAS.Side.Left, BLAS.Uplo.Lower, BLAS.Transpose.Trans, BLAS.Diag.Unit, m, n, alpha, A, 0, m, Bcopy, 0, n);
+        Dtrsm.dtrsm(BLAS.Side.Left, BLAS.Uplo.Lower, BLAS.Trans.Trans, BLAS.Diag.Unit, m, n, alpha, A, 0, m, Bcopy, 0, n);
         
         for (int i = 0; i < m * n; i++) {
             assertEquals(expected[i], Bcopy[i], TOL, "Mismatch at index " + i);
@@ -541,7 +539,7 @@ class DtrsmTest {
         };
         
         double[] Bcopy = B.clone();
-        Dtrsm.dtrsm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.Trans, BLAS.Diag.Unit, m, n, alpha, A, 0, n, Bcopy, 0, n);
+        Dtrsm.dtrsm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.Trans, BLAS.Diag.Unit, m, n, alpha, A, 0, n, Bcopy, 0, n);
         
         for (int i = 0; i < m * n; i++) {
             assertEquals(expected[i], Bcopy[i], TOL, "Mismatch at index " + i);
@@ -574,7 +572,7 @@ class DtrsmTest {
         };
         
         double[] Bcopy = B.clone();
-        Dtrsm.dtrsm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.Trans, BLAS.Diag.Unit, m, n, alpha, A, 0, n, Bcopy, 0, n);
+        Dtrsm.dtrsm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.Trans, BLAS.Diag.Unit, m, n, alpha, A, 0, n, Bcopy, 0, n);
         
         for (int i = 0; i < m * n; i++) {
             assertEquals(expected[i], Bcopy[i], TOL, "Mismatch at index " + i);

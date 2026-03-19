@@ -465,9 +465,9 @@ interface Dlaqr {
 
         int lwkopt = max(1, 2 * nw);
         if (jw > 2) {
-            Dgehrd.dgehrd(jw, 0, jw - 2, t, ldt, work, workOff, work, workOff, -1);
+            Dgehrd.dgehrd(jw, 0, jw - 2, t, tOff, ldt, work, workOff, work, workOff, -1);
             int lwk1 = (int) work[workOff];
-            Dgehrd.dormhr(BLAS.Side.Right, BLAS.Transpose.NoTrans, jw, jw, 0, jw - 2,
+            Dgehrd.dormhr(BLAS.Side.Right, BLAS.Trans.NoTrans, jw, jw, 0, jw - 2,
                           t, tOff, ldt, work, workOff, v, vOff, ldv, work, workOff, -1);
             int lwk2 = (int) work[workOff];
             if (recur > 0) {
@@ -642,7 +642,7 @@ interface Dlaqr {
             }
 
             if (ns > 1 && s != 0) {
-                Dgehrd.dormhr(BLAS.Side.Right, BLAS.Transpose.NoTrans, jw, ns, 0, ns - 1,
+                Dgehrd.dormhr(BLAS.Side.Right, BLAS.Trans.NoTrans, jw, ns, 0, ns - 1,
                               t, tOff, ldt, work, tauOff, v, vOff, ldv,
                               work, workOff + jw, baseWork - jw);
             }
@@ -650,7 +650,7 @@ interface Dlaqr {
             int ltop = wantt ? 0 : ktop;
             for (int krow = ltop; krow < kwtop; krow += nv) {
                 int kln = min(nv, kwtop - krow);
-                Dgemm.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, kln, jw, jw,
+                Dgemm.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, kln, jw, jw,
                             1, h, hOff + krow * ldh + kwtop, ldh, v, vOff, ldv,
                             0, wv, wvOff, ldwv);
                 Dlamv.dlacpy('A', kln, jw, wv, wvOff, ldwv, h, hOff + krow * ldh + kwtop, ldh);
@@ -659,7 +659,7 @@ interface Dlaqr {
             if (wantt) {
                 for (int kcol = kbot + 1; kcol < n; kcol += nh) {
                     int kln = min(nh, n - kcol);
-                    Dgemm.dgemm(BLAS.Transpose.Trans, BLAS.Transpose.NoTrans, jw, kln, jw,
+                    Dgemm.dgemm(BLAS.Trans.Trans, BLAS.Trans.NoTrans, jw, kln, jw,
                                 1, v, vOff, ldv, h, hOff + kwtop * ldh + kcol, ldh,
                                 0, t, tOff, ldt);
                     Dlamv.dlacpy('A', jw, kln, t, tOff, ldt, h, hOff + kwtop * ldh + kcol, ldh);
@@ -669,7 +669,7 @@ interface Dlaqr {
             if (wantz) {
                 for (int krow = iloz; krow <= ihiz; krow += nv) {
                     int kln = min(nv, ihiz - krow + 1);
-                    Dgemm.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, kln, jw, jw,
+                    Dgemm.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, kln, jw, jw,
                                 1, z, zOff + krow * ldz + kwtop, ldz, v, vOff, ldv,
                                 0, wv, wvOff, ldwv);
                     Dlamv.dlacpy('A', kln, jw, wv, wvOff, ldwv, z, zOff + krow * ldz + kwtop, ldz);
@@ -1004,7 +1004,7 @@ interface Dlaqr {
 
             for (int jcol = min(ndcol, kbot) + 1; jcol <= jb0; jcol += nh) {
                 int jlen = min(nh, jb0 - jcol + 1);
-                Dgemm.dgemm(BLAS.Transpose.Trans, BLAS.Transpose.NoTrans, nu, jlen, nu,
+                Dgemm.dgemm(BLAS.Trans.Trans, BLAS.Trans.NoTrans, nu, jlen, nu,
                             1, u, uOff + k1 * ldu + k1, ldu,
                             h, hOff + (incol + k1 + 1) * ldh + jcol, ldh,
                             0, wh, whOff, ldwh);
@@ -1013,7 +1013,7 @@ interface Dlaqr {
 
             for (int jrow = jt0; jrow < max(ktop, incol); jrow += nv) {
                 int jlen = min(nv, max(ktop, incol) - jrow);
-                Dgemm.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, jlen, nu, nu,
+                Dgemm.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, jlen, nu, nu,
                             1, h, hOff + jrow * ldh + incol + k1 + 1, ldh,
                             u, uOff + k1 * ldu + k1, ldu,
                             0, wv, wvOff, ldwv);
@@ -1023,7 +1023,7 @@ interface Dlaqr {
             if (wantz) {
                 for (int jrow = iloz; jrow <= ihiz; jrow += nv) {
                     int jlen = min(nv, ihiz - jrow + 1);
-                    Dgemm.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, jlen, nu, nu,
+                    Dgemm.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, jlen, nu, nu,
                                 1, z, zOff + jrow * ldz + incol + k1 + 1, ldz,
                                 u, uOff + k1 * ldu + k1, ldu,
                                 0, wv, wvOff, ldwv);

@@ -25,7 +25,7 @@ class DlarfTest {
         System.out.println("Before Dlarf:");
         printMatrix(C, m, n);
 
-        Dlarf.dlarf(BLAS.Side.Left, m, n, v, 0, 1, tau, C, 0, ldc, work);
+        Dlarf.dlarf(BLAS.Side.Left, m, n, v, 0, 1, tau, C, 0, ldc, work, 0);
 
         System.out.println("After Dlarf:");
         printMatrix(C, m, n);
@@ -57,7 +57,7 @@ class DlarfTest {
         System.out.println("Before Dlarf:");
         printMatrix(C, m, n);
 
-        Dlarf.dlarf(BLAS.Side.Right, m, n, v, 0, 1, tau, C, 0, ldc, work);
+        Dlarf.dlarf(BLAS.Side.Right, m, n, v, 0, 1, tau, C, 0, ldc, work, 0);
 
         System.out.println("After Dlarf:");
         printMatrix(C, m, n);

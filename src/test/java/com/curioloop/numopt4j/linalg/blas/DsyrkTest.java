@@ -20,7 +20,7 @@ class DsyrkTest {
         };
         double[] C = new double[9];
 
-        Dsyrk.dsyrk(BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, 3, 3, 1.0, A, 0, 3, 0.0, C, 0, 3);
+        Dsyrk.dsyrk(BLAS.Uplo.Upper, BLAS.Trans.NoTrans, 3, 3, 1.0, A, 0, 3, 0.0, C, 0, 3);
 
         assertTrue(Double.isFinite(C[0]));
     }
@@ -34,13 +34,13 @@ class DsyrkTest {
         };
         double[] C = new double[9];
 
-        Dsyrk.dsyrk(BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, 3, 3, 1.0, A, 0, 3, 0.0, C, 0, 3);
+        Dsyrk.dsyrk(BLAS.Uplo.Lower, BLAS.Trans.NoTrans, 3, 3, 1.0, A, 0, 3, 0.0, C, 0, 3);
 
         assertTrue(Double.isFinite(C[0]));
     }
 
     @Test
     void testEmpty() {
-        Dsyrk.dsyrk(BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, 0, 0, 1.0, new double[0], 0, 0, 0.0, new double[0], 0, 0);
+        Dsyrk.dsyrk(BLAS.Uplo.Upper, BLAS.Trans.NoTrans, 0, 0, 1.0, new double[0], 0, 0, 0.0, new double[0], 0, 0);
     }
 }

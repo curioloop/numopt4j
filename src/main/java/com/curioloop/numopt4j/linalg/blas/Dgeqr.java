@@ -89,11 +89,9 @@ interface Dgeqr {
                 int ib = min(k - i, nb);
                 dgeqr2(m - i, ib, A, aOff + i * lda + i, lda, tau, tauOff + i, work, workOff);
                 if (i + ib < n) {
-                    BLAS.dlarft(A, aOff + i * lda + i, lda, tau, tauOff + i, work, workOff, ldwork, m - i, ib);
-                    BLAS.dlarfb(A, aOff + i * lda + i, lda,
-                                work, workOff, ldwork,
-                                A, aOff + i * lda + i + ib, lda,
-                                work, workOff + ib * ldwork, ldwork, m - i, n - i - ib, ib);
+                    Dlarft.dlarftForwardColWise(A, aOff + i * lda + i, lda, tau, tauOff + i, work, workOff, ldwork, m - i, ib);
+                    Dlarfb.dlarfbLeftForwardColWise(A, aOff + i * lda + i, lda, work, workOff, ldwork,
+                                A, aOff + i * lda + i + ib, lda, work, workOff + ib * ldwork, ldwork, m - i, n - i - ib, ib);
                 }
             }
         }
@@ -196,11 +194,9 @@ interface Dgeqr {
             for (int i = ki; i >= 0; i -= nb) {
                 int ib = min(nb, k - i);
                 if (i + ib < n) {
-                    BLAS.dlarft(A, aOff + i * lda + i, lda, tau, tauOff + i, work, workOff, ldwork, m - i, ib);
-                    BLAS.dlarfb(A, aOff + i * lda + i, lda,
-                                work, workOff, ldwork,
-                                A, aOff + i * lda + i + ib, lda,
-                                work, workOff + ib * ldwork, ldwork, m - i, n - i - ib, ib);
+                    Dlarft.dlarftForwardColWise(A, aOff + i * lda + i, lda, tau, tauOff + i, work, workOff, ldwork, m - i, ib);
+                    Dlarfb.dlarfbLeftForwardColWise(A, aOff + i * lda + i, lda, work, workOff, ldwork,
+                                A, aOff + i * lda + i + ib, lda, work, workOff + ib * ldwork, ldwork, m - i, n - i - ib, ib);
                 }
                 dorg2r(m - i, ib, ib, A, aOff + i * lda + i, lda, tau, tauOff + i, work, workOff);
                 for (int j = i; j < i + ib; j++) {

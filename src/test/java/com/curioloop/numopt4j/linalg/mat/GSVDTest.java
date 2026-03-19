@@ -142,7 +142,7 @@ class GSVDTest {
 
         double[] U = gsvd.U();
         double[] UtU = new double[m * m];
-        BLAS.dgemm(BLAS.Transpose.Trans, BLAS.Transpose.NoTrans, m, m, m, 1.0, U, 0, m, U, 0, m, 0.0, UtU, 0, m);
+        BLAS.dgemm(BLAS.Trans.Trans, BLAS.Trans.NoTrans, m, m, m, 1.0, U, 0, m, U, 0, m, 0.0, UtU, 0, m);
 
         for (int i = 0; i < m; i++) {
             for (int j = 0; j < m; j++) {
@@ -173,7 +173,7 @@ class GSVDTest {
 
         double[] V = gsvd.V();
         double[] VtV = new double[p * p];
-        BLAS.dgemm(BLAS.Transpose.Trans, BLAS.Transpose.NoTrans, p, p, p, 1.0, V, 0, p, V, 0, p, 0.0, VtV, 0, p);
+        BLAS.dgemm(BLAS.Trans.Trans, BLAS.Trans.NoTrans, p, p, p, 1.0, V, 0, p, V, 0, p, 0.0, VtV, 0, p);
 
         for (int i = 0; i < p; i++) {
             for (int j = 0; j < p; j++) {
@@ -204,7 +204,7 @@ class GSVDTest {
 
         double[] Q = gsvd.Q();
         double[] QtQ = new double[n * n];
-        BLAS.dgemm(BLAS.Transpose.Trans, BLAS.Transpose.NoTrans, n, n, n, 1.0, Q, 0, n, Q, 0, n, 0.0, QtQ, 0, n);
+        BLAS.dgemm(BLAS.Trans.Trans, BLAS.Trans.NoTrans, n, n, n, 1.0, Q, 0, n, Q, 0, n, 0.0, QtQ, 0, n);
 
         for (int i = 0; i < n; i++) {
             for (int j = 0; j < n; j++) {
@@ -236,7 +236,7 @@ class GSVDTest {
 
         double[] U = gsvd.U();
         double[] UtU = new double[m * m];
-        BLAS.dgemm(BLAS.Transpose.Trans, BLAS.Transpose.NoTrans, m, m, m, 1.0, U, 0, m, U, 0, m, 0.0, UtU, 0, m);
+        BLAS.dgemm(BLAS.Trans.Trans, BLAS.Trans.NoTrans, m, m, m, 1.0, U, 0, m, U, 0, m, 0.0, UtU, 0, m);
         for (int i = 0; i < m; i++) {
             for (int j = 0; j < m; j++) {
                 double expected = (i == j) ? 1.0 : 0.0;
@@ -246,7 +246,7 @@ class GSVDTest {
 
         double[] V = gsvd.V();
         double[] VtV = new double[p * p];
-        BLAS.dgemm(BLAS.Transpose.Trans, BLAS.Transpose.NoTrans, p, p, p, 1.0, V, 0, p, V, 0, p, 0.0, VtV, 0, p);
+        BLAS.dgemm(BLAS.Trans.Trans, BLAS.Trans.NoTrans, p, p, p, 1.0, V, 0, p, V, 0, p, 0.0, VtV, 0, p);
         for (int i = 0; i < p; i++) {
             for (int j = 0; j < p; j++) {
                 double expected = (i == j) ? 1.0 : 0.0;
@@ -256,7 +256,7 @@ class GSVDTest {
 
         double[] Q = gsvd.Q();
         double[] QtQ = new double[n * n];
-        BLAS.dgemm(BLAS.Transpose.Trans, BLAS.Transpose.NoTrans, n, n, n, 1.0, Q, 0, n, Q, 0, n, 0.0, QtQ, 0, n);
+        BLAS.dgemm(BLAS.Trans.Trans, BLAS.Trans.NoTrans, n, n, n, 1.0, Q, 0, n, Q, 0, n, 0.0, QtQ, 0, n);
         for (int i = 0; i < n; i++) {
             for (int j = 0; j < n; j++) {
                 double expected = (i == j) ? 1.0 : 0.0;

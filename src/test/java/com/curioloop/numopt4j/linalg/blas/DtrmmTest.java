@@ -37,7 +37,7 @@ public class DtrmmTest {
                 computeExpectedLeftNN(A, m, B_expected, n);
                 
                 double[] B_result = B.clone();
-                Dtrmm.dtrmm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit, m, n, 1.0, A, 0, m, B_result, 0, n);
+                Dtrmm.dtrmm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, m, n, 1.0, A, 0, m, B_result, 0, n);
                 
                 assertThat(maxDiff(B_result, B_expected)).isLessThan(1e-10)
                     .as("Left+Upper+NN non-unit: m=%d, n=%d", m, n);
@@ -56,7 +56,7 @@ public class DtrmmTest {
                 computeExpectedLeftNN_Unit(A, m, B_expected, n);
                 
                 double[] B_result = B.clone();
-                Dtrmm.dtrmm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.Unit, m, n, 1.0, A, 0, m, B_result, 0, n);
+                Dtrmm.dtrmm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.Unit, m, n, 1.0, A, 0, m, B_result, 0, n);
                 
                 assertThat(maxDiff(B_result, B_expected)).isLessThan(1e-10)
                     .as("Left+Upper+NN unit: m=%d, n=%d", m, n);
@@ -76,7 +76,7 @@ public class DtrmmTest {
                 computeExpectedLeftLowerNN(A, m, B_expected, n);
                 
                 double[] B_result = B.clone();
-                Dtrmm.dtrmm(BLAS.Side.Left, BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit, m, n, 1.0, A, 0, m, B_result, 0, n);
+                Dtrmm.dtrmm(BLAS.Side.Left, BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, m, n, 1.0, A, 0, m, B_result, 0, n);
                 
                 assertThat(maxDiff(B_result, B_expected)).isLessThan(1e-10)
                     .as("Left+Lower+NN non-unit: m=%d, n=%d", m, n);
@@ -95,7 +95,7 @@ public class DtrmmTest {
                 computeExpectedLeftLowerNN_Unit(A, m, B_expected, n);
                 
                 double[] B_result = B.clone();
-                Dtrmm.dtrmm(BLAS.Side.Left, BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, BLAS.Diag.Unit, m, n, 1.0, A, 0, m, B_result, 0, n);
+                Dtrmm.dtrmm(BLAS.Side.Left, BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.Unit, m, n, 1.0, A, 0, m, B_result, 0, n);
                 
                 assertThat(maxDiff(B_result, B_expected)).isLessThan(1e-10)
                     .as("Left+Lower+NN unit: m=%d, n=%d", m, n);
@@ -115,7 +115,7 @@ public class DtrmmTest {
                 computeExpectedLeftTN(A, m, B_expected, n);
                 
                 double[] B_result = B.clone();
-                Dtrmm.dtrmm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Transpose.Trans, BLAS.Diag.NonUnit, m, n, 1.0, A, 0, m, B_result, 0, n);
+                Dtrmm.dtrmm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Trans.Trans, BLAS.Diag.NonUnit, m, n, 1.0, A, 0, m, B_result, 0, n);
                 
                 assertThat(maxDiff(B_result, B_expected)).isLessThan(1e-10)
                     .as("Left+Upper+TN non-unit: m=%d, n=%d", m, n);
@@ -134,7 +134,7 @@ public class DtrmmTest {
                 computeExpectedLeftTN_Unit(A, m, B_expected, n);
                 
                 double[] B_result = B.clone();
-                Dtrmm.dtrmm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Transpose.Trans, BLAS.Diag.Unit, m, n, 1.0, A, 0, m, B_result, 0, n);
+                Dtrmm.dtrmm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Trans.Trans, BLAS.Diag.Unit, m, n, 1.0, A, 0, m, B_result, 0, n);
                 
                 assertThat(maxDiff(B_result, B_expected)).isLessThan(1e-10)
                     .as("Left+Upper+TN unit: m=%d, n=%d", m, n);
@@ -154,7 +154,7 @@ public class DtrmmTest {
                 computeExpectedLeftLowerTN(A, m, B_expected, n);
                 
                 double[] B_result = B.clone();
-                Dtrmm.dtrmm(BLAS.Side.Left, BLAS.Uplo.Lower, BLAS.Transpose.Trans, BLAS.Diag.NonUnit, m, n, 1.0, A, 0, m, B_result, 0, n);
+                Dtrmm.dtrmm(BLAS.Side.Left, BLAS.Uplo.Lower, BLAS.Trans.Trans, BLAS.Diag.NonUnit, m, n, 1.0, A, 0, m, B_result, 0, n);
                 
                 assertThat(maxDiff(B_result, B_expected)).isLessThan(1e-10)
                     .as("Left+Lower+TN non-unit: m=%d, n=%d", m, n);
@@ -173,7 +173,7 @@ public class DtrmmTest {
                 computeExpectedLeftLowerTN_Unit(A, m, B_expected, n);
                 
                 double[] B_result = B.clone();
-                Dtrmm.dtrmm(BLAS.Side.Left, BLAS.Uplo.Lower, BLAS.Transpose.Trans, BLAS.Diag.Unit, m, n, 1.0, A, 0, m, B_result, 0, n);
+                Dtrmm.dtrmm(BLAS.Side.Left, BLAS.Uplo.Lower, BLAS.Trans.Trans, BLAS.Diag.Unit, m, n, 1.0, A, 0, m, B_result, 0, n);
                 
                 assertThat(maxDiff(B_result, B_expected)).isLessThan(1e-10)
                     .as("Left+Lower+TN unit: m=%d, n=%d", m, n);
@@ -197,7 +197,7 @@ public class DtrmmTest {
                 computeExpectedRightNN(A, n, B_expected, m);
                 
                 double[] B_result = B.clone();
-                Dtrmm.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit, m, n, 1.0, A, 0, n, B_result, 0, n);
+                Dtrmm.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, m, n, 1.0, A, 0, n, B_result, 0, n);
                 
                 assertThat(maxDiff(B_result, B_expected)).isLessThan(1e-10)
                     .as("Right+Upper+NN non-unit: m=%d, n=%d", m, n);
@@ -216,7 +216,7 @@ public class DtrmmTest {
                 computeExpectedRightNN_Unit(A, n, B_expected, m);
                 
                 double[] B_result = B.clone();
-                Dtrmm.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.Unit, m, n, 1.0, A, 0, n, B_result, 0, n);
+                Dtrmm.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.Unit, m, n, 1.0, A, 0, n, B_result, 0, n);
                 
                 assertThat(maxDiff(B_result, B_expected)).isLessThan(1e-10)
                     .as("Right+Upper+NN unit: m=%d, n=%d", m, n);
@@ -236,7 +236,7 @@ public class DtrmmTest {
                 computeExpectedRightLowerNN(A, n, B_expected, m);
                 
                 double[] B_result = B.clone();
-                Dtrmm.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit, m, n, 1.0, A, 0, n, B_result, 0, n);
+                Dtrmm.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, m, n, 1.0, A, 0, n, B_result, 0, n);
                 
                 assertThat(maxDiff(B_result, B_expected)).isLessThan(1e-10)
                     .as("Right+Lower+NN non-unit: m=%d, n=%d", m, n);
@@ -255,7 +255,7 @@ public class DtrmmTest {
                 computeExpectedRightLowerNN_Unit(A, n, B_expected, m);
                 
                 double[] B_result = B.clone();
-                Dtrmm.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, BLAS.Diag.Unit, m, n, 1.0, A, 0, n, B_result, 0, n);
+                Dtrmm.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.Unit, m, n, 1.0, A, 0, n, B_result, 0, n);
                 
                 assertThat(maxDiff(B_result, B_expected)).isLessThan(1e-10)
                     .as("Right+Lower+NN unit: m=%d, n=%d", m, n);
@@ -275,7 +275,7 @@ public class DtrmmTest {
                 computeExpectedRightTN(A, n, B_expected, m);
                 
                 double[] B_result = B.clone();
-                Dtrmm.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.Trans, BLAS.Diag.NonUnit, m, n, 1.0, A, 0, n, B_result, 0, n);
+                Dtrmm.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.Trans, BLAS.Diag.NonUnit, m, n, 1.0, A, 0, n, B_result, 0, n);
                 
                 assertThat(maxDiff(B_result, B_expected)).isLessThan(1e-10)
                     .as("Right+Upper+TN non-unit: m=%d, n=%d", m, n);
@@ -294,7 +294,7 @@ public class DtrmmTest {
                 computeExpectedRightTN_Unit(A, n, B_expected, m);
                 
                 double[] B_result = B.clone();
-                Dtrmm.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.Trans, BLAS.Diag.Unit, m, n, 1.0, A, 0, n, B_result, 0, n);
+                Dtrmm.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.Trans, BLAS.Diag.Unit, m, n, 1.0, A, 0, n, B_result, 0, n);
                 
                 assertThat(maxDiff(B_result, B_expected)).isLessThan(1e-10)
                     .as("Right+Upper+TN unit: m=%d, n=%d", m, n);
@@ -314,7 +314,7 @@ public class DtrmmTest {
                 computeExpectedRightLowerTN(A, n, B_expected, m);
                 
                 double[] B_result = B.clone();
-                Dtrmm.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.Trans, BLAS.Diag.NonUnit, m, n, 1.0, A, 0, n, B_result, 0, n);
+                Dtrmm.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.Trans, BLAS.Diag.NonUnit, m, n, 1.0, A, 0, n, B_result, 0, n);
                 
                 assertThat(maxDiff(B_result, B_expected)).isLessThan(1e-10)
                     .as("Right+Lower+TN non-unit: m=%d, n=%d", m, n);
@@ -333,7 +333,7 @@ public class DtrmmTest {
                 computeExpectedRightLowerTN_Unit(A, n, B_expected, m);
                 
                 double[] B_result = B.clone();
-                Dtrmm.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.Trans, BLAS.Diag.Unit, m, n, 1.0, A, 0, n, B_result, 0, n);
+                Dtrmm.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.Trans, BLAS.Diag.Unit, m, n, 1.0, A, 0, n, B_result, 0, n);
                 
                 assertThat(maxDiff(B_result, B_expected)).isLessThan(1e-10)
                     .as("Right+Lower+TN unit: m=%d, n=%d", m, n);
@@ -366,7 +366,7 @@ public class DtrmmTest {
                 }
                 
                 double[] B_result = B.clone();
-                Dtrmm.dtrmm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit, m, n, alpha, A, 0, m, B_result, 0, n);
+                Dtrmm.dtrmm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, m, n, alpha, A, 0, m, B_result, 0, n);
                 
                 assertThat(maxDiff(B_result, B_expected)).isLessThan(1e-10)
                     .as("Alpha test: m=%d, n=%d, alpha=%.3f", m, n, alpha);

@@ -9,10 +9,10 @@ import static java.lang.Math.min;
 
 public interface Dlatrs {
 
-    static double dlatrs(BLAS.Uplo uplo, BLAS.Transpose trans, BLAS.Diag diag, boolean normin,
+    static double dlatrs(BLAS.Uplo uplo, BLAS.Trans trans, BLAS.Diag diag, boolean normin,
                          int n, double[] A, int lda, double[] x, int xOff, double[] cnorm, int cnormOff) {
         boolean upper = uplo == BLAS.Uplo.Upper;
-        boolean notrans = trans == BLAS.Transpose.NoTrans;
+        boolean notrans = trans == BLAS.Trans.NoTrans;
         boolean nounit = diag == BLAS.Diag.NonUnit;
         if (n == 0) return 1.0;
 
@@ -92,7 +92,7 @@ public interface Dlatrs {
                         }
                     }
                 } else {
-                    Dtrsl.dtrsl(A, 0, lda, n, x, xOff, upper ? BLAS.Uplo.Upper : BLAS.Uplo.Lower, notrans ? BLAS.Transpose.NoTrans : BLAS.Transpose.Trans);
+                    Dtrsl.dtrsl(A, 0, lda, n, x, xOff, upper ? BLAS.Uplo.Upper : BLAS.Uplo.Lower, notrans ? BLAS.Trans.NoTrans : BLAS.Trans.Trans);
                     return scale;
                 }
             }
@@ -157,7 +157,7 @@ public interface Dlatrs {
         }
 
         if (grow * tscal > smlnum) {
-            Dtrsl.dtrsl(A, 0, lda, n, x, xOff, upper ? BLAS.Uplo.Upper : BLAS.Uplo.Lower, notrans ? BLAS.Transpose.NoTrans : BLAS.Transpose.Trans);
+            Dtrsl.dtrsl(A, 0, lda, n, x, xOff, upper ? BLAS.Uplo.Upper : BLAS.Uplo.Lower, notrans ? BLAS.Trans.NoTrans : BLAS.Trans.Trans);
             if (tscal != 1.0) {
                 for (int j = 0; j < n; j++) {
                     cnorm[cnormOff + j] /= tscal;

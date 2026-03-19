@@ -25,7 +25,7 @@ class DtrexcTest {
         int n = 3;
         double[] work = new double[workSize(n)];
 
-        boolean ok = Dtrexc.dtrexc(false, n, T, 0, n, null, 0, n, 2, 0, work);
+        boolean ok = Dtrexc.dtrexc(false, n, T, 0, n, null, 0, n, 2, 0, work, 0);
 
         assertTrue(ok);
     }
@@ -45,7 +45,7 @@ class DtrexcTest {
         int n = 3;
         double[] work = new double[workSize(n)];
 
-        boolean ok = Dtrexc.dtrexc(true, n, T, 0, n, Q, 0, n, 2, 0, work);
+        boolean ok = Dtrexc.dtrexc(true, n, T, 0, n, Q, 0, n, 2, 0, work, 0);
 
         assertTrue(ok);
     }
@@ -61,7 +61,7 @@ class DtrexcTest {
         int n = 3;
         double[] work = new double[workSize(n)];
 
-        boolean ok = Dtrexc.dtrexc(false, n, T, 0, n, null, 0, n, 1, 1, work);
+        boolean ok = Dtrexc.dtrexc(false, n, T, 0, n, null, 0, n, 1, 1, work, 0);
 
         assertTrue(ok);
     }
@@ -69,7 +69,7 @@ class DtrexcTest {
     @Test
     void testEmpty() {
         double[] work = new double[32];
-        boolean ok = Dtrexc.dtrexc(false, 0, new double[0], 0, 0, null, 0, 0, 0, 0, work);
+        boolean ok = Dtrexc.dtrexc(false, 0, new double[0], 0, 0, null, 0, 0, 0, 0, work, 0);
         assertTrue(ok);
     }
 
@@ -78,7 +78,7 @@ class DtrexcTest {
         double[] T = {5};
         double[] work = new double[workSize(1)];
 
-        boolean ok = Dtrexc.dtrexc(false, 1, T, 0, 1, null, 0, 1, 0, 0, work);
+        boolean ok = Dtrexc.dtrexc(false, 1, T, 0, 1, null, 0, 1, 0, 0, work, 0);
 
         assertTrue(ok);
     }

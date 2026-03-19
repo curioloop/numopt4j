@@ -12,12 +12,6 @@ interface Dsyr2k {
 
     int THRESHOLD = 64;
 
-    static void dsyr2k(BLAS.Uplo uplo, BLAS.Transpose trans, int n, int k, double alpha,
-                       double[] A, int lda, double[] B, int ldb, double beta,
-                       double[] C, int ldc) {
-        dsyr2k(uplo, trans, n, k, alpha, A, 0, lda, B, 0, ldb, beta, C, 0, ldc);
-    }
-
     /**
      * DSYR2K performs the symmetric rank-2k update with offsets.
      * C := alpha*A*B^T + alpha*B*A^T + beta*C
@@ -38,15 +32,15 @@ interface Dsyr2k {
      * @param cOff  offset into C
      * @param ldc   leading dimension of C
      */
-    static void dsyr2k(BLAS.Uplo uplo, BLAS.Transpose trans, int n, int k, double alpha,
-                       double[] A, int aOff, int lda, double[] B, int bOff, int ldb, 
+    static void dsyr2k(BLAS.Uplo uplo, BLAS.Trans trans, int n, int k, double alpha,
+                       double[] A, int aOff, int lda, double[] B, int bOff, int ldb,
                        double beta, double[] C, int cOff, int ldc) {
         if (n == 0 || (alpha == 0.0 && beta == 1.0)) {
             return;
         }
 
         boolean upper = uplo == BLAS.Uplo.Upper;
-        boolean noTrans = trans == BLAS.Transpose.NoTrans;
+        boolean noTrans = trans == BLAS.Trans.NoTrans;
 
         if (beta != 1.0) {
             scaleTriangular(C, cOff, ldc, n, beta, upper);

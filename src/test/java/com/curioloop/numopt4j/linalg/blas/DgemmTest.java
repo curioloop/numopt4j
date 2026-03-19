@@ -68,7 +68,7 @@ public class DgemmTest {
         
         double[] C_expected = computeExpectedNN(A, m, k, B, n);
         
-        Dgemm.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, m, n, k, 1.0, A, 0, k, B, 0, n, 0.0, C, 0, n);
+        Dgemm.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, m, n, k, 1.0, A, 0, k, B, 0, n, 0.0, C, 0, n);
         
         assertThat(maxDiff(C, C_expected)).isLessThan(1e-10)
             .as("NN: m=%d, n=%d, k=%d", m, n, k);
@@ -114,7 +114,7 @@ public class DgemmTest {
         // DGEMM: C = A^T * B
         // - A: k x m (transposed to m x k), lda = m
         // - B: k x n, ldb = n
-        Dgemm.dgemm(BLAS.Transpose.Trans, BLAS.Transpose.NoTrans, m, n, k, 1.0, A, 0, m, B, 0, n, 0.0, C, 0, n);
+        Dgemm.dgemm(BLAS.Trans.Trans, BLAS.Trans.NoTrans, m, n, k, 1.0, A, 0, m, B, 0, n, 0.0, C, 0, n);
         
         assertThat(maxDiff(C, C_expected)).isLessThan(1e-10)
             .as("TN: m=%d, n=%d, k=%d", m, n, k);
@@ -161,7 +161,7 @@ public class DgemmTest {
         // DGEMM: C = A * B^T
         // - A: m x k, lda = k
         // - B: n x k (but treated as k x n for transpose), ldb = k
-        Dgemm.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.Trans, m, n, k, 1.0, A, 0, k, B, 0, k, 0.0, C, 0, n);
+        Dgemm.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.Trans, m, n, k, 1.0, A, 0, k, B, 0, k, 0.0, C, 0, n);
         
         assertThat(maxDiff(C, C_expected)).isLessThan(1e-10)
             .as("NT: m=%d, n=%d, k=%d", m, n, k);
@@ -201,7 +201,7 @@ public class DgemmTest {
             }
         }
         
-        Dgemm.dgemm(BLAS.Transpose.Trans, BLAS.Transpose.Trans, m, n, k, 1.0, A, 0, m, B, 0, k, 0.0, C, 0, n);
+        Dgemm.dgemm(BLAS.Trans.Trans, BLAS.Trans.Trans, m, n, k, 1.0, A, 0, m, B, 0, k, 0.0, C, 0, n);
         
         assertThat(maxDiff(C, C_expected)).isLessThan(1e-10)
             .as("TT: m=%d, n=%d, k=%d", m, n, k);
@@ -221,7 +221,7 @@ public class DgemmTest {
                 double[] C_original = C.clone();
                 
                 // With alpha=0, C should remain unchanged regardless of A and B
-                Dgemm.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, m, n, 5, 0.0, A, 0, 5, B, 0, n, 1.0, C, 0, n);
+                Dgemm.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, m, n, 5, 0.0, A, 0, 5, B, 0, n, 1.0, C, 0, n);
                 
                 assertThat(maxDiff(C, C_original)).isLessThan(1e-10)
                     .as("Alpha=0: m=%d, n=%d", m, n);
@@ -243,7 +243,7 @@ public class DgemmTest {
                     double[] C = createRandomMatrix(m, n);  // should be ignored
                     double[] C_expected = computeExpectedNN(A, m, k, B, n);
                     
-                    Dgemm.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, m, n, k, 1.0, A, 0, k, B, 0, n, 0.0, C, 0, n);
+                    Dgemm.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, m, n, k, 1.0, A, 0, k, B, 0, n, 0.0, C, 0, n);
                     
                     assertThat(maxDiff(C, C_expected)).isLessThan(1e-10)
                         .as("Beta=0: m=%d, n=%d, k=%d", m, n, k);
@@ -272,7 +272,7 @@ public class DgemmTest {
                         C_expected[i] += C_original[i];
                     }
                     
-                    Dgemm.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, m, n, k, 1.0, A, 0, k, B, 0, n, 1.0, C, 0, n);
+                    Dgemm.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, m, n, k, 1.0, A, 0, k, B, 0, n, 1.0, C, 0, n);
                     
                     assertThat(maxDiff(C, C_expected)).isLessThan(1e-10)
                         .as("Beta=1: m=%d, n=%d, k=%d", m, n, k);
@@ -299,7 +299,7 @@ public class DgemmTest {
                         C_expected[i] *= -2.0;
                     }
                     
-                    Dgemm.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, m, n, k, -2.0, A, 0, k, B, 0, n, 0.0, C, 0, n);
+                    Dgemm.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, m, n, k, -2.0, A, 0, k, B, 0, n, 0.0, C, 0, n);
                     
                     assertThat(maxDiff(C, C_expected)).isLessThan(1e-10)
                         .as("Negative alpha: m=%d, n=%d, k=%d", m, n, k);
@@ -318,7 +318,7 @@ public class DgemmTest {
         double[] B = createRandomMatrix(5, 3);
         double[] C = createRandomMatrix(0, 3);
         
-        Dgemm.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, 0, 3, 5, 1.0, A, 0, 5, B, 0, 3, 0.0, C, 0, 3);
+        Dgemm.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, 0, 3, 5, 1.0, A, 0, 5, B, 0, 3, 0.0, C, 0, 3);
         // Should not throw
     }
 
@@ -328,7 +328,7 @@ public class DgemmTest {
         double[] B = createRandomMatrix(5, 0);
         double[] C = createRandomMatrix(4, 0);
         
-        Dgemm.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, 4, 0, 5, 1.0, A, 0, 5, B, 0, 0, 0.0, C, 0, 0);
+        Dgemm.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, 4, 0, 5, 1.0, A, 0, 5, B, 0, 0, 0.0, C, 0, 0);
         // Should not throw
     }
 
@@ -338,7 +338,7 @@ public class DgemmTest {
         double[] B = createRandomMatrix(0, 3);
         double[] C = new double[12];
         
-        Dgemm.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, 4, 3, 0, 1.0, A, 0, 0, B, 0, 0, 0.0, C, 0, 3);
+        Dgemm.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, 4, 3, 0, 1.0, A, 0, 0, B, 0, 0, 0.0, C, 0, 3);
         // With k=0, C should remain 0 (since alpha=0 effectively)
     }
 
@@ -381,7 +381,7 @@ public class DgemmTest {
                         }
                     }
                     
-                    Dgemm.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, m, n, k, 1.0, A, offset * lda + offset, lda, B, offset * ldb + offset, ldb, 0.0, C, offset * ldc + offset, ldc);
+                    Dgemm.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, m, n, k, 1.0, A, offset * lda + offset, lda, B, offset * ldb + offset, ldb, 0.0, C, offset * ldc + offset, ldc);
                     
                     // Verify the submatrix
                     for (int i = 0; i < m; i++) {
@@ -429,7 +429,7 @@ public class DgemmTest {
                         }
                     }
                     
-                    Dgemm.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, m, n, k, 1.0, A, 0, lda, B, 0, ldb, 0.0, C, 0, ldc);
+                    Dgemm.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, m, n, k, 1.0, A, 0, lda, B, 0, ldb, 0.0, C, 0, ldc);
                     
                     for (int i = 0; i < m; i++) {
                         for (int j = 0; j < n; j++) {
@@ -456,7 +456,7 @@ public class DgemmTest {
                 double[] C_original = C.clone();
                 
                 // alpha=0, beta=1 should not change C
-                Dgemm.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, m, n, 5, 0.0, 
+                Dgemm.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, m, n, 5, 0.0,
                     new double[m*5], 0, 5, 
                     new double[5*n], 0, n, 
                     1.0, C, 0, n);
@@ -495,7 +495,7 @@ public class DgemmTest {
                                 C_expected[i] = alpha * C_expected[i] + beta * C_original[i];
                             }
                             
-                            Dgemm.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, m, n, k, alpha, A, 0, k, B, 0, n, beta, C, 0, n);
+                            Dgemm.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, m, n, k, alpha, A, 0, k, B, 0, n, beta, C, 0, n);
                             
                             assertThat(maxDiff(C, C_expected)).isLessThan(1e-10)
                                 .as("Alpha=%.1f, beta=%.1f: m=%d, n=%d, k=%d", 

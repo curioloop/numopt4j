@@ -22,14 +22,14 @@ class DorghrTest {
         double[] tau = {0.5, 0.3};
         double[] work = new double[100];
 
-        Dgees.dorghr(n, 0, n - 1, A, n, tau, 0, work, 0, work.length);
+        Dgees.dorghr(n, 0, n - 1, A, 0, n, tau, 0, work, 0, work.length);
 
         assertTrue(Double.isFinite(A[0]));
     }
 
     @Test
     void testEmpty() {
-        Dgees.dorghr(0, 0, -1, new double[0], 0, new double[0], 0, new double[1], 0, 0);
+        Dgees.dorghr(0, 0, -1, new double[0], 0, 0, new double[0], 0, new double[1], 0, 0);
     }
 
     @Test
@@ -38,7 +38,7 @@ class DorghrTest {
         double[] tau = new double[1];
         double[] work = new double[10];
 
-        Dgees.dorghr(1, 0, 0, A, 1, tau, 0, work, 0, work.length);
+        Dgees.dorghr(1, 0, 0, A, 0, 1, tau, 0, work, 0, work.length);
 
         assertEquals(5, A[0], TOL);
     }

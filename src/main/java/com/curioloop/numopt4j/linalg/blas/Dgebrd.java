@@ -76,12 +76,12 @@ interface Dgebrd {
                           d, dOff + i, e, eOff + i, tauQ, tauQOff + i, tauP, tauPOff + i,
                           work, workOff, ldworkx, work, workOff + m * ldworkx, ldworky);
 
-            BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.Trans, m - i - nb, n - i - nb, nb,
+            BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.Trans, m - i - nb, n - i - nb, nb,
                        -1, A, aOff + (i + nb) * lda + i, lda,
                        work, workOff + nb * ldworky, ldworky,
                        1, A, aOff + (i + nb) * lda + i + nb, lda);
 
-            BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, m - i - nb, n - i - nb, nb,
+            BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, m - i - nb, n - i - nb, nb,
                        -1, work, workOff + nb * ldworkx, ldworkx,
                        A, aOff + i * lda + i + nb, lda,
                        1, A, aOff + (i + nb) * lda + i + nb, lda);

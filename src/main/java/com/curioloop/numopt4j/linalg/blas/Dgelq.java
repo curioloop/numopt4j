@@ -16,7 +16,7 @@ import static java.lang.Math.*;
  * @see #dgelqf(int, int, double[], int, int, double[], int, double[], int, int)
  * @see #dgelq2(int, int, double[], int, int, double[], int, double[], int)
  * @see #dorglq(int, int, int, double[], int, int, double[], int, double[], int, int)
- * @see #dormlq(BLAS.Side, BLAS.Transpose, int, int, int, double[], int, int, double[], int, double[], int, int, double[], int, int)
+ * @see #dormlq(BLAS.Side, BLAS.Trans, int, int, int, double[], int, int, double[], int, double[], int, int, double[], int, int)
  */
 interface Dgelq {
 
@@ -228,13 +228,13 @@ interface Dgelq {
         return 0;
     }
 
-    static int dormlq(BLAS.Side side, BLAS.Transpose trans, int m, int n, int k,
+    static int dormlq(BLAS.Side side, BLAS.Trans trans, int m, int n, int k,
                       double[] A, int aOff, int lda,
                       double[] tau, int tauOff,
                       double[] C, int cOff, int ldc,
                       double[] work, int workOff, int lwork) {
         boolean left = side == BLAS.Side.Left;
-        boolean notrans = trans == BLAS.Transpose.NoTrans;
+        boolean notrans = trans == BLAS.Trans.NoTrans;
 
         int nw = left ? n : m;
 
@@ -296,7 +296,7 @@ interface Dgelq {
         int tOff = workOff;
         int wrkOff = workOff + tsize;
 
-        BLAS.Transpose transt = notrans ? BLAS.Transpose.Trans : BLAS.Transpose.NoTrans;
+        BLAS.Trans transt = notrans ? BLAS.Trans.Trans : BLAS.Trans.NoTrans;
 
         if (left && notrans) {
             for (int i = 0; i < k; i += nb) {
@@ -344,13 +344,13 @@ interface Dgelq {
         return 0;
     }
 
-    static void dorml2(BLAS.Side side, BLAS.Transpose trans, int m, int n, int k,
+    static void dorml2(BLAS.Side side, BLAS.Trans trans, int m, int n, int k,
                        double[] A, int aOff, int lda,
                        double[] tau, int tauOff,
                        double[] C, int cOff, int ldc,
                        double[] work, int workOff) {
         boolean left = side == BLAS.Side.Left;
-        boolean notrans = trans == BLAS.Transpose.NoTrans;
+        boolean notrans = trans == BLAS.Trans.NoTrans;
 
         if (m == 0 || n == 0 || k == 0) {
             return;
@@ -446,14 +446,14 @@ interface Dgelq {
         }
     }
 
-    static void dlarfbRowWiseLeft(BLAS.Side side, BLAS.Transpose trans, int m, int n, int k,
+    static void dlarfbRowWiseLeft(BLAS.Side side, BLAS.Trans trans, int m, int n, int k,
                                   double[] V, int vOff, int ldv,
                                   double[] T, int tOff, int ldt,
                                   double[] C, int cOff, int ldc,
                                   double[] work, int wOff, int ldwork) {
         if (m <= 0 || n <= 0 || k <= 0) return;
 
-        BLAS.Transpose transEnum = (trans == BLAS.Transpose.NoTrans) ? BLAS.Transpose.Trans : BLAS.Transpose.NoTrans;
+        BLAS.Trans transEnum = (trans == BLAS.Trans.NoTrans) ? BLAS.Trans.Trans : BLAS.Trans.NoTrans;
 
         for (int j = 0; j < k; j++) {
             for (int i = 0; i < n; i++) {
@@ -461,10 +461,10 @@ interface Dgelq {
             }
         }
 
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.Trans, BLAS.Diag.Unit, n, k, 1.0, V, vOff, ldv, work, wOff, n);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.Trans, BLAS.Diag.Unit, n, k, 1.0, V, vOff, ldv, work, wOff, n);
 
         if (m > k) {
-            BLAS.dgemm(BLAS.Transpose.Trans, BLAS.Transpose.Trans, n, k, m - k,
+            BLAS.dgemm(BLAS.Trans.Trans, BLAS.Trans.Trans, n, k, m - k,
                     1.0, C, cOff + k * ldc, ldc,
                     V, vOff + k, ldv,
                     1.0, work, wOff, n);
@@ -473,13 +473,13 @@ interface Dgelq {
         BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, transEnum, BLAS.Diag.NonUnit, n, k, 1.0, T, tOff, ldt, work, wOff, n);
 
         if (m > k) {
-            BLAS.dgemm(BLAS.Transpose.Trans, BLAS.Transpose.Trans, m - k, n, k,
+            BLAS.dgemm(BLAS.Trans.Trans, BLAS.Trans.Trans, m - k, n, k,
                     -1.0, V, vOff + k, ldv,
                     work, wOff, n,
                     1.0, C, cOff + k * ldc, ldc);
         }
 
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.Unit, n, k, 1.0, V, vOff, ldv, work, wOff, n);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.Unit, n, k, 1.0, V, vOff, ldv, work, wOff, n);
 
         for (int i = 0; i < n; i++) {
             for (int j = 0; j < k; j++) {
@@ -488,14 +488,14 @@ interface Dgelq {
         }
     }
 
-    static void dlarfbRowWiseRight(BLAS.Side side, BLAS.Transpose trans, int m, int n, int k,
+    static void dlarfbRowWiseRight(BLAS.Side side, BLAS.Trans trans, int m, int n, int k,
                                    double[] V, int vOff, int ldv,
                                    double[] T, int tOff, int ldt,
                                    double[] C, int cOff, int ldc,
                                    double[] work, int wOff, int ldwork) {
         if (m <= 0 || n <= 0 || k <= 0) return;
 
-        BLAS.Transpose transEnum = (trans == BLAS.Transpose.NoTrans) ? BLAS.Transpose.Trans : BLAS.Transpose.NoTrans;
+        BLAS.Trans transEnum = (trans == BLAS.Trans.NoTrans) ? BLAS.Trans.Trans : BLAS.Trans.NoTrans;
 
         for (int j = 0; j < k; j++) {
             for (int i = 0; i < m; i++) {
@@ -503,10 +503,10 @@ interface Dgelq {
             }
         }
 
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.Trans, BLAS.Diag.Unit, m, k, 1.0, V, vOff, ldv, work, wOff, m);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.Trans, BLAS.Diag.Unit, m, k, 1.0, V, vOff, ldv, work, wOff, m);
 
         if (n > k) {
-            BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.Trans, m, k, n - k,
+            BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.Trans, m, k, n - k,
                     1.0, C, cOff + k, ldc,
                     V, vOff + k, ldv,
                     1.0, work, wOff, m);
@@ -515,13 +515,13 @@ interface Dgelq {
         BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, transEnum, BLAS.Diag.NonUnit, m, k, 1.0, T, tOff, ldt, work, wOff, m);
 
         if (n > k) {
-            BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans, m, n - k, k,
+            BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, m, n - k, k,
                     -1.0, work, wOff, m,
                     V, vOff + k, ldv,
                     1.0, C, cOff + k, ldc);
         }
 
-        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.Unit, m, k, 1.0, V, vOff, ldv, work, wOff, m);
+        BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.Unit, m, k, 1.0, V, vOff, ldv, work, wOff, m);
 
         for (int i = 0; i < m; i++) {
             for (int j = 0; j < k; j++) {

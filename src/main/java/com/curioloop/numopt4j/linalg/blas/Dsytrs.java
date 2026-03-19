@@ -44,7 +44,7 @@ interface Dsytrs {
                     }
 
                     if (k < n - 1) {
-                        Dgemv.dgemv(BLAS.Transpose.NoTrans, n - k - 1, 1, -1.0,
+                        Dgemv.dgemv(BLAS.Trans.NoTrans, n - k - 1, 1, -1.0,
                                 A, aOff + (k + 1) * lda + k, lda,
                                 B, bjOff + k * ldb, ldb, 1.0,
                                 B, bjOff + (k + 1) * ldb, ldb);
@@ -62,7 +62,7 @@ interface Dsytrs {
                     }
 
                     if (k < n - 2) {
-                        Dgemv.dgemv(BLAS.Transpose.NoTrans, n - k - 2, 2, -1.0,
+                        Dgemv.dgemv(BLAS.Trans.NoTrans, n - k - 2, 2, -1.0,
                                 A, aOff + (k + 2) * lda + k, lda,
                                 B, bjOff + k * ldb, ldb, 1.0,
                                 B, bjOff + (k + 2) * ldb, ldb);
@@ -86,7 +86,7 @@ interface Dsytrs {
                 if (ipiv[ipivOff + k] > 0) {
                     if (k < n - 1) {
                         double temp = B[bjOff + k * ldb];
-                        Dgemv.dgemv(BLAS.Transpose.Trans, n - k - 1, 1, -1.0,
+                        Dgemv.dgemv(BLAS.Trans.Trans, n - k - 1, 1, -1.0,
                                 A, aOff + (k + 1) * lda + k, lda,
                                 B, bjOff + (k + 1) * ldb, ldb, 1.0,
                                 B, bjOff + k * ldb, ldb);
@@ -101,11 +101,11 @@ interface Dsytrs {
                     k--;
                 } else {
                     if (k < n - 1) {
-                        Dgemv.dgemv(BLAS.Transpose.Trans, n - k - 1, 1, -1.0,
+                        Dgemv.dgemv(BLAS.Trans.Trans, n - k - 1, 1, -1.0,
                                 A, aOff + (k + 1) * lda + k, lda,
                                 B, bjOff + (k + 1) * ldb, ldb, 1.0,
                                 B, bjOff + k * ldb, ldb);
-                        Dgemv.dgemv(BLAS.Transpose.Trans, n - k - 1, 1, -1.0,
+                        Dgemv.dgemv(BLAS.Trans.Trans, n - k - 1, 1, -1.0,
                                 A, aOff + (k + 1) * lda + k - 1, lda,
                                 B, bjOff + (k + 1) * ldb, ldb, 1.0,
                                 B, bjOff + (k - 1) * ldb, ldb);
@@ -139,7 +139,7 @@ interface Dsytrs {
                     }
 
                     if (k > 0) {
-                        Dgemv.dgemv(BLAS.Transpose.NoTrans, k, 1, -1.0,
+                        Dgemv.dgemv(BLAS.Trans.NoTrans, k, 1, -1.0,
                                 A, aOff + k, lda,
                                 B, bjOff + k * ldb, ldb, 1.0,
                                 B, bjOff, ldb);
@@ -157,7 +157,7 @@ interface Dsytrs {
                     }
 
                     if (k > 1) {
-                        Dgemv.dgemv(BLAS.Transpose.NoTrans, k - 1, 2, -1.0,
+                        Dgemv.dgemv(BLAS.Trans.NoTrans, k - 1, 2, -1.0,
                                 A, aOff + k - 1, lda,
                                 B, bjOff + (k - 1) * ldb, ldb, 1.0,
                                 B, bjOff, ldb);
@@ -180,7 +180,7 @@ interface Dsytrs {
             while (k < n) {
                 if (ipiv[ipivOff + k] > 0) {
                     if (k > 0) {
-                        Dgemv.dgemv(BLAS.Transpose.Trans, k, 1, -1.0,
+                        Dgemv.dgemv(BLAS.Trans.Trans, k, 1, -1.0,
                                 A, aOff + k, lda,
                                 B, bjOff, ldb, 1.0,
                                 B, bjOff + k * ldb, ldb);
@@ -195,11 +195,11 @@ interface Dsytrs {
                     k++;
                 } else {
                     if (k > 0) {
-                        Dgemv.dgemv(BLAS.Transpose.Trans, k, 1, -1.0,
+                        Dgemv.dgemv(BLAS.Trans.Trans, k, 1, -1.0,
                                 A, aOff + k, lda,
                                 B, bjOff, ldb, 1.0,
                                 B, bjOff + k * ldb, ldb);
-                        Dgemv.dgemv(BLAS.Transpose.Trans, k, 1, -1.0,
+                        Dgemv.dgemv(BLAS.Trans.Trans, k, 1, -1.0,
                                 A, aOff + k + 1, lda,
                                 B, bjOff, ldb, 1.0,
                                 B, bjOff + (k + 1) * ldb, ldb);

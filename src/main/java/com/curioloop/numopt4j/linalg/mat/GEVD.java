@@ -192,21 +192,21 @@ public final class GEVD implements Decomposition {
         if (lower) {
             if (type == 1 || type == 2) {
                 // x = L^{-T} * y  =>  solve L^T * X = Y
-                BLAS.dtrsm(BLAS.Side.Left, BLAS.Uplo.Lower, BLAS.Transpose.Trans, BLAS.Diag.NonUnit,
+                BLAS.dtrsm(BLAS.Side.Left, BLAS.Uplo.Lower, BLAS.Trans.Trans, BLAS.Diag.NonUnit,
                         n, n, 1.0, B, 0, n, A, 0, n);
             } else {
                 // type 3: x = L * y
-                BLAS.dtrmm(BLAS.Side.Left, BLAS.Uplo.Lower, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit,
+                BLAS.dtrmm(BLAS.Side.Left, BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit,
                         n, n, 1.0, B, 0, n, A, 0, n);
             }
         } else {
             if (type == 1 || type == 2) {
                 // x = U^{-1} * y  =>  solve U * X = Y
-                BLAS.dtrsm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit,
+                BLAS.dtrsm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit,
                         n, n, 1.0, B, 0, n, A, 0, n);
             } else {
                 // type 3: x = U^T * y
-                BLAS.dtrmm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Transpose.Trans, BLAS.Diag.NonUnit,
+                BLAS.dtrmm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Trans.Trans, BLAS.Diag.NonUnit,
                         n, n, 1.0, B, 0, n, A, 0, n);
             }
         }

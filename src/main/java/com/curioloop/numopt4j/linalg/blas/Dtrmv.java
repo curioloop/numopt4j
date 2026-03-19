@@ -27,12 +27,12 @@ package com.curioloop.numopt4j.linalg.blas;
  */
 interface Dtrmv {
 
-    static void dtrmv(BLAS.Uplo uplo, BLAS.Transpose trans, BLAS.Diag diag, int n,
+    static void dtrmv(BLAS.Uplo uplo, BLAS.Trans trans, BLAS.Diag diag, int n,
                       double[] A, int aOff, int lda,
                       double[] x, int xOff, int incX) {
 
         boolean upper = (uplo == BLAS.Uplo.Upper);
-        boolean transA = (trans == BLAS.Transpose.Trans || trans == BLAS.Transpose.ConjTrans);
+        boolean transA = (trans == BLAS.Trans.Trans || trans == BLAS.Trans.Conj);
         boolean unit = (diag == BLAS.Diag.Unit);
 
         if (n == 0) return;

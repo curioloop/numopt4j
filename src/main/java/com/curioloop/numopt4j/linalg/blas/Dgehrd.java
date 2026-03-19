@@ -10,16 +10,6 @@ interface Dgehrd {
 
     int NBMAX = 64;
 
-    static int dgehrd(int n, int ilo, int ihi, double[] A, int lda,
-                      double[] tau, int tauOff, double[] work, int workOff, int lwork) {
-        return dgehrd(n, ilo, ihi, A, 0, lda, tau, tauOff, work, workOff, lwork);
-    }
-
-    static int dgehrd(int n, int ilo, int ihi, double[] A, int lda,
-                      double[] tau, double[] work, int lwork) {
-        return dgehrd(n, ilo, ihi, A, lda, tau, 0, work, 0, lwork);
-    }
-
     static int dgehrd(int n, int ilo, int ihi, double[] A, int aOff, int lda,
                       double[] tau, int tauOff, double[] work, int workOff, int lwork) {
         if (n <= 0) {
@@ -80,14 +70,14 @@ interface Dgehrd {
                 double ei = A[aOff + (i + ib) * lda + i + ib - 1];
                 A[aOff + (i + ib) * lda + i + ib - 1] = 1.0;
 
-                Dgemm.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.Trans, ihi + 1, ihi - i - ib + 1, ib,
+                Dgemm.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.Trans, ihi + 1, ihi - i - ib + 1, ib,
                         -1.0, work, workOff, ldwork,
                         A, aOff + (i + ib) * lda + i, lda,
                         1.0, A, aOff + i + ib, lda);
                 A[aOff + (i + ib) * lda + i + ib - 1] = ei;
 
                 if (ib > 1) {
-                    Dtrmm.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Transpose.Trans, BLAS.Diag.Unit, i + 1, ib - 1,
+                    Dtrmm.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.Trans, BLAS.Diag.Unit, i + 1, ib - 1,
                             1.0, A, aOff + (i + 1) * lda + i, lda, work, workOff, ldwork);
                     for (int j = 0; j <= ib - 2; j++) {
                         Daxpy.daxpy(i + 1, -1.0, work, workOff + j, ldwork, A, aOff + i + j + 1, lda);
@@ -138,7 +128,7 @@ interface Dgehrd {
      * @param workOff offset into work
      * @param lwork   length of work; use -1 for a workspace query
      */
-    static void dormhr(BLAS.Side side, BLAS.Transpose trans, int m, int n, int ilo, int ihi,
+    static void dormhr(BLAS.Side side, BLAS.Trans trans, int m, int n, int ilo, int ihi,
                        double[] a, int aOff, int lda, double[] tau, int tauOff,
                        double[] c, int cOff, int ldc, double[] work, int workOff, int lwork) {
 
@@ -160,9 +150,9 @@ interface Dgehrd {
 
         String opts;
         if (side == BLAS.Side.Left) {
-            opts = (trans == BLAS.Transpose.NoTrans) ? "LN" : "LT";
+            opts = (trans == BLAS.Trans.NoTrans) ? "LN" : "LT";
         } else {
-            opts = (trans == BLAS.Transpose.NoTrans) ? "RN" : "RT";
+            opts = (trans == BLAS.Trans.NoTrans) ? "RN" : "RT";
         }
         int nb = min(64, Ilaenv.ilaenv(1, "DORMQR", opts, nh, nw, nh, -1));
         int lwkopt = max(1, nw) * nb;

@@ -22,7 +22,7 @@ class DorgtrTest {
         double[] tau = {0.5, 0.3};
         double[] work = new double[100];
 
-        Dorgtr.dorgtr(BLAS.Uplo.Upper, n, A, n, tau, work, work.length);
+        Dorgtr.dorgtr(BLAS.Uplo.Upper, n, A, n, tau, 0, work, 0, work.length);
 
         for (int i = 0; i < n * n; i++) {
             assertTrue(Double.isFinite(A[i]), "A[" + i + "] should be finite");
@@ -40,7 +40,7 @@ class DorgtrTest {
         double[] tau = {0.5, 0.3};
         double[] work = new double[100];
 
-        Dorgtr.dorgtr(BLAS.Uplo.Lower, n, A, n, tau, work, work.length);
+        Dorgtr.dorgtr(BLAS.Uplo.Lower, n, A, n, tau, 0, work, 0, work.length);
 
         for (int i = 0; i < n * n; i++) {
             assertTrue(Double.isFinite(A[i]), "A[" + i + "] should be finite");
@@ -49,7 +49,7 @@ class DorgtrTest {
 
     @Test
     void testEmpty() {
-        Dorgtr.dorgtr(BLAS.Uplo.Upper, 0, new double[0], 0, new double[0], new double[1], 0);
+        Dorgtr.dorgtr(BLAS.Uplo.Upper, 0, new double[0], 0, new double[0], 0, new double[1], 0, 0);
     }
 
     @Test
@@ -58,7 +58,7 @@ class DorgtrTest {
         double[] tau = new double[0];
         double[] work = new double[1];
 
-        Dorgtr.dorgtr(BLAS.Uplo.Upper, 1, A, 1, tau, work, work.length);
+        Dorgtr.dorgtr(BLAS.Uplo.Upper, 1, A, 1, tau, 0, work, 0, work.length);
 
         assertEquals(1.0, A[0], TOL);
     }
@@ -73,7 +73,7 @@ class DorgtrTest {
         double[] tau = {0.5};
         double[] work = new double[10];
 
-        Dorgtr.dorgtr(BLAS.Uplo.Upper, n, A, n, tau, work, work.length);
+        Dorgtr.dorgtr(BLAS.Uplo.Upper, n, A, n, tau, 0, work, 0, work.length);
 
         for (int i = 0; i < n * n; i++) {
             assertTrue(Double.isFinite(A[i]));
@@ -90,7 +90,7 @@ class DorgtrTest {
         double[] tau = {0.5};
         double[] work = new double[10];
 
-        Dorgtr.dorgtr(BLAS.Uplo.Lower, n, A, n, tau, work, work.length);
+        Dorgtr.dorgtr(BLAS.Uplo.Lower, n, A, n, tau, 0, work, 0, work.length);
 
         for (int i = 0; i < n * n; i++) {
             assertTrue(Double.isFinite(A[i]));
@@ -103,7 +103,7 @@ class DorgtrTest {
         double[] tau = new double[2];
         double[] work = new double[1];
 
-        Dorgtr.dorgtr(BLAS.Uplo.Upper, 3, A, 3, tau, work, -1);
+        Dorgtr.dorgtr(BLAS.Uplo.Upper, 3, A, 3, tau, 0, work, 0, -1);
 
         assertTrue(work[0] > 0);
     }
@@ -123,7 +123,7 @@ class DorgtrTest {
         }
         double[] work = new double[100];
 
-        Dorgtr.dorgtr(BLAS.Uplo.Upper, n, A, n, tau, work, work.length);
+        Dorgtr.dorgtr(BLAS.Uplo.Upper, n, A, n, tau, 0, work, 0, work.length);
 
         for (int i = 0; i < n * n; i++) {
             assertTrue(Double.isFinite(A[i]));
@@ -145,7 +145,7 @@ class DorgtrTest {
         }
         double[] work = new double[100];
 
-        Dorgtr.dorgtr(BLAS.Uplo.Lower, n, A, n, tau, work, work.length);
+        Dorgtr.dorgtr(BLAS.Uplo.Lower, n, A, n, tau, 0, work, 0, work.length);
 
         for (int i = 0; i < n * n; i++) {
             assertTrue(Double.isFinite(A[i]));
@@ -167,7 +167,7 @@ class DorgtrTest {
         }
         double[] work = new double[500];
 
-        Dorgtr.dorgtr(BLAS.Uplo.Upper, n, A, n, tau, work, work.length);
+        Dorgtr.dorgtr(BLAS.Uplo.Upper, n, A, n, tau, 0, work, 0, work.length);
 
         for (int i = 0; i < n * n; i++) {
             assertTrue(Double.isFinite(A[i]));
@@ -184,7 +184,7 @@ class DorgtrTest {
         double[] tau = new double[n - 1];
         double[] work = new double[100];
 
-        Dorgtr.dorgtr(BLAS.Uplo.Upper, n, A, n, tau, work, work.length);
+        Dorgtr.dorgtr(BLAS.Uplo.Upper, n, A, n, tau, 0, work, 0, work.length);
 
         for (int i = 0; i < n; i++) {
             assertEquals(1.0, A[i * n + i], TOL);
@@ -201,7 +201,7 @@ class DorgtrTest {
         double[] tau = new double[n - 1];
         double[] work = new double[100];
 
-        Dorgtr.dorgtr(BLAS.Uplo.Lower, n, A, n, tau, work, work.length);
+        Dorgtr.dorgtr(BLAS.Uplo.Lower, n, A, n, tau, 0, work, 0, work.length);
 
         for (int i = 0; i < n; i++) {
             assertEquals(1.0, A[i * n + i], TOL);

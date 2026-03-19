@@ -25,11 +25,6 @@ interface Dlatrd {
      * @param w     workspace matrix (n x nb)
      * @param ldw   leading dimension of w
      */
-    static void dlatrd(BLAS.Uplo uplo, int n, int nb, double[] A, int lda,
-                       double[] e, double[] tau, double[] w, int ldw) {
-        dlatrd(uplo, n, nb, A, 0, lda, e, 0, tau, 0, w, 0, ldw);
-    }
-
     static void dlatrd(BLAS.Uplo uplo, int n, int nb, double[] A, int aOff, int lda,
                        double[] e, int eOff, double[] tau, int tauOff,
                        double[] w, int wOff, int ldw) {
@@ -49,15 +44,15 @@ interface Dlatrd {
                     // A[0:i, i] := A[0:i, i] - A[0:i, i+1:n] * w[i, iw+1:n]
                     // A[0:i, i] := A[0:i, i] - w[0:i, iw+1:n] * A[i, i+1:n]
                     // dgemv(trans, m, n, alpha, A, aOff, lda, x, xOff, beta, y, yOff)
-                    Dgemv.dgemv(BLAS.Transpose.NoTrans, i + 1, n - i - 1, -1.0,
+                    Dgemv.dgemv(BLAS.Trans.NoTrans, i + 1, n - i - 1, -1.0,
                                A, aOff + i + 1, lda,
-                               w, wOff + i * ldw + iw + 1, 1.0,
-                               A, aOff + i * lda);
+                               w, wOff + i * ldw + iw + 1, 1, 1.0,
+                               A, aOff + i * lda, 1);
                     
-                    Dgemv.dgemv(BLAS.Transpose.NoTrans, i + 1, n - i - 1, -1.0,
+                    Dgemv.dgemv(BLAS.Trans.NoTrans, i + 1, n - i - 1, -1.0,
                                w, wOff + iw + 1, ldw,
-                               A, aOff + i * lda + i + 1, 1.0,
-                               A, aOff + i * lda);
+                               A, aOff + i * lda + i + 1, 1, 1.0,
+                               A, aOff + i * lda, 1);
                 }
                 
                 if (i > 0) {
@@ -79,29 +74,29 @@ interface Dlatrd {
                     if (i < n - 1) {
                         // dgemv(trans, m, n, alpha, A, aOff, lda, x, xOff, beta, y, yOff)
                         // w[0:i-1, iw] += A[0:i-1, i+1:n]^T * w[0:i-1, iw+1:n]
-                        Dgemv.dgemv(BLAS.Transpose.Trans, i, n - i - 1, 1.0,
+                        Dgemv.dgemv(BLAS.Trans.Trans, i, n - i - 1, 1.0,
                                    w, wOff + iw + 1, ldw,
-                                   A, aOff + i * lda + i + 1, 0.0,
-                                   w, wOff + (i + 1) * ldw + iw);
+                                   A, aOff + i * lda + i + 1, 1, 0.0,
+                                   w, wOff + (i + 1) * ldw + iw, 1);
                         
                         // w[0:i-1, iw] -= A[0:i-1, i+1:n] * w[0:i-1, iw+1:n]
-                        Dgemv.dgemv(BLAS.Transpose.NoTrans, i, n - i - 1, -1.0,
+                        Dgemv.dgemv(BLAS.Trans.NoTrans, i, n - i - 1, -1.0,
                                    A, aOff + i * lda + i + 1, lda,
                                    w, wOff + (i + 1) * ldw + iw, 1, 0.0,
-                                   w, wOff + iw);
+                                   w, wOff + iw, 1);
                         
                         // w[0:i-1, iw+1:n] := A[0:i-1, i+1:n]^T * v
                         // v is in A at column i with stride lda
-                        Dgemv.dgemv(BLAS.Transpose.Trans, i, n - i - 1, 1.0,
+                        Dgemv.dgemv(BLAS.Trans.Trans, i, n - i - 1, 1.0,
                                    A, aOff + i * lda + i + 1, lda,
                                    A, aOff + i, lda, 0.0,
-                                   w, wOff + (i + 1) * ldw + iw);
+                                   w, wOff + (i + 1) * ldw + iw, 1);
                         
                         // w[0:i-1, iw+1:n] -= w[0:i-1, iw+1:n] * v
-                        Dgemv.dgemv(BLAS.Transpose.NoTrans, i, n - i - 1, -1.0,
+                        Dgemv.dgemv(BLAS.Trans.NoTrans, i, n - i - 1, -1.0,
                                    w, wOff + iw + 1, ldw,
                                    A, aOff + i, lda, 1.0,
-                                   w, wOff + (i + 1) * ldw + iw);
+                                   w, wOff + (i + 1) * ldw + iw, 1);
                     }
                     
                     // dscal(n, alpha, x, xOff, xInc)
@@ -116,15 +111,15 @@ interface Dlatrd {
             // Reduce first nb columns of lower triangle
             for (int i = 0; i < nb; i++) {
                 // Update A(i:n, i)
-                Dgemv.dgemv(BLAS.Transpose.NoTrans, n - i, i, -1.0,
+                Dgemv.dgemv(BLAS.Trans.NoTrans, n - i, i, -1.0,
                            A, aOff + i * lda, lda,
-                           w, wOff + i * ldw, 1.0,
-                           A, aOff + i * lda + i);
+                           w, wOff + i * ldw, 1, 1.0,
+                           A, aOff + i * lda + i, 1);
                 
-                Dgemv.dgemv(BLAS.Transpose.NoTrans, n - i, i, -1.0,
+                Dgemv.dgemv(BLAS.Trans.NoTrans, n - i, i, -1.0,
                            w, wOff + i * ldw, ldw,
-                           A, aOff + i * lda, 1.0,
-                           A, aOff + i * lda + i);
+                           A, aOff + i * lda, 1, 1.0,
+                           A, aOff + i * lda + i, 1);
                 
                 if (i < n - 1) {
                     // Generate elementary reflector H_i to annihilate A(i+2:n, i)
@@ -143,28 +138,28 @@ interface Dlatrd {
                     
                     // w[0:i, i] := A[i+1:n, 0:i]^T * v
                     // v is in A at column i starting from row i+1
-                    Dgemv.dgemv(BLAS.Transpose.Trans, m, i, 1.0,
+                    Dgemv.dgemv(BLAS.Trans.Trans, m, i, 1.0,
                                w, wOff + (i + 1) * ldw, ldw,
                                A, aOff + (i + 1) * lda + i, lda, 0.0,
-                               w, wOff + i);
+                               w, wOff + i, 1);
                     
                     // w[0:i, i] -= A[i+1:n, 0:i] * w[i+1:n, i]
-                    Dgemv.dgemv(BLAS.Transpose.NoTrans, m, i, -1.0,
+                    Dgemv.dgemv(BLAS.Trans.NoTrans, m, i, -1.0,
                                A, aOff + (i + 1) * lda, lda,
                                w, wOff + (i + 1) * ldw + i, 1, 0.0,
-                               w, wOff + i);
+                               w, wOff + i, 1);
                     
                     // w[i+1:n, i+1] := A[i+1:n, 0:i]^T * v
-                    Dgemv.dgemv(BLAS.Transpose.Trans, m, i, 1.0,
+                    Dgemv.dgemv(BLAS.Trans.Trans, m, i, 1.0,
                                A, aOff + (i + 1) * lda, lda,
                                A, aOff + (i + 1) * lda + i, lda, 0.0,
-                               w, wOff + (i + 1) * ldw + i + 1);
+                               w, wOff + (i + 1) * ldw + i + 1, 1);
                     
                     // w[i+1:n, i+1] -= w[i+1:n, 0:i] * v
-                    Dgemv.dgemv(BLAS.Transpose.NoTrans, m, i, -1.0,
+                    Dgemv.dgemv(BLAS.Trans.NoTrans, m, i, -1.0,
                                w, wOff + (i + 1) * ldw, ldw,
                                A, aOff + (i + 1) * lda + i, lda, 1.0,
-                               w, wOff + (i + 1) * ldw + i + 1);
+                               w, wOff + (i + 1) * ldw + i + 1, 1);
                     
                     // w[i+1:n, i] := tau[i] * w[i+1:n, i]
                     BLAS.dscal(m, tau[tauOff + i], w, wOff + (i + 1) * ldw + i, ldw);

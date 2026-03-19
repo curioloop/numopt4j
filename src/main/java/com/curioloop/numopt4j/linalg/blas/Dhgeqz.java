@@ -113,8 +113,8 @@ interface Dhgeqz {
         if (lwork == -1) { work[workOff] = max(1, n); return 0; }
         if (n <= 0) return 0;
 
-        if (compq == 'I') BLAS.dlaset('A', n, n, 0.0, 1.0, Q, qOff, ldq);
-        if (compz == 'I') BLAS.dlaset('A', n, n, 0.0, 1.0, Z, zOff, ldz);
+        if (compq == 'I') BLAS.dlaset(BLAS.Uplo.All, n, n, 0.0, 1.0, Q, qOff, ldq);
+        if (compz == 'I') BLAS.dlaset(BLAS.Uplo.All, n, n, 0.0, 1.0, Z, zOff, ldz);
 
         double safmin = BLAS.safmin();
         double safmax = 1.0 / safmin;

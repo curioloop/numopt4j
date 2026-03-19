@@ -8,7 +8,6 @@ package com.curioloop.numopt4j.linalg.blas;
 
 import net.jqwik.api.*;
 import net.jqwik.api.constraints.*;
-import org.junit.jupiter.api.Tag;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -98,12 +97,12 @@ class IllegalDimErrorHandlingProperties {
 
         // dgemv with negative m
         assertDoesNotThrow(() ->
-                BLAS.dgemv(BLAS.Transpose.NoTrans, negDim, posDim, 1.0, A, 0, posDim, x, 0, 1, 0.0, y, 0, 1),
+                BLAS.dgemv(BLAS.Trans.NoTrans, negDim, posDim, 1.0, A, 0, posDim, x, 0, 1, 0.0, y, 0, 1),
                 "dgemv should silently return on m=" + negDim);
 
         // dgemv with negative n
         assertDoesNotThrow(() ->
-                BLAS.dgemv(BLAS.Transpose.NoTrans, posDim, negDim, 1.0, A, 0, posDim, x, 0, 1, 0.0, y, 0, 1),
+                BLAS.dgemv(BLAS.Trans.NoTrans, posDim, negDim, 1.0, A, 0, posDim, x, 0, 1, 0.0, y, 0, 1),
                 "dgemv should silently return on n=" + negDim);
 
         // dger with negative m
@@ -148,37 +147,37 @@ class IllegalDimErrorHandlingProperties {
 
         // dgemm with negative m
         assertDoesNotThrow(() ->
-                BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans,
+                BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans,
                         negDim, posDim, posDim, 1.0, A, 0, posDim, B, 0, posDim, 0.0, C, 0, posDim),
                 "dgemm should silently return on m=" + negDim);
 
         // dgemm with negative n
         assertDoesNotThrow(() ->
-                BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans,
+                BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans,
                         posDim, negDim, posDim, 1.0, A, 0, posDim, B, 0, posDim, 0.0, C, 0, posDim),
                 "dgemm should silently return on n=" + negDim);
 
         // dsyrk with negative n
         assertDoesNotThrow(() ->
-                BLAS.dsyrk(BLAS.Uplo.Upper, BLAS.Transpose.NoTrans,
+                BLAS.dsyrk(BLAS.Uplo.Upper, BLAS.Trans.NoTrans,
                         negDim, posDim, 1.0, A, 0, posDim, 0.0, C, 0, posDim),
                 "dsyrk should silently return on n=" + negDim);
 
         // dsyrk with negative k
         assertDoesNotThrow(() ->
-                BLAS.dsyrk(BLAS.Uplo.Upper, BLAS.Transpose.NoTrans,
+                BLAS.dsyrk(BLAS.Uplo.Upper, BLAS.Trans.NoTrans,
                         posDim, negDim, 1.0, A, 0, posDim, 0.0, C, 0, posDim),
                 "dsyrk should silently return on k=" + negDim);
 
         // dtrsm with negative m
         assertDoesNotThrow(() ->
-                BLAS.dtrsm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit,
+                BLAS.dtrsm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit,
                         negDim, posDim, 1.0, A, 0, posDim, B, 0, posDim),
                 "dtrsm should silently return on m=" + negDim);
 
         // dtrsm with negative n
         assertDoesNotThrow(() ->
-                BLAS.dtrsm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Transpose.NoTrans, BLAS.Diag.NonUnit,
+                BLAS.dtrsm(BLAS.Side.Left, BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit,
                         posDim, negDim, 1.0, A, 0, posDim, B, 0, posDim),
                 "dtrsm should silently return on n=" + negDim);
     }
@@ -318,14 +317,14 @@ class IllegalDimErrorHandlingProperties {
         double[] C = new double[]{cValue};
 
         // dgemm with negative m should not modify C
-        BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans,
+        BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans,
                 negDim, posDim, posDim, 1.0, A, 0, posDim, B, 0, posDim, 0.0, C, 0, posDim);
         assertEquals(cValue, C[0], 0.0,
                 "dgemm should not modify C on m=" + negDim);
 
         // dgemm with negative n should not modify C
         C[0] = cValue;
-        BLAS.dgemm(BLAS.Transpose.NoTrans, BLAS.Transpose.NoTrans,
+        BLAS.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans,
                 posDim, negDim, posDim, 1.0, A, 0, posDim, B, 0, posDim, 0.0, C, 0, posDim);
         assertEquals(cValue, C[0], 0.0,
                 "dgemm should not modify C on n=" + negDim);

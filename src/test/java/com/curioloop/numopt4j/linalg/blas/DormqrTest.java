@@ -13,7 +13,7 @@ class DormqrTest {
 
     @Test
     void testEmpty() {
-        int info = Dormqr.dormqr(BLAS.Side.Left, BLAS.Transpose.NoTrans, 0, 0, 0, new double[0], 0, 0, new double[0], 0, new double[0], 0, 0, new double[1], 0);
+        int info = Dormqr.dormqr(BLAS.Side.Left, BLAS.Trans.NoTrans, 0, 0, 0, new double[0], 0, 0, new double[0], 0, new double[0], 0, 0, new double[1], 0);
         assertEquals(0, info);
     }
 }

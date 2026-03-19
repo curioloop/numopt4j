@@ -12,45 +12,6 @@ package com.curioloop.numopt4j.linalg.blas;
 interface Dsytd2 {
 
     /**
-     * DSYTD2 reduces a symmetric matrix A to symmetric tridiagonal form T
-     * by orthogonal similarity transformation: Q^T * A * Q = T
-     *
-     * @param uplo  'U' for upper triangular, 'L' for lower triangular
-     * @param n     order of matrix A
-     * @param A     symmetric matrix (n x n, row-major), overwritten
-     * @param lda   leading dimension of A
-     * @param d     diagonal elements (output, length n)
-     * @param e     off-diagonal elements (output, length n-1)
-     * @param tau   Householder scalars (output, length n-1)
-     */
-    static void dsytd2(BLAS.Uplo uplo, int n, double[] A, int lda,
-                       double[] d, double[] e, double[] tau) {
-        dsytd2(uplo, n, A, 0, lda, d, 0, e, 0, tau, 0);
-    }
-
-    /**
-     * DSYTD2 reduces a symmetric matrix A to symmetric tridiagonal form T
-     * by orthogonal similarity transformation: Q^T * A * Q = T
-     * Version with matrix offset.
-     *
-     * @param uplo  uplo enum: Upper or Lower
-     * @param n     order of matrix A
-     * @param A     symmetric matrix (n x n, row-major), overwritten
-     * @param aOff  offset into A
-     * @param lda   leading dimension of A
-     * @param d     diagonal elements (output, length n)
-     * @param dOff  offset into d
-     * @param e     off-diagonal elements (output, length n-1)
-     * @param eOff  offset into e
-     * @param tau   Householder scalars (output, length n-1)
-     * @param tauOff offset into tau
-     */
-    static void dsytd2(BLAS.Uplo uplo, int n, double[] A, int aOff, int lda,
-                       double[] d, int dOff, double[] e, int eOff, double[] tau, int tauOff) {
-        dsytd2(uplo, n, A, aOff, lda, d, dOff, e, eOff, tau, tauOff, null, 0);
-    }
-
-    /**
      * Reduces a symmetric matrix to tridiagonal form (unblocked).
      * Version with external work array for zero-allocation.
      *

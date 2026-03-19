@@ -62,7 +62,7 @@ interface Dorgql {
 
                     int m2 = m - k + i + ib;
                     int n2 = n - k + i;
-                    Dlarfb.dlarfbLeftBackward(a, vOff, lda,
+                    Dlarfb.dlarfbLeftBackwardColWise(a, vOff, lda,
                                      work, workOff, ldwork,
                                      a, aOff, lda,
                                      work, workOff + ib * ldwork, ldwork, m2, n2, ib);

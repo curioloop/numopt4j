@@ -20,7 +20,7 @@ class DgemvTest {
         double[] x = {1, 2, 3};
         double[] y = {0, 0};
 
-        Dgemv.dgemv(BLAS.Transpose.NoTrans, 2, 3, 1.0, A, 0, 3, x, 0, 1, 0.0, y, 0, 1);
+        Dgemv.dgemv(BLAS.Trans.NoTrans, 2, 3, 1.0, A, 0, 3, x, 0, 1, 0.0, y, 0, 1);
 
         assertEquals(14.0, y[0], TOL);
         assertEquals(32.0, y[1], TOL);

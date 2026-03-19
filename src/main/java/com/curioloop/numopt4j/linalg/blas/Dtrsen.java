@@ -142,7 +142,7 @@ interface Dtrsen {
                 if (swap) {
                     ks += 1;
                     if (k != ks) {
-                        if (!Dtrexc.dtrexc(wantq, n, t, tOff, ldt, q, qOff, ldq, k, ks, work)) {
+                        if (!Dtrexc.dtrexc(wantq, n, t, tOff, ldt, q, qOff, ldq, k, ks, work, 0)) {
                             storeEigen(t, tOff, ldt, wr, wi, n);
                             iwork[1] = m;
                             if (wants) {
