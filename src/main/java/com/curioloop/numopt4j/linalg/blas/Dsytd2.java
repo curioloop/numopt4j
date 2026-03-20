@@ -40,7 +40,6 @@ interface Dsytd2 {
 
         if (upper) {
             // Reduce the upper triangle of A.
-            // Following Gonum: use tau[tauOff:tauOff+i] as temporary workspace
             for (int i = n - 2; i >= 0; i--) {
                 // Generate elementary reflector H_i = I - tau * v * v^T to
                 // annihilate A[0:i, i+1].
@@ -56,19 +55,15 @@ interface Dsytd2 {
                     A[aOff + i * lda + i + 1] = 1.0;
                     
                     // Compute x := tau * A * v, storing in tau[tauOff:tauOff+i+1]
-                    // Gonum: bi.Dsymv(uplo, i+1, taui, a, lda, a[i+1:], lda, 0, tau, 1)
                     // v is stored at A[0:i+1, i+1] with stride lda starting at offset i+1
                     Dsymv.dsymv(BLAS.Uplo.Upper, i + 1, taui, A, aOff, lda, A, aOff + i + 1, lda, 0.0, tau, tauOff, 1);
                     
                     // Compute w := x - 1/2 * tau * (x^T * v) * v
-                    // Gonum: alpha := -0.5 * taui * bi.Ddot(i+1, tau, 1, a[i+1:], lda)
                     double alpha = -0.5 * taui * Ddot.ddot(i + 1, tau, tauOff, 1, A, aOff + i + 1, lda);
-                    // Gonum: bi.Daxpy(i+1, alpha, a[i+1:], lda, tau, 1)
                     Daxpy.daxpy(i + 1, alpha, A, aOff + i + 1, lda, tau, tauOff, 1);
                     
                     // Apply the transformation as a rank-2 update
                     // A = A - v * w^T - w * v^T
-                    // Gonum: bi.Dsyr2(uplo, i+1, -1, a[i+1:], lda, tau, 1, a, lda)
                     Dsyr2.dsyr2(BLAS.Uplo.Upper, i + 1, -1.0, A, aOff + i + 1, lda, tau, tauOff, 1, A, aOff, lda);
                     A[aOff + i * lda + i + 1] = e[eOff + i];
                 }
@@ -79,7 +74,6 @@ interface Dsytd2 {
             d[dOff] = A[aOff];
         } else {
             // Reduce the lower triangle of A.
-            // Following Gonum: use tau[tauOff+i:tauOff+n-1] as temporary workspace
             for (int i = 0; i < n - 1; i++) {
                 int m = n - i - 1;
                 
@@ -96,19 +90,15 @@ interface Dsytd2 {
                     A[aOff + (i + 1) * lda + i] = 1.0;
                     
                     // Compute x := tau * A * v, storing in tau[tauOff+i:tauOff+n-1]
-                    // Gonum: bi.Dsymv(uplo, n-i-1, taui, a[(i+1)*lda+i+1:], lda, a[(i+1)*lda+i:], lda, 0, tau[i:], 1)
-                    Dsymv.dsymv(BLAS.Uplo.Lower, m, taui, A, aOff + (i + 1) * lda + i + 1, lda, 
+                    Dsymv.dsymv(BLAS.Uplo.Lower, m, taui, A, aOff + (i + 1) * lda + i + 1, lda,
                                A, aOff + (i + 1) * lda + i, lda, 0.0, tau, tauOff + i, 1);
                     
                     // Compute w := x - 1/2 * tau * (x^T * v) * v
-                    // Gonum: alpha := -0.5 * taui * bi.Ddot(n-i-1, tau[i:], 1, a[(i+1)*lda+i:], lda)
                     double alpha = -0.5 * taui * Ddot.ddot(m, tau, tauOff + i, 1, A, aOff + (i + 1) * lda + i, lda);
-                    // Gonum: bi.Daxpy(n-i-1, alpha, a[(i+1)*lda+i:], lda, tau[i:], 1)
                     Daxpy.daxpy(m, alpha, A, aOff + (i + 1) * lda + i, lda, tau, tauOff + i, 1);
                     
                     // Apply the transformation as a rank-2 update
-                    // Gonum: bi.Dsyr2(uplo, n-i-1, -1, a[(i+1)*lda+i:], lda, tau[i:], 1, a[(i+1)*lda+i+1:], lda)
-                    Dsyr2.dsyr2(BLAS.Uplo.Lower, m, -1.0, A, aOff + (i + 1) * lda + i, lda, tau, tauOff + i, 1, 
+                    Dsyr2.dsyr2(BLAS.Uplo.Lower, m, -1.0, A, aOff + (i + 1) * lda + i, lda, tau, tauOff + i, 1,
                                A, aOff + (i + 1) * lda + i + 1, lda);
                     A[aOff + (i + 1) * lda + i] = e[eOff + i];
                 }

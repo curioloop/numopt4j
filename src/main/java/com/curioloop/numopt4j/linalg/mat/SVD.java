@@ -217,7 +217,6 @@ public final class SVD implements Decomposition {
         }
 
         double[] work = pool.work();
-        // Gonum-style layout: e at [0..minMN), tauQ at [minMN..2*minMN), tauP at [2*minMN..3*minMN), scratch at [3*minMN..)
         int eOff    = 0;
         int tauQOff = minMN;
         int tauPOff = 2 * minMN;

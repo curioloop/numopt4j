@@ -2545,5 +2545,88 @@ public interface BLAS {
         Dlasrt.dlasrt(id, n, d, dOff);
     }
 
+    // ==================== Tridiagonal solvers ====================
+
+    /**
+     * Solves a general tridiagonal system A * X = B using Gaussian elimination with partial pivoting (LAPACK DGTSV).
+     * On entry, dl/d/du contain the sub-diagonal, diagonal, and super-diagonal of A.
+     * On return, they may be overwritten with factorization data.
+     *
+     * @param n    order of matrix A
+     * @param nrhs number of right-hand sides
+     * @param dl   sub-diagonal (length n-1), modified on exit
+     * @param dlOff offset into dl
+     * @param d    diagonal (length n), modified on exit
+     * @param dOff offset into d
+     * @param du   super-diagonal (length n-1), modified on exit
+     * @param duOff offset into du
+     * @param B    right-hand side matrix (n × nrhs, row-major), overwritten with solution
+     * @param bOff offset into B
+     * @param ldb  leading dimension of B (>= nrhs)
+     * @return true on success, false if A is singular
+     */
+    static boolean dgtsv(int n, int nrhs,
+                         double[] dl, int dlOff, double[] d, int dOff, double[] du, int duOff,
+                         double[] B, int bOff, int ldb) {
+        return Dptsv.dgtsv(n, nrhs, dl, dlOff, d, dOff, du, duOff, B, bOff, ldb);
+    }
+
+    /**
+     * Computes the L*D*Lᵀ factorization of a symmetric positive definite tridiagonal matrix (LAPACK DPTTRF).
+     * On return, d contains the diagonal of D and e contains the subdiagonal of unit bidiagonal L.
+     *
+     * @param n    order of matrix A
+     * @param d    diagonal elements (length n), overwritten with D on exit
+     * @param dOff offset into d
+     * @param e    subdiagonal elements (length n-1), overwritten with L on exit
+     * @param eOff offset into e
+     * @return true on success, false if A is not positive definite
+     */
+    static boolean dpttrf(int n, double[] d, int dOff, double[] e, int eOff) {
+        return Dptsv.dpttrf(n, d, dOff, e, eOff);
+    }
+
+    /**
+     * Solves a symmetric positive definite tridiagonal system using L*D*Lᵀ factorization (LAPACK DPTTRS).
+     * Uses the factorization computed by {@link #dpttrf}.
+     *
+     * @param n    order of matrix A
+     * @param nrhs number of right-hand sides
+     * @param d    diagonal of D from dpttrf (length n)
+     * @param dOff offset into d
+     * @param e    subdiagonal of L from dpttrf (length n-1)
+     * @param eOff offset into e
+     * @param B    right-hand side matrix (n × nrhs, row-major), overwritten with solution
+     * @param bOff offset into B
+     * @param ldb  leading dimension of B (>= nrhs)
+     */
+    static void dpttrs(int n, int nrhs,
+                       double[] d, int dOff, double[] e, int eOff,
+                       double[] B, int bOff, int ldb) {
+        Dptsv.dpttrs(n, nrhs, d, dOff, e, eOff, B, bOff, ldb);
+    }
+
+    /**
+     * Solves a symmetric positive definite tridiagonal system A * X = B (LAPACK DPTSV).
+     * Factors A = L*D*Lᵀ then solves in one call.
+     * On return, d and e are overwritten with the factorization.
+     *
+     * @param n    order of matrix A
+     * @param nrhs number of right-hand sides
+     * @param d    diagonal elements (length n), overwritten with D on exit
+     * @param dOff offset into d
+     * @param e    subdiagonal elements (length n-1), overwritten with L on exit
+     * @param eOff offset into e
+     * @param B    right-hand side matrix (n × nrhs, row-major), overwritten with solution
+     * @param bOff offset into B
+     * @param ldb  leading dimension of B (>= nrhs)
+     * @return true on success, false if A is not positive definite
+     */
+    static boolean dptsv(int n, int nrhs,
+                         double[] d, int dOff, double[] e, int eOff,
+                         double[] B, int bOff, int ldb) {
+        return Dptsv.dptsv(n, nrhs, d, dOff, e, eOff, B, bOff, ldb);
+    }
+
 }
 
