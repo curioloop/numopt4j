@@ -124,19 +124,19 @@ OptimizationResult result = Minimizer.trf()
 ### Linear Regression (OLS / WLS)
 
 ```java
-// OLS with SVD solver (numerically robust)
+// OLS with SVD solver (X is overwritten in-place)
 OLS r = Regressor.ols(y, X, n, k, Regressor.Opts.PINV);
 
 // OLS with QR solver (faster when X is full rank)
 OLS r = Regressor.ols(y, X, n, k, Regressor.Opts.QR);
 
-// WLS with per-observation weights
+// WLS with per-observation weights (X is overwritten in-place)
 WLS r = Regressor.wls(y, X, weights, n, k, Regressor.Opts.PINV);
 
 // Workspace reuse across multiple fits
-Regressor.Pool ws = new Regressor.Pool();
-for (double[] yi : series) {
-    OLS r = Regressor.ols(yi, X, n, k, ws, Regressor.Opts.PINV);
+OLS.Pool ws = new OLS.Pool();
+for (double[] Xi : series) {
+    OLS r = Regressor.ols(y, Xi.clone(), n, k, ws, Regressor.Opts.PINV);
     double[] beta = r.parameters();
     double   r2   = r.r2(false);
 }
@@ -247,6 +247,8 @@ Regressor.wls(y, X, w, n, k, Pool, Opts...)  // WLS with workspace reuse
 ```
 
 `Opts.QR` — QR factorization (faster, full-rank X); `Opts.PINV` — SVD pseudoinverse (robust, rank-deficient X); `Opts.NO_CONST_DETECT` — skip intercept detection.
+
+**Both OLS and WLS overwrite X in-place.** y is never modified. WLS additionally writes whitened y~ into `WLS.Pool.yWhiten`.
 
 Key result methods on `Regression` (base of `OLS`/`WLS`):
 

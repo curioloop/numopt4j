@@ -327,7 +327,7 @@ new Bound(lower, upper)     // public constructor; use Double.NaN for no bound o
 
 `com.curioloop.numopt4j.linalg.Regressor`
 
-Facade for ordinary and weighted least squares regression. Solves y = Xβ + ε with optional per-observation weights. X is row-major n×k; neither y nor X is modified.
+Facade for ordinary and weighted least squares regression. Solves y = Xβ + ε with optional per-observation weights. X is row-major n×k; **both OLS and WLS overwrite X in-place**. y is never modified. WLS additionally writes whitened y~ into `WLS.Pool.yWhiten`.
 
 ### Factory Methods
 
@@ -397,10 +397,11 @@ double[][] ci = pred.confInt(0.05);  // 95% prediction interval
 ### Pool (Workspace Reuse)
 
 ```java
-Regressor.Pool ws = new Regressor.Pool();
+OLS.Pool ws = new OLS.Pool();   // for OLS
+WLS.Pool ws = new WLS.Pool();   // for WLS (includes yWhiten buffer)
 // reuse across multiple fits of the same or similar dimensions
-OLS r1 = Regressor.ols(y1, X, n, k, ws, Regressor.Opts.PINV);
-OLS r2 = Regressor.ols(y2, X, n, k, ws, Regressor.Opts.PINV);
+OLS r1 = Regressor.ols(y1, X1, n, k, ws, Regressor.Opts.PINV);
+OLS r2 = Regressor.ols(y2, X2, n, k, ws, Regressor.Opts.PINV);
 ```
 
 ### Quick Example
@@ -419,8 +420,8 @@ double[] beta = r.parameters();   // [slope, intercept]
 double   r2   = r.r2(false);
 double   aic  = r.aic();
 
-// WLS fit (inverse-variance weights)
-WLS rw = Regressor.wls(y, X, weights, n, 2, Regressor.Opts.PINV);
+// WLS fit (inverse-variance weights, X is overwritten in-place)
+WLS rw = Regressor.wls(y, X.clone(), weights, n, 2, Regressor.Opts.PINV);
 
 // Prediction interval
 Prediction pred = r.predict(X, n, null);

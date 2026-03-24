@@ -893,7 +893,7 @@ for (double[] startPoint : startPoints) {
 
 `com.curioloop.numopt4j.linalg.Regressor`
 
-Facade for ordinary and weighted least squares regression. Solves the linear model y = Xβ + ε with optional per-observation weights. X is row-major n×k; neither y nor X is modified.
+Facade for ordinary and weighted least squares regression. Solves the linear model y = Xβ + ε with optional per-observation weights. X is row-major n×k; **both OLS and WLS overwrite X in-place**. y is never modified. WLS additionally writes whitened ỹ into `WLS.Pool.yWhiten`.
 
 ### Package
 
@@ -923,7 +923,7 @@ WLS Regressor.wls(double[] y, double[] X, double[] weights, int n, int k, Pool w
 
 Parameters:
 - `y` — endogenous vector, length ≥ n, not modified
-- `X` — exogenous matrix, row-major n×k, not modified
+- `X` — exogenous matrix, row-major n×k, **overwritten in-place** by the solver
 - `weights` — observation weights, length ≥ n, all positive, not modified (WLS only)
 - `n` — number of observations
 - `k` — number of regressors (including intercept column if present)
@@ -1005,19 +1005,29 @@ static double normalQuantile(double p)
 
 ### Pool (Workspace Reuse)
 
-`com.curioloop.numopt4j.linalg.Regressor.Pool`
+`com.curioloop.numopt4j.linalg.reg.OLS.Pool` / `com.curioloop.numopt4j.linalg.reg.WLS.Pool`
 
 Reusable workspace that eliminates per-fit allocations. Buffers grow on demand.
 
+`OLS.Pool` fields:
 ```java
-public double[] work;   // LAPACK floating-point scratch
-public double[] yCopy;  // copy of endogenous vector
-public double[] xCopy;  // copy of exogenous matrix (possibly whitened for WLS)
-public int[]    ipiv;   // pivot indices for QR path
+public double[] work;        // LAPACK floating-point scratch
+public int[]    ipiv;        // pivot indices for QR path
+public double[] beta;        // β̂ output, length k
+public double[] unscaledCov; // (X'X)^-1, length k×k
+public double[] fitted;      // y^ = X*beta^, length n
+public double[] residual;    // e = y - y^, length n
+```
 
-Pool ensureWork(int size)
-Pool ensureData(int n, int nk)
-Pool ensureIpiv(int size)
+`WLS.Pool` extends `OLS.Pool` with one additional field:
+```java
+public double[] yWhiten;     // ỹ = sqrt(W)*y, length n (WLS only)
+```
+
+Obtain a correctly-typed pool via `model.alloc()`:
+```java
+OLS.Pool ws = new OLS.Pool();   // for OLS
+WLS.Pool ws = new WLS.Pool();   // for WLS (includes yWhiten)
 ```
 
 ### Complete Example
@@ -1052,15 +1062,15 @@ Prediction pred = r.predict(X, n, null);
 double[][] ci   = pred.confInt(0.05);
 // ci[0] = lower bounds, ci[1] = upper bounds, ci[2] = std errors
 
-// WLS with per-observation weights
+// WLS with per-observation weights (X is overwritten in-place)
 double[] weights = new double[n];
 Arrays.fill(weights, 1.0);
-WLS rw = Regressor.wls(y, X, weights, n, k, Regressor.Opts.PINV);
+WLS rw = Regressor.wls(y, X.clone(), weights, n, k, Regressor.Opts.PINV);
 
 // Workspace reuse across multiple fits
-Regressor.Pool ws = new Regressor.Pool();
+OLS.Pool ws = new OLS.Pool();
 for (double[] yi : series) {
-    OLS ri = Regressor.ols(yi, X, n, k, ws, Regressor.Opts.PINV);
+    OLS ri = Regressor.ols(yi, buildX(), n, k, ws, Regressor.Opts.PINV);
     // process ri.parameters(), ri.r2(false), etc.
 }
 ```
@@ -1090,9 +1100,12 @@ new WLS(double[] y, double[] X, double[] weights, int n, int k)
 new WLS(double[] y, double[] X, double[] weights, int n, int k, boolean useQR)
 new WLS(double[] y, double[] X, double[] weights, int n, int k, boolean useQR, boolean noConst)
 
-// Fit
+// Fit — X is overwritten in-place for both OLS and WLS
 OLS result = new OLS(y, X, n, k).fit();
-OLS result = new OLS(y, X, n, k).fit(ws);  // with workspace reuse
+OLS result = new OLS(y, X, n, k).fit(ws);  // with workspace reuse (OLS.Pool)
+
+WLS result = new WLS(y, X, weights, n, k).fit();
+WLS result = new WLS(y, X, weights, n, k).fit(ws);  // with workspace reuse (WLS.Pool)
 ```
 
 ## 17. Decomposer (Matrix Decompositions)

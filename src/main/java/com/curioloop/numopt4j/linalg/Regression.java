@@ -8,22 +8,21 @@ import static java.lang.Math.*;
 import com.curioloop.numopt4j.linalg.blas.BLAS;
 import com.curioloop.numopt4j.linalg.reg.OLS;
 import com.curioloop.numopt4j.linalg.reg.Prediction;
-import com.curioloop.numopt4j.linalg.reg.WLS;
 
 /**
  * Statistical result of an OLS or WLS fit.
  *
  * <p>All quantities are computed lazily and cached on first access.
- * Subclasses ({@link OLS}, {@link WLS}) extend this class and populate
- * the solver outputs ({@code beta}, {@code normCov}, {@code rank}, {@code cond})
- * during {@link OLS#fit()}.
+ * Subclasses ({@link OLS}, {@link com.curioloop.numopt4j.linalg.reg.WLS}) extend this class
+ * and populate the solver outputs ({@code beta}, {@code unscaledCov}, {@code rank}, {@code cond})
+ * during {@code fit()}.
  *
  * <h2>Key statistics</h2>
  * <ul>
  *   <li>{@link #parameters()} — β̂</li>
  *   <li>{@link #paramCov()}   — Cov(β̂) = σ̂²·(XᵀX)⁻¹</li>
  *   <li>{@link #bse()}        — standard errors √diag(Cov(β̂))</li>
- *   <li>{@link #ssr()}        — sum of squared (whitened) residuals ‖ỹ - X̃β̂‖²</li>
+ *   <li>{@link #ssr()}        — sum of squared (whitened) residuals ‖ỹ - X̃β̂‖²</li>
  *   <li>{@link #scale()}      — σ̂² = SSR / (n - rank)</li>
  *   <li>{@link #r2(boolean)}  — R² (optionally adjusted)</li>
  *   <li>{@link #mse()}        — model / residual / total MSE</li>
@@ -35,32 +34,78 @@ import com.curioloop.numopt4j.linalg.reg.WLS;
 public abstract class Regression {
 
     // ---- solver outputs (populated by OLS/WLS.fit) ----
-    protected double[] beta;     // parameter estimates β̂, length k
-    protected double[] unscaledCov;  // (XᵀX)⁻¹ or (RᵀR)⁻¹, k×k row-major
-    protected int      rank;     // numerical rank of X
-    protected double   cond;     // condition number √(σ_max²/σ_min²)
+    protected double[] beta;        // parameter estimates β̂, length k
+    protected double[] unscaledCov; // (XᵀX)⁻¹ or (RᵀR)⁻¹, k×k row-major
+    protected int      rank;        // numerical rank of X
+    protected double   cond;        // condition number √(σ_max²/σ_min²)
 
-    // ---- lazy cache ----
+    // ---- pool reference (set on first fit) ----
+    private OLS.Pool pool;
+
+    // ---- fitted/residual: set by solver via setFittedResidualCache ----
     private double[] fitted;
     private double[] residual;
+
+    // ---- whitened variants (lazy) ----
     private double[] whitenFitted;
     private double[] whitenResidual;
-    private double   ssr    = Double.NaN;
-    private double   tss    = Double.NaN;
-    private double   tssCen = Double.NaN;
-    private double   llf    = Double.NaN;
+
+    // ---- lazy scalar cache ----
+    private double ssr    = Double.NaN;
+    private double tss    = Double.NaN;
+    private double tssCen = Double.NaN;
+    private double llf    = Double.NaN;
 
     // ---- abstract accessors (implemented by OLS/WLS) ----
 
     public abstract int      nObs();
     public abstract int      nParams();
     public abstract int      kConst();
-    protected abstract int      dfModel();
-    protected abstract int      dfResidual();
-    protected abstract double[] endog();
-    protected abstract double[] exog();
-    protected abstract double[] weights();
+    protected abstract int   dfModel();
+    protected abstract int   dfResidual();
+    public abstract double[] endog();
+    public abstract double[] weights();
 
+    // ---- called by solver after computing fitted/residual into Pool ----
+
+    /**
+     * Points the lazy-cache fields at the Pool's fitted/residual buffers.
+     * Called once per fit, inside the solver, after those buffers are written.
+     */
+    protected void setFittedResidualCache(OLS.Pool ws) {
+        this.pool     = ws;
+        this.fitted   = ws.fitted;
+        this.residual = ws.residual;
+        // invalidate whitened and scalar caches
+        this.whitenFitted   = null;
+        this.whitenResidual = null;
+        this.ssr    = Double.NaN;
+        this.tss    = Double.NaN;
+        this.tssCen = Double.NaN;
+        this.llf    = Double.NaN;
+    }
+
+    /**
+     * Returns the workspace pool bound to this model after the first {@code fit()}.
+     * Returns {@code null} if the model has not been fitted yet.
+     */
+    public OLS.Pool pool() { return pool; }
+
+    /**
+     * Pre-allocates a {@link OLS.Pool} sized for this model's dimensions.
+     *
+     * <p>Pass the returned pool to every {@code fit()} call for zero per-fit allocations.
+     *
+     * <pre>{@code
+     * OLS.Pool ws = model.alloc();
+     * for (double[] Xi : series) {
+     *     model.fit(ws);
+     * }
+     * }</pre>
+     */
+    public OLS.Pool alloc() {
+        return new OLS.Pool();
+    }
 
     // ---- parameters ----
 
@@ -83,24 +128,15 @@ public abstract class Regression {
     public double[] fitted(boolean whiten) {
         double[] w = weights();
         if (!whiten || w == null) {
-            if (fitted == null) fitted = computeFitted();
             return fitted;
         } else {
             if (whitenFitted == null) {
-                double[] f = fitted(false);
                 int n = nObs();
                 whitenFitted = new double[n];
-                for (int i = 0; i < n; i++) whitenFitted[i] = f[i] * sqrt(w[i]);
+                for (int i = 0; i < n; i++) whitenFitted[i] = fitted[i] * sqrt(w[i]);
             }
             return whitenFitted;
         }
-    }
-
-    private double[] computeFitted() {
-        int n = nObs(), k = nParams();
-        double[] f = new double[n];
-        BLAS.dgemv(BLAS.Trans.NoTrans, n, k, 1.0, exog(), 0, k, beta, 0, 1, 0.0, f, 0, 1);
-        return f;
     }
 
     /**
@@ -111,32 +147,20 @@ public abstract class Regression {
     public double[] residual(boolean whiten) {
         double[] w = weights();
         if (!whiten || w == null) {
-            if (residual == null) residual = computeResidual();
             return residual;
         } else {
             if (whitenResidual == null) {
-                double[] e = residual(false);
                 int n = nObs();
                 whitenResidual = new double[n];
-                for (int i = 0; i < n; i++) whitenResidual[i] = e[i] * sqrt(w[i]);
+                for (int i = 0; i < n; i++) whitenResidual[i] = residual[i] * sqrt(w[i]);
             }
             return whitenResidual;
         }
     }
 
-    private double[] computeResidual() {
-        double[] y = endog();
-        double[] f = fitted(false);
-        int n = nObs();
-        double[] e = y.clone();  // e = y
-        // e = y - f  via daxpy: e += -1 * f
-        BLAS.daxpy(n, -1.0, f, 0, 1, e, 0, 1);
-        return e;
-    }
-
     // ---- sum of squares ----
 
-    /** Sum of squared (whitened) residuals: SSR = ‖ỹ - X̃β̂‖² = ẽᵀẽ. */
+    /** Sum of squared (whitened) residuals: SSR = ‖ỹ - X̃β̂‖² = ẽᵀẽ. */
     public double ssr() {
         if (Double.isNaN(ssr)) {
             double[] e = residual(true);
@@ -175,7 +199,6 @@ public abstract class Regression {
         } else if (centered) {
             for (int i = 0; i < n; i++) { double d = y[i] - mean; s += d * d; }
         } else {
-            // uncentered, no weights: TSS = y·y
             s = BLAS.ddot(n, y, 0, 1, y, 0, 1);
         }
 
@@ -277,13 +300,6 @@ public abstract class Regression {
 
     /**
      * Predicts for new observations.
-     *
-     * <p>For each row xᵢ of newX:
-     * <pre>
-     *   mean[i]        = xᵢᵀβ̂
-     *   paramVar[i]    = xᵢᵀ·Cov(β̂)·xᵢ
-     *   residualVar[i] = σ̂²/wᵢ
-     * </pre>
      *
      * @param newX    new exogenous matrix, row-major m×k (not modified)
      * @param m       number of new observations

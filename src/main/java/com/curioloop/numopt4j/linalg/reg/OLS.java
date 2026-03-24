@@ -3,7 +3,6 @@
  */
 package com.curioloop.numopt4j.linalg.reg;
 
-import com.curioloop.numopt4j.linalg.Regressor;
 import com.curioloop.numopt4j.linalg.Regression;
 import com.curioloop.numopt4j.linalg.blas.BLAS;
 
@@ -25,6 +24,8 @@ import static java.lang.Math.*;
  * </ul>
  *
  * <p>Data layout: X is row-major n×k, each row is one observation.
+ * <b>X is overwritten in-place by the solver.</b> y is never modified.
+ * Fitted values and residuals are computed inside the solver and cached in {@link Pool}.
  */
 public class OLS extends Regression {
 
@@ -40,20 +41,75 @@ public class OLS extends Regression {
     @Override public    int      kConst()     { return kConst; }
     @Override protected int      dfModel()    { return rank - kConst; }
     @Override protected int      dfResidual() { return nObs - rank; }
-    @Override public    double[] endog()       { return y; }
-    @Override public    double[] exog()       { return X; }
+    @Override public    double[] endog()      { return y; }
     @Override public    double[] weights()    { return null; }
+
+    // =========================================================================
+    // Pool
+    // =========================================================================
+
+    /**
+     * Reusable workspace for OLS computations.
+     *
+     * <p>All buffers grow on demand and are reused across fits.
+     * No per-fit heap allocations after the first call.
+     *
+     * <ul>
+     *   <li>{@code work}        — LAPACK floating-point scratch</li>
+     *   <li>{@code ipiv}        — pivot indices (QR path)</li>
+     *   <li>{@code beta}        — β̂ output, length k</li>
+     *   <li>{@code unscaledCov} — (XᵀX)⁻¹, length k×k</li>
+     *   <li>{@code fitted}      — ŷ = Xβ̂, length n (computed inside solver)</li>
+     *   <li>{@code residual}    — e = y − ŷ, length n (computed inside solver)</li>
+     * </ul>
+     */
+    public static class Pool {
+
+        public double[] work;        // LAPACK floating-point scratch
+        public int[]    ipiv;        // pivot indices for dgetrf/dgetri (QR path)
+        public double[] beta;        // pre-allocated β̂ output (length k)
+        public double[] unscaledCov; // pre-allocated (XᵀX)⁻¹ output (length k×k)
+        public double[] fitted;      // ŷ = Xβ̂, length n
+        public double[] residual;    // e = y − ŷ, length n
+
+        public Pool() {}
+
+        /**
+         * Pre-allocates all buffers. Safe to call multiple times; buffers only grow.
+         */
+        public Pool ensure(int n, int k) {
+            if (beta == null || beta.length < k)                  beta = new double[k];
+            if (unscaledCov == null || unscaledCov.length < k*k)  unscaledCov = new double[k*k];
+            if (fitted   == null || fitted.length   < n) fitted   = new double[n];
+            if (residual == null || residual.length < n) residual = new double[n];
+            return this;
+        }
+
+        Pool ensureWork(int size) {
+            if (work == null || work.length < size) work = new double[size];
+            return this;
+        }
+
+        Pool ensureIpiv(int size) {
+            if (ipiv == null || ipiv.length < size) ipiv = new int[size];
+            return this;
+        }
+    }
+
+    // =========================================================================
+    // Constructors
+    // =========================================================================
 
     public OLS(double[] y, double[] X, int n, int k, boolean useQR, boolean noConst) {
         if (n < 1 || k < 1) throw new IllegalArgumentException("n and k must be >= 1");
         if (y.length < n)   throw new IllegalArgumentException("y too short");
         if (X.length < n*k) throw new IllegalArgumentException("X too short");
         this.nObs    = n;
-        this.nParams    = k;
+        this.nParams = k;
         this.y       = y;
         this.X       = X;
         this.useQR   = useQR;
-        this.kConst  = noConst ? 0 : -1; // resolved lazily in fit()
+        this.kConst  = noConst ? 0 : -1;
     }
 
     public OLS(double[] y, double[] X, int n, int k, boolean useQR) {
@@ -64,34 +120,43 @@ public class OLS extends Regression {
         this(y, X, n, k, false, false);
     }
 
+    // =========================================================================
+    // fit
+    // =========================================================================
+
     public OLS fit() {
-        return fit(new Regressor.Pool());
+        return fit(new Pool());
     }
 
-    public OLS fit(Regressor.Pool ws) {
+    /**
+     * Fits the model.
+     *
+     * <p><b>X is overwritten in-place.</b> The solver operates directly on X,
+     * computes fitted values and residuals internally, and caches them in {@code ws}.
+     */
+    public OLS fit(Pool ws) {
         if (ws == null) return fit();
-        int n = nObs, k = nParams;
-        ws.ensureData(n, n * k);
-        // Resolve kConst lazily, reusing ws.xCopy as scratch for SVD if needed.
-        if (kConst < 0) kConst = detectConst(X, n, k, ws);
-        System.arraycopy(y, 0, ws.yCopy, 0, n);
-        System.arraycopy(X, 0, ws.xCopy, 0, n * k);
-        if (useQR) solveQR(ws.yCopy, ws.xCopy, ws);
-        else       solveSVD(ws.yCopy, ws.xCopy, ws);
+        ws.ensure(nObs, nParams);
+        if (kConst < 0) kConst = detectConst(X, nObs, nParams, ws);
+        if (useQR) solveQR(y, X, ws);
+        else       solveSVD(y, X, ws);
         return this;
     }
 
-
-    // ==================== SVD solver ====================
+    // =========================================================================
+    // SVD solver
+    // =========================================================================
     //
     // Decompose X = UΣVᵀ, then:
-    //   β̂         = X⁺y = VΣ⁺Uᵀy
-    //   unscaledCov = X⁺X⁺ᵀ = (VΣ⁺)(VΣ⁺)ᵀ = VΣ⁺²Vᵀ  (= (XᵀX)⁻¹ when full rank)
+    //   β̂          = VΣ⁺Uᵀy
+    //   fitted      = U·(Uᵀy)  (projection onto column space of X)
+    //   unscaledCov = VΣ⁺²Vᵀ  (= (XᵀX)⁻¹ when full rank)
+    //
+    // Memory layout in ws.work:
+    //   [lwork | U:n×r | VT:r×k | S:r | tmp:r]
 
-    void solveSVD(double[] endo, double[] exog, Regressor.Pool ws) {
+    void solveSVD(double[] endo, double[] exog, Pool ws) {
         int n = nObs, k = nParams;
-        beta    = new double[k];
-        unscaledCov = new double[k * k];
         int r = min(n, k);
 
         double[] wq = new double[1];
@@ -102,28 +167,41 @@ public class OLS extends Regression {
         int offU = lwork, offVT = lwork + n*r, offS = lwork + n*r + r*k, offTmp = lwork + n*r + r*k + r;
         ws.ensureWork(lwork + n*r + r*k + r + r);
 
-        // Decompose X = UΣVᵀ
         BLAS.dgesvd('S', 'S', n, k, exog, 0, k,
                     ws.work, offS, ws.work, offU, r, ws.work, offVT, k,
                     ws.work, 0, lwork);
 
-        // Rank from Σ, condition number σ_max/σ_min
+        // rank / cond from Σ
         double tol = ws.work[offS] * 0x1p-53;
         rank = 0;
         for (int i = 0; i < r; i++) if (ws.work[offS + i] > tol) rank++;
         cond = sqrt((ws.work[offS] * ws.work[offS]) / (ws.work[offS + r - 1] * ws.work[offS + r - 1]));
 
-        // Compute Σ⁺: invert non-zero singular values
+        // tmp = Uᵀy  (used for both fitted and β̂)
+        BLAS.dgemv(BLAS.Trans.Trans, n, r, 1.0, ws.work, offU, r, endo, 0, 1, 0.0, ws.work, offTmp, 1);
+
+        // fitted = U·tmp,  residual = endo - fitted
+        // zero out components beyond rank before projecting
+        for (int i = rank; i < r; i++) ws.work[offTmp + i] = 0.0;
+        BLAS.dgemv(BLAS.Trans.NoTrans, n, r, 1.0, ws.work, offU, r, ws.work, offTmp, 1, 0.0, ws.fitted, 0, 1);
+        System.arraycopy(endo, 0, ws.residual, 0, n);
+        BLAS.daxpy(n, -1.0, ws.fitted, 0, 1, ws.residual, 0, 1);
+        setFittedResidualCache(ws);
+
+        // Σ⁺: invert non-zero singular values (recompute after zeroing rank-truncated tmp)
         double cutoff = ws.work[offS] * 1e-15;
         for (int i = 0; i < r; i++)
             ws.work[offS + i] = (ws.work[offS + i] > cutoff) ? 1.0 / ws.work[offS + i] : 0.0;
 
-        // β̂ = Vᵀᵀ(Σ⁺(Uᵀy))
+        // β̂ = Vᵀᵀ(Σ⁺·(Uᵀy))
+        // restore tmp = Uᵀy (re-read from endo since we zeroed rank-truncated entries)
         BLAS.dgemv(BLAS.Trans.Trans, n, r, 1.0, ws.work, offU, r, endo, 0, 1, 0.0, ws.work, offTmp, 1);
         for (int i = 0; i < r; i++) ws.work[offTmp + i] *= ws.work[offS + i];
+        beta = ws.beta;
         BLAS.dgemv(BLAS.Trans.Trans, r, k, 1.0, ws.work, offVT, k, ws.work, offTmp, 1, 0.0, beta, 0, 1);
 
-        // normCov = (VΣ⁺)ᵀ(VΣ⁺)  via dsyrk on scaled Vᵀ rows
+        // unscaledCov = (VΣ⁺)ᵀ(VΣ⁺) via dsyrk
+        unscaledCov = ws.unscaledCov;
         for (int i = 0; i < r; i++) {
             double si = ws.work[offS + i];
             for (int j = 0; j < k; j++) ws.work[offVT + i*k + j] *= si;
@@ -134,30 +212,22 @@ public class OLS extends Regression {
             for (int j = i + 1; j < k; j++) unscaledCov[j*k + i] = unscaledCov[i*k + j];
     }
 
-    // ==================== QR solver ====================
+    // =========================================================================
+    // QR solver
+    // =========================================================================
     //
     // Decompose X = QR, then:
-    //   β̂         = R⁻¹Qᵀy
-    //   unscaledCov = (RᵀR)⁻¹  (= (XᵀX)⁻¹ when full rank)
+    //   β̂          = R⁻¹Qᵀy
+    //   fitted      = Q·(Qᵀy)  (projection onto column space of X)
+    //   unscaledCov = (RᵀR)⁻¹
     //
-    // Steps:
-    //   1. dgeqrf  → R in upper triangle of exog
-    //   2. copy R  → work[offR]  (before dorgqr overwrites exog)
-    //   3. dorgqr  → exog becomes Q;  work[offR] still holds R
-    //   4. dtrtrs  → β̂ = R⁻¹(Qᵀy)
-    //   5. SVD(R)  → rank/cond  (R copied into unscaledCov[], SVD overwrites unscaledCov[])
-    //   6. re-copy R from work[offR], compute unscaledCov = (RᵀR)⁻¹ via LU
-    //
-    // work[offR] is never touched by dgeqrf/dorgqr/dgetri scratch (all use work[0..lwork),
-    // and offR = lwork).
+    // Memory layout in ws.work:
+    //   [lwork | R:k×k | tau:t]
 
-    void solveQR(double[] endo, double[] exog, Regressor.Pool ws) {
+    void solveQR(double[] endo, double[] exog, Pool ws) {
         int n = nObs, k = nParams;
-        beta    = new double[k];
-        unscaledCov = new double[k * k];
-        int t = min(n, k); // tau length for Householder reflectors
+        int t = min(n, k);
 
-        // Query lwork for dgeqrf and dorgqr; need >= k for dgetri
         double[] wq = new double[1];
         BLAS.dgeqrf(n, k, exog, 0, k, wq, 0, wq, 0, -1);
         int lwork = (int) wq[0];
@@ -165,67 +235,67 @@ public class OLS extends Regression {
         lwork = max(lwork, max((int) wq[0], k));
 
         // work layout: [lwork | R:k×k | tau:t]
-        // offR = lwork, so scratch work[0..lwork) never overlaps R
         int offR = lwork, offTau = lwork + k*k;
         ws.ensureWork(lwork + k*k + t);
         ws.ensureIpiv(k);
 
-        // Step 1: X = QR factorization
+        // Step 1: QR factorization
         BLAS.dgeqrf(n, k, exog, 0, k, ws.work, offTau, ws.work, 0, lwork);
 
-        // Step 2: Save R into work[offR] before dorgqr overwrites exog
+        // Step 2: save R
         java.util.Arrays.fill(ws.work, offR, offR + k*k, 0.0);
         for (int i = 0; i < k; i++)
             System.arraycopy(exog, i*k + i, ws.work, offR + i*k + i, k - i);
 
-        // Step 3: Expand Q in-place (exog = Q now;  work[offR] = R intact)
+        // Step 3: expand Q in-place (exog now holds Q)
         BLAS.dorgqr(n, k, k, exog, 0, k, ws.work, offTau, ws.work, 0, lwork);
 
-        // Step 4: β̂ = R⁻¹(Qᵀy)
+        // Step 4: Qᵀy — write into beta as temp
+        beta = ws.beta;
         BLAS.dgemv(BLAS.Trans.Trans, n, k, 1.0, exog, 0, k, endo, 0, 1, 0.0, beta, 0, 1);
+
+        // Step 5: fitted = Q·(Qᵀy),  residual = endo - fitted
+        BLAS.dgemv(BLAS.Trans.NoTrans, n, k, 1.0, exog, 0, k, beta, 0, 1, 0.0, ws.fitted, 0, 1);
+        System.arraycopy(endo, 0, ws.residual, 0, n);
+        BLAS.daxpy(n, -1.0, ws.fitted, 0, 1, ws.residual, 0, 1);
+        setFittedResidualCache(ws);
+
+        // Step 6: β̂ = R⁻¹(Qᵀy)
         BLAS.dtrtrs(BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, k, 1,
                     ws.work, offR, k, beta, 0, 1);
 
-        // Step 5: rank/cond via SVD of R
-        // Copy R into normCov[], run SVD — singular values go into work[0..k)
-        // (safe to reuse scratch since offR = lwork >= k).
-        // SVD overwrites normCov[] with garbage; recomputed in step 6.
-        java.util.Arrays.fill(unscaledCov, 0.0);
+        // Step 7: rank/cond via SVD of R — use ws.unscaledCov as temp
+        unscaledCov = ws.unscaledCov;
+        java.util.Arrays.fill(unscaledCov, 0, k*k, 0.0);
         for (int i = 0; i < k; i++)
             System.arraycopy(ws.work, offR + i*k + i, unscaledCov, i*k + i, k - i);
         BLAS.dgesvd('N', 'N', k, k, unscaledCov, 0, k, ws.work, 0,
-                    null, 0, 1, null, 0, 1, ws.work, k, lwork - k);
+                    null, 0, 1, null, 0, 1, ws.work, k, max(lwork - k, svdWorkSize(k, k)));
         rank = 0;
         for (int i = 0; i < k; i++) if (ws.work[i] > ws.work[0] * 0x1p-53) rank++;
         cond = sqrt((ws.work[0] * ws.work[0]) / (ws.work[k - 1] * ws.work[k - 1]));
 
-        // Step 6: normCov = (RᵀR)⁻¹ via LU  (work[offR] still holds R)
+        // Step 8: unscaledCov = (RᵀR)⁻¹ via LU
         BLAS.dgemm(BLAS.Trans.Trans, BLAS.Trans.NoTrans, k, k, k,
                    1.0, ws.work, offR, k, ws.work, offR, k, 0.0, unscaledCov, 0, k);
         BLAS.dgetrf(k, k, unscaledCov, 0, k, ws.ipiv, 0);
         BLAS.dgetri(k, unscaledCov, 0, k, ws.ipiv, 0, ws.work, 0, lwork);
     }
 
-
-    // ==================== constant detection ====================
+    // =========================================================================
+    // Constant detection
+    // =========================================================================
 
     /**
      * Detects whether X contains a constant term (intercept column).
-     *
-     * <p>Fast path: single-pass O(nk) scan with one array — each column's first
-     * value is used as baseline; marked NaN if any later value differs.
-     * Returns immediately when a single explicit constant column is found.
-     *
-     * <p>Slow path: when the scan is ambiguous (no constant column, or multiple
-     * constant columns with no explicit 1), checks for an implicit constant by
-     * comparing rank(X) vs rank([1|X]) via SVD.
-     * Reuses ws.xCopy and ws.work as scratch (zero extra allocation).
      */
-    static int detectConst(double[] X, int n, int k, Regressor.Pool ws) {
-        // O(nk) single-pass scan — one array, NaN marks non-constant columns
-        double[] base = new double[k];
-        System.arraycopy(X, 0, base, 0, k); // first row as baseline
-        int remaining = k; // columns not yet marked NaN
+    static int detectConst(double[] X, int n, int k, Pool ws) {
+        // Fast path: single-pass O(nk) scan.
+        // reuse work[0..k) as base — fast path does no LAPACK so work[0..k) is free
+        ws.ensureWork(k);
+        double[] base = ws.work;
+        System.arraycopy(X, 0, base, 0, k);
+        int remaining = k;
         for (int i = 1; i < n && remaining > 0; i++) {
             for (int j = 0; j < k; j++) {
                 if (!Double.isNaN(base[j]) && X[i*k + j] != base[j]) {
@@ -245,43 +315,44 @@ public class OLS extends Regression {
         if (constCount == 1) return 1;
         if (constCount > 1 && hasExplicitOne) return 1;
 
-        // Ambiguous — compare rank(X) vs rank([1|X]) via SVD
+        // Slow path: compare rank(X) vs rank([1|X])
+        // work layout: [ lwork | S: min(n,k1) | A: n×k1 ]
         int k1 = k + 1;
-        ws.ensureData(n, n * k1);
-        double[] buf = ws.xCopy;
+        int lwork = svdWorkSize(n, k1);
+        int offS  = lwork;
+        int offA  = lwork + min(n, k1);
+        ws.ensureWork(offA + n * k1);
 
-        // pass 1: rank of X (n×k)
-        System.arraycopy(X, 0, buf, 0, n * k);
-        int orgRank = numericalRank(buf, n, k, ws);
+        // first call: rank(X) — copy X into work[offA], padded to k1 columns
+        for (int i = 0; i < n; i++)
+            System.arraycopy(X, i * k, ws.work, offA + i * k, k);
+        int orgRank = numericalRank(ws.work, offA, n, k, offS, lwork, ws);
 
-        // pass 2: rank of [1|X] (n×(k+1))
+        // second call: rank([1|X]) — prepend ones column
         for (int i = 0; i < n; i++) {
-            buf[i * k1] = 1.0;
-            System.arraycopy(X, i * k, buf, i * k1 + 1, k);
+            ws.work[offA + i * k1] = 1.0;
+            System.arraycopy(X, i * k, ws.work, offA + i * k1 + 1, k);
         }
-        int augRank = numericalRank(buf, n, k1, ws);
+        int augRank = numericalRank(ws.work, offA, n, k1, offS, lwork, ws);
 
-        // rank([1|X]) == rank(X)  ⟹  1 is in col-span of X  ⟹  implicit constant
         return augRank == orgRank ? 1 : 0;
     }
 
-    /**
-     * Computes numerical rank of A (m×n) via SVD.
-     * A is overwritten. Reuses ws.work as scratch.
-     */
-    private static int numericalRank(double[] A, int m, int n, Regressor.Pool ws) {
-        int minmn = min(m, n);
+    /** Returns the LAPACK lwork estimate for dgesvd('N','N', m, n). */
+    static int svdWorkSize(int m, int n) {
         double[] wq = new double[1];
-        BLAS.dgesvd('N', 'N', m, n, A, 0, n, wq, 0, null, 0, 1, null, 0, 1, wq, 0, -1);
-        int lwork = (int) wq[0];
-        // work layout: [lwork | S:minmn]
-        int offS = lwork;
-        ws.ensureWork(lwork + minmn);
-        BLAS.dgesvd('N', 'N', m, n, A, 0, n,
-                    ws.work, offS, null, 0, 1, null, 0, 1,
-                    ws.work, 0, lwork);
+        BLAS.dgesvd('N', 'N', m, n, null, 0, n, wq, 0, null, 0, 1, null, 0, 1, wq, 0, -1);
+        return (int) wq[0];
+    }
+
+    /** Computes numerical rank of A (m×n) stored in ws.work[offA..], using ws.work[offS..] for singular values. */
+    private static int numericalRank(double[] work, int offA, int m, int n, int offS, int lwork, Pool ws) {
+        int minmn = min(m, n);
+        BLAS.dgesvd('N', 'N', m, n, work, offA, n,
+                    work, offS, null, 0, 1, null, 0, 1,
+                    work, 0, lwork);
         int rank = 0;
-        for (int i = 0; i < minmn; i++) if (ws.work[offS + i] > ws.work[offS] * 0x1p-53) rank++;
+        for (int i = 0; i < minmn; i++) if (work[offS + i] > work[offS] * 0x1p-53) rank++;
         return rank;
     }
 }

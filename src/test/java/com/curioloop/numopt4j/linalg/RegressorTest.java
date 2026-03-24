@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * numpy.random.default_rng(42).normal(0, 1.5, 50).
  * Weights: w[i]=1 for i<30, w[i]=3 for i>=30; wInv[i]=1/w[i].
  */
-public class LeastSquaresTest {
+public class RegressorTest {
 
     static final int NOBS = 50;
 
@@ -184,7 +184,7 @@ public class LeastSquaresTest {
     @Test
     void testOLS_predictionInterval_SVD() {
         double[] X2 = buildX2();
-        Regression res = new OLS(Y_VEC, X2, NOBS, 2, false).fit();
+        Regression res = new OLS(Y_VEC, X2.clone(), NOBS, 2, false).fit();
 
         double[] paramCov = res.paramCov();
         double[] fitted   = res.fitted(false);
@@ -230,8 +230,8 @@ public class LeastSquaresTest {
     @Test
     void testOLS_predictionInterval_QR() {
         double[] X2 = buildX2();
-        Regression svd = new OLS(Y_VEC, X2, NOBS, 2, false).fit();
-        Regression qr  = new OLS(Y_VEC, X2, NOBS, 2, true).fit();
+        Regression svd = new OLS(Y_VEC, X2.clone(), NOBS, 2, false).fit();
+        Regression qr  = new OLS(Y_VEC, X2.clone(), NOBS, 2, true).fit();
 
         Prediction pSvd = svd.predict(X2, NOBS, null);
         Prediction pQr  = qr.predict(X2, NOBS, null);
@@ -351,6 +351,7 @@ public class LeastSquaresTest {
     void testWLS_predictionInterval_SVD() {
         double[] X2   = buildX2();
         double[] wInv = buildWInv();
+        double[] X2orig = X2.clone(); // save original X for prediction (X is overwritten by fit)
         Regression res = new WLS(Y_VEC, X2, wInv, NOBS, 2, false).fit();
 
         double[] paramCov = res.paramCov();
@@ -364,11 +365,11 @@ public class LeastSquaresTest {
         for (int i = 0; i < NOBS; i++) {
             for (int j = 0; j < k; j++) {
                 double dot = 0;
-                for (int l = 0; l < k; l++) dot += paramCov[j*k+l] * X2[i*k+l];
+                for (int l = 0; l < k; l++) dot += paramCov[j*k+l] * X2orig[i*k+l];
                 tmp[j] = dot;
             }
             double pv = 0;
-            for (int j = 0; j < k; j++) pv += tmp[j] * X2[i*k+j];
+            for (int j = 0; j < k; j++) pv += tmp[j] * X2orig[i*k+j];
             double wi = (i < 30) ? 1.0 : 3.0;
             std[i] = sqrt(mse * wi + pv);   // residualVar = scale / wInv[i] = scale * w[i]
             lb[i]  = fitted[i] - Q * std[i];
@@ -382,7 +383,7 @@ public class LeastSquaresTest {
         assertEquals(38.033919413790, lb[49],  1e-10, "WLS lb[49]");
         assertEquals(45.091646984811, ub[49],  1e-10, "WLS ub[49]");
 
-        Prediction pred = res.predict(X2, NOBS, wInv);
+        Prediction pred = res.predict(X2orig, NOBS, wInv);
         double[][] ci = pred.confInt(0.05);
         assertClose(std, ci[2], 1e-12, "WLS pred std");
         assertClose(lb,  ci[0], 1e-10, "WLS pred lb");
@@ -399,11 +400,12 @@ public class LeastSquaresTest {
     void testWLS_predictionInterval_QR() {
         double[] X2   = buildX2();
         double[] wInv = buildWInv();
-        Regression svd = new WLS(Y_VEC, X2, wInv, NOBS, 2, false).fit();
-        Regression qr  = new WLS(Y_VEC, X2, wInv, NOBS, 2, true).fit();
+        Regression svd = new WLS(Y_VEC, X2,        wInv, NOBS, 2, false).fit();
+        Regression qr  = new WLS(Y_VEC, buildX2(), wInv, NOBS, 2, true).fit();
 
-        Prediction pSvd = svd.predict(X2, NOBS, wInv);
-        Prediction pQr  = qr.predict(X2, NOBS, wInv);
+        double[] X2orig = buildX2(); // fresh X for prediction
+        Prediction pSvd = svd.predict(X2orig, NOBS, wInv);
+        Prediction pQr  = qr.predict(X2orig, NOBS, wInv);
 
         double[][] ciSvd = pSvd.confInt(0.05);
         double[][] ciQr  = pQr.confInt(0.05);
@@ -434,7 +436,7 @@ public class LeastSquaresTest {
         double[] X = {1,1, 2,1, 3,1, 4,1, 5,1};
         double[] y = {2.1, 4.0, 5.9, 8.1, 10.0};
         double[] w = {1, 1, 1, 1, 1};
-        Regression ols = new OLS(y, X, 5, 2).fit();
+        Regression ols = new OLS(y, X.clone(), 5, 2).fit();
         Regression wls = new WLS(y, X, w, 5, 2).fit();
         assertClose(ols.parameters(), wls.parameters(), 1e-10, "uniform WLS vs OLS beta");
         assertEquals(ols.ssr(),      wls.ssr(),      1e-10, "uniform WLS vs OLS SSR");
@@ -462,8 +464,8 @@ public class LeastSquaresTest {
     @Test
     void testFacade_ols_matchesDirectOLS() {
         double[] X = buildX2();
-        Regression direct = new OLS(Y_VEC, X, NOBS, 2).fit();
-        Regression facade = Regressor.ols(Y_VEC, X, NOBS, 2, Regressor.Opts.PINV);
+        Regression direct = new OLS(Y_VEC, X.clone(), NOBS, 2).fit();
+        Regression facade = Regressor.ols(Y_VEC, X.clone(), NOBS, 2, Regressor.Opts.PINV);
         assertClose(direct.parameters(), facade.parameters(), 1e-10, "facade OLS beta");
         assertEquals(direct.ssr(),     facade.ssr(),     1e-10, "facade OLS SSR");
         assertEquals(direct.r2(false), facade.r2(false), 1e-10, "facade OLS R²");
@@ -472,8 +474,8 @@ public class LeastSquaresTest {
     @Test
     void testFacade_ols_qrOpt() {
         double[] X = buildX2();
-        Regression svd = Regressor.ols(Y_VEC, X, NOBS, 2, Regressor.Opts.PINV);
-        Regression qr  = Regressor.ols(Y_VEC, X, NOBS, 2, Regressor.Opts.QR);
+        Regression svd = Regressor.ols(Y_VEC, X.clone(), NOBS, 2, Regressor.Opts.PINV);
+        Regression qr  = Regressor.ols(Y_VEC, X.clone(), NOBS, 2, Regressor.Opts.QR);
         assertClose(svd.parameters(), qr.parameters(), 1e-10, "facade QR vs SVD beta");
         assertEquals(svd.ssr(), qr.ssr(), 1e-8, "facade QR vs SVD SSR");
     }
@@ -481,8 +483,8 @@ public class LeastSquaresTest {
     @Test
     void testFacade_wls_matchesDirectWLS() {
         double[] X = buildX2(), wInv = buildWInv();
-        Regression direct = new WLS(Y_VEC, X, wInv, NOBS, 2).fit();
-        Regression facade = Regressor.wls(Y_VEC, X, wInv, NOBS, 2, Regressor.Opts.PINV);
+        Regression direct = new WLS(Y_VEC, X,           wInv, NOBS, 2).fit();
+        Regression facade = Regressor.wls(Y_VEC, buildX2(), wInv, NOBS, 2, Regressor.Opts.PINV);
         assertClose(direct.parameters(), facade.parameters(), 1e-10, "facade WLS beta");
         assertEquals(direct.ssr(),     facade.ssr(),     1e-10, "facade WLS SSR");
         assertEquals(direct.r2(false), facade.r2(false), 1e-10, "facade WLS R²");
@@ -490,30 +492,27 @@ public class LeastSquaresTest {
 
     @Test
     void testFacade_poolReuse() {
-        double[] X = buildX2();
-        Regressor.Pool ws = new Regressor.Pool();
-        Regression r1 = Regressor.ols(Y_VEC, X, NOBS, 2, ws, Regressor.Opts.PINV);
+        WLS.Pool ws = new WLS.Pool();
+        Regression r1 = Regressor.ols(Y_VEC, buildX2(), NOBS, 2, ws, Regressor.Opts.PINV);
         double[] beta1 = r1.parameters().clone();
-        Regression r2 = Regressor.ols(Y_VEC, X, NOBS, 2, ws, Regressor.Opts.PINV);
+        Regression r2 = Regressor.ols(Y_VEC, buildX2(), NOBS, 2, ws, Regressor.Opts.PINV);
         assertClose(beta1, r2.parameters(), 1e-10, "pool reuse beta");
         assertEquals(r1.ssr(), r2.ssr(), 1e-10, "pool reuse SSR");
     }
 
     @Test
     void testFacade_noConstDetect() {
-        double[] X = {1,1, 2,1, 3,1, 4,1};
         double[] y = {3, 5, 7, 9};
-        assertEquals(1, Regressor.ols(y, X, 4, 2, Regressor.Opts.PINV).kConst(),                                    "kConst with detection");
-        assertEquals(0, Regressor.ols(y, X, 4, 2, Regressor.Opts.PINV, Regressor.Opts.NO_CONST_DETECT).kConst(), "kConst without detection");
+        assertEquals(1, Regressor.ols(y, new double[]{1,1, 2,1, 3,1, 4,1}, 4, 2, Regressor.Opts.PINV).kConst(),                                    "kConst with detection");
+        assertEquals(0, Regressor.ols(y, new double[]{1,1, 2,1, 3,1, 4,1}, 4, 2, Regressor.Opts.PINV, Regressor.Opts.NO_CONST_DETECT).kConst(), "kConst without detection");
     }
 
     @Test
-    void testFacade_inputNotModified() {
-        double[] y = Y_VEC.clone(), X = buildX2();
-        double[] yOrig = y.clone(), XOrig = X.clone();
-        Regressor.ols(y, X, NOBS, 2, Regressor.Opts.PINV);
+    void testFacade_yNotModified() {
+        double[] y = Y_VEC.clone();
+        double[] yOrig = y.clone();
+        Regressor.ols(y, buildX2(), NOBS, 2, Regressor.Opts.PINV);
         assertClose(yOrig, y, 0, "y was modified");
-        assertClose(XOrig, X, 0, "X was modified");
     }
 
     // ================================================================
@@ -536,7 +535,7 @@ public class LeastSquaresTest {
 
     static java.util.Map<String, double[]> loadMacrodata() throws Exception {
         java.util.Map<String, double[]> result = new java.util.LinkedHashMap<>();
-        java.io.InputStream is = LeastSquaresTest.class.getClassLoader()
+        java.io.InputStream is = RegressorTest.class.getClassLoader()
                 .getResourceAsStream("macrodata.csv");
         assertNotNull(is, "macrodata.csv not found");
         try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.InputStreamReader(is))) {
@@ -626,8 +625,8 @@ public class LeastSquaresTest {
         double[][] xy = buildMacrodataXY();
         double[] y = xy[0]; double[] X = xy[1]; int n = y.length, k = 3;
 
-        Regression svd = new OLS(y, X, n, k, false).fit();
-        Regression qr  = new OLS(y, X, n, k, true).fit();
+        Regression svd = new OLS(y, X.clone(), n, k, false).fit();
+        Regression qr  = new OLS(y, X.clone(), n, k, true).fit();
 
         assertClose(svd.parameters(), qr.parameters(), 1e-12, "macro QR vs SVD beta");
         assertEquals(svd.ssr(),      qr.ssr(),      1e-10, "macro QR vs SVD SSR");
