@@ -9,6 +9,7 @@ High-performance numerical optimization library for Java.
 - **SLSQP**: Sequential Least Squares Programming with equality/inequality constraints
 - **TRF**: Trust Region Reflective for nonlinear least squares
 - **Root finding**: Brentq (1-D), HYBR and Broyden (N-D) via `RootFinder`
+- **Linear regression**: OLS and WLS with SVD/QR solvers, full statistical output via `Regressor`
 - **Matrix decompositions**: LU, QR, LQ, SVD, Cholesky/LDLᵀ, Schur, Eigen, GEVD, GGEVD, GSVD via `Decomposer`
 - Workspace reuse for high-frequency optimization scenarios
 - Multiple numerical gradient/Jacobian methods with different accuracy/speed tradeoffs
@@ -120,6 +121,41 @@ OptimizationResult result = Minimizer.trf()
     .solve();
 ```
 
+### Linear Regression (OLS / WLS)
+
+```java
+// OLS with SVD solver (numerically robust)
+OLS r = Regressor.ols(y, X, n, k, Regressor.Opts.PINV);
+
+// OLS with QR solver (faster when X is full rank)
+OLS r = Regressor.ols(y, X, n, k, Regressor.Opts.QR);
+
+// WLS with per-observation weights
+WLS r = Regressor.wls(y, X, weights, n, k, Regressor.Opts.PINV);
+
+// Workspace reuse across multiple fits
+Regressor.Pool ws = new Regressor.Pool();
+for (double[] yi : series) {
+    OLS r = Regressor.ols(yi, X, n, k, ws, Regressor.Opts.PINV);
+    double[] beta = r.parameters();
+    double   r2   = r.r2(false);
+}
+
+// Statistical output
+double[] beta = r.parameters();   // β̂
+double[] bse  = r.bse();          // standard errors
+double   r2   = r.r2(false);      // R²
+double   r2a  = r.r2(true);       // adjusted R²
+double   llf  = r.logLike();      // log-likelihood
+double   aic  = r.aic();
+double   bic  = r.bic();
+
+// Prediction intervals
+Prediction pred = r.predict(newX, m, null);
+double[][] ci   = pred.confInt(0.05);  // 95% prediction interval
+// ci[0] = lower bounds, ci[1] = upper bounds, ci[2] = std errors
+```
+
 ### Root Finding (1-D Brentq)
 
 ```java
@@ -201,10 +237,37 @@ RootFinder.hybr(BiConsumer<double[],double[]> fn, int n)    // → HYBRProblem
 RootFinder.broyden(BiConsumer<double[],double[]> fn, int n) // → BroydenProblem
 ```
 
-### Decomposer (facade — matrix decompositions)
+### Regressor (facade — linear regression)
 
-All methods accept an optional `Pool` for workspace reuse and optional `Opts` enums for configuration.
-Input matrices are overwritten in place (row-major, `double[]`).
+```java
+Regressor.ols(y, X, n, k, Opts...)           // OLS, must specify Opts.QR or Opts.PINV
+Regressor.ols(y, X, n, k, Pool, Opts...)     // OLS with workspace reuse
+Regressor.wls(y, X, w, n, k, Opts...)        // WLS
+Regressor.wls(y, X, w, n, k, Pool, Opts...)  // WLS with workspace reuse
+```
+
+`Opts.QR` — QR factorization (faster, full-rank X); `Opts.PINV` — SVD pseudoinverse (robust, rank-deficient X); `Opts.NO_CONST_DETECT` — skip intercept detection.
+
+Key result methods on `Regression` (base of `OLS`/`WLS`):
+
+| Method | Description |
+|---|---|
+| `parameters()` | β̂ (length k) |
+| `bse()` | standard errors √diag(Cov(β̂)) |
+| `paramCov()` | Cov(β̂) = σ̂²·(XᵀX)⁻¹, k×k |
+| `ssr()` | sum of squared residuals |
+| `scale()` | σ̂² = SSR / (n − rank) |
+| `r2(boolean)` | R² (pass `true` for adjusted) |
+| `mse()` | double[3] = {MSE_model, MSE_residual, MSE_total} |
+| `logLike()` | Gaussian log-likelihood |
+| `aic()` / `bic()` | information criteria |
+| `fitted(boolean)` | ŷ = Xβ̂ (pass `true` for whitened) |
+| `residual(boolean)` | e = y − ŷ (pass `true` for whitened) |
+| `predict(newX, m, w)` | `Prediction` with mean(), paramVar(), residualVar() |
+| `nObs()` / `nParams()` / `kConst()` | dimensions |
+| `rank()` / `condNum()` | numerical rank and condition number |
+
+### Decomposer (facade — matrix decompositions)
 
 ```java
 // Standard decompositions

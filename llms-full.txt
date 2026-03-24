@@ -889,7 +889,213 @@ for (double[] startPoint : startPoints) {
 ```
 
 
-## 16. Decomposer (Matrix Decompositions)
+## 16. Regressor (Linear Regression)
+
+`com.curioloop.numopt4j.linalg.Regressor`
+
+Facade for ordinary and weighted least squares regression. Solves the linear model y = Xβ + ε with optional per-observation weights. X is row-major n×k; neither y nor X is modified.
+
+### Package
+
+```
+com.curioloop.numopt4j.linalg          # Regression (abstract base), Regressor (facade)
+com.curioloop.numopt4j.linalg.reg      # OLS, WLS, Prediction
+```
+
+### Algorithm Selection
+
+| Solver | Opt | When to use |
+|---|---|---|
+| SVD / pseudoinverse | `Opts.PINV` | Default choice — numerically robust, handles rank-deficient X |
+| QR factorization | `Opts.QR` | Faster when X is known to be full rank |
+
+### Factory Methods
+
+```java
+// OLS — ordinary least squares
+OLS Regressor.ols(double[] y, double[] X, int n, int k, Opts... opts)
+OLS Regressor.ols(double[] y, double[] X, int n, int k, Pool ws, Opts... opts)
+
+// WLS — weighted least squares
+WLS Regressor.wls(double[] y, double[] X, double[] weights, int n, int k, Opts... opts)
+WLS Regressor.wls(double[] y, double[] X, double[] weights, int n, int k, Pool ws, Opts... opts)
+```
+
+Parameters:
+- `y` — endogenous vector, length ≥ n, not modified
+- `X` — exogenous matrix, row-major n×k, not modified
+- `weights` — observation weights, length ≥ n, all positive, not modified (WLS only)
+- `n` — number of observations
+- `k` — number of regressors (including intercept column if present)
+- `ws` — reusable workspace (optional; created internally if null)
+- `opts` — one or more `Regressor.Opts` values; `QR` or `PINV` is required
+
+### Opts Enum
+
+```java
+Regressor.Opts.QR              // QR factorization solver
+Regressor.Opts.PINV            // SVD pseudoinverse solver
+Regressor.Opts.NO_CONST_DETECT // skip intercept detection; treat kConst as 0
+```
+
+### Regression Result API (abstract base of OLS / WLS)
+
+`com.curioloop.numopt4j.linalg.Regression`
+
+All quantities are computed lazily and cached on first access.
+
+```java
+// ---- parameters ----
+double[]   parameters()              // β̂, length k
+double[]   bse()                     // standard errors √diag(Cov(β̂)), length k
+double[]   paramCov()                // Cov(β̂) = σ̂²·(XᵀX)⁻¹, k×k row-major (new array each call)
+
+// ---- fitted values and residuals ----
+double[]   fitted(boolean whiten)    // ŷ = Xβ̂; if whiten=true and WLS, returns √W·ŷ
+double[]   residual(boolean whiten)  // e = y − ŷ; if whiten=true and WLS, returns √W·e
+
+// ---- sum of squares ----
+double     ssr()                     // sum of squared (whitened) residuals ‖ẽ‖²
+double     tss(boolean centered)     // total sum of squares (centered or uncentered)
+double     ess()                     // explained sum of squares = TSS − SSR
+
+// ---- scale and covariance ----
+double     scale()                   // σ̂² = SSR / (n − rank)
+
+// ---- goodness of fit ----
+double     r2(boolean adjusted)      // R² or adjusted R²
+double[]   mse()                     // double[3] = {MSE_model, MSE_residual, MSE_total}
+
+// ---- information criteria ----
+double     logLike()                 // Gaussian log-likelihood
+double     aic()                     // AIC = −2·llf + 2·(dfModel + kConst)
+double     bic()                     // BIC = −2·llf + log(n)·(dfModel + kConst)
+
+// ---- prediction ----
+Prediction predict(double[] newX, int m, double[] weights)
+
+// ---- dimensions and diagnostics ----
+int        nObs()                    // number of observations n
+int        nParams()                 // number of regressors k
+int        kConst()                  // 1 if intercept detected/present, 0 otherwise
+int        rank()                    // numerical rank of X
+double     condNum()                 // condition number √(σ_max²/σ_min²)
+```
+
+### Prediction
+
+`com.curioloop.numopt4j.linalg.reg.Prediction`
+
+Returned by `Regression.predict(newX, m, weights)`.
+
+```java
+// mean is computed eagerly (single dgemv); paramVar and residualVar are lazy (computed on first call)
+double[]   mean()          // ŷ = newX·β̂, length m
+double[]   paramVar()      // xᵢᵀ·Cov(β̂)·xᵢ per observation (parameter uncertainty), lazy
+double[]   residualVar()   // σ̂²/wᵢ per observation (residual uncertainty), lazy
+
+// Prediction interval: lb[i] = mean[i] − Q·std[i],  ub[i] = mean[i] + Q·std[i]
+// where std[i] = √(residualVar[i] + paramVar[i]),  Q = t_{dfResidual, 1−alpha/2}
+double[][] confInt(double alpha)     // returns double[3][] = {lb, ub, std}
+
+// Utility: t-distribution quantile (Cornish-Fisher + Newton-Raphson)
+static double tQuantile(int df, double p)
+static double normalQuantile(double p)
+```
+
+### Pool (Workspace Reuse)
+
+`com.curioloop.numopt4j.linalg.Regressor.Pool`
+
+Reusable workspace that eliminates per-fit allocations. Buffers grow on demand.
+
+```java
+public double[] work;   // LAPACK floating-point scratch
+public double[] yCopy;  // copy of endogenous vector
+public double[] xCopy;  // copy of exogenous matrix (possibly whitened for WLS)
+public int[]    ipiv;   // pivot indices for QR path
+
+Pool ensureWork(int size)
+Pool ensureData(int n, int nk)
+Pool ensureIpiv(int size)
+```
+
+### Complete Example
+
+```java
+import com.curioloop.numopt4j.linalg.*;
+import com.curioloop.numopt4j.linalg.reg.*;
+
+int n = 50, k = 2;
+
+// Build X = [x, 1] row-major n×2
+double[] X = new double[n * k];
+for (int i = 0; i < n; i++) { X[i*k] = xVec[i]; X[i*k+1] = 1.0; }
+
+// OLS with SVD solver
+OLS r = Regressor.ols(y, X, n, k, Regressor.Opts.PINV);
+
+double[] beta = r.parameters();   // [slope, intercept]
+double[] bse  = r.bse();          // standard errors
+double   r2   = r.r2(false);      // R²
+double   r2a  = r.r2(true);       // adjusted R²
+double   llf  = r.logLike();
+double   aic  = r.aic();
+double   bic  = r.bic();
+double   sig2 = r.scale();        // σ̂²
+
+double[] fitted   = r.fitted(false);
+double[] residual = r.residual(false);
+
+// Prediction interval (95%)
+Prediction pred = r.predict(X, n, null);
+double[][] ci   = pred.confInt(0.05);
+// ci[0] = lower bounds, ci[1] = upper bounds, ci[2] = std errors
+
+// WLS with per-observation weights
+double[] weights = new double[n];
+Arrays.fill(weights, 1.0);
+WLS rw = Regressor.wls(y, X, weights, n, k, Regressor.Opts.PINV);
+
+// Workspace reuse across multiple fits
+Regressor.Pool ws = new Regressor.Pool();
+for (double[] yi : series) {
+    OLS ri = Regressor.ols(yi, X, n, k, ws, Regressor.Opts.PINV);
+    // process ri.parameters(), ri.r2(false), etc.
+}
+```
+
+### Intercept Detection
+
+By default, `Regressor` scans X for a constant column (intercept). The result is stored in `kConst()`:
+- `kConst() == 1` — intercept present (affects R², AIC/BIC, adjusted R²)
+- `kConst() == 0` — no intercept
+
+Pass `Opts.NO_CONST_DETECT` to skip detection and treat `kConst` as 0.
+
+Detection uses a fast O(nk) scan; falls back to SVD rank comparison only when ambiguous.
+
+### OLS / WLS Direct Construction
+
+You can also construct `OLS`/`WLS` directly without the `Regressor` facade:
+
+```java
+// OLS constructors
+new OLS(double[] y, double[] X, int n, int k)                              // SVD, with const detection
+new OLS(double[] y, double[] X, int n, int k, boolean useQR)               // specify solver
+new OLS(double[] y, double[] X, int n, int k, boolean useQR, boolean noConst)
+
+// WLS constructors
+new WLS(double[] y, double[] X, double[] weights, int n, int k)
+new WLS(double[] y, double[] X, double[] weights, int n, int k, boolean useQR)
+new WLS(double[] y, double[] X, double[] weights, int n, int k, boolean useQR, boolean noConst)
+
+// Fit
+OLS result = new OLS(y, X, n, k).fit();
+OLS result = new OLS(y, X, n, k).fit(ws);  // with workspace reuse
+```
+
+## 17. Decomposer (Matrix Decompositions)
 
 `com.curioloop.numopt4j.linalg.Decomposer`
 
@@ -926,7 +1132,7 @@ com.curioloop.numopt4j.linalg.mat      # LU, QR, LQ, SVD, Cholesky, Schur, Eigen
 - Pool fields: uppercase names (e.g. `U`, `VT`, `Z`) are matrices; lowercase names (e.g. `s`, `wr`, `wi`) are vectors.
 
 
-## 17. LU Decomposition
+## 18. LU Decomposition
 
 `com.curioloop.numopt4j.linalg.mat.LU`
 
@@ -973,7 +1179,7 @@ for (double[] mat : matrices) {
 ```
 
 
-## 18. QR Decomposition
+## 19. QR Decomposition
 
 `com.curioloop.numopt4j.linalg.mat.QR`
 
@@ -1028,7 +1234,7 @@ int rank = qrp.rank();
 ```
 
 
-## 19. LQ Decomposition
+## 20. LQ Decomposition
 
 `com.curioloop.numopt4j.linalg.mat.LQ`
 
@@ -1057,7 +1263,7 @@ lq.pool()                // LQ.Pool for reuse
 ```
 
 
-## 20. SVD
+## 21. SVD
 
 `com.curioloop.numopt4j.linalg.mat.SVD`
 
@@ -1112,7 +1318,7 @@ double[] x = svd.solve(b, null);  // pseudoinverse
 ```
 
 
-## 21. Cholesky / LDLᵀ Decomposition
+## 22. Cholesky / LDLᵀ Decomposition
 
 `com.curioloop.numopt4j.linalg.mat.Cholesky`
 
@@ -1169,7 +1375,7 @@ ldl.solve(b, x);
 ```
 
 
-## 22. Schur Decomposition
+## 23. Schur Decomposition
 
 `com.curioloop.numopt4j.linalg.mat.Schur`
 
@@ -1235,7 +1441,7 @@ sc2.discreteLyapunov(A.clone(), Q);
 ```
 
 
-## 23. Eigen Decomposition
+## 24. Eigen Decomposition
 
 `com.curioloop.numopt4j.linalg.mat.Eigen`
 
@@ -1309,7 +1515,7 @@ Matrix toS = eg.toS();  // n×1 complex matrix
 ```
 
 
-## 24. GEVD — Generalized Symmetric-Definite Eigenvalue Decomposition
+## 25. GEVD — Generalized Symmetric-Definite Eigenvalue Decomposition
 
 `com.curioloop.numopt4j.linalg.mat.GEVD`
 
@@ -1375,7 +1581,7 @@ Matrix V = gv.toV();  // eigenvectors as columns
 ```
 
 
-## 25. GGEVD — Generalized Non-Symmetric Eigenvalue Decomposition
+## 26. GGEVD — Generalized Non-Symmetric Eigenvalue Decomposition
 
 `com.curioloop.numopt4j.linalg.mat.GGEVD`
 
@@ -1451,7 +1657,7 @@ for (int i = 0; i < n; i++) {
 ```
 
 
-## 26. GSVD — Generalized Singular Value Decomposition
+## 27. GSVD — Generalized Singular Value Decomposition
 
 `com.curioloop.numopt4j.linalg.mat.GSVD`
 

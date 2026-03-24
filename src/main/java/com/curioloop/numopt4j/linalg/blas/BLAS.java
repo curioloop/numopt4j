@@ -4,27 +4,181 @@
 package com.curioloop.numopt4j.linalg.blas;
 
 /**
- * Unified BLAS Level 1/2 interface.
+ * Unified LAPACK/BLAS interface aggregating all available routines for external access.
  *
- * <p>This interface aggregates all BLAS routines for external access.</p>
+ * <p>All matrices use row-major layout. The leading dimension ({@code lda}, {@code ldb}, etc.)
+ * equals the number of columns for a dense row-major matrix.
+ * Offset parameters ({@code aOff}, {@code xOff}, etc.) allow operating on sub-arrays
+ * without copying.
  *
- * <h2>Level 1 Operations</h2>
+ * <h2>BLAS Level 1 — Vector Operations</h2>
  * <ul>
- *   <li>dcopy, dset, dswap - vector copy/fill/swap</li>
- *   <li>dnrm2 - Euclidean norm</li>
- *   <li>damax - infinity norm</li>
- *   <li>dasum - L1 norm (sum of absolute values)</li>
- *   <li>idamax - index of max absolute value</li>
- *   <li>drot - Givens rotation</li>
- *   <li>daxpy - y += α×x</li>
- *   <li>dscal - x *= α</li>
- *   <li>ddot - dot product</li>
+ *   <li>{@link #dcopy}   — y := x</li>
+ *   <li>{@link #dset}    — x[i] := a</li>
+ *   <li>{@link #dswap}   — x ↔ y</li>
+ *   <li>{@link #daxpy}   — y := α·x + y</li>
+ *   <li>{@link #dscal}   — x := α·x</li>
+ *   <li>{@link #ddot}    — dot product xᵀy</li>
+ *   <li>{@link #dnrm2}   — Euclidean norm ‖x‖₂</li>
+ *   <li>{@link #dasum}   — L1 norm Σ|xᵢ|</li>
+ *   <li>{@link #damax}   — infinity norm max|xᵢ|</li>
+ *   <li>{@link #idamax}  — index of max |xᵢ|</li>
+ *   <li>{@link #drot}    — Givens plane rotation</li>
+ *   <li>{@link #drscl}   — x := x / a  (reciprocal scale)</li>
  * </ul>
  *
- * <h2>Level 2 Operations</h2>
+ * <h2>BLAS Level 2 — Matrix-Vector Operations</h2>
  * <ul>
- *   <li>dgemv - matrix-vector multiply</li>
- *   <li>dtrsv - triangular solve</li>
+ *   <li>{@link #dgemv}   — y := α·op(A)·x + β·y  (general)</li>
+ *   <li>{@link #dger}    — A := α·x·yᵀ + A  (rank-1 update)</li>
+ *   <li>{@link #dsymv}   — y := α·A·x + β·y  (symmetric)</li>
+ *   <li>{@link #dsyr2}   — A := α·x·yᵀ + α·y·xᵀ + A  (symmetric rank-2)</li>
+ *   <li>{@link #dtrmv}   — x := op(A)·x  (triangular)</li>
+ *   <li>{@link #dtrsl}   — solve T·x = b or Tᵀ·x = b  (LINPACK-style)</li>
+ * </ul>
+ *
+ * <h2>BLAS Level 3 — Matrix-Matrix Operations</h2>
+ * <ul>
+ *   <li>{@link #dgemm}   — C := α·op(A)·op(B) + β·C  (general)</li>
+ *   <li>{@link #dsymm}   — C := α·A·B + β·C  (symmetric A)</li>
+ *   <li>{@link #dsyrk}   — C := α·A·Aᵀ + β·C  (symmetric rank-k)</li>
+ *   <li>{@link #dsyr2k}  — C := α·A·Bᵀ + α·B·Aᵀ + β·C  (symmetric rank-2k)</li>
+ *   <li>{@link #dtrmm}   — B := α·op(A)·B  (triangular)</li>
+ *   <li>{@link #dtrsm}   — solve op(A)·X = α·B  (triangular)</li>
+ * </ul>
+ *
+ * <h2>LAPACK — Norms and Scaling</h2>
+ * <ul>
+ *   <li>{@link #dlange}  — norm of a general matrix (max, 1, inf, Frobenius)</li>
+ *   <li>{@link #dlansy}  — norm of a symmetric matrix</li>
+ *   <li>{@link #dlantr}  — norm of a triangular matrix</li>
+ *   <li>{@link #dlanst}  — norm of a symmetric tridiagonal matrix</li>
+ *   <li>{@link #dlascl}  — scale a matrix or vector by cfrom/cto</li>
+ *   <li>{@link #dlaset}  — initialize a matrix to α (off-diag) and β (diag)</li>
+ *   <li>{@link #dlacpy}  — copy all or part of a matrix</li>
+ *   <li>{@link #dlapmt}  — apply column permutation</li>
+ *   <li>{@link #dlaswp}  — apply row interchanges</li>
+ *   <li>{@link #dlamch}  — machine precision constants</li>
+ * </ul>
+ *
+ * <h2>LAPACK — QR Factorization</h2>
+ * <ul>
+ *   <li>{@link #dgeqrf}  — QR factorization A = Q·R  (blocked)</li>
+ *   <li>{@link #dgeqr2}  — QR factorization  (unblocked)</li>
+ *   <li>{@link #dgeqp3}  — QR with column pivoting A·P = Q·R</li>
+ *   <li>{@link #dorgqr}  — generate Q from dgeqrf  (blocked)</li>
+ *   <li>{@link #dorg2r}  — generate Q from dgeqrf  (unblocked)</li>
+ *   <li>{@link #dormqr}  — apply Q from dgeqrf  (blocked)</li>
+ *   <li>{@link #dorm2r}  — apply Q from dgeqrf  (unblocked)</li>
+ *   <li>{@link #dlarft}  — form triangular factor T of block reflector</li>
+ *   <li>{@link #dlarfb}  — apply block reflector H = I − V·T·Vᵀ</li>
+ *   <li>{@link #dlarfg}  — generate elementary Householder reflector</li>
+ *   <li>{@link #dlarf}   — apply elementary Householder reflector</li>
+ * </ul>
+ *
+ * <h2>LAPACK — LQ Factorization</h2>
+ * <ul>
+ *   <li>{@link #dgelqf}  — LQ factorization A = L·Q  (blocked)</li>
+ *   <li>{@link #dgelq2}  — LQ factorization  (unblocked)</li>
+ *   <li>{@link #dorglq}  — generate Q from dgelqf  (blocked)</li>
+ *   <li>{@link #dorgl2}  — generate Q from dgelqf  (unblocked)</li>
+ *   <li>{@link #dormlq}  — apply Q from dgelqf  (blocked)</li>
+ *   <li>{@link #dormr2}  — apply Q from dgerqf  (unblocked)</li>
+ *   <li>{@link #dormrq}  — apply Q from dgerqf  (blocked)</li>
+ *   <li>{@link #dorgql}  — generate Q from QL factorization</li>
+ *   <li>{@link #dorgr2}  — generate Q from RQ factorization  (unblocked)</li>
+ * </ul>
+ *
+ * <h2>LAPACK — SVD</h2>
+ * <ul>
+ *   <li>{@link #dgesvd}  — SVD: A = U·Σ·Vᵀ</li>
+ *   <li>{@link #dgebrd}  — reduce to bidiagonal form  (blocked)</li>
+ *   <li>{@link #dgebd2}  — reduce to bidiagonal form  (unblocked)</li>
+ *   <li>{@link #dorgbr}  — generate Q or P from dgebrd</li>
+ *   <li>{@link #dormbr}  — apply Q or P from dgebrd</li>
+ *   <li>{@link #dbdsqr}  — SVD of bidiagonal matrix via QR iteration</li>
+ *   <li>{@link #dlasv2}  — SVD of 2×2 triangular matrix</li>
+ *   <li>{@link #dlasr}   — apply sequence of plane rotations</li>
+ * </ul>
+ *
+ * <h2>LAPACK — LU Factorization and Linear Solve</h2>
+ * <ul>
+ *   <li>{@link #dgetrf}  — LU factorization A = P·L·U  (blocked)</li>
+ *   <li>{@link #dgetri}  — matrix inversion via LU</li>
+ *   <li>{@link #dgetrs}  — solve A·X = B using LU factorization</li>
+ *   <li>{@link #dgecon}  — estimate reciprocal condition number (general)</li>
+ *   <li>{@link #dtrtrs}  — solve triangular system A·X = B or Aᵀ·X = B</li>
+ *   <li>{@link #dtrtri}  — invert triangular matrix</li>
+ *   <li>{@link #dtrcon}  — estimate reciprocal condition number (triangular)</li>
+ *   <li>{@link #dlatrs}  — solve scaled triangular system</li>
+ * </ul>
+ *
+ * <h2>LAPACK — Cholesky Factorization</h2>
+ * <ul>
+ *   <li>{@link #dpotrf}  — Cholesky factorization A = LLᵀ or UᵀU</li>
+ *   <li>{@link #dpotri}  — invert SPD matrix via Cholesky</li>
+ *   <li>{@link #dpotrs}  — solve A·X = B using Cholesky factorization</li>
+ *   <li>{@link #dpocon}  — estimate reciprocal condition number (SPD)</li>
+ *   <li>{@link #dlauum}  — compute product U·Uᵀ or Lᵀ·L (triangular)</li>
+ * </ul>
+ *
+ * <h2>LAPACK — Symmetric Indefinite Factorization</h2>
+ * <ul>
+ *   <li>{@link #dsytrf}  — Bunch-Kaufman factorization of symmetric matrix</li>
+ *   <li>{@link #dsytrs}  — solve A·X = B using Bunch-Kaufman factorization</li>
+ *   <li>{@link #dsycon}  — estimate reciprocal condition number (symmetric)</li>
+ *   <li>{@link #dlasyf}  — partial Bunch-Kaufman factorization  (blocked)</li>
+ * </ul>
+ *
+ * <h2>LAPACK — Symmetric Eigenvalue</h2>
+ * <ul>
+ *   <li>{@link #dsyev}   — eigenvalues/vectors of symmetric matrix</li>
+ *   <li>{@link #dsytrd}  — reduce symmetric matrix to tridiagonal form</li>
+ *   <li>{@link #dorgtr}  — generate Q from dsytrd</li>
+ *   <li>{@link #dlatrd}  — reduce nb columns/rows to tridiagonal form</li>
+ *   <li>{@link #dsteqr}  — eigenvalues/vectors of symmetric tridiagonal (QR iteration)</li>
+ *   <li>{@link #dsterf}  — eigenvalues of symmetric tridiagonal (root-free QR)</li>
+ *   <li>{@link #dsygst}  — reduce generalized symmetric eigenproblem to standard form</li>
+ * </ul>
+ *
+ * <h2>LAPACK — Non-Symmetric Eigenvalue</h2>
+ * <ul>
+ *   <li>{@link #dgeev}   — eigenvalues/vectors of general matrix</li>
+ *   <li>{@link #dgees}   — Schur factorization of general matrix</li>
+ *   <li>{@link #dgehrd}  — reduce to upper Hessenberg form  (blocked)</li>
+ *   <li>{@link #dgehd2}  — reduce to upper Hessenberg form  (unblocked)</li>
+ *   <li>{@link #dorghr}  — generate Q from dgehrd</li>
+ *   <li>{@link #dhseqr}  — eigenvalues of upper Hessenberg matrix (QR algorithm)</li>
+ *   <li>{@link #dgebal}  — balance a general matrix</li>
+ *   <li>{@link #dgebak}  — back-transform eigenvectors after dgebal</li>
+ *   <li>{@link #dtrevc3} — compute eigenvectors of quasi-triangular matrix</li>
+ *   <li>{@link #dtrexc}  — reorder Schur factorization</li>
+ *   <li>{@link #dtrsen}  — reorder Schur factorization and compute condition numbers</li>
+ *   <li>{@link #dtrsyl}  — solve Sylvester equation A·X ± X·B = C</li>
+ *   <li>{@link #dlaln2}  — solve 1×1 or 2×2 linear system with scaling</li>
+ * </ul>
+ *
+ * <h2>LAPACK — Generalized Eigenvalue</h2>
+ * <ul>
+ *   <li>{@link #dggev}   — eigenvalues/vectors of general matrix pair (A, B)</li>
+ *   <li>{@link #dhgeqz}  — QZ iteration for generalized eigenvalue problem</li>
+ *   <li>{@link #dtgevc}  — compute eigenvectors of generalized quasi-triangular pair</li>
+ *   <li>{@link #dtgsja}  — generalized SVD via TGSJA</li>
+ * </ul>
+ *
+ * <h2>LAPACK — Tridiagonal Solvers</h2>
+ * <ul>
+ *   <li>{@link #dgtsv}   — solve general tridiagonal A·X = B  (Gaussian elimination)</li>
+ *   <li>{@link #dptsv}   — solve SPD tridiagonal A·X = B  (L·D·Lᵀ)</li>
+ *   <li>{@link #dpttrf}  — L·D·Lᵀ factorization of SPD tridiagonal</li>
+ *   <li>{@link #dpttrs}  — solve using L·D·Lᵀ factorization</li>
+ * </ul>
+ *
+ * <h2>LAPACK — Utilities</h2>
+ * <ul>
+ *   <li>{@link #dlasrt}  — sort array in increasing or decreasing order</li>
+ *   <li>{@link #dlasr}   — apply sequence of plane rotations to a matrix</li>
+ *   <li>{@link #dlatrs}  — solve scaled triangular system (overflow-safe)</li>
  * </ul>
  */
 public interface BLAS {

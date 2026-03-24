@@ -14,6 +14,7 @@ numopt4j is a Java numerical optimization library supporting derivative-free opt
 - Multivariate root-finding with Jacobian → HYBR (`RootFinder.hybr()`)
 - Multivariate root-finding Jacobian-free → Broyden (`RootFinder.broyden()`)
 - Matrix decompositions → `Decomposer` facade (LU, QR, LQ, SVD, Cholesky, Schur, Eigen, GEVD, GGEVD, GSVD)
+- Linear regression (OLS/WLS) → `Regressor` facade
 
 ## Package Structure
 
@@ -24,8 +25,9 @@ com.curioloop.numopt4j.optim.lbfgsb      # LBFGSBProblem, LBFGSBWorkspace
 com.curioloop.numopt4j.optim.slsqp       # SLSQPProblem, SLSQPWorkspace
 com.curioloop.numopt4j.optim.trf         # TRFProblem, TRFWorkspace
 com.curioloop.numopt4j.optim.root        # BrentqProblem, HYBRProblem, HYBRWorkspace, BroydenProblem, BroydenWorkspace
-com.curioloop.numopt4j.linalg            # Decomposer, Decomposition
+com.curioloop.numopt4j.linalg            # Decomposer, Decomposition, Regression, Regressor
 com.curioloop.numopt4j.linalg.mat        # LU, QR, LQ, SVD, Cholesky, Schur, Eigen, GEVD, GGEVD, GSVD
+com.curioloop.numopt4j.linalg.reg    # OLS, WLS, Prediction
 ```
 
 Typical import for optimization:
@@ -42,6 +44,12 @@ Typical import for matrix decompositions:
 ```java
 import com.curioloop.numopt4j.linalg.*;
 import com.curioloop.numopt4j.linalg.mat.*;
+```
+
+Typical import for linear regression:
+```java
+import com.curioloop.numopt4j.linalg.*;
+import com.curioloop.numopt4j.linalg.reg.*;
 ```
 
 ## Quick Start
@@ -314,6 +322,110 @@ new Bound(lower, upper)     // public constructor; use Double.NaN for no bound o
 |--------|----------|-------|
 | `FORWARD` | O(h) | n+1 |
 | `CENTRAL` | O(h²) — default | 2n |
+
+## Regressor (Linear Regression)
+
+`com.curioloop.numopt4j.linalg.Regressor`
+
+Facade for ordinary and weighted least squares regression. Solves y = Xβ + ε with optional per-observation weights. X is row-major n×k; neither y nor X is modified.
+
+### Factory Methods
+
+```java
+Regressor.ols(y, X, n, k, Opts...)           // OLS — must specify Opts.QR or Opts.PINV
+Regressor.ols(y, X, n, k, Pool, Opts...)     // OLS with workspace reuse
+Regressor.wls(y, X, w, n, k, Opts...)        // WLS
+Regressor.wls(y, X, w, n, k, Pool, Opts...)  // WLS with workspace reuse
+```
+
+### Opts
+
+| Opt | Description |
+|---|---|
+| `Opts.QR` | QR factorization — faster when X is full rank |
+| `Opts.PINV` | SVD pseudoinverse — robust, handles rank-deficient X |
+| `Opts.NO_CONST_DETECT` | Skip automatic intercept-column detection (kConst = 0) |
+
+### Regression Result Methods (base of OLS / WLS)
+
+```java
+// Parameters
+double[]   parameters()          // β̂, length k
+double[]   bse()                 // standard errors √diag(Cov(β̂))
+double[]   paramCov()            // Cov(β̂) = σ̂²·(XᵀX)⁻¹, k×k row-major
+
+// Fit quality
+double     ssr()                 // sum of squared (whitened) residuals
+double     tss(boolean centered) // total sum of squares
+double     ess()                 // explained sum of squares
+double     scale()               // σ̂² = SSR / (n − rank)
+double     r2(boolean adjusted)  // R² or adjusted R²
+double[]   mse()                 // {MSE_model, MSE_residual, MSE_total}
+
+// Information criteria
+double     logLike()             // Gaussian log-likelihood
+double     aic()                 // AIC = −2·llf + 2·(dfModel + kConst)
+double     bic()                 // BIC = −2·llf + log(n)·(dfModel + kConst)
+
+// Fitted values and residuals
+double[]   fitted(boolean whiten)   // ŷ = Xβ̂; whitened = √W·ŷ for WLS
+double[]   residual(boolean whiten) // e = y − ŷ; whitened = √W·e for WLS
+
+// Prediction
+Prediction predict(double[] newX, int m, double[] weights)
+
+// Dimensions and diagnostics
+int        nObs()                // n
+int        nParams()             // k
+int        kConst()              // 1 if intercept detected, 0 otherwise
+int        rank()                // numerical rank of X
+double     condNum()             // condition number √(σ_max²/σ_min²)
+```
+
+### Prediction
+
+```java
+Prediction pred = r.predict(newX, m, weights);
+pred.mean()          // ŷ = newX·β̂, length m
+pred.paramVar()      // xᵢᵀ·Cov(β̂)·xᵢ per observation
+pred.residualVar()   // σ̂²/wᵢ per observation
+
+double[][] ci = pred.confInt(0.05);  // 95% prediction interval
+// ci[0] = lower bounds, ci[1] = upper bounds, ci[2] = std errors
+```
+
+### Pool (Workspace Reuse)
+
+```java
+Regressor.Pool ws = new Regressor.Pool();
+// reuse across multiple fits of the same or similar dimensions
+OLS r1 = Regressor.ols(y1, X, n, k, ws, Regressor.Opts.PINV);
+OLS r2 = Regressor.ols(y2, X, n, k, ws, Regressor.Opts.PINV);
+```
+
+### Quick Example
+
+```java
+import com.curioloop.numopt4j.linalg.*;
+import com.curioloop.numopt4j.linalg.reg.*;
+
+// Build X = [x, 1] row-major n×2
+double[] X = new double[n * 2];
+for (int i = 0; i < n; i++) { X[i*2] = xVec[i]; X[i*2+1] = 1.0; }
+
+// OLS fit
+OLS r = Regressor.ols(y, X, n, 2, Regressor.Opts.PINV);
+double[] beta = r.parameters();   // [slope, intercept]
+double   r2   = r.r2(false);
+double   aic  = r.aic();
+
+// WLS fit (inverse-variance weights)
+WLS rw = Regressor.wls(y, X, weights, n, 2, Regressor.Opts.PINV);
+
+// Prediction interval
+Prediction pred = r.predict(X, n, null);
+double[][] ci   = pred.confInt(0.05);
+```
 
 ## Decomposer (Matrix Decompositions)
 
