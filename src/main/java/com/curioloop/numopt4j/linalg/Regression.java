@@ -19,7 +19,7 @@ import com.curioloop.numopt4j.linalg.reg.Prediction;
  *
  * <h2>Key statistics</h2>
  * <ul>
- *   <li>{@link #parameters()} — β̂</li>
+ *   <li>{@link #params()} — β̂</li>
  *   <li>{@link #paramCov()}   — Cov(β̂) = σ̂²·(XᵀX)⁻¹</li>
  *   <li>{@link #bse()}        — standard errors √diag(Cov(β̂))</li>
  *   <li>{@link #ssr()}        — sum of squared (whitened) residuals ‖ỹ - X̃β̂‖²</li>
@@ -110,7 +110,7 @@ public abstract class Regression {
     // ---- parameters ----
 
     /** Parameter estimates β̂ (length k). */
-    public double[] parameters() { return beta; }
+    public double[] params() { return beta; }
 
     /** Numerical rank of X. */
     public int rank() { return rank; }

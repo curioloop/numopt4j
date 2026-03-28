@@ -46,8 +46,16 @@ public final class Regressor {
         QR,
         /** Use SVD/pinv solver (numerically robust, handles rank-deficient X). */
         PINV,
-        /** Skip automatic constant-column detection (treat kConst as 0). */
-        NO_CONST_DETECT
+        /**
+         * Declare that X contains a constant column (intercept); sets kConst = 1.
+         * Skips automatic detection. Equivalent to statsmodels hasconst=True.
+         */
+        HAS_CONST,
+        /**
+         * Declare that X has no constant column; sets kConst = 0.
+         * Skips automatic detection. Equivalent to statsmodels hasconst=False.
+         */
+        NO_CONST
     }
 
     // =========================================================================
@@ -86,9 +94,9 @@ public final class Regressor {
         boolean hasQR = contains(opts, Opts.QR), hasPINV = contains(opts, Opts.PINV);
         if (!hasQR && !hasPINV) throw new IllegalArgumentException("Must specify Opts.QR or Opts.PINV");
         if (hasQR && hasPINV)   throw new IllegalArgumentException("Cannot specify both Opts.QR and Opts.PINV");
-        boolean noConst = contains(opts, Opts.NO_CONST_DETECT);
+        int kConst = contains(opts, Opts.HAS_CONST) ? 1 : contains(opts, Opts.NO_CONST) ? 0 : -1;
         if (ws == null) ws = new OLS.Pool();
-        return new OLS(y, X, n, k, hasQR, noConst).fit(ws);
+        return new OLS(y, X, n, k, hasQR, kConst).fit(ws);
     }
 
     // =========================================================================
@@ -126,9 +134,9 @@ public final class Regressor {
         boolean hasQR = contains(opts, Opts.QR), hasPINV = contains(opts, Opts.PINV);
         if (!hasQR && !hasPINV) throw new IllegalArgumentException("Must specify Opts.QR or Opts.PINV");
         if (hasQR && hasPINV)   throw new IllegalArgumentException("Cannot specify both Opts.QR and Opts.PINV");
-        boolean noConst = contains(opts, Opts.NO_CONST_DETECT);
+        int kConst = contains(opts, Opts.HAS_CONST) ? 1 : contains(opts, Opts.NO_CONST) ? 0 : -1;
         if (ws == null) ws = new WLS.Pool();
-        return new WLS(y, X, weights, n, k, hasQR, noConst).fit(ws);
+        return new WLS(y, X, weights, n, k, hasQR, kConst).fit(ws);
     }
 
     // =========================================================================

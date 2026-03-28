@@ -100,7 +100,7 @@ public class OLS extends Regression {
     // Constructors
     // =========================================================================
 
-    public OLS(double[] y, double[] X, int n, int k, boolean useQR, boolean noConst) {
+    public OLS(double[] y, double[] X, int n, int k, boolean useQR, int kConst) {
         if (n < 1 || k < 1) throw new IllegalArgumentException("n and k must be >= 1");
         if (y.length < n)   throw new IllegalArgumentException("y too short");
         if (X.length < n*k) throw new IllegalArgumentException("X too short");
@@ -109,16 +109,10 @@ public class OLS extends Regression {
         this.y       = y;
         this.X       = X;
         this.useQR   = useQR;
-        this.kConst  = noConst ? 0 : -1;
+        this.kConst  = kConst;  // -1 = auto-detect, 0 = no const, 1 = has const
     }
 
-    public OLS(double[] y, double[] X, int n, int k, boolean useQR) {
-        this(y, X, n, k, useQR, false);
-    }
 
-    public OLS(double[] y, double[] X, int n, int k) {
-        this(y, X, n, k, false, false);
-    }
 
     // =========================================================================
     // fit

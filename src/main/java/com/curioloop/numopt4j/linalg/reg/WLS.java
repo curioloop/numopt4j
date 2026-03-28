@@ -60,19 +60,12 @@ public class WLS extends OLS {
     // Constructors
     // =========================================================================
 
-    public WLS(double[] y, double[] X, double[] weights, int n, int k, boolean useQR, boolean noConst) {
-        super(y, X, n, k, useQR, noConst);
+    public WLS(double[] y, double[] X, double[] weights, int n, int k, boolean useQR, int kConst) {
+        super(y, X, n, k, useQR, kConst);
         if (weights.length < n) throw new IllegalArgumentException("weights too short");
         this.w = weights;
     }
 
-    public WLS(double[] y, double[] X, double[] weights, int n, int k, boolean useQR) {
-        this(y, X, weights, n, k, useQR, false);
-    }
-
-    public WLS(double[] y, double[] X, double[] weights, int n, int k) {
-        this(y, X, weights, n, k, false, false);
-    }
 
     @Override public double[] weights() { return w; }
 

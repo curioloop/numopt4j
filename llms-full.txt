@@ -935,7 +935,8 @@ Parameters:
 ```java
 Regressor.Opts.QR              // QR factorization solver
 Regressor.Opts.PINV            // SVD pseudoinverse solver
-Regressor.Opts.NO_CONST_DETECT // skip intercept detection; treat kConst as 0
+Regressor.Opts.HAS_CONST  // declare X has a constant column; sets kConst=1, skips detection
+Regressor.Opts.NO_CONST   // declare X has no constant column; sets kConst=0, skips detection
 ```
 
 ### Regression Result API (abstract base of OLS / WLS)
@@ -945,8 +946,8 @@ Regressor.Opts.NO_CONST_DETECT // skip intercept detection; treat kConst as 0
 All quantities are computed lazily and cached on first access.
 
 ```java
-// ---- parameters ----
-double[]   parameters()              // β̂, length k
+// ---- params ----
+double[]   params()                  // β̂, length k
 double[]   bse()                     // standard errors √diag(Cov(β̂)), length k
 double[]   paramCov()                // Cov(β̂) = σ̂²·(XᵀX)⁻¹, k×k row-major (new array each call)
 
@@ -1045,7 +1046,7 @@ for (int i = 0; i < n; i++) { X[i*k] = xVec[i]; X[i*k+1] = 1.0; }
 // OLS with SVD solver
 OLS r = Regressor.ols(y, X, n, k, Regressor.Opts.PINV);
 
-double[] beta = r.parameters();   // [slope, intercept]
+double[] beta = r.params();       // [slope, intercept]
 double[] bse  = r.bse();          // standard errors
 double   r2   = r.r2(false);      // R²
 double   r2a  = r.r2(true);       // adjusted R²
@@ -1071,7 +1072,7 @@ WLS rw = Regressor.wls(y, X.clone(), weights, n, k, Regressor.Opts.PINV);
 OLS.Pool ws = new OLS.Pool();
 for (double[] yi : series) {
     OLS ri = Regressor.ols(yi, buildX(), n, k, ws, Regressor.Opts.PINV);
-    // process ri.parameters(), ri.r2(false), etc.
+    // process ri.params(), ri.r2(false), etc.
 }
 ```
 
@@ -1081,7 +1082,7 @@ By default, `Regressor` scans X for a constant column (intercept). The result is
 - `kConst() == 1` — intercept present (affects R², AIC/BIC, adjusted R²)
 - `kConst() == 0` — no intercept
 
-Pass `Opts.NO_CONST_DETECT` to skip detection and treat `kConst` as 0.
+Pass `Opts.HAS_CONST` or `Opts.NO_CONST` to skip detection and explicitly set kConst to 1 or 0.
 
 Detection uses a fast O(nk) scan; falls back to SVD rank comparison only when ambiguous.
 
@@ -1090,22 +1091,17 @@ Detection uses a fast O(nk) scan; falls back to SVD rank comparison only when am
 You can also construct `OLS`/`WLS` directly without the `Regressor` facade:
 
 ```java
-// OLS constructors
-new OLS(double[] y, double[] X, int n, int k)                              // SVD, with const detection
-new OLS(double[] y, double[] X, int n, int k, boolean useQR)               // specify solver
-new OLS(double[] y, double[] X, int n, int k, boolean useQR, boolean noConst)
-
-// WLS constructors
-new WLS(double[] y, double[] X, double[] weights, int n, int k)
-new WLS(double[] y, double[] X, double[] weights, int n, int k, boolean useQR)
-new WLS(double[] y, double[] X, double[] weights, int n, int k, boolean useQR, boolean noConst)
+// Single constructor — full control
+// kConst: -1 = auto-detect (default), 0 = no constant, 1 = has constant
+new OLS(double[] y, double[] X, int n, int k, boolean useQR, int kConst)
+new WLS(double[] y, double[] X, double[] weights, int n, int k, boolean useQR, int kConst)
 
 // Fit — X is overwritten in-place for both OLS and WLS
-OLS result = new OLS(y, X, n, k).fit();
-OLS result = new OLS(y, X, n, k).fit(ws);  // with workspace reuse (OLS.Pool)
+OLS result = new OLS(y, X, n, k, false, -1).fit();
+OLS result = new OLS(y, X, n, k, false, -1).fit(ws);  // with workspace reuse (OLS.Pool)
 
-WLS result = new WLS(y, X, weights, n, k).fit();
-WLS result = new WLS(y, X, weights, n, k).fit(ws);  // with workspace reuse (WLS.Pool)
+WLS result = new WLS(y, X, weights, n, k, false, -1).fit();
+WLS result = new WLS(y, X, weights, n, k, false, -1).fit(ws);  // with workspace reuse (WLS.Pool)
 ```
 
 ## 17. Decomposer (Matrix Decompositions)

@@ -344,13 +344,14 @@ Regressor.wls(y, X, w, n, k, Pool, Opts...)  // WLS with workspace reuse
 |---|---|
 | `Opts.QR` | QR factorization — faster when X is full rank |
 | `Opts.PINV` | SVD pseudoinverse — robust, handles rank-deficient X |
-| `Opts.NO_CONST_DETECT` | Skip automatic intercept-column detection (kConst = 0) |
+| `Opts.HAS_CONST` | Declare X has a constant column; sets kConst=1, skips detection |
+| `Opts.NO_CONST` | Declare X has no constant column; sets kConst=0, skips detection |
 
 ### Regression Result Methods (base of OLS / WLS)
 
 ```java
 // Parameters
-double[]   parameters()          // β̂, length k
+double[]   params()          // β̂, length k
 double[]   bse()                 // standard errors √diag(Cov(β̂))
 double[]   paramCov()            // Cov(β̂) = σ̂²·(XᵀX)⁻¹, k×k row-major
 
@@ -416,7 +417,7 @@ for (int i = 0; i < n; i++) { X[i*2] = xVec[i]; X[i*2+1] = 1.0; }
 
 // OLS fit
 OLS r = Regressor.ols(y, X, n, 2, Regressor.Opts.PINV);
-double[] beta = r.parameters();   // [slope, intercept]
+double[] beta = r.params();   // [slope, intercept]
 double   r2   = r.r2(false);
 double   aic  = r.aic();
 

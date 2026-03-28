@@ -25,7 +25,7 @@ High-performance numerical optimization library for Java.
 <dependency>
     <groupId>com.curioloop</groupId>
     <artifactId>numopt4j</artifactId>
-    <version>0.1.0</version>
+    <version>0.9.0</version>
 </dependency>
 ```
 
@@ -137,12 +137,12 @@ WLS r = Regressor.wls(y, X, weights, n, k, Regressor.Opts.PINV);
 OLS.Pool ws = new OLS.Pool();
 for (double[] Xi : series) {
     OLS r = Regressor.ols(y, Xi.clone(), n, k, ws, Regressor.Opts.PINV);
-    double[] beta = r.parameters();
+    double[] beta = r.params();
     double   r2   = r.r2(false);
 }
 
 // Statistical output
-double[] beta = r.parameters();   // β̂
+double[] beta = r.params();   // β̂
 double[] bse  = r.bse();          // standard errors
 double   r2   = r.r2(false);      // R²
 double   r2a  = r.r2(true);       // adjusted R²
@@ -246,7 +246,7 @@ Regressor.wls(y, X, w, n, k, Opts...)        // WLS
 Regressor.wls(y, X, w, n, k, Pool, Opts...)  // WLS with workspace reuse
 ```
 
-`Opts.QR` — QR factorization (faster, full-rank X); `Opts.PINV` — SVD pseudoinverse (robust, rank-deficient X); `Opts.NO_CONST_DETECT` — skip intercept detection.
+`Opts.QR` — QR factorization (faster, full-rank X); `Opts.PINV` — SVD pseudoinverse (robust, rank-deficient X); `Opts.HAS_CONST` — declare X has a constant column (kConst=1, skip detection); `Opts.NO_CONST` — declare X has no constant column (kConst=0, skip detection).
 
 **Both OLS and WLS overwrite X in-place.** y is never modified. WLS additionally writes whitened y~ into `WLS.Pool.yWhiten`.
 
@@ -254,7 +254,7 @@ Key result methods on `Regression` (base of `OLS`/`WLS`):
 
 | Method | Description |
 |---|---|
-| `parameters()` | β̂ (length k) |
+| `params()` | β̂ (length k) |
 | `bse()` | standard errors √diag(Cov(β̂)) |
 | `paramCov()` | Cov(β̂) = σ̂²·(XᵀX)⁻¹, k×k |
 | `ssr()` | sum of squared residuals |

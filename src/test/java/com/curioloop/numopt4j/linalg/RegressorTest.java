@@ -87,10 +87,10 @@ public class RegressorTest {
 
     @Test
     void testOLS_SVD_basicStats() {
-        Regression res = new OLS(Y_VEC, buildX2(), NOBS, 2, false).fit();
+        Regression res = new OLS(Y_VEC, buildX2(), NOBS, 2, false, -1).fit();
 
         assertEquals(2, res.rank());
-        double[] beta = res.parameters();
+        double[] beta = res.params();
         assertEquals(2.033926771810814,  beta[0], 1e-12, "OLS SVD beta[0]");
         assertEquals(0.7975488276313836, beta[1], 1e-12, "OLS SVD beta[1]");
 
@@ -115,10 +115,10 @@ public class RegressorTest {
 
     @Test
     void testOLS_QR_basicStats() {
-        Regression res = new OLS(Y_VEC, buildX2(), NOBS, 2, true).fit();
+        Regression res = new OLS(Y_VEC, buildX2(), NOBS, 2, true, -1).fit();
 
         assertEquals(2, res.rank());
-        double[] beta = res.parameters();
+        double[] beta = res.params();
         assertEquals(2.033926771810814,  beta[0], 1e-12, "OLS QR beta[0]");
         assertEquals(0.7975488276313836, beta[1], 1e-12, "OLS QR beta[1]");
 
@@ -137,10 +137,10 @@ public class RegressorTest {
 
     @Test
     void testOLS_QR_matchesSVD() {
-        Regression svd = new OLS(Y_VEC, buildX2(), NOBS, 2, false).fit();
-        Regression qr  = new OLS(Y_VEC, buildX2(), NOBS, 2, true).fit();
+        Regression svd = new OLS(Y_VEC, buildX2(), NOBS, 2, false, -1).fit();
+        Regression qr  = new OLS(Y_VEC, buildX2(), NOBS, 2, true, -1).fit();
 
-        assertClose(svd.parameters(), qr.parameters(), 1e-12, "OLS beta SVD vs QR");
+        assertClose(svd.params(), qr.params(), 1e-12, "OLS beta SVD vs QR");
         assertEquals(svd.ssr(),      qr.ssr(),      1e-12, "OLS SSR SVD vs QR");
         assertEquals(svd.r2(false),  qr.r2(false),  1e-12, "OLS R² SVD vs QR");
         assertEquals(svd.scale(),    qr.scale(),    1e-12, "OLS scale SVD vs QR");
@@ -151,7 +151,7 @@ public class RegressorTest {
 
     @Test
     void testOLS_fittedResidualConsistency() {
-        Regression res = new OLS(Y_VEC, buildX2(), NOBS, 2).fit();
+        Regression res = new OLS(Y_VEC, buildX2(), NOBS, 2, false, -1).fit();
         double[] fitted   = res.fitted(false);
         double[] residual = res.residual(false);
 
@@ -169,7 +169,7 @@ public class RegressorTest {
 
     @Test
     void testOLS_informationCriteria() {
-        Regression res = new OLS(Y_VEC, buildX2(), NOBS, 2).fit();
+        Regression res = new OLS(Y_VEC, buildX2(), NOBS, 2, false, -1).fit();
         assertTrue(Double.isFinite(res.logLike()), "llf not finite");
         assertTrue(res.bic() > res.aic(), "BIC should exceed AIC for n=50");
     }
@@ -184,7 +184,7 @@ public class RegressorTest {
     @Test
     void testOLS_predictionInterval_SVD() {
         double[] X2 = buildX2();
-        Regression res = new OLS(Y_VEC, X2.clone(), NOBS, 2, false).fit();
+        Regression res = new OLS(Y_VEC, X2.clone(), NOBS, 2, false, -1).fit();
 
         double[] paramCov = res.paramCov();
         double[] fitted   = res.fitted(false);
@@ -230,8 +230,8 @@ public class RegressorTest {
     @Test
     void testOLS_predictionInterval_QR() {
         double[] X2 = buildX2();
-        Regression svd = new OLS(Y_VEC, X2.clone(), NOBS, 2, false).fit();
-        Regression qr  = new OLS(Y_VEC, X2.clone(), NOBS, 2, true).fit();
+        Regression svd = new OLS(Y_VEC, X2.clone(), NOBS, 2, false, -1).fit();
+        Regression qr  = new OLS(Y_VEC, X2.clone(), NOBS, 2, true, -1).fit();
 
         Prediction pSvd = svd.predict(X2, NOBS, null);
         Prediction pQr  = qr.predict(X2, NOBS, null);
@@ -254,10 +254,10 @@ public class RegressorTest {
 
     @Test
     void testWLS_SVD_basicStats() {
-        Regression res = new WLS(Y_VEC, buildX2(), buildWInv(), NOBS, 2, false).fit();
+        Regression res = new WLS(Y_VEC, buildX2(), buildWInv(), NOBS, 2, false, -1).fit();
 
         assertEquals(2, res.rank());
-        double[] beta = res.parameters();
+        double[] beta = res.params();
         assertEquals(2.0398186742701783, beta[0], 1e-12, "WLS SVD beta[0]");
         assertEquals(0.7664097138967324, beta[1], 1e-12, "WLS SVD beta[1]");
 
@@ -280,10 +280,10 @@ public class RegressorTest {
 
     @Test
     void testWLS_QR_basicStats() {
-        Regression res = new WLS(Y_VEC, buildX2(), buildWInv(), NOBS, 2, true).fit();
+        Regression res = new WLS(Y_VEC, buildX2(), buildWInv(), NOBS, 2, true, -1).fit();
 
         assertEquals(2, res.rank());
-        double[] beta = res.parameters();
+        double[] beta = res.params();
         assertEquals(2.0398186742701783, beta[0], 1e-12, "WLS QR beta[0]");
         assertEquals(0.7664097138967324, beta[1], 1e-12, "WLS QR beta[1]");
 
@@ -301,10 +301,10 @@ public class RegressorTest {
 
     @Test
     void testWLS_QR_matchesSVD() {
-        Regression svd = new WLS(Y_VEC, buildX2(), buildWInv(), NOBS, 2, false).fit();
-        Regression qr  = new WLS(Y_VEC, buildX2(), buildWInv(), NOBS, 2, true).fit();
+        Regression svd = new WLS(Y_VEC, buildX2(), buildWInv(), NOBS, 2, false, -1).fit();
+        Regression qr  = new WLS(Y_VEC, buildX2(), buildWInv(), NOBS, 2, true, -1).fit();
 
-        assertClose(svd.parameters(), qr.parameters(), 1e-12, "WLS beta SVD vs QR");
+        assertClose(svd.params(), qr.params(), 1e-12, "WLS beta SVD vs QR");
         assertEquals(svd.ssr(),     qr.ssr(),     1e-12, "WLS SSR SVD vs QR");
         assertEquals(svd.r2(false), qr.r2(false), 1e-12, "WLS R² SVD vs QR");
         assertEquals(svd.scale(),   qr.scale(),   1e-12, "WLS scale SVD vs QR");
@@ -314,7 +314,7 @@ public class RegressorTest {
 
     @Test
     void testWLS_fittedResidualConsistency() {
-        Regression res = new WLS(Y_VEC, buildX2(), buildWInv(), NOBS, 2).fit();
+        Regression res = new WLS(Y_VEC, buildX2(), buildWInv(), NOBS, 2, false, -1).fit();
         double[] fitted   = res.fitted(false);
         double[] residual = res.residual(false);
 
@@ -329,7 +329,7 @@ public class RegressorTest {
     @Test
     void testWLS_whitenedResiduals() {
         double[] wInv = buildWInv();
-        Regression res = new WLS(Y_VEC, buildX2(), wInv, NOBS, 2).fit();
+        Regression res = new WLS(Y_VEC, buildX2(), wInv, NOBS, 2, false, -1).fit();
         double[] eRaw    = res.residual(false);
         double[] eWhiten = res.residual(true);
 
@@ -352,7 +352,7 @@ public class RegressorTest {
         double[] X2   = buildX2();
         double[] wInv = buildWInv();
         double[] X2orig = X2.clone(); // save original X for prediction (X is overwritten by fit)
-        Regression res = new WLS(Y_VEC, X2, wInv, NOBS, 2, false).fit();
+        Regression res = new WLS(Y_VEC, X2, wInv, NOBS, 2, false, -1).fit();
 
         double[] paramCov = res.paramCov();
         double[] fitted   = res.fitted(false);
@@ -400,8 +400,8 @@ public class RegressorTest {
     void testWLS_predictionInterval_QR() {
         double[] X2   = buildX2();
         double[] wInv = buildWInv();
-        Regression svd = new WLS(Y_VEC, X2,        wInv, NOBS, 2, false).fit();
-        Regression qr  = new WLS(Y_VEC, buildX2(), wInv, NOBS, 2, true).fit();
+        Regression svd = new WLS(Y_VEC, X2,        wInv, NOBS, 2, false, -1).fit();
+        Regression qr  = new WLS(Y_VEC, buildX2(), wInv, NOBS, 2, true, -1).fit();
 
         double[] X2orig = buildX2(); // fresh X for prediction
         Prediction pSvd = svd.predict(X2orig, NOBS, wInv);
@@ -424,9 +424,9 @@ public class RegressorTest {
     void testOLS_exactFit() {
         double[] X = {1, 1,  2, 1,  3, 1};
         double[] y = {3, 5, 7};
-        Regression res = new OLS(y, X, 3, 2).fit();
-        assertEquals(2.0, res.parameters()[0], 1e-10, "slope");
-        assertEquals(1.0, res.parameters()[1], 1e-10, "intercept");
+        Regression res = new OLS(y, X, 3, 2, false, -1).fit();
+        assertEquals(2.0, res.params()[0], 1e-10, "slope");
+        assertEquals(1.0, res.params()[1], 1e-10, "intercept");
         assertEquals(1.0, res.r2(false), 1e-10, "R²");
         assertEquals(0.0, res.ssr(),     1e-10, "SSR");
     }
@@ -436,9 +436,9 @@ public class RegressorTest {
         double[] X = {1,1, 2,1, 3,1, 4,1, 5,1};
         double[] y = {2.1, 4.0, 5.9, 8.1, 10.0};
         double[] w = {1, 1, 1, 1, 1};
-        Regression ols = new OLS(y, X.clone(), 5, 2).fit();
-        Regression wls = new WLS(y, X, w, 5, 2).fit();
-        assertClose(ols.parameters(), wls.parameters(), 1e-10, "uniform WLS vs OLS beta");
+        Regression ols = new OLS(y, X.clone(), 5, 2, false, -1).fit();
+        Regression wls = new WLS(y, X, w, 5, 2, false, -1).fit();
+        assertClose(ols.params(), wls.params(), 1e-10, "uniform WLS vs OLS beta");
         assertEquals(ols.ssr(),      wls.ssr(),      1e-10, "uniform WLS vs OLS SSR");
         assertEquals(ols.r2(false),  wls.r2(false),  1e-10, "uniform WLS vs OLS R²");
     }
@@ -447,14 +447,14 @@ public class RegressorTest {
     void testOLS_noConstant() {
         double[] X = {1,2, 2,4, 3,6, 4,8};
         double[] y = {3, 6, 9, 12};
-        assertEquals(0, new OLS(y, X, 4, 2).fit().kConst(), "kConst should be 0");
+        assertEquals(0, new OLS(y, X, 4, 2, false, -1).fit().kConst(), "kConst should be 0");
     }
 
     @Test
     void testOLS_withConstant() {
         double[] X = {1,1, 2,1, 3,1, 4,1};
         double[] y = {3, 5, 7, 9};
-        assertEquals(1, new OLS(y, X, 4, 2).fit().kConst(), "kConst should be 1");
+        assertEquals(1, new OLS(y, X, 4, 2, false, -1).fit().kConst(), "kConst should be 1");
     }
 
     // ================================================================
@@ -464,9 +464,9 @@ public class RegressorTest {
     @Test
     void testFacade_ols_matchesDirectOLS() {
         double[] X = buildX2();
-        Regression direct = new OLS(Y_VEC, X.clone(), NOBS, 2).fit();
+        Regression direct = new OLS(Y_VEC, X.clone(), NOBS, 2, false, -1).fit();
         Regression facade = Regressor.ols(Y_VEC, X.clone(), NOBS, 2, Regressor.Opts.PINV);
-        assertClose(direct.parameters(), facade.parameters(), 1e-10, "facade OLS beta");
+        assertClose(direct.params(), facade.params(), 1e-10, "facade OLS beta");
         assertEquals(direct.ssr(),     facade.ssr(),     1e-10, "facade OLS SSR");
         assertEquals(direct.r2(false), facade.r2(false), 1e-10, "facade OLS R²");
     }
@@ -476,16 +476,16 @@ public class RegressorTest {
         double[] X = buildX2();
         Regression svd = Regressor.ols(Y_VEC, X.clone(), NOBS, 2, Regressor.Opts.PINV);
         Regression qr  = Regressor.ols(Y_VEC, X.clone(), NOBS, 2, Regressor.Opts.QR);
-        assertClose(svd.parameters(), qr.parameters(), 1e-10, "facade QR vs SVD beta");
+        assertClose(svd.params(), qr.params(), 1e-10, "facade QR vs SVD beta");
         assertEquals(svd.ssr(), qr.ssr(), 1e-8, "facade QR vs SVD SSR");
     }
 
     @Test
     void testFacade_wls_matchesDirectWLS() {
         double[] X = buildX2(), wInv = buildWInv();
-        Regression direct = new WLS(Y_VEC, X,           wInv, NOBS, 2).fit();
+        Regression direct = new WLS(Y_VEC, X,           wInv, NOBS, 2, false, -1).fit();
         Regression facade = Regressor.wls(Y_VEC, buildX2(), wInv, NOBS, 2, Regressor.Opts.PINV);
-        assertClose(direct.parameters(), facade.parameters(), 1e-10, "facade WLS beta");
+        assertClose(direct.params(), facade.params(), 1e-10, "facade WLS beta");
         assertEquals(direct.ssr(),     facade.ssr(),     1e-10, "facade WLS SSR");
         assertEquals(direct.r2(false), facade.r2(false), 1e-10, "facade WLS R²");
     }
@@ -494,17 +494,19 @@ public class RegressorTest {
     void testFacade_poolReuse() {
         WLS.Pool ws = new WLS.Pool();
         Regression r1 = Regressor.ols(Y_VEC, buildX2(), NOBS, 2, ws, Regressor.Opts.PINV);
-        double[] beta1 = r1.parameters().clone();
+        double[] beta1 = r1.params().clone();
         Regression r2 = Regressor.ols(Y_VEC, buildX2(), NOBS, 2, ws, Regressor.Opts.PINV);
-        assertClose(beta1, r2.parameters(), 1e-10, "pool reuse beta");
+        assertClose(beta1, r2.params(), 1e-10, "pool reuse beta");
         assertEquals(r1.ssr(), r2.ssr(), 1e-10, "pool reuse SSR");
     }
 
     @Test
     void testFacade_noConstDetect() {
         double[] y = {3, 5, 7, 9};
-        assertEquals(1, Regressor.ols(y, new double[]{1,1, 2,1, 3,1, 4,1}, 4, 2, Regressor.Opts.PINV).kConst(),                                    "kConst with detection");
-        assertEquals(0, Regressor.ols(y, new double[]{1,1, 2,1, 3,1, 4,1}, 4, 2, Regressor.Opts.PINV, Regressor.Opts.NO_CONST_DETECT).kConst(), "kConst without detection");
+        double[] X = {1,1, 2,1, 3,1, 4,1};
+        assertEquals(1, Regressor.ols(y, X.clone(), 4, 2, Regressor.Opts.PINV).kConst(),                                 "kConst auto-detect");
+        assertEquals(1, Regressor.ols(y, X.clone(), 4, 2, Regressor.Opts.PINV, Regressor.Opts.HAS_CONST).kConst(),      "kConst HAS_CONST");
+        assertEquals(0, Regressor.ols(y, X.clone(), 4, 2, Regressor.Opts.PINV, Regressor.Opts.NO_CONST).kConst(),       "kConst NO_CONST");
     }
 
     @Test
@@ -588,11 +590,11 @@ public class RegressorTest {
         double[][] xy = buildMacrodataXY();
         double[] y = xy[0]; double[] X = xy[1]; int n = y.length, k = 3;
 
-        Regression res = new OLS(y, X, n, k, false).fit();
+        Regression res = new OLS(y, X, n, k, false, -1).fit();
 
         assertEquals(n, res.nObs()); assertEquals(k, res.nParams());
 
-        double[] beta = res.parameters();
+        double[] beta = res.params();
         assertEquals(-9.481672774654836,  beta[0], 1e-12, "macro SVD beta[0]");
         assertEquals( 4.374221664703201,  beta[1], 1e-12, "macro SVD beta[1]");
         assertEquals(-0.6139969694789915, beta[2], 1e-12, "macro SVD beta[2]");
@@ -625,10 +627,10 @@ public class RegressorTest {
         double[][] xy = buildMacrodataXY();
         double[] y = xy[0]; double[] X = xy[1]; int n = y.length, k = 3;
 
-        Regression svd = new OLS(y, X.clone(), n, k, false).fit();
-        Regression qr  = new OLS(y, X.clone(), n, k, true).fit();
+        Regression svd = new OLS(y, X.clone(), n, k, false, -1).fit();
+        Regression qr  = new OLS(y, X.clone(), n, k, true, -1).fit();
 
-        assertClose(svd.parameters(), qr.parameters(), 1e-12, "macro QR vs SVD beta");
+        assertClose(svd.params(), qr.params(), 1e-12, "macro QR vs SVD beta");
         assertEquals(svd.ssr(),      qr.ssr(),      1e-10, "macro QR vs SVD SSR");
         assertEquals(svd.r2(false),  qr.r2(false),  1e-12, "macro QR vs SVD R²");
         assertEquals(svd.scale(),    qr.scale(),    1e-10, "macro QR vs SVD scale");
@@ -645,7 +647,7 @@ public class RegressorTest {
         double[][] xy = buildMacrodataXY();
         double[] y = xy[0]; double[] X = xy[1]; int n = y.length;
 
-        Regression res = new OLS(y, X, n, 3).fit();
+        Regression res = new OLS(y, X, n, 3, false, -1).fit();
         double[] fitted   = res.fitted(false);
         double[] residual = res.residual(false);
 
