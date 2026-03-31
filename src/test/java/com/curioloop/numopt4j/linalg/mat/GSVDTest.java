@@ -13,6 +13,15 @@ class GSVDTest {
 
     private static final double EPSILON = 1e-10;
 
+    private static int queryWorkspace(int m, int p, int n) {
+        double[] tmp = new double[1];
+        BLAS.dggsvp3(BLAS.GsvdJob.Compute, BLAS.GsvdJob.Compute, BLAS.GsvdJob.Compute,
+                m, p, n, null, 0, n, null, 0, n, 0, 0,
+                null, 0, m, null, 0, p, null, 0, n,
+                null, null, tmp, 0, -1);
+        return Math.max(n + (int) tmp[0], Math.max(2 * n + 2, 6));
+    }
+
     @Test
     void testGSVDSimple() {
         double[] A = {
@@ -111,13 +120,76 @@ class GSVDTest {
 
     @Test
     void testWorkspaceSize() {
-        Decomposition.Workspace ws1 = GSVD.workspace(3, 3, 3);
-        Decomposition.Workspace ws2 = GSVD.workspace(2, 5, 3);
-        Decomposition.Workspace ws3 = GSVD.workspace(5, 2, 3);
+        Decomposition.Workspace ws1 = GSVD.workspace();
+        Decomposition.Workspace ws2 = GSVD.workspace();
+        Decomposition.Workspace ws3 = GSVD.workspace();
 
-        assertThat(ws1.work().length).isPositive();
-        assertThat(ws2.work().length).isPositive();
-        assertThat(ws3.work().length).isPositive();
+        assertThat(ws1.work()).isNull();
+        assertThat(ws2.work()).isNull();
+        assertThat(ws3.work()).isNull();
+    }
+
+    @Test
+    void testWorkspaceMatchesRequestedKind() {
+        GSVD.Pool none = GSVD.workspace();
+        GSVD.Pool onlyU = GSVD.workspace();
+        GSVD.Pool onlyV = GSVD.workspace();
+        GSVD.Pool onlyQ = GSVD.workspace();
+        GSVD.Pool all = GSVD.workspace();
+
+        none.ensure(4, 3, 2, GSVD.GSVD_NONE);
+        onlyU.ensure(4, 3, 2, GSVD.GSVD_U);
+        onlyV.ensure(4, 3, 2, GSVD.GSVD_V);
+        onlyQ.ensure(4, 3, 2, GSVD.GSVD_Q);
+        all.ensure(4, 3, 2, GSVD.GSVD_ALL);
+
+        int expectedWork = queryWorkspace(4, 3, 2);
+        assertThat(none.work().length).isEqualTo(expectedWork);
+        assertThat(onlyU.work().length).isEqualTo(expectedWork);
+        assertThat(onlyV.work().length).isEqualTo(expectedWork);
+        assertThat(onlyQ.work().length).isEqualTo(expectedWork);
+        assertThat(all.work().length).isEqualTo(expectedWork);
+
+        assertThat(none.U).isNull();
+        assertThat(none.V).isNull();
+        assertThat(none.Q).isNull();
+        assertThat(onlyU.U).hasSize(16);
+        assertThat(onlyU.V).isNull();
+        assertThat(onlyU.Q).isNull();
+        assertThat(onlyV.U).isNull();
+        assertThat(onlyV.V).hasSize(9);
+        assertThat(onlyV.Q).isNull();
+        assertThat(onlyQ.U).isNull();
+        assertThat(onlyQ.V).isNull();
+        assertThat(onlyQ.Q).hasSize(4);
+        assertThat(all.U).hasSize(16);
+        assertThat(all.V).hasSize(9);
+        assertThat(all.Q).hasSize(4);
+    }
+
+    @Test
+    void testNullWorkspaceRespectsKind() {
+        double[] A = {
+            1.0, 0.0,
+            0.0, 1.0
+        };
+        double[] B = {
+            1.0, 0.0,
+            0.0, 1.0
+        };
+
+        GSVD none = GSVD.decompose(A.clone(), 2, 2, B.clone(), 2, GSVD.GSVD_NONE);
+        GSVD onlyU = GSVD.decompose(A.clone(), 2, 2, B.clone(), 2, GSVD.GSVD_U);
+
+        assertThat(none.pool().work().length).isEqualTo(queryWorkspace(2, 2, 2));
+        assertThat(none.pool().U).isNull();
+        assertThat(none.pool().V).isNull();
+        assertThat(none.pool().Q).isNull();
+
+        assertThat(onlyU.pool().work().length).isEqualTo(queryWorkspace(2, 2, 2));
+        assertThat(onlyU.pool().U).hasSize(4);
+        assertThat(onlyU.pool().V).isNull();
+        assertThat(onlyU.pool().Q).isNull();
     }
 
     @Test

@@ -68,14 +68,18 @@ public final class GEVD implements Decomposition {
 
         private Pool() {}
 
-        public Pool ensure(int n) {
+        public Pool ensure(int n, boolean wantVectors) {
             if (eigenvalues == null || eigenvalues.length < n) {
                 eigenvalues = new double[n];
             }
             double[] tmp = new double[1];
-            Dsyev.dsyev('V', 'L', n, null, n, null, 0, tmp, 0, -1);
+            Dsyev.dsyev(wantVectors ? 'V' : 'N', 'L', n, null, n, null, 0, tmp, 0, -1);
             ensureWork((int) tmp[0]);
             return this;
+        }
+
+        public Pool ensure(int n) {
+            return ensure(n, true);
         }
     }
 
@@ -90,8 +94,8 @@ public final class GEVD implements Decomposition {
 
     private GEVD() {}
 
-    public static Workspace workspace(int n) {
-        return new Pool().ensure(n);
+    public static Workspace workspace() {
+        return new Pool();
     }
 
     /**
@@ -154,9 +158,9 @@ public final class GEVD implements Decomposition {
         this.type = type;
         this.ok = false;
 
-        if (ws == null) ws = (Pool) workspace(n);
+        if (ws == null) ws = new Pool();
         this.pool = ws;
-        this.pool.ensure(n);
+        this.pool.ensure(n, !valuesOnly);
 
         boolean lower = (uplo == BLAS.Uplo.Lower);
 

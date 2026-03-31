@@ -70,8 +70,10 @@ class LUNumericalStabilityTest {
         if (!lu.ok()) {
             return Double.POSITIVE_INFINITY;
         }
-        double[] inv = lu.inverse(null);
-        if (inv == null) {
+        double[] inv;
+        try {
+            inv = lu.inverse(null);
+        } catch (ArithmeticException ex) {
             return Double.POSITIVE_INFINITY;
         }
 
@@ -198,7 +200,11 @@ class LUNumericalStabilityTest {
         double sigmaMin = Double.MAX_VALUE;
         for (int iter = 0; iter < 50; iter++) {
             double[] z = x.clone();
-            lu.solve(z, z);
+            try {
+                lu.solve(z, z);
+            } catch (ArithmeticException ex) {
+                return Double.POSITIVE_INFINITY;
+            }
 
             for (int i = 0; i < n; i++) {
                 double sum = 0;
@@ -208,7 +214,11 @@ class LUNumericalStabilityTest {
                 y[i] = sum;
             }
 
-            lu.solve(y, y);
+            try {
+                lu.solve(y, y);
+            } catch (ArithmeticException ex) {
+                return Double.POSITIVE_INFINITY;
+            }
 
             double norm = 0;
             for (int i = 0; i < n; i++) norm += y[i] * y[i];

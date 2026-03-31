@@ -75,15 +75,11 @@ class LUAccuracyTest {
                 A[i * n + j] = 1.0 / (i + j + 1);
             }
         }
-        double[] Aorig = A.clone();
 
         LU lu = LU.decompose(A, n);
         assertTrue(lu.ok(), "Should be nonsingular");
-        double[] inv = lu.inverse(null);
-        assertNotNull(inv, "Inverse should succeed");
-        
-        double[] product = multiplyMatrices(Aorig, inv, n);
-        assertIdentity(product, n, 1e-4);
+        assertTrue(lu.cond() > 1e16, "Hilbert matrix should be rejected as ill-conditioned");
+        assertThrows(ArithmeticException.class, () -> lu.inverse(null));
     }
     
     @Test

@@ -52,6 +52,7 @@ class QRPivotTest {
         double[] x = qr.solve(b, null);
         
         assertThat(qr.ok()).isTrue();
+        assertThat(x).isSameAs(b);
         
         double[] Aorig = {
             4.0, 1.0,
@@ -103,14 +104,21 @@ class QRPivotTest {
     void testExtractR() {
         double[] A = {
             1.0, 2.0,
-            3.0, 4.0
+            3.0, 4.0,
+            5.0, 6.0
         };
         
-        QR qr = QR.decompose(A, 2, 2, true, null);
-        double[] R = qr.toR().data;
+        QR qr = QR.decompose(A, 3, 2, true, null);
+        Decomposition.Matrix Rm = qr.toR();
+        double[] R = Rm.data;
+
+        assertThat(Rm.m).isEqualTo(3);
+        assertThat(Rm.n).isEqualTo(2);
         
         assertThat(R[0]).isNotCloseTo(0.0, offset(EPSILON));
         assertThat(R[3]).isNotCloseTo(0.0, offset(EPSILON));
+        assertThat(R[4]).isCloseTo(0.0, offset(EPSILON));
+        assertThat(R[5]).isCloseTo(0.0, offset(EPSILON));
     }
 
     @Test
@@ -165,7 +173,7 @@ class QRPivotTest {
             3.0, 4.0
         };
         
-        QR.Pool ws = (QR.Pool) QR.workspace(2, 2, true);
+        QR.Pool ws = QR.workspace();
         QR qr = QR.decompose(A, 2, 2, true, ws);
         
         assertThat(qr.ok()).isTrue();
@@ -183,7 +191,7 @@ class QRPivotTest {
             7.0, 8.0
         };
         
-        QR.Pool ws = (QR.Pool) QR.workspace(2, 2, false);
+        QR.Pool ws = QR.workspace();
         
         QR qr1 = QR.decompose(A1, 2, 2, ws);
         assertThat(qr1.ok()).isTrue();
@@ -193,4 +201,11 @@ class QRPivotTest {
         
         assertThat(qr1.pool()).isSameAs(qr2.pool());
     }
+
+            @Test
+            void testWideMatrixRejectedInPivotingMode() {
+                assertThatThrownBy(() -> QR.decompose(new double[6], 2, 3, true, null))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("m must be >= n");
+            }
 }

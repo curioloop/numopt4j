@@ -3,15 +3,26 @@
  */
 package com.curioloop.numopt4j.linalg.mat;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
+
+import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class LUTest {
 
     private static final double TOLERANCE = 1e-10;
+
+    private static double readCondition(LU lu) {
+        try {
+            Field field = LU.class.getDeclaredField("condition");
+            field.setAccessible(true);
+            return field.getDouble(lu);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError(e);
+        }
+    }
 
     @Test
     @DisplayName("2x2 matrix inversion")
@@ -67,6 +78,9 @@ class LUTest {
 
         LU lu = LU.decompose(A, 2);
         assertFalse(lu.ok());
+        assertEquals(Double.POSITIVE_INFINITY, lu.cond());
+        assertThrows(ArithmeticException.class, () -> lu.solve(new double[]{1, 1}, null));
+        assertThrows(ArithmeticException.class, () -> lu.inverse(null));
     }
 
     @Test
@@ -87,14 +101,13 @@ class LUTest {
     @DisplayName("Solve linear system")
     void testSolve() {
         double[] A = {3, 2, 1, 2};
-        double[] Aorig = A.clone();
 
         LU lu = LU.decompose(A, 2);
         assertTrue(lu.ok());
 
         double[] b = {5, 5};
         double[] x = lu.solve(b, null);
-        assertNotNull(x);
+        assertSame(b, x);
 
         assertEquals(0.0, x[0], TOLERANCE);
         assertEquals(2.5, x[1], TOLERANCE);
@@ -309,7 +322,6 @@ class LUTest {
     @DisplayName("LogDet for positive determinant")
     void testLogDetPositive() {
         double[] A = {2, 1, 1, 3};
-        double[] Aorig = A.clone();
 
         LU lu = LU.decompose(A, 2);
         assertTrue(lu.ok());
@@ -326,7 +338,6 @@ class LUTest {
     @DisplayName("extract L")
     void testExtractL() {
         double[] A = {4, 3, 6, 3};
-        double[] Aorig = A.clone();
 
         LU lu = LU.decompose(A, 2);
         assertTrue(lu.ok());
@@ -343,7 +354,6 @@ class LUTest {
     @DisplayName("extract U")
     void testExtractU() {
         double[] A = {4, 3, 6, 3};
-        double[] Aorig = A.clone();
 
         LU lu = LU.decompose(A, 2);
         assertTrue(lu.ok());
@@ -416,6 +426,24 @@ class LUTest {
         double cond = lu.cond();
         assertTrue(cond > 0);
         assertTrue(cond >= 1);
+    }
+
+    @Test
+    @DisplayName("cond is lazy initialized")
+    void testCondIsLazyInitialized() {
+        double[] A = {
+            2.5, 1.2, 0.8,
+            1.2, 3.1, 1.5,
+            0.8, 1.5, 2.8
+        };
+
+        LU lu = LU.decompose(A, 3);
+        assertTrue(lu.ok());
+        assertTrue(Double.isNaN(readCondition(lu)));
+
+        double cond = lu.cond();
+        assertTrue(cond >= 1.0);
+        assertEquals(cond, readCondition(lu));
     }
 
     @Test

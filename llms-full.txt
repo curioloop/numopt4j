@@ -1152,7 +1152,7 @@ Performs LU decomposition with partial pivoting: PA = LU.
 ```java
 Decomposer.lu(A, n)           // decompose n×n matrix A
 Decomposer.lu(A, n, ws)       // with workspace reuse
-LU.Pool ws = LU.workspace(n)  // pre-allocate workspace
+LU.Pool ws = LU.workspace()   // empty pool, grows on first use
 ```
 
 ### Result Methods
@@ -1180,7 +1180,7 @@ double[] x = lu.solve(new double[]{10, 12}, null);  // solve Ax = b
 double det = lu.determinant();
 
 // Workspace reuse
-LU.Pool ws = LU.workspace(n);
+LU.Pool ws = LU.workspace();
 for (double[] mat : matrices) {
     LU result = Decomposer.lu(mat, n, ws);
     result.solve(b, x);
@@ -1206,8 +1206,7 @@ QR.Opts.PIVOTING   // enable column pivoting (rank-revealing QR, A·P = Q·R)
 Decomposer.qr(A, m, n)                    // standard QR
 Decomposer.qr(A, m, n, QR.Opts.PIVOTING) // rank-revealing QR
 Decomposer.qr(A, m, n, ws)               // with workspace reuse
-QR.Pool ws = QR.workspace(m, n)
-QR.Pool ws = QR.workspace(m, n, pivoting)
+QR.Pool ws = QR.workspace()
 ```
 
 ### Result Methods
@@ -1255,7 +1254,7 @@ Used for minimum-norm solutions to underdetermined systems.
 ```java
 Decomposer.lq(A, m, n)       // decompose m×n matrix (m <= n)
 Decomposer.lq(A, m, n, ws)   // with workspace reuse
-LQ.Pool ws = LQ.workspace(m, n)
+LQ.Pool ws = LQ.workspace()
 ```
 
 ### Result Methods
@@ -1295,8 +1294,7 @@ Default (no opts): thin U and thin Vᵀ.
 Decomposer.svd(A, m, n)                              // thin U and Vᵀ
 Decomposer.svd(A, m, n, SVD.Opts.FULL_U, SVD.Opts.FULL_V)
 Decomposer.svd(A, m, n, ws)                          // with workspace reuse
-SVD.Pool ws = SVD.workspace(m, n)
-SVD.Pool ws = SVD.workspace(m, n, kindMask)          // kindMask: SVD_WANT_U | SVD_WANT_V | SVD_FULL_U | SVD_FULL_V
+SVD.Pool ws = SVD.workspace()
 ```
 
 ### Result Methods
@@ -1349,8 +1347,7 @@ Decomposer.cholesky(A, n)                              // standard Cholesky, low
 Decomposer.cholesky(A, n, Cholesky.Opts.UPPER)         // upper triangle
 Decomposer.cholesky(A, n, Cholesky.Opts.PIVOTING)      // LDLᵀ
 Decomposer.cholesky(A, n, ws)                          // with workspace reuse
-Cholesky.Pool ws = Cholesky.workspace(n)
-Cholesky.Pool ws = Cholesky.workspace(n, pivoting)
+Cholesky.Pool ws = (Cholesky.Pool) Cholesky.workspace()
 ```
 
 ### Result Methods
@@ -1408,7 +1405,7 @@ Decomposer.schur(A, n)                              // no Z, no sorting
 Decomposer.schur(A, n, Schur.Opts.WANT_Z)           // with Z
 Decomposer.schur(A, n, Schur.Opts.WANT_Z, Schur.Opts.SORT_LHP)  // with Z, sort stable first
 Decomposer.schur(A, n, ws)                          // with workspace reuse
-Schur.Pool ws = Schur.workspace(n)
+Schur.Pool ws = Schur.workspace()
 ```
 
 ### Result Methods
@@ -1478,8 +1475,7 @@ Decomposer.eigen(A, n, Eigen.Opts.SYMMETRIC_LOWER)        // symmetric, eigenval
 Decomposer.eigen(A, n, Eigen.Opts.SYMMETRIC_LOWER, Eigen.Opts.WANT_RIGHT)  // symmetric + vectors
 Decomposer.eigen(A, n, Eigen.Opts.WANT_LEFT, Eigen.Opts.WANT_RIGHT)  // both vectors
 Decomposer.eigen(A, n, ws)                                // with workspace reuse
-Eigen.Pool ws = Eigen.workspace(n)
-Eigen.Pool ws = Eigen.workspace(n, symmetric, kind)
+Eigen.Pool ws = Eigen.workspace()
 ```
 
 ### Result Methods
@@ -1557,7 +1553,7 @@ Decomposer.gevd(A, B, n)                                   // type 1, lower tria
 Decomposer.gevd(A, B, n, GEVD.Opts.WANT_V)                 // with eigenvectors
 Decomposer.gevd(A, B, n, GEVD.Opts.UPPER, GEVD.Opts.TYPE2)
 Decomposer.gevd(A, B, n, ws)                               // with workspace reuse
-GEVD.Pool ws = (GEVD.Pool) GEVD.workspace(n)
+GEVD.Pool ws = (GEVD.Pool) GEVD.workspace()
 ```
 
 ### Result Methods
@@ -1614,7 +1610,7 @@ Decomposer.ggevd(A, B, n)                                  // eigenvalues only
 Decomposer.ggevd(A, B, n, GGEVD.Opts.WANT_VR)             // right eigenvectors only
 Decomposer.ggevd(A, B, n, GGEVD.Opts.WANT_VL, GGEVD.Opts.WANT_VR)  // both
 Decomposer.ggevd(A, B, n, ws)                              // with workspace reuse
-GGEVD.Pool ws = GGEVD.workspace(n)
+GGEVD.Pool ws = GGEVD.workspace()
 ```
 
 ### Result Methods
@@ -1693,7 +1689,7 @@ Default (no opts): compute U, V, and Q.
 Decomposer.gsvd(A, m, n, B, p)                             // all matrices
 Decomposer.gsvd(A, m, n, B, p, GSVD.Opts.WANT_U)          // U only
 Decomposer.gsvd(A, m, n, B, p, ws)                         // with workspace reuse
-GSVD.Pool ws = GSVD.workspace(m, p, n)
+GSVD.Pool ws = GSVD.workspace()
 ```
 
 ### Result Methods

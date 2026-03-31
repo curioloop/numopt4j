@@ -75,4 +75,20 @@ class SVDConditionTest {
         assertThat(svd.ok()).isTrue();
         assertThat(svd.cond()).isGreaterThan(1e9);
     }
+
+    @Test
+    void testRankUsesRcond() {
+        double[] A = {
+            10000.0, 0.0, 0.0,
+            0.0, 100.0, 0.0,
+            0.0, 0.0, 1.0
+        };
+
+        SVD svd = SVD.decompose(A, 3, 3);
+
+        assertThat(svd.ok()).isTrue();
+        assertThat(svd.rank(1e-3)).isEqualTo(2);
+        assertThat(svd.rank(1e-1)).isEqualTo(1);
+        assertThat(svd.rank()).isEqualTo(3);
+    }
 }

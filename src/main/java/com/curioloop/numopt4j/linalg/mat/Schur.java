@@ -149,14 +149,8 @@ public final class Schur implements Decomposition {
 
     private Schur() {}
 
-    public static Pool workspace(int n) {
-        Pool pool = new Pool();
-        // Query dgees for optimal work size
-        double[] tmp = new double[1];
-        BLAS.dgees('V', 'N', null, n, null, n, null, null, null, n, tmp, 0, -1, null);
-        pool.ensureWork((int) tmp[0]);
-        pool.ensureBwork(n);
-        return pool;
+    public static Pool workspace() {
+        return new Pool();
     }
 
     /** Opts-based entry point. */
@@ -214,18 +208,16 @@ public final class Schur implements Decomposition {
             throw new IllegalArgumentException("Workspace must be an instance of Schur.Pool");
         }
 
-        if (ws == null) {
-            ws = workspace(n);
-        }
+        if (ws == null) ws = new Pool();
         this.pool = (Pool) ws;
 
         Pool pool = (Pool) ws;
         char sortChar = (sort != null) ? 'S' : 'N';
         // Query dgees for optimal work size
         double[] tmp = new double[1];
-        BLAS.dgees(computeZ ? 'V' : 'N', sortChar, sort, n, null, n, null, null, null, n, tmp, 0, -1, null);
-        pool.ensureWork((int) tmp[0]);
         if (sort != null) pool.ensureBwork(n);
+        BLAS.dgees(computeZ ? 'V' : 'N', sortChar, sort, n, null, n, null, null, null, n, tmp, 0, -1, pool.bwork());
+        pool.ensureWork((int) tmp[0]);
         pool.ensure(n, computeZ);
 
         int info = BLAS.dgees(computeZ ? 'V' : 'N', sortChar, sort, n, A, n, pool.wr, pool.wi, pool.Z, n, pool.work(), 0, pool.work().length, pool.bwork());
@@ -334,8 +326,8 @@ public final class Schur implements Decomposition {
      */
     public boolean reorder(boolean[] selects) {
         if (!ok || selects == null || selects.length < n) return false;
-        pool.ensureWork(max(1, n * n));
-        pool.ensureIwork(max(1, n * n));
+        pool.ensureWork(max(1, n));
+        pool.ensureIwork(max(2, n));
         boolean result = BLAS.dtrsen('N', pool.Z != null, selects, n,
                 T, 0, n, pool.Z, 0, n, pool.wr, pool.wi,
                 pool.work(), pool.work().length,

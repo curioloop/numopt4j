@@ -12,12 +12,12 @@ interface Dlamch {
 
     // Machine constants (IEEE 754 double precision)
     // Epsilon: 2^-52 = b^(1-t) where b=2, t=53
-    static final double EPSILON = 0x1.0p-52;  // dlamchE: epsilon
+    double EPSILON = 0x1.0p-52;  // dlamchE: epsilon
     // Safe minimum: 2^-1022 (smallest normalized number)
-    static final double SAFE_MIN = 0x1.0p-1022;  // dlamchS: safe minimum
-    static final double BASE = 2.0;  // dlamchB
+    double SAFE_MIN = 0x1.0p-1022;  // dlamchS: safe minimum
+    double BASE = 2.0;  // dlamchB
     // Precision: eps * base = 2^-51
-    static final double PREC = 0x1.0p-51;  // dlamchP: base * epsilon
+    double PREC = 0x1.0p-51;  // dlamchP: base * epsilon
 
     /**
      * DLAMCH returns machine-dependent constants.

@@ -3,12 +3,14 @@
  */
 package com.curioloop.numopt4j.linalg.mat;
 
-import com.curioloop.numopt4j.linalg.Decomposition;
 import com.curioloop.numopt4j.linalg.blas.BLAS;
 import org.junit.jupiter.api.Test;
+
+import java.lang.reflect.Field;
 import java.util.Random;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Comprehensive tests for Cholesky decomposition.
@@ -18,6 +20,16 @@ public class CholeskyTest {
     private final Random rand = new Random(12345);
 
     private static final double EPSILON = 1e-10;
+
+    private static double readCondition(Cholesky cholesky) {
+        try {
+            Field field = Cholesky.class.getDeclaredField("condition");
+            field.setAccessible(true);
+            return field.getDouble(cholesky);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError(e);
+        }
+    }
 
     @Test
     void testDecomposeLower() {
@@ -94,6 +106,7 @@ public class CholeskyTest {
             }
 
             double[] x = Cholesky.decompose(A, n, BLAS.Uplo.Lower).solve(b, null);
+            assertThat(x).isSameAs(b);
 
             assertThat(maxDiff(x, x_expected)).isLessThan(EPSILON * 100)
                 .as("x should equal A^-1*b for n=%d", n);
@@ -118,6 +131,7 @@ public class CholeskyTest {
             }
 
             double[] x = Cholesky.decompose(A, n, BLAS.Uplo.Upper).solve(b, null);
+            assertThat(x).isSameAs(b);
 
             assertThat(maxDiff(x, x_expected)).isLessThan(EPSILON * 1000)
                 .as("x should equal A^-1*b for n=%d", n);
@@ -178,7 +192,6 @@ public class CholeskyTest {
         int[] sizes = {1, 2, 3, 5, 8, 10};
         for (int n : sizes) {
             double[] A = createRandomPositiveDefinite(n);
-            double[] A_original = A.clone();
 
             Cholesky cholesky = Cholesky.decompose(A, n, BLAS.Uplo.Lower);
 
@@ -225,6 +238,19 @@ public class CholeskyTest {
     }
 
     @Test
+    void testCondIsLazyInitialized() {
+        double[] A = createRandomPositiveDefinite(4);
+
+        Cholesky cholesky = Cholesky.decompose(A, 4, BLAS.Uplo.Lower);
+        assertThat(cholesky.ok()).isTrue();
+        assertThat(readCondition(cholesky)).isNaN();
+
+        double cond = cholesky.cond();
+        assertThat(cond).isGreaterThanOrEqualTo(1.0);
+        assertThat(readCondition(cholesky)).isEqualTo(cond);
+    }
+
+    @Test
     void testCondIllConditioned() {
         int n = 5;
         java.util.Random rand = new java.util.Random(42);
@@ -259,6 +285,11 @@ public class CholeskyTest {
 
         Cholesky cholesky = Cholesky.decompose(A, 3, BLAS.Uplo.Lower);
         assertThat(cholesky.ok()).isFalse();
+        assertThat(cholesky.cond()).isEqualTo(Double.POSITIVE_INFINITY);
+        assertThatThrownBy(() -> cholesky.solve(new double[]{1, 1, 1}, null))
+            .isInstanceOf(ArithmeticException.class);
+        assertThatThrownBy(() -> cholesky.inverse(null))
+            .isInstanceOf(ArithmeticException.class);
     }
 
     @Test
@@ -275,7 +306,7 @@ public class CholeskyTest {
     @Test
     void testWorkspaceReuse() {
         int n = 10;
-        Cholesky.Pool ws = (Cholesky.Pool) Cholesky.workspace(n, false);
+        Cholesky.Pool ws = (Cholesky.Pool) Cholesky.workspace();
         
         for (int i = 0; i < 5; i++) {
             double[] A = createRandomPositiveDefinite(n);

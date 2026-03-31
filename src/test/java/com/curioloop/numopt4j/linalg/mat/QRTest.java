@@ -3,7 +3,10 @@
  */
 package com.curioloop.numopt4j.linalg.mat;
 
+import com.curioloop.numopt4j.linalg.Decomposition;
 import org.junit.jupiter.api.Test;
+
+import java.lang.reflect.Field;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -11,6 +14,16 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class QRTest {
 
     private static final double EPSILON = 1e-10;
+
+    private static double readCondition(QR qr) {
+        try {
+            Field field = QR.class.getDeclaredField("condition");
+            field.setAccessible(true);
+            return field.getDouble(qr);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError(e);
+        }
+    }
 
     @Test
     void testDecomposeSquareMatrix() {
@@ -25,6 +38,22 @@ class QRTest {
         assertThat(qr.ok()).isTrue();
         assertThat(A[1 * n + 0]).isNotEqualTo(0.0);
         assertThat(A[0 * n + 1]).isNotEqualTo(0.0);
+    }
+
+    @Test
+    void testCondIsLazyInitialized() {
+        double[] A = {
+            2.0, 1.0,
+            1.0, 3.0
+        };
+
+        QR qr = QR.decompose(A, 2, 2);
+        assertThat(qr.ok()).isTrue();
+        assertThat(readCondition(qr)).isNaN();
+
+        double cond = qr.cond();
+        assertThat(cond).isGreaterThanOrEqualTo(1.0);
+        assertThat(readCondition(qr)).isEqualTo(cond);
     }
 
     @Test
@@ -60,6 +89,7 @@ class QRTest {
 
         double[] x = qr.solve(b, null);
         assertThat(x).isNotNull();
+        assertThat(x).isSameAs(b);
         assertThat(x[0]).isCloseTo(1.4, org.assertj.core.data.Offset.offset(1e-10));
         assertThat(x[1]).isCloseTo(2.2, org.assertj.core.data.Offset.offset(1e-10));
     }
@@ -67,19 +97,32 @@ class QRTest {
     @Test
     void testExtractR() {
         double[] A = {
-            3.0, 2.0, 1.0,
-            0.0, 1.0, 1.0,
-            0.0, 0.0, 2.0
+            1.0, 2.0, 3.0,
+            4.0, 5.0, 6.0,
+            7.0, 8.0, 9.0,
+            10.0, 11.0, 12.0
         };
-        int m = 3, n = 3;
+        int m = 4, n = 3;
 
         QR qr = QR.decompose(A, m, n);
         assertThat(qr.ok()).isTrue();
 
-        double[] R = qr.toR().data;
+        Decomposition.Matrix Rm = qr.toR();
+        double[] R = Rm.data;
 
-        for (int i = 0; i < n; i++) {
+        assertThat(Rm.m).isEqualTo(m);
+        assertThat(Rm.n).isEqualTo(n);
+
+        for (int i = 0; i < m; i++) {
             for (int j = 0; j < i; j++) {
+                if (j >= n) {
+                    continue;
+                }
+                assertThat(R[i * n + j]).isCloseTo(0.0, org.assertj.core.data.Offset.offset(EPSILON));
+            }
+        }
+        for (int i = n; i < m; i++) {
+            for (int j = 0; j < n; j++) {
                 assertThat(R[i * n + j]).isCloseTo(0.0, org.assertj.core.data.Offset.offset(EPSILON));
             }
         }
@@ -121,11 +164,9 @@ class QRTest {
     void testInvalidDimensions() {
         double[] A = new double[6];
 
-        try {
-            QR qr = QR.decompose(A, 2, 3);
-        } catch (IllegalArgumentException ex) {
-            assertThat(ex.getMessage()).doesNotContain("m must be >= n");
-        }
+        assertThatThrownBy(() -> QR.decompose(A, 2, 3))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("m must be >= n");
     }
 
     @Test
@@ -208,10 +249,63 @@ class QRTest {
     }
 
     @Test
-    void testRectangularMatrix() {
+    void testTallMatrixReconstructionAndOrthogonality() {
+        java.util.Random rand = new java.util.Random(42);
+        int m = 6;
+        int n = 4;
+        double[] A = new double[m * n];
+        for (int i = 0; i < m * n; i++) {
+            A[i] = rand.nextDouble() * 2 - 1;
+        }
+        double[] Aorig = A.clone();
+
+        QR qr = QR.decompose(A, m, n);
+        assertThat(qr.ok()).isTrue();
+
+        Decomposition.Matrix Qm = qr.toQ();
+        Decomposition.Matrix Rm = qr.toR();
+        assertThat(Qm.m).isEqualTo(m);
+        assertThat(Qm.n).isEqualTo(m);
+        assertThat(Rm.m).isEqualTo(m);
+        assertThat(Rm.n).isEqualTo(n);
+
+        double[] Q = Qm.data;
+        double[] R = Rm.data;
+        double[] QR = new double[m * n];
+        for (int i = 0; i < m; i++) {
+            for (int j = 0; j < n; j++) {
+                for (int k = 0; k < m; k++) {
+                    QR[i * n + j] += Q[i * m + k] * R[k * n + j];
+                }
+            }
+        }
+
+        for (int i = 0; i < m * n; i++) {
+            assertThat(QR[i]).isCloseTo(Aorig[i], org.assertj.core.data.Offset.offset(1e-8 * m));
+        }
+
+        double[] QtQ = new double[m * m];
+        for (int i = 0; i < m; i++) {
+            for (int j = 0; j < m; j++) {
+                for (int k = 0; k < m; k++) {
+                    QtQ[i * m + j] += Q[k * m + i] * Q[k * m + j];
+                }
+            }
+        }
+
+        for (int i = 0; i < m; i++) {
+            for (int j = 0; j < m; j++) {
+                double expected = (i == j) ? 1.0 : 0.0;
+                assertThat(QtQ[i * m + j]).isCloseTo(expected, org.assertj.core.data.Offset.offset(1e-8));
+            }
+        }
+    }
+
+    @Test
+    void testTallRectangularMatrix() {
         java.util.Random rand = new java.util.Random(42);
 
-        int[][] dimensions = {{5, 3}, {3, 5}, {10, 4}, {4, 10}};
+        int[][] dimensions = {{5, 3}, {10, 4}};
         for (int[] dim : dimensions) {
             int m = dim[0], n = dim[1];
             double[] A = new double[m * n];
@@ -222,6 +316,13 @@ class QRTest {
             QR qr = QR.decompose(A, m, n);
             assertThat(qr.ok()).isTrue();
         }
+    }
+
+    @Test
+    void testWideRectangularMatrixRejected() {
+        assertThatThrownBy(() -> QR.decompose(new double[15], 3, 5))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("m must be >= n");
     }
 
     @Test
@@ -245,6 +346,22 @@ class QRTest {
     }
 
     @Test
+    void testSolveRejectsTallMatrix() {
+        double[] A = {
+            1.0, 1.0,
+            1.0, 2.0,
+            1.0, 3.0
+        };
+        double[] b = {2.0, 3.0, 5.0};
+
+        QR qr = QR.decompose(A, 3, 2);
+
+        assertThatThrownBy(() -> qr.solve(b, null))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("square QR factorization");
+    }
+
+    @Test
     void testLeastSquaresResidual() {
         double[] A = {
             1.0, 1.0,
@@ -261,6 +378,7 @@ class QRTest {
         assertThat(qr.ok()).isTrue();
 
         assertThat(qr.leastSquares(b, x)).isNotNull();
+        assertThat(b).containsExactly(bCopy);
 
         assertThat(x[0]).isCloseTo(1.0/3.0, org.assertj.core.data.Offset.offset(1e-10));
         assertThat(x[1]).isCloseTo(1.5, org.assertj.core.data.Offset.offset(1e-10));

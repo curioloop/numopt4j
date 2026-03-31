@@ -6,27 +6,37 @@ package com.curioloop.numopt4j.linalg.mat;
 import com.curioloop.numopt4j.linalg.Decomposition;
 import com.curioloop.numopt4j.linalg.blas.BLAS;
 
-import static java.lang.Math.abs;
-import static java.lang.Math.max;
-
 public final class LQ implements Decomposition {
-
-    private static final double EPSILON = BLAS.dlamch('E');
+    private static final double CONDITION_TOLERANCE = 1e16;
 
     /** Configuration options for LQ decomposition (currently no variants). */
     public enum Opts {}
 
     public static final class Pool extends Decomposition.Workspace {
+        /** Householder reflection factors. */
+        public double[] tau;
+
         /**
          * Ensure all buffers are allocated for LQ decomposition of an m×n matrix.
-         * Layout: work[0..m) = tau, work[m..) = scratch.
          */
         public Pool ensure(int m, int n) {
-            // Query dgelqf for optimal scratch size; tau occupies work[0..m)
-            // solveTranspose also needs work[m..m+n) as a temp buffer for b
+            if (m <= 0 || n <= 0) {
+                throw new IllegalArgumentException("Dimensions must be positive");
+            }
+            if (m > n) {
+                throw new IllegalArgumentException("For LQ decomposition, m must be <= n");
+            }
+            if (tau == null || tau.length < m) {
+                tau = new double[m];
+            }
+
             double[] tmp = new double[1];
             BLAS.dgelqf(m, n, null, 0, n, null, 0, tmp, 0, -1);
-            ensureWork(m + n + (int) tmp[0]);
+            int lqWork = (int) tmp[0];
+            BLAS.dormlq(BLAS.Side.Left, BLAS.Trans.Trans, n, 1, m,
+                    null, 0, n, null, 0, null, 0, 1, tmp, 0, -1);
+            ensureWork(Math.max(Math.max(lqWork, (int) tmp[0]), 3 * m));
+            ensureIwork(m);
             return this;
         }
     }
@@ -36,17 +46,27 @@ public final class LQ implements Decomposition {
     private int m;
     private int n;
     private boolean ok;
+    private double condition;
 
     private LQ() {}
 
-    public static Pool workspace(int m, int n) {
-        return new Pool().ensure(m, n);
+    /**
+     * Creates an empty workspace pool for LQ decomposition.
+     */
+    public static Pool workspace() {
+        return new Pool();
     }
 
+    /**
+     * Factorizes a square or wide matrix using LQ decomposition.
+     */
     public static LQ decompose(double[] A, int m, int n) {
         return decompose(A, m, n, (Pool) null);
     }
 
+    /**
+     * Factorizes a square or wide matrix using LQ decomposition with workspace reuse.
+     */
     public static LQ decompose(double[] A, int m, int n, Pool ws) {
         LQ lq = new LQ();
         lq.doDecompose(A, m, n, ws);
@@ -54,250 +74,191 @@ public final class LQ implements Decomposition {
     }
 
     private void doDecompose(double[] A, int m, int n, Pool ws) {
-        if (A == null || A.length < m * n) {
-            throw new IllegalArgumentException("Matrix A must have length >= m*n");
-        }
         if (m <= 0 || n <= 0) {
             throw new IllegalArgumentException("Dimensions must be positive");
         }
         if (m > n) {
             throw new IllegalArgumentException("For LQ decomposition, m must be <= n");
         }
+        if (A == null || A.length < m * n) {
+            throw new IllegalArgumentException("Matrix A must have length >= m*n");
+        }
 
         this.LQ = A;
         this.m = m;
         this.n = n;
         this.ok = false;
-
-        if (ws == null) {
-            ws = new Pool();
-        }
-        this.pool = ws;
-
+        this.condition = Double.NaN;
+        this.pool = ws == null ? new Pool() : ws;
         pool.ensure(m, n);
 
-        BLAS.dgelqf(m, n, A, 0, n, pool.work(), 0, pool.work(), m, pool.work().length - m);
+        int result = BLAS.dgelqf(m, n, LQ, 0, n, pool.tau, 0, pool.work(), 0, pool.work().length);
+        if (result != 0) {
+            throw new IllegalStateException("LQ factorization failed with dgelqf status=" + result);
+        }
+
         this.ok = true;
     }
 
+    /**
+     * Solves the minimum-norm system {@code A*x = b} for a wide or square matrix.
+     *
+    * <p>To minimize allocations, this method uses {@code b} as a working buffer and may
+    * overwrite it. Pass a distinct {@code x} buffer if the original right-hand side must be
+    * preserved.</p>
+     *
+     * @param b right-hand side vector of length at least {@code m}
+     * @param x destination vector of length at least {@code n}; may be {@code null}
+     * @return the minimum-norm solution vector {@code x}
+     * @throws IllegalStateException if the decomposition is unavailable
+     * @throws ArithmeticException if the factor is singular or ill-conditioned
+     */
     public double[] solve(double[] b, double[] x) {
-        if (!ok) return null;
+        requireDecomposition();
         if (b == null || b.length < m) {
-            throw new IllegalArgumentException("Vector b must have length >= m");
+            throw new IllegalArgumentException("Vector b must have length >= " + m);
         }
         if (x == null || x.length < n) {
             x = new double[n];
         }
 
-        if (x != b) {
-            System.arraycopy(b, 0, x, 0, m);
+        requireWellConditioned();
+        double[] rhs = b;
+        if (!BLAS.dtrtrs(BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit,
+            m, 1, LQ, 0, n, rhs, 0, 1)) {
+            throw new ArithmeticException("LQ factor is singular");
         }
 
-        for (int i = 0; i < m; i++) {
-            if (abs(LQ[i * n + i]) < EPSILON) {
-                return null;
-            }
-            double sum = x[i];
-            for (int j = 0; j < i; j++) {
-                sum -= LQ[i * n + j] * x[j];
-            }
-            x[i] = sum / LQ[i * n + i];
-        }
+        BLAS.dset(n, 0.0, x, 0, 1);
+        BLAS.dcopy(m, rhs, 0, 1, x, 0, 1);
 
-        for (int i = m; i < n; i++) {
-            x[i] = 0;
+        int result = BLAS.dormlq(BLAS.Side.Left, BLAS.Trans.Trans, n, 1, m, LQ, 0, n,
+            pool.tau, 0, x, 0, 1, pool.work(), 0, pool.work().length);
+        if (result != 0) {
+            throw new IllegalStateException("Failed to apply Q^T with dormlq status=" + result);
         }
-
-        BLAS.dormlq(BLAS.Side.Left, BLAS.Trans.Trans, n, 1, m, LQ, 0, n,
-                pool.work(), 0, x, 0, 1,
-                pool.work(), m, pool.work().length - m);
 
         return x;
     }
 
+    /**
+     * Solves the transpose system {@code A^T*x = b} in the least-squares sense.
+     *
+    * <p>To minimize allocations, this method uses {@code b} as a working buffer and may
+    * overwrite it. Pass a distinct {@code x} buffer if the original right-hand side must be
+    * preserved.</p>
+     *
+     * @param b right-hand side vector of length at least {@code n}
+     * @param x destination vector of length at least {@code m}; may be {@code null}
+     * @return the solution vector {@code x}
+     * @throws IllegalStateException if the decomposition is unavailable
+     * @throws ArithmeticException if the factor is singular or ill-conditioned
+     */
     public double[] solveTranspose(double[] b, double[] x) {
-        if (!ok) return null;
+        requireDecomposition();
         if (b == null || b.length < n) {
-            throw new IllegalArgumentException("Vector b must have length >= n");
+            throw new IllegalArgumentException("Vector b must have length >= " + n);
         }
         if (x == null || x.length < m) {
             x = new double[m];
         }
 
-        double[] work = pool.work();
-        int bOff = m;
-        int scrOff = m + n;
-        System.arraycopy(b, 0, work, bOff, n);
+        requireWellConditioned();
+        double[] rhs = b;
 
-        BLAS.dormlq(BLAS.Side.Left, BLAS.Trans.NoTrans, n, 1, m, LQ, 0, n,
-                work, 0, work, bOff, 1,
-                work, scrOff, work.length - scrOff);
+    int result = BLAS.dormlq(BLAS.Side.Left, BLAS.Trans.NoTrans, n, 1, m, LQ, 0, n,
+        pool.tau, 0, rhs, 0, 1, pool.work(), 0, pool.work().length);
+    if (result != 0) {
+        throw new IllegalStateException("Failed to apply Q with dormlq status=" + result);
+    }
 
-        for (int i = m - 1; i >= 0; i--) {
-            if (abs(LQ[i * n + i]) < EPSILON) {
-                return null;
-            }
-            double sum = work[bOff + i];
-            for (int j = i + 1; j < m; j++) {
-                sum -= LQ[j * n + i] * x[j];
-            }
-            x[i] = sum / LQ[i * n + i];
+    if (!BLAS.dtrtrs(BLAS.Uplo.Lower, BLAS.Trans.Trans, BLAS.Diag.NonUnit,
+        m, 1, LQ, 0, n, rhs, 0, 1)) {
+            throw new ArithmeticException("LQ factor is singular");
         }
+
+        BLAS.dcopy(m, rhs, 0, 1, x, 0, 1);
 
         return x;
     }
 
+    /**
+     * Compatibility alias for {@link #solve(double[], double[])}.
+     *
+     * <p>For the standard {@code m <= n} LQ domain, solving {@code A*x = b} already returns the
+     * minimum-norm solution, so this method delegates directly to {@link #solve(double[], double[])}.
+     * It therefore shares the same in-place right-hand-side overwrite behavior.</p>
+     */
     public double[] leastSquares(double[] b, double[] x) {
-        if (!ok) return null;
-        if (b == null || b.length < n) {
-            throw new IllegalArgumentException("Vector b must have length >= n");
-        }
-        if (x == null || x.length < n) {
-            x = new double[n];
-        }
-
-        for (int i = 0; i < n; i++) {
-            x[i] = b[i];
-        }
-
-        BLAS.dormlq(BLAS.Side.Left, BLAS.Trans.Trans, n, 1, m, LQ, 0, n,
-                pool.work(), 0, x, 0, 1,
-                pool.work(), m, pool.work().length - m);
-
-        for (int i = 0; i < m; i++) {
-            if (abs(LQ[i * n + i]) < EPSILON) {
-                return null;
-            }
-            double sum = x[i];
-            for (int j = 0; j < i; j++) {
-                sum -= LQ[i * n + j] * x[j];
-            }
-            x[i] = sum / LQ[i * n + i];
-        }
-
-        for (int i = m; i < n; i++) {
-            x[i] = 0;
-        }
-
-        return x;
+        return solve(b, x);
     }
 
-    /** Returns the L factor as an m×m lower triangular matrix, or null if failed. */
+    /**
+     * Returns the full lower-trapezoidal factor {@code L} as an {@code m x n} matrix.
+     */
     public Matrix toL() {
-        if (!ok) return null;
-        double[] dst = new double[m * m];
+        requireDecomposition();
+        double[] dst = new double[m * n];
         for (int i = 0; i < m; i++) {
-            for (int j = 0; j < m; j++) {
-                dst[i * m + j] = (j <= i) ? LQ[i * n + j] : 0.0;
+            int limit = Math.min(i + 1, n);
+            for (int j = 0; j < limit; j++) {
+                dst[i * n + j] = LQ[i * n + j];
             }
         }
-        return new Matrix(m, m, false, dst);
+        return new Matrix(m, n, false, dst);
     }
 
-    /** Returns the Q factor as an n×n orthogonal matrix, or null if failed. */
+    /**
+     * Returns the full orthogonal factor {@code Q} as an {@code n x n} matrix.
+     */
     public Matrix toQ() {
-        if (!ok) return null;
+        requireDecomposition();
         double[] dst = new double[n * n];
-        java.util.Arrays.fill(dst, 0, n * n, 0.0);
         for (int i = 0; i < m; i++) {
             System.arraycopy(LQ, i * n, dst, i * n, n);
         }
-        BLAS.dorglq(n, n, m, dst, 0, n, pool.work(), 0, pool.work(), m);
+        BLAS.dorglq(n, n, m, dst, 0, n, pool.tau, 0, pool.work(), 0);
         return new Matrix(n, n, false, dst);
     }
 
+    /**
+     * Returns the condition number estimate associated with the lower-triangular LQ factor.
+     */
     public double cond() {
-        if (!ok || m == 0) return Double.NaN;
+        requireDecomposition();
+        return ensureCondition();
+    }
 
-        double anorm = 0;
-        for (int j = 0; j < m; j++) {
-            double colSum = 0;
-            for (int i = j; i < m; i++) {
-                colSum += abs(LQ[i * n + j]);
-            }
-            anorm = max(anorm, colSum);
+    private double computeCondition() {
+        if (m == 0) {
+            return Double.NaN;
         }
-        if (anorm == 0) return Double.POSITIVE_INFINITY;
-
-        double[] v = pool.work();
-        int vOff = m;
-        double est = 0;
-        int kase = 0;
-
-        for (int i = 0; i < m; i++) {
-            v[vOff + i] = 1.0 / (m - i);
+        double rcond = BLAS.dtrcon(BLAS.Norm.One, BLAS.Uplo.Lower, BLAS.Diag.NonUnit,
+                m, LQ, n, pool.work(), pool.iwork());
+        if (rcond == 0) {
+            return Double.POSITIVE_INFINITY;
         }
+        return 1.0 / rcond;
+    }
 
-        while (true) {
-            if (kase == 0) {
-                double t = 0;
-                for (int i = 0; i < m; i++) {
-                    double sum = 0;
-                    for (int j = i; j < m; j++) {
-                        sum += abs(LQ[j * n + i]) * v[vOff + j];
-                    }
-                    v[vOff + i] = sum;
-                    if (abs(v[vOff + i]) > t) t = abs(v[vOff + i]);
-                }
-                for (int i = 0; i < m; i++) {
-                    v[vOff + i] /= t;
-                }
-
-                for (int i = m - 1; i >= 0; i--) {
-                    double sum = v[vOff + i];
-                    for (int j = 0; j < i; j++) {
-                        sum -= LQ[i * n + j] * v[vOff + j];
-                    }
-                    if (abs(LQ[i * n + i]) > EPSILON) {
-                        v[vOff + i] = sum / LQ[i * n + i];
-                    } else {
-                        v[vOff + i] = 0;
-                    }
-                }
-
-                est = 0;
-                for (int i = 0; i < m; i++) {
-                    est = max(est, abs(v[vOff + i]));
-                }
-                kase = 1;
-            } else if (kase == 1) {
-                for (int i = 0; i < m; i++) {
-                    double sum = v[vOff + i];
-                    for (int j = 0; j < i; j++) {
-                        sum -= LQ[i * n + j] * v[vOff + j];
-                    }
-                    if (abs(LQ[i * n + i]) > EPSILON) {
-                        v[vOff + i] = sum / LQ[i * n + i];
-                    } else {
-                        v[vOff + i] = 0;
-                    }
-                }
-
-                for (int i = m - 1; i >= 0; i--) {
-                    double sum = 0;
-                    for (int j = i; j < m; j++) {
-                        sum += abs(LQ[j * n + i]) * v[vOff + j];
-                    }
-                    v[vOff + i] = sum;
-                }
-
-                double newEst = 0;
-                for (int i = 0; i < m; i++) {
-                    newEst = max(newEst, abs(v[vOff + i]));
-                }
-
-                if (newEst <= est) {
-                    break;
-                }
-                est = newEst;
-                kase = 2;
-            } else {
-                break;
-            }
+    private void requireDecomposition() {
+        if (!ok) {
+            throw new IllegalStateException("LQ decomposition not completed or failed");
         }
+    }
 
-        if (est == 0) return Double.POSITIVE_INFINITY;
-        return anorm * est;
+    private void requireWellConditioned() {
+        double condition = ensureCondition();
+        if (!Double.isFinite(condition) || condition > CONDITION_TOLERANCE) {
+            throw new ArithmeticException("LQ factor is singular or ill-conditioned");
+        }
+    }
+
+    private double ensureCondition() {
+        if (Double.isNaN(condition)) {
+            condition = computeCondition();
+        }
+        return condition;
     }
 
     @Override
@@ -310,11 +271,19 @@ public final class LQ implements Decomposition {
         return pool;
     }
 
+    /** Returns the number of rows in the factorized matrix. */
     public int m() {
         return m;
     }
 
+    /** Returns the number of columns in the factorized matrix. */
     public int n() {
         return n;
     }
+
+    /** Returns the stored Householder scalar factors. */
+    public double[] tau() {
+        return pool.tau;
+    }
+
 }

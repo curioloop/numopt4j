@@ -11,6 +11,8 @@ import static java.lang.Math.min;
 
 public final class SVD implements Decomposition {
 
+    private static final double EPSILON = BLAS.dlamch('E');
+
     public static final int SVD_NONE   = 0;
     public static final int SVD_WANT_U = 1;
     public static final int SVD_WANT_V = 2;
@@ -56,45 +58,8 @@ public final class SVD implements Decomposition {
 
     private SVD() {}
 
-    public static Pool workspace(int m, int n) {
-        return workspace(m, n, SVD_ALL);
-    }
-
-    public static Pool workspace(int m, int n, int kind) {
-        int minMN = min(m, n);
-        int maxMN = max(m, n);
-        Pool pool = new Pool();
-        pool.ensureS(minMN);
-
-        boolean wantU  = (kind & SVD_WANT_U) != 0;
-        boolean wantVT = (kind & SVD_WANT_V) != 0;
-        boolean fullU  = (kind & SVD_FULL_U) != 0;
-        boolean fullVT = (kind & SVD_FULL_V) != 0;
-
-        // Work layout:
-        //   work[0..minMN)         = e  (off-diagonal from dgebd2)
-        //   work[minMN..2*minMN)   = tauQ
-        //   work[2*minMN..3*minMN) = tauP
-        //   work[3*minMN..)        = scratch for dorgbr / dbdsqr
-        // dbdsqr needs 4*minMN+16 scratch; dgebd2 needs maxMN scratch
-        double[] tmp = new double[1];
-        int scratch = max(maxMN, 4 * minMN + 16); // dbdsqr needs 4n+16 (dlasq1 requirement)
-        if (wantU) {
-            int uCols = fullU ? m : minMN;
-            BLAS.dorgbr('Q', m, uCols, n, null, 0, uCols, null, 0, tmp, 0, -1);
-            scratch = Math.max(scratch, (int) tmp[0]);
-        }
-        if (wantVT) {
-            int vtRows = fullVT ? n : minMN;
-            BLAS.dorgbr('P', vtRows, n, m, null, 0, n, null, 0, tmp, 0, -1);
-            scratch = Math.max(scratch, (int) tmp[0]);
-        }
-        pool.ensureWork(3 * minMN + scratch);
-
-        int uSize  = wantU  ? (fullU  ? m * m : m * minMN) : 0;
-        int vtSize = wantVT ? (fullVT ? n * n : minMN * n) : 0;
-        pool.ensureUV(max(uSize, vtSize));
-        return pool;
+    public static Pool workspace() {
+        return new Pool();
     }
 
     /**
@@ -118,163 +83,68 @@ public final class SVD implements Decomposition {
 
     private void doDecompose(double[] A, int m, int n, int kind, Pool wsIn) {
         int minMN = min(m, n);
-        int maxMN = max(m, n);
 
         boolean wantU     = (kind & SVD_WANT_U) != 0;
         boolean wantVT    = (kind & SVD_WANT_V) != 0;
         boolean wantFullU = (kind & SVD_FULL_U) != 0;
         boolean wantFullV = (kind & SVD_FULL_V) != 0;
 
-        if (wsIn == null) wsIn = workspace(m, n, kind);
-        this.pool = wsIn;
-
-        // S is always needed
-        pool.ensureS(minMN);
-
-        // Work layout:
-        //   work[0..minMN)         = e  (off-diagonal from dgebd2)
-        //   work[minMN..2*minMN)   = tauQ
-        //   work[2*minMN..3*minMN) = tauP
-        //   work[3*minMN..)        = scratch for dorgbr / dbdsqr
-        // dbdsqr needs 4*minMN+16 scratch (dlasq1 requires 4n+16)
-        {
-            double[] tmp = new double[1];
-            int scratch = max(maxMN, 4 * minMN + 16);
-            if (wantU) {
-                int uCols = wantFullU ? m : minMN;
-                BLAS.dorgbr('Q', m, uCols, n, null, 0, uCols, null, 0, tmp, 0, -1);
-                scratch = Math.max(scratch, (int) tmp[0]);
-            }
-            if (wantVT) {
-                int vtRows = wantFullV ? n : minMN;
-                BLAS.dorgbr('P', vtRows, n, m, null, 0, n, null, 0, tmp, 0, -1);
-                scratch = Math.max(scratch, (int) tmp[0]);
-            }
-            pool.ensureWork(3 * minMN + scratch);
-        }
-
-        // Reuse A array where possible (A contents are no longer needed after dgebd2):
-        // A size = m*n; let the larger output reuse A, allocate the smaller one from pool
-        final int aLen = m * n;
-        final double[] outS = pool.s;
-        final double[] outU;
-        final double[] outVT;
-
-        // S is much smaller than A, use pool directly
+        boolean overwriteU = false;
+        boolean overwriteVT = false;
         if (wantU && wantVT) {
-            int uSize  = wantFullU ? m * m : m * minMN;
-            int vtSize = wantFullV ? n * n : minMN * n;
-            if (uSize >= vtSize && uSize <= aLen) {
-                // U reuses A, VT from pool
-                outU = A; 
-                pool.ensureUV(vtSize); 
-                outVT = pool.UV;
-            } else if (vtSize <= aLen) {
-                // VT reuses A, U from pool
-                pool.ensureUV(uSize); 
-                outU = pool.UV; 
-                outVT = A;
+            if (m >= n) {
+                overwriteU = !wantFullU;
+                overwriteVT = wantFullU;
             } else {
-                // Theoretically unreachable for thin SVD (both uSize and vtSize <= aLen)
-                // Defensive fallback: pool gets the larger one, smaller one is allocated separately
-                if (uSize >= vtSize) {
-                    pool.ensureUV(uSize); 
-                    outU = pool.UV; 
-                    outVT = new double[vtSize];
-                } else {
-                    pool.ensureUV(vtSize); 
-                    outU = new double[uSize]; 
-                    outVT = pool.UV;
-                }
+                overwriteU = wantFullV;
+                overwriteVT = !wantFullV;
             }
         } else if (wantU) {
-            int uSize = wantFullU ? m * m : m * minMN;
-            if (uSize <= aLen) {
-                outU = A;
-            } else {
-                pool.ensureUV(uSize);
-                outU = pool.UV;
-            }
-            outVT = null;
+            overwriteU = !wantFullU || m < n;
         } else if (wantVT) {
-            int vtSize = wantFullV ? n * n : minMN * n;
-            outU = null;
-            if (vtSize <= aLen) {
-                outVT = A;
-            } else {
-                pool.ensureUV(vtSize);
-                outVT = pool.UV;
-            }
-        } else {
-            outU  = null;
-            outVT = null;
+            overwriteVT = !wantFullV || m >= n;
         }
 
-        if (minMN == 0) {
-            this.s = outS; this.U = outU; this.VT = outVT;
-            ok = true;
-            return;
+        if (wsIn == null) wsIn = new Pool();
+        this.pool = wsIn;
+        pool.ensureS(minMN);
+        int uSize = wantU && !overwriteU ? (wantFullU ? m * m : m * minMN) : 0;
+        int vtSize = wantVT && !overwriteVT ? (wantFullV ? n * n : minMN * n) : 0;
+        pool.ensureUV(max(uSize, vtSize));
+
+        char jobU = wantU ? (overwriteU ? 'O' : (wantFullU ? 'A' : 'S')) : 'N';
+        char jobVT = wantVT ? (overwriteVT ? 'O' : (wantFullV ? 'A' : 'S')) : 'N';
+        int ldu = wantU ? max(1, wantFullU ? m : minMN) : 1;
+        int ldvt = wantVT ? max(1, n) : 1;
+
+        double[] tmp = new double[1];
+        BLAS.dgesvd(jobU, jobVT, m, n, null, 0, max(1, n), null, 0,
+                null, 0, ldu, null, 0, ldvt, tmp, 0, -1);
+        pool.ensureWork(max(1, (int) tmp[0]));
+
+        double[] outS = pool.s;
+        double[] outU = null;
+        if (wantU) {
+            outU = overwriteU ? A : pool.UV;
+        }
+        double[] outVT = null;
+        if (wantVT) {
+            outVT = overwriteVT ? A : pool.UV;
         }
 
-        double[] work = pool.work();
-        int eOff    = 0;
-        int tauQOff = minMN;
-        int tauPOff = 2 * minMN;
-        int scratchOff = 3 * minMN;
-        int lda = n;
+        int info = BLAS.dgesvd(jobU, jobVT, m, n, A, 0, max(1, n), outS, 0,
+                outU, 0, ldu, outVT, 0, ldvt, pool.work(), 0, pool.work().length);
 
-        BLAS.dgebd2(m, n, A, 0, lda, outS, 0, work, eOff, work, tauQOff, work, tauPOff, work, scratchOff);
-
-        if (m >= n) {
-            if (wantVT) {
-                dlacpyUpper(n, n, A, 0, lda, outVT, 0, n);
-                BLAS.dorgbr('P', n, n, n, outVT, 0, n, work, tauPOff, work, scratchOff, work.length - scratchOff);
+        if (info == 0 && overwriteU && m < n) {
+            for (int row = 1; row < m; row++) {
+                System.arraycopy(A, row * n, A, row * m, m);
             }
-            if (wantU) {
-                if (wantFullU) {
-                    dlacpyLower(m, n, A, 0, lda, outU, 0, m);
-                    for (int i = 0; i < m; i++) for (int j = n; j < m; j++) outU[i * m + j] = 0.0;
-                    BLAS.dorgbr('Q', m, m, n, outU, 0, m, work, tauQOff, work, scratchOff, work.length - scratchOff);
-                } else {
-                    // thin U
-                    dlacpyLower(m, minMN, A, 0, lda, outU, 0, minMN);
-                    BLAS.dorgbr('Q', m, minMN, n, outU, 0, minMN, work, tauQOff, work, scratchOff, work.length - scratchOff);
-                }
-            }
-            int ncvt = wantVT ? n : 0, nru = wantU ? m : 0;
-            int ldvt = wantVT ? n : 1, ldu = wantU ? (wantFullU ? m : minMN) : 1;
-            ok = BLAS.dbdsqr(BLAS.Uplo.Upper, minMN, ncvt, nru, 0, outS, 0, work, eOff, outVT, 0, ldvt, outU, 0, ldu, null, 0, 0, work, scratchOff);
-        } else {
-            if (wantVT) {
-                dlacpyUpper(m, n, A, 0, lda, outVT, 0, n);
-                if (wantFullV && n > m) for (int i = m; i < n; i++) for (int j = 0; j < n; j++) outVT[i * n + j] = 0.0;
-                int vtRows = wantFullV ? n : minMN;
-                BLAS.dorgbr('P', vtRows, n, m, outVT, 0, n, work, tauPOff, work, scratchOff, work.length - scratchOff);
-            }
-            if (wantU) {
-                int uCols = wantFullU ? m : minMN;
-                dlacpyLower(m, m, A, 0, lda, outU, 0, uCols);
-                BLAS.dorgbr('Q', m, uCols, n, outU, 0, uCols, work, tauQOff, work, scratchOff, work.length - scratchOff);
-            }
-            int ncvt = wantVT ? n : 0, nru = wantU ? m : 0;
-            int ldvt = wantVT ? n : 1, ldu = wantU ? (wantFullU ? m : minMN) : 1;
-            ok = BLAS.dbdsqr(BLAS.Uplo.Lower, minMN, ncvt, nru, 0, outS, 0, work, eOff, outVT, 0, ldvt, outU, 0, ldu, null, 0, 0, work, scratchOff);
         }
 
-        // Record the arrays actually written (user array or pool array)
-        this.s = outS; this.U = outU; this.VT = outVT;
-    }
-
-    private static void dlacpyUpper(int m, int n, double[] src, int srcOff, int lda, double[] dst, int dstOff, int ldb) {
-        for (int i = 0; i < m; i++)
-            for (int j = i; j < n; j++)
-                dst[dstOff + i * ldb + j] = src[srcOff + i * lda + j];
-    }
-
-    private static void dlacpyLower(int m, int n, double[] src, int srcOff, int lda, double[] dst, int dstOff, int ldb) {
-        for (int i = 0; i < m; i++)
-            for (int j = 0; j < min(i + 1, n); j++)
-                dst[dstOff + i * ldb + j] = src[srcOff + i * lda + j];
+        this.s = outS;
+        this.U = outU;
+        this.VT = outVT;
+        this.ok = info == 0;
     }
 
     @Override
@@ -324,16 +194,34 @@ public final class SVD implements Decomposition {
     public int n() { return n; }
     public int kind() { return ok ? kind : -1; }
 
+    /**
+     * Returns the effective rank using the default relative cutoff {@code max(m,n) * eps}.
+     */
     public int rank() {
         if (s == null || s.length == 0) return 0;
-        double tol = Math.max(m, n) * Math.ulp(s[0]);
-        return rank(tol);
+        return rank(max(m, n) * EPSILON);
     }
 
-    public int rank(double tol) {
-        if (s == null) return 0;
+    /**
+     * Returns the effective rank using the relative cutoff {@code rcond * s[0]}.
+     *
+     * @param rcond relative singular value cutoff; must be nonnegative
+     * @return the number of singular values strictly larger than {@code rcond * s[0]}
+     */
+    public int rank(double rcond) {
+        if (rcond < 0) {
+            throw new IllegalArgumentException("rcond must be nonnegative");
+        }
+        if (s == null || s.length == 0 || s[0] <= 0) return 0;
+        double threshold = rcond * s[0];
         int r = 0;
-        for (double s : s) if (s > tol) r++;
+        for (double value : s) {
+            if (value > threshold) {
+                r++;
+            } else {
+                break;
+            }
+        }
         return r;
     }
 
@@ -349,32 +237,51 @@ public final class SVD implements Decomposition {
         return s[0];
     }
 
+    /**
+     * Solves for the minimum-norm vector using the default effective rank.
+     *
+     * <p>This method requires that both left and right singular vectors were requested during
+     * factorization. It throws if the decomposition is unavailable or if the right-hand side has
+     * incompatible length.</p>
+     */
     public double[] solve(double[] b, double[] x) {
-        return solve(b, x, null);
+        int rank = rank();
+        return solve(b, x, rank);
     }
 
-    public double[] solve(double[] b, double[] x, double[] tmp) {
-        if (s == null || U == null || VT == null) return null;
-        int minMN = min(m, n);
-        int uCols = uCols();
-        double tol = EPSILON * s[0] * max(m, n);
-        if (tmp == null || tmp.length < minMN) tmp = new double[minMN];
-        for (int i = 0; i < minMN; i++) {
-            if (s[i] > tol) {
-                double sum = 0;
-                for (int j = 0; j < m; j++) sum += U[j * uCols + i] * b[j];
-                tmp[i] = sum / s[i];
-            } else {
-                tmp[i] = 0;
-            }
+    /**
+     * Solves for the minimum-norm vector using the leading {@code rank} singular values.
+     *
+     * @param b right-hand side vector of length at least {@code m}
+     * @param x destination vector of length at least {@code n}; may be {@code null}
+     * @param rank effective rank in the range {@code [0, min(m,n)]}
+     * @return the solution vector
+     */
+    public double[] solve(double[] b, double[] x, int rank) {
+        if (!ok) {
+            throw new IllegalStateException("SVD decomposition not completed or failed");
         }
-        for (int i = 0; i < n; i++) {
-            double sum = 0;
-            for (int j = 0; j < minMN; j++) sum += VT[j * n + i] * tmp[j];
-            x[i] = sum;
+        if (U == null || VT == null) {
+            throw new IllegalStateException("SVD solve requires both U and VT to be computed");
+        }
+        if (b == null || b.length < m) {
+            throw new IllegalArgumentException("Vector b must have length >= " + m);
+        }
+        int minMN = min(m, n);
+        if (rank < 0 || rank > minMN) {
+            throw new IllegalArgumentException("rank must be in [0, " + minMN + "]");
+        }
+        if (x == null || x.length < n) {
+            x = new double[n];
+        }
+        double[] rhs = x == b ? b.clone() : b;
+        int uCols = uCols();
+        BLAS.dset(n, 0.0, x, 0, 1);
+        for (int i = 0; i < rank; i++) {
+            double coeff = BLAS.ddot(m, U, i, uCols, rhs, 0, 1) / s[i];
+            BLAS.daxpy(n, coeff, VT, i * n, 1, x, 0, 1);
         }
         return x;
     }
 
-    private static final double EPSILON = 0x1.0p-52;
 }

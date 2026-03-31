@@ -12,6 +12,12 @@ class GEVDTest {
 
     private static final double EPSILON = 1e-8;
 
+    private static int queryWorkspace(int n, boolean wantVectors) {
+        double[] tmp = new double[1];
+        BLAS.dsyev(wantVectors ? 'V' : 'N', 'L', n, null, n, null, 0, tmp, 0, -1);
+        return (int) tmp[0];
+    }
+
     // Verify A*v_i = lambda_i * B*v_i for all eigenpairs
     private static void verifyType1(double[] Aorig, double[] Borig, int n, double[] w, double[] V) {
         for (int i = 0; i < n; i++) {
@@ -144,6 +150,19 @@ class GEVDTest {
 
         assertThat(eg.ok()).isTrue();
         assertThat(eg.cond()).isCloseTo(3.0, offset(EPSILON));
+    }
+
+    @Test
+    void testValuesOnlyUsesExactWorkspaceQuery() {
+        double[] A = { 2.0, 1.0, 1.0, 2.0 };
+        double[] B = { 1.0, 0.0, 0.0, 1.0 };
+        GEVD.Pool ws = (GEVD.Pool) GEVD.workspace();
+
+        GEVD eg = GEVD.decompose(A.clone(), B.clone(), 2, BLAS.Uplo.Lower, 1, true, ws);
+
+        assertThat(eg.ok()).isTrue();
+        assertThat(eg.toV()).isNull();
+        assertThat(ws.work().length).isEqualTo(queryWorkspace(2, false));
     }
 
     @Test

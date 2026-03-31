@@ -21,10 +21,17 @@ import com.curioloop.numopt4j.linalg.mat.Schur;
  * <p>Each method accepts an optional varargs {@code Pool} for workspace reuse,
  * and an optional varargs {@code Opts} enum for algorithm configuration.</p>
  *
+ * <p>For LU and Cholesky-style factorizations, decomposition creation always returns a
+ * decomposition object. Use {@link Decomposition#ok()} to inspect whether factorization
+ * succeeded. Subsequent operational methods such as {@code solve(...)} and {@code inverse(...)}
+ * report singular, indefinite, or ill-conditioned factors with exceptions rather than
+ * returning {@code null}.</p>
+ *
  * <pre>{@code
  * // Basic usage — defaults
  * LU  lu   = Decomposer.lu(A, n);
- * QR  qr   = Decomposer.qr(A, m, n);
+ * QR  qr   = Decomposer.qr(A, m, n);   // use for tall/square matrices (m >= n)
+ * LQ  lq   = Decomposer.lq(A, m, n);   // use for wide/square matrices (m <= n)
  * SVD svd  = Decomposer.svd(A, m, n);
  * Cholesky chol = Decomposer.cholesky(A, n);
  *
@@ -34,9 +41,9 @@ import com.curioloop.numopt4j.linalg.mat.Schur;
  * Cholesky ldl = Decomposer.cholesky(A, n, Cholesky.Opts.UPPER, Cholesky.Opts.PIVOTING);
  *
  * // Workspace reuse
- * LU.Pool ws = lu.alloc();
- * for (double[] b : rhs) {
- *     LU result = Decomposer.lu(b, n, ws);
+ * LU.Pool ws = LU.workspace();
+ * for (double[] matrix : batch) {
+ *     LU result = Decomposer.lu(matrix, n, ws);
  * }
  * }</pre>
  */
@@ -50,6 +57,11 @@ public final class Decomposer {
 
     /**
      * Performs LU decomposition of an n×n matrix.
+        *
+        * <p>The returned decomposition may represent a singular factorization. Call {@link LU#ok()}
+        * to inspect factorization status. Operational methods such as {@link LU#solve(double[], double[])}
+        * and {@link LU#inverse(double[])} throw {@link ArithmeticException} for failed, singular,
+        * or ill-conditioned factors.</p>
      *
      * @param A  input matrix (row-major, length >= n*n), overwritten in place
      * @param n  matrix dimension
@@ -60,6 +72,9 @@ public final class Decomposer {
 
     /**
      * Performs LU decomposition with workspace reuse.
+        *
+        * <p>The returned decomposition follows the same factorization and exception semantics as
+        * {@link #lu(double[], int)}.</p>
      *
      * @param A  input matrix (row-major, length >= n*n), overwritten in place
      * @param n  matrix dimension
@@ -74,7 +89,11 @@ public final class Decomposer {
     // =========================================================================
 
     /**
-     * Performs QR decomposition of an m×n matrix.
+    * Performs QR decomposition of an m×n matrix with {@code m >= n}.
+    *
+    * <p>This is the standard QR path for square and tall matrices. For wide matrices
+    * ({@code m < n}), use {@link #lq(double[], int, int)} or {@link #svd(double[], int, int, SVD.Opts...)}
+    * instead.</p>
      *
      * <p>Options: {@link QR.Opts#PIVOTING} enables column pivoting.</p>
      *
@@ -89,7 +108,11 @@ public final class Decomposer {
     }
 
     /**
-     * Performs QR decomposition with workspace reuse.
+    * Performs QR decomposition with workspace reuse for an m×n matrix with {@code m >= n}.
+    *
+    * <p>This is the standard QR path for square and tall matrices. For wide matrices
+    * ({@code m < n}), use {@link #lq(double[], int, int, LQ.Pool)} or {@link #svd(double[], int, int, SVD.Pool, SVD.Opts...)}
+    * instead.</p>
      *
      * @param A    input matrix (row-major, length >= m*n), overwritten in place
      * @param m    number of rows
@@ -112,6 +135,11 @@ public final class Decomposer {
      * <p>Default (no opts): computes both U and Vᵀ in thin form (SVD_ALL).</p>
      * <p>Options: {@link SVD.Opts#WANT_U}, {@link SVD.Opts#WANT_V},
      * {@link SVD.Opts#FULL_U}, {@link SVD.Opts#FULL_V}.</p>
+        *
+        * <p>The returned decomposition keeps {@link SVD#ok()} as the factorization-status contract.
+        * Solving through the SVD requires that both U and Vᵀ were requested during factorization;
+        * solve methods report invalid state and rank/shape errors with exceptions rather than
+        * returning {@code null}.</p>
      *
      * @param A    input matrix (row-major, length >= m*n), overwritten in place
      * @param m    number of rows
@@ -125,6 +153,9 @@ public final class Decomposer {
 
     /**
      * Performs SVD with workspace reuse.
+        *
+        * <p>The returned decomposition follows the same factorization and solve semantics as
+        * {@link #svd(double[], int, int, SVD.Opts...)}.</p>
      *
      * @param A    input matrix (row-major, length >= m*n), overwritten in place
      * @param m    number of rows
@@ -146,6 +177,12 @@ public final class Decomposer {
      * <p>Default (no opts): standard Cholesky using lower triangle.</p>
      * <p>Options: {@link Cholesky.Opts#UPPER} uses upper triangle;
      * {@link Cholesky.Opts#PIVOTING} switches to pivoted LDLᵀ.</p>
+        *
+        * <p>The returned decomposition may represent a failed factorization. Call
+        * {@link Cholesky#ok()} to inspect factorization status. Operational methods such as
+        * {@link Cholesky#solve(double[], double[])} and non-pivoted
+        * {@link Cholesky#inverse(double[])} throw exceptions for failed, singular, indefinite,
+        * or ill-conditioned factors.</p>
      *
      * @param A    input matrix (row-major, length >= n*n), overwritten in place
      * @param n    matrix dimension
@@ -159,6 +196,9 @@ public final class Decomposer {
 
     /**
      * Performs Cholesky (or LDLᵀ) decomposition with workspace reuse.
+        *
+        * <p>The returned decomposition follows the same factorization and exception semantics as
+        * {@link #cholesky(double[], int, Cholesky.Opts...)}.</p>
      *
      * @param A    input matrix (row-major, length >= n*n), overwritten in place
      * @param n    matrix dimension
@@ -312,7 +352,10 @@ public final class Decomposer {
     // =========================================================================
 
     /**
-     * Performs LQ decomposition of an m×n matrix (m ≤ n).
+    * Performs LQ decomposition of an m×n matrix with {@code m <= n}.
+    *
+    * <p>This is the dual standard path for square and wide matrices. For tall matrices
+    * ({@code m > n}), use {@link #qr(double[], int, int, QR.Opts...)} instead.</p>
      *
      * @param A  input matrix (row-major, length >= m*n), overwritten in place
      * @param m  number of rows
@@ -323,7 +366,10 @@ public final class Decomposer {
     }
 
     /**
-     * Performs LQ decomposition with workspace reuse.
+    * Performs LQ decomposition with workspace reuse for an m×n matrix with {@code m <= n}.
+    *
+    * <p>This is the dual standard path for square and wide matrices. For tall matrices
+    * ({@code m > n}), use {@link #qr(double[], int, int, QR.Pool, QR.Opts...)} instead.</p>
      *
      * @param A  input matrix (row-major, length >= m*n), overwritten in place
      * @param m  number of rows

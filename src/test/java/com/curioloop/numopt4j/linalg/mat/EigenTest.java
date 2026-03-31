@@ -3,7 +3,6 @@
  */
 package com.curioloop.numopt4j.linalg.mat;
 
-import com.curioloop.numopt4j.linalg.Decomposition;
 import com.curioloop.numopt4j.linalg.Decomposer;
 import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -409,14 +408,30 @@ public class EigenTest {
     @Test
     public void testWorkspaceSizeSymmetric() {
         int n = 3;
-        Decomposition.Workspace ws = Eigen.workspace(n, true, Eigen.EIGEN_RIGHT);
+        Eigen.Pool ws = Eigen.workspace();
+        assertThat(ws.work()).isNull();
+        double[] A = {
+            3, 1, 0,
+            1, 2, 0,
+            0, 0, 1
+        };
+        Eigen eigen = Eigen.decompose(A.clone(), n, true, 'L', Eigen.EIGEN_RIGHT, ws);
+        assertThat(eigen.ok()).isTrue();
         assertThat(ws.work().length).isGreaterThanOrEqualTo(3 * n - 1);
     }
 
     @Test
     public void testWorkspaceSizeGeneral() {
         int n = 3;
-        Decomposition.Workspace ws = Eigen.workspace(n, false, Eigen.EIGEN_NONE);
+        Eigen.Pool ws = Eigen.workspace();
+        assertThat(ws.work()).isNull();
+        double[] A = {
+            1, 2, 0,
+            0, 3, 4,
+            0, 0, 5
+        };
+        Eigen eigen = Eigen.decompose(A.clone(), n, false, 'L', Eigen.EIGEN_NONE, ws);
+        assertThat(eigen.ok()).isTrue();
         assertThat(ws.work().length).isGreaterThanOrEqualTo(3 * n);
     }
 

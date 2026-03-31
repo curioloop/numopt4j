@@ -107,24 +107,8 @@ public final class Eigen implements Decomposition {
         pool.ensure(n, false, kind);
     }
 
-    public static Pool workspace(int n) {
-        return workspace(n, false, EIGEN_RIGHT);
-    }
-
-    public static Pool workspace(int n, boolean symmetric, int kind) {
-        Pool pool = new Pool();
-        if (symmetric) {
-            // Query dsyev for optimal work size
-            double[] tmp = new double[1];
-            Dsyev.dsyev('V', 'L', n, null, n, null, 0, tmp, 0, -1);
-            pool.ensureWork((int) tmp[0]);
-            pool.ensure(n, true, kind);
-        } else {
-            boolean wantLeft  = (kind & EIGEN_LEFT)  != 0;
-            boolean wantRight = (kind & EIGEN_RIGHT) != 0;
-            ensureGeneralPool(pool, n, wantLeft, wantRight, kind);
-        }
-        return pool;
+    public static Pool workspace() {
+        return new Pool();
     }
 
     /** Opts-based entry point. */
@@ -175,9 +159,7 @@ public final class Eigen implements Decomposition {
             throw new IllegalArgumentException("Workspace must be an instance of Eigen.Pool");
         }
 
-        if (ws == null) {
-            ws = workspace(n, true, wantVectors ? EIGEN_RIGHT : EIGEN_NONE);
-        }
+        if (ws == null) ws = new Pool();
         this.pool = (Pool) ws;
 
         pool.ensure(n, true, wantVectors ? EIGEN_RIGHT : EIGEN_NONE);
@@ -220,9 +202,7 @@ public final class Eigen implements Decomposition {
             throw new IllegalArgumentException("Workspace must be an instance of Eigen.Pool");
         }
 
-        if (ws == null) {
-            ws = workspace(n, false, kind);
-        }
+        if (ws == null) ws = new Pool();
         this.pool = (Pool) ws;
 
         ensureGeneralPool(pool, n, wantLeft, wantRight, kind);

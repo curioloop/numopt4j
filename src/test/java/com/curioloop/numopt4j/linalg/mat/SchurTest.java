@@ -4,6 +4,7 @@
 package com.curioloop.numopt4j.linalg.mat;
 
 import com.curioloop.numopt4j.linalg.Decomposition;
+import com.curioloop.numopt4j.linalg.blas.BLAS;
 import com.curioloop.numopt4j.linalg.blas.Select;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -13,6 +14,14 @@ import static org.junit.jupiter.api.Assertions.*;
 class SchurTest {
 
     private static final double EPS = 1e-10;
+
+    private static int queryWorkspace(int n, boolean computeZ, boolean sort) {
+        double[] tmp = new double[1];
+        boolean[] bwork = sort ? new boolean[n] : null;
+        BLAS.dgees(computeZ ? 'V' : 'N', sort ? 'S' : 'N', null,
+            n, null, n, null, null, null, n, tmp, 0, -1, bwork);
+        return (int) tmp[0];
+    }
 
     @Test
     @DisplayName("Schur: basic 3x3 matrix")
@@ -346,11 +355,102 @@ class SchurTest {
     @Test
     @DisplayName("Schur: workspace size")
     void testWorkspaceSize() {
-        int n = 10;
-        Decomposition.Workspace ws = Schur.workspace(n);
-        assertTrue(ws.work().length >= 3 * n);
-        assertTrue(ws.work().length >= n + 10);
-        assertTrue(ws.bwork().length >= n);
+        Decomposition.Workspace ws = Schur.workspace();
+        assertNull(ws.work());
+        assertNull(ws.bwork());
+    }
+
+    @Test
+    @DisplayName("Schur: workspace matches requested computeZ and sort")
+    void testWorkspaceMatchesRequestedMode() {
+        double[] A = {
+            -1, 0, 0, 0, 0, 0,
+            0, -2, 0, 0, 0, 0,
+            0, 0, -3, 0, 0, 0,
+            0, 0, 0, 4, 0, 0,
+            0, 0, 0, 0, 5, 0,
+            0, 0, 0, 0, 0, 6
+        };
+        Schur.Pool noZNoSort = Schur.workspace();
+        Schur.Pool withZ = Schur.workspace();
+        Schur.Pool sorted = Schur.workspace();
+
+        assertTrue(Schur.decompose(A.clone(), 6, false, null, noZNoSort).ok());
+        assertTrue(Schur.decompose(A.clone(), 6, true, null, withZ).ok());
+        assertTrue(Schur.decompose(A.clone(), 6, false, Schur.LHP, sorted).ok());
+
+        assertEquals(queryWorkspace(6, false, false), noZNoSort.work().length);
+        assertEquals(queryWorkspace(6, true, false), withZ.work().length);
+        assertEquals(queryWorkspace(6, false, true), sorted.work().length);
+        assertNull(noZNoSort.bwork());
+        assertNull(withZ.bwork());
+        assertNotNull(sorted.bwork());
+        assertTrue(sorted.bwork().length >= 6);
+    }
+
+    @Test
+    @DisplayName("Schur: null workspace respects computeZ and sort")
+    void testNullWorkspaceRespectsRequestedMode() {
+        double[] A = {
+            1, 0, 0,
+            0, -1, 0,
+            0, 0, -2
+        };
+
+        Schur plain = Schur.decompose(A.clone(), 3, false, null, null);
+        assertTrue(plain.ok());
+        assertEquals(queryWorkspace(3, false, false), plain.pool().work().length);
+        assertNull(plain.pool().Z);
+        assertNull(plain.pool().bwork());
+
+        Schur sorted = Schur.decompose(A.clone(), 3, true, Schur.LHP, null);
+        assertTrue(sorted.ok());
+        assertEquals(queryWorkspace(3, true, true), sorted.pool().work().length);
+        assertNotNull(sorted.pool().Z);
+        assertNotNull(sorted.pool().bwork());
+        assertEquals(2, sorted.sdim());
+    }
+
+    @Test
+    @DisplayName("Schur: baseline workspace grows for sort and Lyapunov")
+    void testBaselineWorkspaceGrowsForFollowUpOperations() {
+        int n = 2;
+        Schur.Pool pool = Schur.workspace();
+        double[] A = {
+            -1.0, 0.0,
+            0.0, 0.5
+        };
+        double[] Q = {
+            1.0, 0.0,
+            0.0, 1.0
+        };
+
+        Schur schur = Schur.decompose(A.clone(), n, true, Schur.LHP, pool);
+        assertTrue(schur.ok());
+        assertNotNull(pool.Z);
+        assertNotNull(pool.bwork());
+        assertTrue(schur.lyapunov(Q));
+    }
+
+    @Test
+    @DisplayName("Schur: reorder keeps exact iwork sizing")
+    void testReorderKeepsExactIworkSizing() {
+        int n = 6;
+        double[] A = {
+            -1, 0, 0, 0, 0, 0,
+            0, -2, 0, 0, 0, 0,
+            0, 0, -3, 0, 0, 0,
+            0, 0, 0, 4, 0, 0,
+            0, 0, 0, 0, 5, 0,
+            0, 0, 0, 0, 0, 6
+        };
+        Schur.Pool pool = Schur.workspace();
+        Schur schur = Schur.decompose(A.clone(), n, true, null, pool);
+
+        assertTrue(schur.ok());
+        assertEquals(n, pool.iwork().length);
+        assertTrue(schur.reorder(Schur.LHP));
+        assertEquals(n, pool.iwork().length);
     }
 
     @Test

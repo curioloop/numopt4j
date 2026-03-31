@@ -4,13 +4,32 @@
 package com.curioloop.numopt4j.linalg.mat;
 
 import com.curioloop.numopt4j.linalg.Decomposition;
+import com.curioloop.numopt4j.linalg.blas.BLAS;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class SVDTest {
 
     private static final double EPSILON = 1e-8;
+
+    private static double[] sampleMatrix(int m, int n) {
+        double[] A = new double[m * n];
+        for (int i = 0; i < m; i++) {
+            for (int j = 0; j < n; j++) {
+                A[i * n + j] = (i == j ? 3.0 + i : 0.25 * ((i + j) % 5 + 1));
+            }
+        }
+        return A;
+    }
+
+    private static int queryWorkspace(char jobU, char jobVT, int m, int n, int ldu, int ldvt) {
+        double[] tmp = new double[1];
+        BLAS.dgesvd(jobU, jobVT, m, n, null, 0, Math.max(1, n), null, 0,
+                null, 0, ldu, null, 0, ldvt, tmp, 0, -1);
+        return (int) tmp[0];
+    }
 
     @Test
     void testSingularValuesSquareMatrix() {
@@ -136,9 +155,7 @@ class SVDTest {
 
         SVD svd = SVD.decompose(A.clone(), n, n, SVD.SVD_NONE, null);
 
-        double[] s = svd.singularValues();
-        double tol = 1e-10 * s[0];
-        int rank = svd.rank(tol);
+        int rank = svd.rank(1e-10);
 
         assertThat(rank).isEqualTo(2);
     }
@@ -153,9 +170,7 @@ class SVDTest {
 
         SVD svd = SVD.decompose(A.clone(), n, n, SVD.SVD_NONE, null);
 
-        double[] s = svd.singularValues();
-        double tol = 1e-10 * s[0];
-        int rank = svd.rank(tol);
+        int rank = svd.rank(1e-10);
 
         assertThat(rank).isEqualTo(2);
     }
@@ -471,13 +486,81 @@ class SVDTest {
 
     @Test
     void testWorkspaceSize() {
-        Decomposition.Workspace ws1 = SVD.workspace(3, 3, SVD.SVD_ALL);
-        Decomposition.Workspace ws2 = SVD.workspace(2, 5, SVD.SVD_ALL);
-        Decomposition.Workspace ws3 = SVD.workspace(5, 2, SVD.SVD_ALL);
+        Decomposition.Workspace ws1 = SVD.workspace();
+        Decomposition.Workspace ws2 = SVD.workspace();
+        Decomposition.Workspace ws3 = SVD.workspace();
 
         assertThat(ws1).isNotNull();
         assertThat(ws2).isNotNull();
         assertThat(ws3).isNotNull();
+        assertThat(ws1.work()).isNull();
+        assertThat(ws2.work()).isNull();
+        assertThat(ws3.work()).isNull();
+    }
+
+    @Test
+    void testOverwriteWorkspaceDoesNotReservePseudoCopyBuffer() {
+        int m = 200;
+        int n = 10;
+
+        SVD.Pool ws = SVD.workspace();
+        SVD.decompose(sampleMatrix(m, n), m, n, SVD.SVD_ALL, ws);
+
+        assertThat(ws.work().length).isLessThan(2 * m * n);
+    }
+
+    @Test
+    void testTallAllWorkspaceMatchesOverwriteQuery() {
+        int m = 200;
+        int n = 10;
+
+        SVD.Pool ws = SVD.workspace();
+        SVD svd = SVD.decompose(sampleMatrix(m, n), m, n, SVD.SVD_ALL, ws);
+
+        assertThat(svd.ok()).isTrue();
+        assertThat(ws.work().length).isEqualTo(queryWorkspace('O', 'S', m, n, n, n));
+        assertThat(ws.UV).isNotNull();
+        assertThat(ws.UV.length).isEqualTo(n * n);
+    }
+
+    @Test
+    void testTallWantVWorkspaceMatchesOverwriteQuery() {
+        int m = 200;
+        int n = 10;
+
+        SVD.Pool ws = SVD.workspace();
+        SVD svd = SVD.decompose(sampleMatrix(m, n), m, n, SVD.SVD_WANT_V, ws);
+
+        assertThat(svd.ok()).isTrue();
+        assertThat(ws.work().length).isEqualTo(queryWorkspace('N', 'O', m, n, 1, 1));
+        assertThat(ws.UV).isNull();
+    }
+
+    @Test
+    void testWideWantUWorkspaceMatchesOverwriteQuery() {
+        int m = 10;
+        int n = 200;
+
+        SVD.Pool ws = SVD.workspace();
+        SVD svd = SVD.decompose(sampleMatrix(m, n), m, n, SVD.SVD_WANT_U, ws);
+
+        assertThat(svd.ok()).isTrue();
+        assertThat(ws.work().length).isEqualTo(queryWorkspace('O', 'N', m, n, 1, 1));
+        assertThat(ws.UV).isNull();
+    }
+
+    @Test
+    void testWideAllFullVWorkspaceMatchesOverwriteQuery() {
+        int m = 10;
+        int n = 200;
+
+        SVD.Pool ws = SVD.workspace();
+        SVD svd = SVD.decompose(sampleMatrix(m, n), m, n, SVD.SVD_ALL | SVD.SVD_FULL_V, ws);
+
+        assertThat(svd.ok()).isTrue();
+        assertThat(ws.work().length).isEqualTo(queryWorkspace('O', 'A', m, n, 1, n));
+        assertThat(ws.UV).isNotNull();
+        assertThat(ws.UV.length).isEqualTo(n * n);
     }
 
     @Test
@@ -529,7 +612,6 @@ class SVDTest {
     @Test
     void testConditionNumberIllConditioned() {
         int n = 5;
-        java.util.Random rand = new java.util.Random(42);
         double[] A = new double[n * n];
         for (int i = 0; i < n; i++) {
             A[i * n + i] = Math.pow(10, i);
@@ -753,11 +835,39 @@ class SVDTest {
 
         SVD svd = SVD.decompose(A.clone(), n, n, SVD.SVD_NONE, null);
 
-        double[] s = svd.singularValues();
-        double tol = 1e-8 * s[0];
-        int rank = svd.rank(tol);
+        int rank = svd.rank(1e-8);
 
         assertThat(rank).isEqualTo(2);
+    }
+
+    @Test
+    void testSolveThrowsOnMissingVectors() {
+        double[] A = {
+            1.0, 2.0,
+            3.0, 4.0
+        };
+        double[] b = {5.0, 6.0};
+
+        SVD svd = SVD.decompose(A.clone(), 2, 2, SVD.SVD_NONE, null);
+
+        assertThatThrownBy(() -> svd.solve(b, new double[2]))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("requires both U and VT");
+    }
+
+    @Test
+    void testSolveThrowsOnRankOutOfRange() {
+        double[] A = {
+            1.0, 2.0,
+            3.0, 4.0
+        };
+        double[] b = {5.0, 6.0};
+
+        SVD svd = SVD.decompose(A.clone(), 2, 2, SVD.SVD_ALL, null);
+
+        assertThatThrownBy(() -> svd.solve(b, new double[2], 3))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("rank must be in [0, 2]");
     }
 
     @Test
@@ -799,7 +909,7 @@ class SVDTest {
     }
 
     @Test
-    void testSolveWithExternalTmpArray() {
+    void testSolveAllowsAliasBetweenInputAndOutput() {
         double[] A = {
             1.0, 2.0,
             3.0, 4.0
@@ -809,9 +919,8 @@ class SVDTest {
 
         SVD svd = SVD.decompose(A.clone(), n, n, SVD.SVD_ALL, null);
 
-        double[] x = new double[n];
-        double[] tmp = new double[n];
-        svd.solve(b, x, tmp);
+        double[] x = b.clone();
+        svd.solve(x, x);
 
         assertThat(x[0]).isCloseTo(-4.0, org.assertj.core.data.Offset.offset(EPSILON));
         assertThat(x[1]).isCloseTo(4.5, org.assertj.core.data.Offset.offset(EPSILON));
@@ -843,7 +952,6 @@ class SVDTest {
     void testSolveZeroMatrix() {
         int m = 2, n = 2;
         double[] A = new double[m * n];
-        double[] b = {3.0, 2.0};
 
         SVD svd = SVD.decompose(A.clone(), m, n, SVD.SVD_ALL, null);
 
@@ -984,6 +1092,21 @@ class SVDTest {
     }
 
     @Test
+    void testSVDKindWantUTallReusesInputArray() {
+        double[] A = {
+            1.0, 2.0,
+            3.0, 4.0,
+            5.0, 6.0
+        };
+
+        SVD svd = SVD.decompose(A, 3, 2, SVD.SVD_WANT_U, null);
+
+        assertThat(svd.ok()).isTrue();
+        assertThat(svd.U()).isSameAs(A);
+        assertThat(svd.VT()).isNull();
+    }
+
+    @Test
     void testSVDKindWantV() {
         double[] A = {
             1.0, 2.0, 3.0,
@@ -1000,6 +1123,20 @@ class SVDTest {
         assertThat(svd.VT()).isNotNull();
         assertThat(svd.vtRows()).isEqualTo(Math.min(m, n));
         assertThat(svd.VT().length).isGreaterThanOrEqualTo(Math.min(m, n) * n);
+    }
+
+    @Test
+    void testSVDKindWantVWideReusesInputArray() {
+        double[] A = {
+            1.0, 2.0, 3.0,
+            4.0, 5.0, 6.0
+        };
+
+        SVD svd = SVD.decompose(A, 2, 3, SVD.SVD_WANT_V, null);
+
+        assertThat(svd.ok()).isTrue();
+        assertThat(svd.U()).isNull();
+        assertThat(svd.VT()).isSameAs(A);
     }
 
     @Test
@@ -1020,6 +1157,36 @@ class SVDTest {
         assertThat(svd.VT()).isNotNull();
         assertThat(svd.vtRows()).isEqualTo(Math.min(m, n));
         assertThat(svd.VT().length).isGreaterThanOrEqualTo(Math.min(m, n) * n);
+    }
+
+    @Test
+    void testSVDKindAllWideReusesInputForVT() {
+        double[] A = {
+            1.0, 2.0, 3.0,
+            4.0, 5.0, 6.0
+        };
+
+        SVD svd = SVD.decompose(A, 2, 3, SVD.SVD_ALL, null);
+
+        assertThat(svd.ok()).isTrue();
+        assertThat(svd.U()).isNotSameAs(A);
+        assertThat(svd.VT()).isSameAs(A);
+    }
+
+    @Test
+    void testSVDKindAllTallReusesInputForU() {
+        double[] A = {
+            1.0, 2.0,
+            3.0, 4.0,
+            5.0, 6.0,
+            7.0, 8.0
+        };
+
+        SVD svd = SVD.decompose(A, 4, 2, SVD.SVD_ALL, null);
+
+        assertThat(svd.ok()).isTrue();
+        assertThat(svd.U()).isSameAs(A);
+        assertThat(svd.VT()).isNotSameAs(A);
     }
 
     @Test
@@ -1089,6 +1256,41 @@ class SVDTest {
         assertThat(svd.VT()).isNotNull();
         assertThat(svd.vtRows()).isEqualTo(n);
         assertThat(svd.VT().length).isGreaterThanOrEqualTo(n * n);
+    }
+
+    @Test
+    void testSVDKindAllWideFullVReusesInputForU() {
+        double[] A = {
+            1.0, 2.0, 3.0,
+            4.0, 5.0, 6.0
+        };
+
+        SVD svd = SVD.decompose(A, 2, 3, SVD.SVD_ALL | SVD.SVD_FULL_V, null);
+
+        assertThat(svd.ok()).isTrue();
+        assertThat(svd.U()).isSameAs(A);
+        assertThat(svd.VT()).isNotSameAs(A);
+
+        double[] reconstructed = new double[6];
+        double[] s = svd.singularValues();
+        double[] U = svd.toU().data;
+        double[] VT = svd.toVT().data;
+        for (int i = 0; i < 2; i++) {
+            for (int j = 0; j < 3; j++) {
+                double sum = 0;
+                for (int k = 0; k < 2; k++) {
+                    sum += U[i * 2 + k] * s[k] * VT[k * 3 + j];
+                }
+                reconstructed[i * 3 + j] = sum;
+            }
+        }
+
+        assertThat(reconstructed[0]).isCloseTo(1.0, org.assertj.core.data.Offset.offset(EPSILON));
+        assertThat(reconstructed[1]).isCloseTo(2.0, org.assertj.core.data.Offset.offset(EPSILON));
+        assertThat(reconstructed[2]).isCloseTo(3.0, org.assertj.core.data.Offset.offset(EPSILON));
+        assertThat(reconstructed[3]).isCloseTo(4.0, org.assertj.core.data.Offset.offset(EPSILON));
+        assertThat(reconstructed[4]).isCloseTo(5.0, org.assertj.core.data.Offset.offset(EPSILON));
+        assertThat(reconstructed[5]).isCloseTo(6.0, org.assertj.core.data.Offset.offset(EPSILON));
     }
 
     @Test

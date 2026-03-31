@@ -7,9 +7,13 @@ import com.curioloop.numopt4j.linalg.Decomposition;
 import com.curioloop.numopt4j.linalg.blas.BLAS;
 import com.curioloop.numopt4j.linalg.blas.Dlansy;
 
+import java.util.Arrays;
+
 import static java.lang.Math.abs;
 
 public final class Cholesky implements Decomposition {
+
+    private static final double CONDITION_TOLERANCE = 1e16;
 
     /** Decomposition options for Cholesky / LDLᵀ. */
     public enum Opts {
@@ -28,6 +32,7 @@ public final class Cholesky implements Decomposition {
     private boolean pivoting;
     private boolean ok;
     private double anorm;
+    private double condition;
 
     /**
      * Pool for both Cholesky and LDL (pivoting) modes.
@@ -61,12 +66,8 @@ public final class Cholesky implements Decomposition {
 
     private Cholesky() {}
 
-    public static Workspace workspace(int n) {
-        return workspace(n, false);
-    }
-
-    public static Workspace workspace(int n, boolean pivoting) {
-        return new Pool().ensure(n, pivoting);
+    public static Workspace workspace() {
+        return new Pool();
     }
 
     public static Cholesky decompose(double[] A, int n, BLAS.Uplo uplo) {
@@ -95,6 +96,7 @@ public final class Cholesky implements Decomposition {
         this.uplo = uplo;
         this.pivoting = pivoting;
         this.ok = false;
+        this.condition = Double.NaN;
 
         if (ws == null) ws = new Pool();
         this.pool = ws;
@@ -127,12 +129,39 @@ public final class Cholesky implements Decomposition {
         return pool;
     }
 
+    /**
+     * Solves {@code A*x = b} using the stored Cholesky or pivoted LDL factorization.
+     *
+     * <p>To minimize allocations, this method may use {@code b} as the destination buffer.
+     * When {@code x} is {@code null}, the solution is written back into {@code b} and that
+     * same array is returned.</p>
+     *
+     * <p>Factorization success remains available through {@link #ok()}, but operational failure
+     * is reported with exceptions: failed factorizations, singular or indefinite factors, and
+     * factors with estimated condition number above {@code 1e16} are rejected.</p>
+     *
+     * @param b right-hand side vector of length at least {@code n}
+     * @param x destination vector of length at least {@code n}; may be {@code null}
+     * @return the solution vector
+     * @throws IllegalArgumentException if {@code b} is too short
+     * @throws ArithmeticException if the factorization failed, is singular, indefinite, or ill-conditioned
+     */
     public double[] solve(double[] b, double[] x) {
-        if (!ok) return null;
         if (b == null || b.length < n) {
             throw new IllegalArgumentException("Vector b must have length >= n");
         }
-        if (x == null || x.length < n) x = new double[n];
+        if (!ok) {
+            throw new ArithmeticException(pivoting ? "LDL factor is singular or indefinite" : "Cholesky factor is singular or indefinite");
+        }
+        double condition = ensureCondition();
+        if (!Double.isFinite(condition) || condition > CONDITION_TOLERANCE) {
+            throw new ArithmeticException(pivoting ? "LDL factor is singular or ill-conditioned" : "Cholesky factor is singular or ill-conditioned");
+        }
+        if (x == null) {
+            x = b;
+        } else if (x.length < n) {
+            x = new double[n];
+        }
         if (x != b) System.arraycopy(b, 0, x, 0, n);
         if (pivoting) {
             BLAS.dsytrs(uplo, n, 1, LDL, 0, n, pool.ipiv, 0, x, 0, 1);
@@ -142,14 +171,33 @@ public final class Cholesky implements Decomposition {
         return x;
     }
 
+    /**
+     * Forms the inverse from a non-pivoted Cholesky factorization.
+     *
+     * <p>This operation is only available for the standard Cholesky path. Pivoted LDL
+     * factorizations continue to reject inversion with {@link UnsupportedOperationException}.</p>
+     *
+     * @param Ainv destination array of length at least {@code n*n}; may be {@code null}
+     * @return the inverse matrix in row-major order
+     * @throws UnsupportedOperationException if this decomposition uses pivoted LDL mode
+     * @throws ArithmeticException if the factorization failed, is singular, indefinite, or ill-conditioned
+     */
     public double[] inverse(double[] Ainv) {
-        if (!ok) return null;
         if (pivoting) {
             throw new UnsupportedOperationException("Inverse not supported for pivoting (LDL) decomposition");
         }
+        if (!ok) {
+            throw new ArithmeticException("Cholesky factor is singular or indefinite");
+        }
+        double condition = ensureCondition();
+        if (!Double.isFinite(condition) || condition > CONDITION_TOLERANCE) {
+            throw new ArithmeticException("Cholesky factor is singular or ill-conditioned");
+        }
         if (Ainv == null || Ainv.length < n * n) Ainv = new double[n * n];
         if (Ainv != LDL) System.arraycopy(LDL, 0, Ainv, 0, n * n);
-        if (!BLAS.dpotri(uplo, n, Ainv, 0, n)) return null;
+        if (!BLAS.dpotri(uplo, n, Ainv, 0, n)) {
+            throw new ArithmeticException("Cholesky factor is singular");
+        }
         return Ainv;
     }
 
@@ -212,7 +260,17 @@ public final class Cholesky implements Decomposition {
     }
 
     public double cond() {
-        if (!ok || n == 0) return Double.NaN;
+        return ensureCondition();
+    }
+
+    private double ensureCondition() {
+        if (Double.isNaN(condition)) {
+            condition = ok ? computeCondition() : Double.POSITIVE_INFINITY;
+        }
+        return condition;
+    }
+
+    private double computeCondition() {
         double rcond;
         if (pivoting) {
             rcond = BLAS.dsycon(uplo, n, LDL, 0, n, pool.ipiv, 0, anorm, pool.work(), pool.iwork());
@@ -245,6 +303,12 @@ public final class Cholesky implements Decomposition {
         return new Matrix(n, n, false, D);
     }
 
+    /**
+     * Returns the cached condition number estimate for the factorized matrix.
+     *
+     * <p>The estimate is computed once during factorization. Failed factorizations report
+     * {@link Double#POSITIVE_INFINITY}.</p>
+     */
     private void extractD(double[] D) {
         boolean lower = uplo == BLAS.Uplo.Lower;
         int[] piv = pool.ipiv;
@@ -281,12 +345,17 @@ public final class Cholesky implements Decomposition {
     public boolean isPivoting() { return pivoting; }
 
     private static void clearOppositeTriangle(double[] A, int n, boolean lower) {
+        if (n < 2) {
+            return;
+        }
         if (lower) {
-            for (int i = 0, rowOff = 0; i < n; i++, rowOff += n)
-                for (int j = i + 1; j < n; j++) A[rowOff + j] = 0;
+            for (int i = 0, rowOff = 0; i < n - 1; i++, rowOff += n) {
+                Arrays.fill(A, rowOff + i + 1, rowOff + n, 0.0);
+            }
         } else {
-            for (int i = 0, rowOff = 0; i < n; i++, rowOff += n)
-                for (int j = 0; j < i; j++) A[rowOff + j] = 0;
+            for (int i = 1, rowOff = n; i < n; i++, rowOff += n) {
+                Arrays.fill(A, rowOff, rowOff + i, 0.0);
+            }
         }
     }
 }

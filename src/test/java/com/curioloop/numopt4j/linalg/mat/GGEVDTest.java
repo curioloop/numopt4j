@@ -5,6 +5,7 @@ package com.curioloop.numopt4j.linalg.mat;
 
 import com.curioloop.numopt4j.linalg.Decomposer;
 import com.curioloop.numopt4j.linalg.Decomposition.Matrix;
+import com.curioloop.numopt4j.linalg.blas.BLAS;
 import org.junit.jupiter.api.Test;
 
 import static java.lang.Math.*;
@@ -18,6 +19,13 @@ import static org.assertj.core.api.Assertions.*;
 class GGEVDTest {
 
     private static final double TOL = 1e-6;
+
+    private static int queryWorkspace(int n, boolean wantVL, boolean wantVR) {
+        double[] tmp = new double[1];
+        BLAS.dggev(wantVL, wantVR, n, null, n, null, n, null, null, null,
+                null, n, null, n, tmp, 0, -1);
+        return (int) tmp[0];
+    }
 
     /**
      * Verify A*vr_i = lambda_i * B*vr_i for all real eigenvalues.
@@ -92,6 +100,42 @@ class GGEVDTest {
     }
 
     @Test
+    void testWorkspaceDefaultsToValuesOnly() {
+        GGEVD.Pool pool = GGEVD.workspace();
+
+        assertThat(pool.work()).isNull();
+        assertThat(pool.VL).isNull();
+        assertThat(pool.VR).isNull();
+    }
+
+    @Test
+    void testWorkspaceMatchesRequestedEigenvectors() {
+        GGEVD.Pool valuesOnly = GGEVD.workspace();
+        GGEVD.Pool leftOnly = GGEVD.workspace();
+        GGEVD.Pool rightOnly = GGEVD.workspace();
+        GGEVD.Pool both = GGEVD.workspace();
+
+        valuesOnly.ensure(4, false, false);
+        leftOnly.ensure(4, true, false);
+        rightOnly.ensure(4, false, true);
+        both.ensure(4, true, true);
+
+        assertThat(valuesOnly.work().length).isEqualTo(queryWorkspace(4, false, false));
+        assertThat(leftOnly.work().length).isEqualTo(queryWorkspace(4, true, false));
+        assertThat(rightOnly.work().length).isEqualTo(queryWorkspace(4, false, true));
+        assertThat(both.work().length).isEqualTo(queryWorkspace(4, true, true));
+
+        assertThat(valuesOnly.VL).isNull();
+        assertThat(valuesOnly.VR).isNull();
+        assertThat(leftOnly.VL).hasSize(16);
+        assertThat(leftOnly.VR).isNull();
+        assertThat(rightOnly.VL).isNull();
+        assertThat(rightOnly.VR).hasSize(16);
+        assertThat(both.VL).hasSize(16);
+        assertThat(both.VR).hasSize(16);
+    }
+
+    @Test
     void testRealEigenvalues3x3() {
         // A = diag(1,2,3), B = I => eigenvalues 1, 2, 3
         double[] A = {
@@ -145,6 +189,11 @@ class GGEVDTest {
         Matrix VR = g.toVR();
         assertThat(VR).isNotNull();
         verifyRightEigvecs(Aorig, Borig, 2, ar, ai, be, VR.data);
+
+        GGEVD.Pool pool = g.pool();
+        assertThat(pool.work().length).isEqualTo(queryWorkspace(2, false, true));
+        assertThat(pool.VL).isNull();
+        assertThat(pool.VR).isNotNull();
     }
 
     @Test
@@ -169,6 +218,11 @@ class GGEVDTest {
         for (int i = 0; i < 2; i++) {
             assertThat(ar[i] / be[i]).isCloseTo(0.0, offset(TOL));
         }
+
+        GGEVD.Pool pool = g.pool();
+        assertThat(pool.work().length).isEqualTo(queryWorkspace(2, false, false));
+        assertThat(pool.VL).isNull();
+        assertThat(pool.VR).isNull();
     }
 
     @Test

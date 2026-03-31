@@ -84,11 +84,13 @@ class DecomposerTest {
     }
 
     @Test
-    void qrNonPivotingToPReturnsNull() {
+    void qrNonPivotingToPThrows() {
         double[] A = {1, 2, 3, 4};
         QR qr = Decomposer.qr(A, 2, 2); // no PIVOTING opt
         assertThat(qr.ok()).isTrue();
-        assertThat(qr.toP()).isNull();
+        assertThatThrownBy(qr::toP)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Column permutation matrix is only available for pivoting QR");
     }
 
     @Test

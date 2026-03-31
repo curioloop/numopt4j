@@ -3,7 +3,6 @@
  */
 package com.curioloop.numopt4j.linalg.mat;
 
-import com.curioloop.numopt4j.linalg.Decomposition;
 import com.curioloop.numopt4j.linalg.blas.BLAS;
 import org.junit.jupiter.api.Test;
 
@@ -191,7 +190,7 @@ class LDLTest {
     @Test
     void testWorkspaceReuse() {
         int n = 5;
-        Cholesky.Pool ws = (Cholesky.Pool) Cholesky.workspace(n, true);
+        Cholesky.Pool ws = (Cholesky.Pool) Cholesky.workspace();
         
         for (int i = 0; i < 3; i++) {
             double[] A = createRandomSymmetric(n);

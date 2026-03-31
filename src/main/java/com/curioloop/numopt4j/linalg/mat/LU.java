@@ -9,6 +9,8 @@ import com.curioloop.numopt4j.linalg.blas.Dlange;
 
 public final class LU implements Decomposition {
 
+    private static final double CONDITION_TOLERANCE = 1e16;
+
     public static final class Pool extends Decomposition.Workspace {
         /** Allocate/expand work and iwork on demand; ipiv and piv both reuse iwork (first n for ipiv, next n for piv) */
         public Pool ensure(int n) {
@@ -26,16 +28,12 @@ public final class LU implements Decomposition {
     private int n;
     private boolean ok;
     private double anorm;
+    private double condition;
 
     private LU() {}
 
-    public static Pool workspace(int n) {
-        return new Pool().ensure(n);
-    }
-
-    public static boolean inverseInPlace(double[] A, int[] ipiv, double[] work, int n) {
-        if (BLAS.dgetrf(n, n, A, 0, n, ipiv, 0) != 0) return false;
-        return BLAS.dgetri(n, A, 0, n, ipiv, 0, work, 0, work != null ? work.length : n);
+    public static Pool workspace() {
+        return new Pool();
     }
 
     public static LU decompose(double[] A, int n) {
@@ -60,6 +58,7 @@ public final class LU implements Decomposition {
         this.n = n;
         this.ok = false;
         this.anorm = Dlange.dlange('1', n, n, A, 0, n);
+        this.condition = Double.NaN;
 
         if (ws == null) {
             ws = new Pool();
@@ -68,7 +67,6 @@ public final class LU implements Decomposition {
         pool.ensure(n);
 
         this.ok = BLAS.dgetrf(n, n, A, 0, n, pool.iwork(), n) == 0;
-
         updatePivots();
     }
 
@@ -91,12 +89,37 @@ public final class LU implements Decomposition {
         return pool;
     }
 
+    /**
+     * Solves {@code A*x = b} using the stored LU factorization.
+     *
+     * <p>To minimize allocations, this method may use {@code b} as the destination buffer.
+     * When {@code x} is {@code null}, the solution is written back into {@code b} and that
+     * same array is returned.</p>
+     *
+     * <p>Factorization success remains available through {@link #ok()}, but operational failure
+     * is reported with exceptions: singular factors and factors with estimated condition number
+     * above {@code 1e16} are rejected.</p>
+     *
+     * @param b right-hand side vector of length at least {@code n}
+     * @param x destination vector of length at least {@code n}; may be {@code null}
+     * @return the solution vector
+     * @throws IllegalArgumentException if {@code b} is too short
+     * @throws ArithmeticException if the factorization failed, is singular, or is ill-conditioned
+     */
     public double[] solve(double[] b, double[] x) {
-        if (!ok) return null;
         if (b == null || b.length < n) {
             throw new IllegalArgumentException("Vector b must have length >= n");
         }
-        if (x == null || x.length < n) {
+        if (!ok) {
+            throw new ArithmeticException("LU factor is singular");
+        }
+        double condition = ensureCondition();
+        if (!Double.isFinite(condition) || condition > CONDITION_TOLERANCE) {
+            throw new ArithmeticException("LU factor is singular or ill-conditioned");
+        }
+        if (x == null) {
+            x = b;
+        } else if (x.length < n) {
             x = new double[n];
         }
         if (x != b) {
@@ -106,8 +129,25 @@ public final class LU implements Decomposition {
         return x;
     }
 
+    /**
+     * Forms the inverse from the stored LU factorization.
+     *
+     * <p>The destination may alias the factor storage. As with {@link #solve(double[], double[])},
+     * this method rejects singular and ill-conditioned factors instead of returning {@code null}.
+     * A failed factorization still leaves {@link #ok()} as {@code false}.</p>
+     *
+     * @param Ainv destination array of length at least {@code n*n}; may be {@code null}
+     * @return the inverse matrix in row-major order
+     * @throws ArithmeticException if the factorization failed, is singular, or is ill-conditioned
+     */
     public double[] inverse(double[] Ainv) {
-        if (!ok) return null;
+        if (!ok) {
+            throw new ArithmeticException("LU factor is singular");
+        }
+        double condition = ensureCondition();
+        if (!Double.isFinite(condition) || condition > CONDITION_TOLERANCE) {
+            throw new ArithmeticException("LU factor is singular or ill-conditioned");
+        }
         if (Ainv == null || Ainv.length < n * n) {
             Ainv = new double[n * n];
         }
@@ -116,7 +156,7 @@ public final class LU implements Decomposition {
         }
         double[] work = pool.work();
         if (!BLAS.dgetri(n, Ainv, 0, n, pool.iwork(), n, work, 0, work.length)) {
-            return null;
+            throw new ArithmeticException("LU factor is singular");
         }
         return Ainv;
     }
@@ -154,8 +194,24 @@ public final class LU implements Decomposition {
         return new double[]{logDet, sign};
     }
 
+    /**
+     * Returns the cached condition number estimate for the factorized matrix.
+     *
+     * <p>The estimate is computed lazily on first request. Failed factorizations report
+     * {@link Double#POSITIVE_INFINITY}.</p>
+     */
     public double cond() {
-        if (!ok || n == 0) return Double.NaN;
+        return ensureCondition();
+    }
+
+    private double ensureCondition() {
+        if (Double.isNaN(condition)) {
+            condition = ok ? computeCondition() : Double.POSITIVE_INFINITY;
+        }
+        return condition;
+    }
+
+    private double computeCondition() {
         double rcond = BLAS.dgecon(BLAS.Norm.One, n, LU, n, anorm, pool.work(), pool.iwork());
         if (rcond == 0) return Double.POSITIVE_INFINITY;
         return 1.0 / rcond;
@@ -166,6 +222,11 @@ public final class LU implements Decomposition {
         return ok;
     }
 
+    /**
+     * Returns the permutation as a zero-based index array.
+     *
+     * <p>The returned array shares workspace storage with the decomposition.</p>
+     */
     public int[] piv() {
         return pool.iwork();
     }

@@ -11,6 +11,46 @@ class DgesvdTest {
 
     private static final double EPSILON = 1e-8;
 
+    private static int queryWorkspace(char jobU, char jobVT, int m, int n, int ldu, int ldvt) {
+        double[] work = new double[1];
+        int info = BLAS.dgesvd(jobU, jobVT, m, n, null, 0, Math.max(1, n), null, 0,
+                null, 0, ldu, null, 0, ldvt, work, 0, -1);
+        assertThat(info).isEqualTo(0);
+        return (int) work[0];
+    }
+
+    private static int tallOverwriteMinWork(int m, int n) {
+        return Math.max(3 * n + m, 5 * n);
+    }
+
+    private static int wideOverwriteMinWork(int m, int n) {
+        return Math.max(3 * m + n, 5 * m);
+    }
+
+    private static double[] sampleMatrix(int m, int n, long seed) {
+        java.util.Random random = new java.util.Random(seed);
+        double[] data = new double[m * n];
+        for (int i = 0; i < data.length; i++) {
+            data[i] = random.nextDouble() * 2.0 - 1.0;
+        }
+        return data;
+    }
+
+    private static void assertThinReconstruction(double[] original, int m, int n, double[] s,
+                                                 double[] u, int uOff, int ldu,
+                                                 double[] vt, int vtOff, int ldvt) {
+        int k = Math.min(m, n);
+        for (int row = 0; row < m; row++) {
+            for (int col = 0; col < n; col++) {
+                double sum = 0.0;
+                for (int i = 0; i < k; i++) {
+                    sum += u[uOff + row * ldu + i] * s[i] * vt[vtOff + i * ldvt + col];
+                }
+                assertThat(sum).isCloseTo(original[row * n + col], org.assertj.core.data.Offset.offset(1e-7));
+            }
+        }
+    }
+
     @Test
     void testSingularValuesSquareMatrix() {
         double[] A = {
@@ -430,5 +470,101 @@ class DgesvdTest {
         for (int i = 0; i < n - 1; i++) {
             assertThat(s[i]).isGreaterThanOrEqualTo(s[i + 1]);
         }
+    }
+
+    @Test
+    void testTallOverwriteUReducedWorkspaceBranch() {
+        int m = 20;
+        int n = 5;
+        int lda = n;
+        int lwork = tallOverwriteMinWork(m, n);
+        int fastThreshold = n * n + Math.max(4 * n, 5 * n);
+
+        assertThat(m).isGreaterThanOrEqualTo(Ilaenv.ilaenv(6, "DGESVD", "OS", m, n, 0, 0));
+        assertThat(lwork).isLessThan(fastThreshold);
+        assertThat(lwork).isLessThan(queryWorkspace('O', 'S', m, n, 1, n));
+
+        double[] original = sampleMatrix(m, n, 11L);
+        double[] a = original.clone();
+        double[] s = new double[n];
+        double[] vt = new double[n * n];
+        double[] work = new double[lwork];
+
+        int info = BLAS.dgesvd('O', 'S', m, n, a, 0, lda, s, 0, null, 0, 1, vt, 0, n, work, 0, lwork);
+
+        assertThat(info).isEqualTo(0);
+        assertThinReconstruction(original, m, n, s, a, 0, lda, vt, 0, n);
+    }
+
+    @Test
+    void testTallOverwriteVTReducedWorkspaceBranch() {
+        int m = 20;
+        int n = 5;
+        int lda = n;
+        int lwork = tallOverwriteMinWork(m, n);
+        int fastThreshold = 2 * n * n + Math.max(Math.max(n + m, 4 * n), 5 * n);
+
+        assertThat(m).isGreaterThanOrEqualTo(Ilaenv.ilaenv(6, "DGESVD", "SO", m, n, 0, 0));
+        assertThat(lwork).isLessThan(fastThreshold);
+        assertThat(lwork).isLessThan(queryWorkspace('S', 'O', m, n, n, 1));
+
+        double[] original = sampleMatrix(m, n, 23L);
+        double[] a = original.clone();
+        double[] s = new double[n];
+        double[] u = new double[m * n];
+        double[] work = new double[lwork];
+
+        int info = BLAS.dgesvd('S', 'O', m, n, a, 0, lda, s, 0, u, 0, n, null, 0, 1, work, 0, lwork);
+
+        assertThat(info).isEqualTo(0);
+        assertThinReconstruction(original, m, n, s, u, 0, n, a, 0, lda);
+    }
+
+    @Test
+    void testWideOverwriteVTReducedWorkspaceBranch() {
+        int m = 5;
+        int n = 20;
+        int lda = n;
+        int lwork = wideOverwriteMinWork(m, n);
+        int fastThreshold = m * m + Math.max(4 * m, 5 * m);
+
+        assertThat(n).isGreaterThanOrEqualTo(Ilaenv.ilaenv(6, "DGESVD", "SO", m, n, 0, 0));
+        assertThat(lwork).isLessThan(fastThreshold);
+        assertThat(lwork).isLessThan(queryWorkspace('S', 'O', m, n, m, 1));
+
+        double[] original = sampleMatrix(m, n, 37L);
+        double[] a = original.clone();
+        double[] s = new double[m];
+        double[] u = new double[m * m];
+        double[] work = new double[lwork];
+
+        int info = BLAS.dgesvd('S', 'O', m, n, a, 0, lda, s, 0, u, 0, m, null, 0, 1, work, 0, lwork);
+
+        assertThat(info).isEqualTo(0);
+        assertThinReconstruction(original, m, n, s, u, 0, m, a, 0, lda);
+    }
+
+    @Test
+    void testWideOverwriteUReducedWorkspaceBranch() {
+        int m = 5;
+        int n = 20;
+        int lda = n;
+        int lwork = wideOverwriteMinWork(m, n);
+        int fastThreshold = 2 * m * m + Math.max(Math.max(m + n, 4 * m), 5 * m);
+
+        assertThat(n).isGreaterThanOrEqualTo(Ilaenv.ilaenv(6, "DGESVD", "OS", m, n, 0, 0));
+        assertThat(lwork).isLessThan(fastThreshold);
+        assertThat(lwork).isLessThan(queryWorkspace('O', 'S', m, n, 1, n));
+
+        double[] original = sampleMatrix(m, n, 41L);
+        double[] a = original.clone();
+        double[] s = new double[m];
+        double[] vt = new double[m * n];
+        double[] work = new double[lwork];
+
+        int info = BLAS.dgesvd('O', 'S', m, n, a, 0, lda, s, 0, null, 0, 1, vt, 0, n, work, 0, lwork);
+
+        assertThat(info).isEqualTo(0);
+        assertThinReconstruction(original, m, n, s, a, 0, lda, vt, 0, n);
     }
 }

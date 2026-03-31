@@ -87,8 +87,8 @@ public final class GSVD implements Decomposition {
 
     private GSVD() {}
 
-    public static Pool workspace(int m, int p, int n) {
-        return new Pool().ensure(m, p, n, GSVD_ALL);
+    public static Pool workspace() {
+        return new Pool();
     }
 
     public static GSVD decompose(double[] A, int m, int n, double[] B, int p) {
@@ -136,9 +136,7 @@ public final class GSVD implements Decomposition {
         BLAS.GsvdJob jobV = wantV ? BLAS.GsvdJob.Compute : BLAS.GsvdJob.None;
         BLAS.GsvdJob jobQ = wantQ ? BLAS.GsvdJob.Compute : BLAS.GsvdJob.None;
 
-        if (ws == null) {
-            ws = (Pool) workspace(m, p, n);
-        }
+        if (ws == null) ws = new Pool();
         this.pool = ws;
         this.pool.ensure(m, p, n, kind);
 

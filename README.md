@@ -274,8 +274,8 @@ Key result methods on `Regression` (base of `OLS`/`WLS`):
 ```java
 // Standard decompositions
 LU       lu  = Decomposer.lu(A, n);                          // LU with partial pivoting
-QR       qr  = Decomposer.qr(A, m, n);                      // QR (or rank-revealing with PIVOTING)
-LQ       lq  = Decomposer.lq(A, m, n);                      // LQ (m <= n)
+QR       qr  = Decomposer.qr(A, m, n);                      // QR for tall/square matrices (m >= n)
+LQ       lq  = Decomposer.lq(A, m, n);                      // LQ for wide/square matrices (m <= n)
 SVD      svd = Decomposer.svd(A, m, n);                      // SVD, thin U and Vᵀ by default
 Cholesky ch  = Decomposer.cholesky(A, n);                    // Cholesky (or LDLᵀ with PIVOTING)
 Schur    sc  = Decomposer.schur(A, n);                       // Real Schur: A = Z·T·Zᵀ
@@ -290,7 +290,7 @@ GGEVD    gg  = Decomposer.ggevd(A, B, n);                   // Generalized non-s
 GSVD     gs  = Decomposer.gsvd(A, m, n, B, p);              // GSVD of A (m×n) and B (p×n)
 
 // With options
-QR  qrp  = Decomposer.qr(A, m, n, QR.Opts.PIVOTING);
+QR  qrp  = Decomposer.qr(A, m, n, QR.Opts.PIVOTING);        // rank-revealing QR for m >= n
 SVD svdU = Decomposer.svd(A, m, n, SVD.Opts.FULL_U, SVD.Opts.FULL_V);
 GEVD gv2 = Decomposer.gevd(A, B, n, GEVD.Opts.UPPER, GEVD.Opts.TYPE2);
 
@@ -305,8 +305,8 @@ for (double[] mat : matrices) {
 | Class | Key result methods |
 |---|---|
 | `LU` | `toL()`, `toU()`, `toP()`, `solve(b,x)`, `inverse(Ainv)`, `determinant()`, `cond()` |
-| `QR` | `toQ()`, `toR()`, `toP()`, `solve(b,x)`, `leastSquares(b,x)`, `rank()`, `cond()` |
-| `LQ` | `toL()`, `toQ()`, `solve(b,x)`, `leastSquares(b,x)`, `cond()` |
+| `QR` | `toQ()` full `m×m`, `toR()` full `m×n`, `toP()` (pivoted only), `solve(b,x)` for square systems, `leastSquares(b,x)` for tall/square systems, `rank()`, `cond()` |
+| `LQ` | `toL()` full `m×n`, `toQ()` full `n×n`, `solve(b,x)` minimum-norm solve for wide/square systems, `leastSquares(b,x)` alias of `solve(b,x)`, `cond()` |
 | `SVD` | `toU()`, `toVT()`, `singularValues()`, `solve(b,x)`, `rank()`, `cond()` |
 | `Cholesky` | `toL()`, `toD()` (LDLᵀ only), `solve(b,x)`, `inverse(Ainv)`, `determinant()`, `cond()` |
 | `Schur` | `toT()`, `toZ()`, `toS()`, `eigenvalues()`, `lyapunov(Q)`, `lyapunov(Q,sign)`, `discreteLyapunov(A,Q)` |

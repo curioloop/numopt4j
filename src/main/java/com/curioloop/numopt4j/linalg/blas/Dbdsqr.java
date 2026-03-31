@@ -33,7 +33,7 @@ interface Dbdsqr {
      * @param c     matrix C (n×ncc, row-major); updated to Qᵀ*C on exit
      * @param cOff  offset into c
      * @param ldc   leading dimension of c
-     * @param work  workspace (length >= 4*(n-1))
+     * @param work  workspace (length >= 4*n)
      * @param workOff offset into work
      * @return true on success, false if convergence failure
      */
@@ -56,10 +56,9 @@ interface Dbdsqr {
         int nm13 = nm12 + nm1;
         int idir = 0;
 
-        int tmpOff = workOff + 4 * n;
-        int rotOff = tmpOff;
-        int svOff = tmpOff + 3;
-        int sv2Off = tmpOff + 9;
+        // Netlib keeps these as local scalars; tmp is only needed because the
+        // Java helper ports expose array-based outputs.
+        double[] tmp = new double[6];
 
         if (n > 1 && ncvt == 0 && nru == 0 && ncc == 0) {
             int info = Dlasq1.dlasq1(n, d, dOff, e, eOff, work, workOff);
@@ -71,8 +70,8 @@ interface Dbdsqr {
         boolean lower = uplo == BLAS.Uplo.Lower;
         if (lower) {
             for (int i = 0; i < n - 1; i++) {
-                Dlartg.dlartg(d[dOff + i], e[eOff + i], work, rotOff);
-                double cs = work[rotOff], sn = work[rotOff + 1], r = work[rotOff + 2];
+                Dlartg.dlartg(d[dOff + i], e[eOff + i], tmp, 0);
+                double cs = tmp[0], sn = tmp[1], r = tmp[2];
                 d[dOff + i] = r;
                 e[eOff + i] = sn * d[dOff + i + 1];
                 d[dOff + i + 1] *= cs;
@@ -164,9 +163,9 @@ interface Dbdsqr {
             }
 
             if (l2 == m - 2) {
-                Dlas2.dlasv2(d[dOff + m - 2], e[eOff + m - 2], d[dOff + m - 1], work, svOff);
-                double ssmin = work[svOff], ssmax = work[svOff + 1];
-                double sinr = work[svOff + 2], cosr = work[svOff + 3], sinl = work[svOff + 4], cosl = work[svOff + 5];
+                Dlas2.dlasv2(d[dOff + m - 2], e[eOff + m - 2], d[dOff + m - 1], tmp, 0);
+                double ssmin = tmp[0], ssmax = tmp[1];
+                double sinr = tmp[2], cosr = tmp[3], sinl = tmp[4], cosl = tmp[5];
                 d[dOff + m - 1] = ssmin;
                 d[dOff + m - 2] = ssmax;
                 e[eOff + m - 2] = 0;
@@ -237,12 +236,12 @@ interface Dbdsqr {
                 double sl2;
                 if (idir == 1) {
                     sl2 = abs(d[dOff + l2]);
-                    Dlas2.dlas2(d[dOff + m - 2], e[eOff + m - 2], d[dOff + m - 1], work, sv2Off);
-                    shift = work[sv2Off];
+                    Dlas2.dlas2(d[dOff + m - 2], e[eOff + m - 2], d[dOff + m - 1], tmp, 0);
+                    shift = tmp[0];
                 } else {
                     sl2 = abs(d[dOff + m - 1]);
-                    Dlas2.dlas2(d[dOff + l2], e[eOff + l2], d[dOff + l2 + 1], work, sv2Off);
-                    shift = work[sv2Off];
+                    Dlas2.dlas2(d[dOff + l2], e[eOff + l2], d[dOff + l2 + 1], tmp, 0);
+                    shift = tmp[0];
                 }
                 if (sl2 > 0 && (shift / sl2) * (shift / sl2) < eps) {
                     shift = 0;
@@ -256,13 +255,13 @@ interface Dbdsqr {
                     double cs = 1, oldcs = 1;
                     double sn = 0, r = 0, oldsn = 0;
                     for (int i = l2; i < m - 1; i++) {
-                        Dlartg.dlartg(d[dOff + i] * cs, e[eOff + i], work, rotOff);
-                        cs = work[rotOff]; sn = work[rotOff + 1]; r = work[rotOff + 2];
+                        Dlartg.dlartg(d[dOff + i] * cs, e[eOff + i], tmp, 0);
+                        cs = tmp[0]; sn = tmp[1]; r = tmp[2];
                         if (i > l2) {
                             e[eOff + i - 1] = oldsn * r;
                         }
-                        Dlartg.dlartg(oldcs * r, d[dOff + i + 1] * sn, work, rotOff);
-                        oldcs = work[rotOff]; oldsn = work[rotOff + 1]; d[dOff + i] = work[rotOff + 2];
+                        Dlartg.dlartg(oldcs * r, d[dOff + i + 1] * sn, tmp, 0);
+                        oldcs = tmp[0]; oldsn = tmp[1]; d[dOff + i] = tmp[2];
                         work[workOff + i - l2] = cs;
                         work[workOff + nm1 + i - l2] = sn;
                         work[workOff + nm12 + i - l2] = oldcs;
@@ -287,13 +286,13 @@ interface Dbdsqr {
                     double cs = 1, oldcs = 1;
                     double sn = 0, r = 0, oldsn = 0;
                     for (int i = m - 1; i >= l2 + 1; i--) {
-                        Dlartg.dlartg(d[dOff + i] * cs, e[eOff + i - 1], work, rotOff);
-                        cs = work[rotOff]; sn = work[rotOff + 1]; r = work[rotOff + 2];
+                        Dlartg.dlartg(d[dOff + i] * cs, e[eOff + i - 1], tmp, 0);
+                        cs = tmp[0]; sn = tmp[1]; r = tmp[2];
                         if (i < m - 1) {
                             e[eOff + i] = oldsn * r;
                         }
-                        Dlartg.dlartg(oldcs * r, d[dOff + i - 1] * sn, work, rotOff);
-                        oldcs = work[rotOff]; oldsn = work[rotOff + 1]; d[dOff + i] = work[rotOff + 2];
+                        Dlartg.dlartg(oldcs * r, d[dOff + i - 1] * sn, tmp, 0);
+                        oldcs = tmp[0]; oldsn = tmp[1]; d[dOff + i] = tmp[2];
                         work[workOff + i - l2 - 1] = cs;
                         work[workOff + nm1 + i - l2 - 1] = -sn;
                         work[workOff + nm12 + i - l2 - 1] = oldcs;
@@ -321,9 +320,9 @@ interface Dbdsqr {
                     double g = e[eOff + l2];
                     double cosl = 0, sinl = 0, r = 0;
                     for (int i = l2; i < m - 1; i++) {
-                        Dlartg.dlartg(f, g, work, rotOff);
-                        double cosr = work[rotOff], sinr = work[rotOff + 1];
-                        r = work[rotOff + 2];
+                        Dlartg.dlartg(f, g, tmp, 0);
+                        double cosr = tmp[0], sinr = tmp[1];
+                        r = tmp[2];
                         if (i > l2) {
                             e[eOff + i - 1] = r;
                         }
@@ -331,8 +330,8 @@ interface Dbdsqr {
                         e[eOff + i] = cosr * e[eOff + i] - sinr * d[dOff + i];
                         g = sinr * d[dOff + i + 1];
                         d[dOff + i + 1] *= cosr;
-                        Dlartg.dlartg(f, g, work, rotOff);
-                        cosl = work[rotOff]; sinl = work[rotOff + 1]; r = work[rotOff + 2];
+                        Dlartg.dlartg(f, g, tmp, 0);
+                        cosl = tmp[0]; sinl = tmp[1]; r = tmp[2];
                         d[dOff + i] = r;
                         f = cosl * e[eOff + i] + sinl * d[dOff + i + 1];
                         d[dOff + i + 1] = cosl * d[dOff + i + 1] - sinl * e[eOff + i];
@@ -362,8 +361,8 @@ interface Dbdsqr {
                     double f = (abs(d[dOff + m - 1]) - shift) * (copySign(1, d[dOff + m - 1]) + shift / d[dOff + m - 1]);
                     double g = e[eOff + m - 2];
                     for (int i = m - 1; i > l2; i--) {
-                        Dlartg.dlartg(f, g, work, rotOff);
-                        double cosr = work[rotOff], sinr = work[rotOff + 1], r = work[rotOff + 2];
+                        Dlartg.dlartg(f, g, tmp, 0);
+                        double cosr = tmp[0], sinr = tmp[1], r = tmp[2];
                         if (i < m - 1) {
                             e[eOff + i] = r;
                         }
@@ -371,9 +370,9 @@ interface Dbdsqr {
                         e[eOff + i - 1] = cosr * e[eOff + i - 1] - sinr * d[dOff + i];
                         g = sinr * d[dOff + i - 1];
                         d[dOff + i - 1] *= cosr;
-                        Dlartg.dlartg(f, g, work, rotOff);
-                        double cosl = work[rotOff], sinl = work[rotOff + 1];
-                        r = work[rotOff + 2];
+                        Dlartg.dlartg(f, g, tmp, 0);
+                        double cosl = tmp[0], sinl = tmp[1];
+                        r = tmp[2];
                         d[dOff + i] = r;
                         f = cosl * e[eOff + i - 1] + sinl * d[dOff + i - 1];
                         d[dOff + i - 1] = cosl * d[dOff + i - 1] - sinl * e[eOff + i - 1];

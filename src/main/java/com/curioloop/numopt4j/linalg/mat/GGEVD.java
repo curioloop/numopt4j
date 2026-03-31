@@ -50,11 +50,10 @@ public final class GGEVD implements Decomposition {
             }
             if (wantVL && (VL == null || VL.length < n * n)) VL = new double[n * n];
             if (wantVR && (VR == null || VR.length < n * n)) VR = new double[n * n];
-            double[] qry = new double[1];
-            BLAS.dggev(false, false, n, null, n, null, n, null, null, null,
-                       null, n, null, n, qry, 0, -1);
-            // Extra 2*n*n for tmpVL/tmpVR scratch (carved from work, no separate alloc)
-            ensureWork((int) qry[0] + 2 * n * n);
+            double[] tmp = new double[1];
+            BLAS.dggev(wantVL, wantVR, n, null, n, null, n, null, null, null,
+                       null, n, null, n, tmp, 0, -1);
+            ensureWork((int) tmp[0]);
             return this;
         }
 
@@ -82,8 +81,8 @@ public final class GGEVD implements Decomposition {
 
     private GGEVD() {}
 
-    public static Pool workspace(int n) {
-        return new Pool().ensure(n, true, true);
+    public static Pool workspace() {
+        return new Pool();
     }
 
     /**
@@ -121,8 +120,8 @@ public final class GGEVD implements Decomposition {
      * @param opts   zero or more {@link Opts} values; default computes eigenvalues only
      */
     public static GGEVD decompose(double[] A, double[] B, int n, Pool ws, Opts... opts) {
-        boolean wantVL = opts != null && contains(opts, Opts.WANT_VL);
-        boolean wantVR = opts != null && contains(opts, Opts.WANT_VR);
+        boolean wantVL = contains(opts, Opts.WANT_VL);
+        boolean wantVR = contains(opts, Opts.WANT_VR);
         return decompose(A, B, n, wantVL, wantVR, ws);
     }
 
@@ -163,7 +162,7 @@ public final class GGEVD implements Decomposition {
         this.hasVL = wantVL;
         this.hasVR = wantVR;
 
-        if (ws == null) ws = (Pool) workspace(n);
+        if (ws == null) ws = new Pool();
         this.pool = ws;
         this.pool.ensure(n, wantVL, wantVR);
 

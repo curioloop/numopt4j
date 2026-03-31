@@ -30,18 +30,13 @@ interface Dgesvd {
         }
 
         int minmn = min(m, n);
-        int minwork = 1;
-        if (minmn > 0) {
-            minwork = max(3 * minmn + max(m, n), 5 * minmn);
-        }
+        int minwrk = 1;
 
         if (m < 0) return -3;
         if (n < 0) return -4;
         if (lda < max(1, n)) return -6;
         if (ldu < 1 || (wantua && ldu < m) || (wantus && ldu < minmn)) return -9;
         if (ldvt < 1 || (wantvas && ldvt < n)) return -11;
-        if (lwork < minwork && lwork != -1) return -13;
-
         if (minmn == 0) {
             if (lwork >= 1) work[workOff] = 1;
             return 0;
@@ -54,7 +49,7 @@ interface Dgesvd {
         int bdspac = 0;
 
         if (m >= n) {
-            bdspac = 4 * n + 11;
+            bdspac = 5 * n;
             int lworkDgeqrf = queryDgeqrf(m, n, work, workOff);
             int lworkDorgqrN = queryDorgqr(m, n, n, work, workOff);
             int lworkDorgqrM = queryDorgqr(m, m, n, work, workOff);
@@ -70,6 +65,7 @@ interface Dgesvd {
                         maxwrk = max(maxwrk, 3 * n + lworkDorgbrP);
                     }
                     maxwrk = max(maxwrk, bdspac);
+                    minwrk = max(4 * n, bdspac);
                 } else if (wantuo && wantvn) {
                     wrkbl = n + lworkDgeqrf;
                     wrkbl = max(wrkbl, n + lworkDorgqrN);
@@ -77,6 +73,7 @@ interface Dgesvd {
                     wrkbl = max(wrkbl, 3 * n + lworkDorgbrQ);
                     wrkbl = max(wrkbl, bdspac);
                     maxwrk = max(n * n + wrkbl, n * n + m * n + n);
+                    minwrk = max(3 * n + m, bdspac);
                 } else if (wantuo && wantvas) {
                     wrkbl = n + lworkDgeqrf;
                     wrkbl = max(wrkbl, n + lworkDorgqrN);
@@ -85,6 +82,7 @@ interface Dgesvd {
                     wrkbl = max(wrkbl, 3 * n + lworkDorgbrP);
                     wrkbl = max(wrkbl, bdspac);
                     maxwrk = max(n * n + wrkbl, n * n + m * n + n);
+                    minwrk = max(3 * n + m, bdspac);
                 } else if (wantus && wantvn) {
                     wrkbl = n + lworkDgeqrf;
                     wrkbl = max(wrkbl, n + lworkDorgqrN);
@@ -92,6 +90,7 @@ interface Dgesvd {
                     wrkbl = max(wrkbl, 3 * n + lworkDorgbrQ);
                     wrkbl = max(wrkbl, bdspac);
                     maxwrk = n * n + wrkbl;
+                    minwrk = max(3 * n + m, bdspac);
                 } else if (wantus && wantvo) {
                     wrkbl = n + lworkDgeqrf;
                     wrkbl = max(wrkbl, n + lworkDorgqrN);
@@ -100,6 +99,7 @@ interface Dgesvd {
                     wrkbl = max(wrkbl, 3 * n + lworkDorgbrP);
                     wrkbl = max(wrkbl, bdspac);
                     maxwrk = 2 * n * n + wrkbl;
+                    minwrk = max(3 * n + m, bdspac);
                 } else if (wantus && wantvas) {
                     wrkbl = n + lworkDgeqrf;
                     wrkbl = max(wrkbl, n + lworkDorgqrN);
@@ -108,6 +108,7 @@ interface Dgesvd {
                     wrkbl = max(wrkbl, 3 * n + lworkDorgbrP);
                     wrkbl = max(wrkbl, bdspac);
                     maxwrk = n * n + wrkbl;
+                    minwrk = max(3 * n + m, bdspac);
                 } else if (wantua && wantvn) {
                     wrkbl = n + lworkDgeqrf;
                     wrkbl = max(wrkbl, n + lworkDorgqrM);
@@ -115,6 +116,7 @@ interface Dgesvd {
                     wrkbl = max(wrkbl, 3 * n + lworkDorgbrQ);
                     wrkbl = max(wrkbl, bdspac);
                     maxwrk = n * n + wrkbl;
+                    minwrk = max(3 * n + m, bdspac);
                 } else if (wantua && wantvo) {
                     wrkbl = n + lworkDgeqrf;
                     wrkbl = max(wrkbl, n + lworkDorgqrM);
@@ -123,6 +125,7 @@ interface Dgesvd {
                     wrkbl = max(wrkbl, 3 * n + lworkDorgbrP);
                     wrkbl = max(wrkbl, bdspac);
                     maxwrk = 2 * n * n + wrkbl;
+                    minwrk = max(3 * n + m, bdspac);
                 } else if (wantua && wantvas) {
                     wrkbl = n + lworkDgeqrf;
                     wrkbl = max(wrkbl, n + lworkDorgqrM);
@@ -131,6 +134,7 @@ interface Dgesvd {
                     wrkbl = max(wrkbl, 3 * n + lworkDorgbrP);
                     wrkbl = max(wrkbl, bdspac);
                     maxwrk = n * n + wrkbl;
+                    minwrk = max(3 * n + m, bdspac);
                 }
             } else {
                 maxwrk = 3 * n + lworkDgebrd;
@@ -144,9 +148,10 @@ interface Dgesvd {
                     maxwrk = max(maxwrk, 3 * n + lworkDorgbrP);
                 }
                 maxwrk = max(maxwrk, bdspac);
+                minwrk = max(3 * n + m, bdspac);
             }
         } else {
-            bdspac = 4 * m + 11;
+            bdspac = 5 * m;
             int lworkDgelqf = queryDgelqf(m, n, work, workOff);
             int lworkDorglqN = queryDorglq(n, n, m, work, workOff);
             int lworkDorglqM = queryDorglq(m, n, m, work, workOff);
@@ -162,6 +167,7 @@ interface Dgesvd {
                         maxwrk = max(maxwrk, 3 * m + lworkDorgbrQ);
                     }
                     maxwrk = max(maxwrk, bdspac);
+                    minwrk = max(4 * m, bdspac);
                 } else if (wantvo && wantun) {
                     wrkbl = m + lworkDgelqf;
                     wrkbl = max(wrkbl, m + lworkDorglqM);
@@ -169,6 +175,7 @@ interface Dgesvd {
                     wrkbl = max(wrkbl, 3 * m + lworkDorgbrP);
                     wrkbl = max(wrkbl, bdspac);
                     maxwrk = max(m * m + wrkbl, m * m + m * n + m);
+                    minwrk = max(3 * m + n, bdspac);
                 } else if (wantvo && wantuas) {
                     wrkbl = m + lworkDgelqf;
                     wrkbl = max(wrkbl, m + lworkDorglqM);
@@ -177,6 +184,7 @@ interface Dgesvd {
                     wrkbl = max(wrkbl, 3 * m + lworkDorgbrQ);
                     wrkbl = max(wrkbl, bdspac);
                     maxwrk = max(m * m + wrkbl, m * m + m * n + m);
+                    minwrk = max(3 * m + n, bdspac);
                 } else if (wantvs && wantun) {
                     wrkbl = m + lworkDgelqf;
                     wrkbl = max(wrkbl, m + lworkDorglqM);
@@ -184,6 +192,7 @@ interface Dgesvd {
                     wrkbl = max(wrkbl, 3 * m + lworkDorgbrP);
                     wrkbl = max(wrkbl, bdspac);
                     maxwrk = m * m + wrkbl;
+                    minwrk = max(3 * m + n, bdspac);
                 } else if (wantvs && wantuo) {
                     wrkbl = m + lworkDgelqf;
                     wrkbl = max(wrkbl, m + lworkDorglqM);
@@ -192,6 +201,7 @@ interface Dgesvd {
                     wrkbl = max(wrkbl, 3 * m + lworkDorgbrQ);
                     wrkbl = max(wrkbl, bdspac);
                     maxwrk = 2 * m * m + wrkbl;
+                    minwrk = max(3 * m + n, bdspac);
                 } else if (wantvs && wantuas) {
                     wrkbl = m + lworkDgelqf;
                     wrkbl = max(wrkbl, m + lworkDorglqM);
@@ -200,6 +210,7 @@ interface Dgesvd {
                     wrkbl = max(wrkbl, 3 * m + lworkDorgbrQ);
                     wrkbl = max(wrkbl, bdspac);
                     maxwrk = m * m + wrkbl;
+                    minwrk = max(3 * m + n, bdspac);
                 } else if (wantva && wantun) {
                     wrkbl = m + lworkDgelqf;
                     wrkbl = max(wrkbl, m + lworkDorglqN);
@@ -207,6 +218,7 @@ interface Dgesvd {
                     wrkbl = max(wrkbl, 3 * m + lworkDorgbrP);
                     wrkbl = max(wrkbl, bdspac);
                     maxwrk = m * m + wrkbl;
+                    minwrk = max(3 * m + n, bdspac);
                 } else if (wantva && wantuo) {
                     wrkbl = m + lworkDgelqf;
                     wrkbl = max(wrkbl, m + lworkDorglqN);
@@ -215,6 +227,7 @@ interface Dgesvd {
                     wrkbl = max(wrkbl, 3 * m + lworkDorgbrQ);
                     wrkbl = max(wrkbl, bdspac);
                     maxwrk = 2 * m * m + wrkbl;
+                    minwrk = max(3 * m + n, bdspac);
                 } else if (wantva && wantuas) {
                     wrkbl = m + lworkDgelqf;
                     wrkbl = max(wrkbl, m + lworkDorglqN);
@@ -223,6 +236,7 @@ interface Dgesvd {
                     wrkbl = max(wrkbl, 3 * m + lworkDorgbrQ);
                     wrkbl = max(wrkbl, bdspac);
                     maxwrk = m * m + wrkbl;
+                    minwrk = max(3 * m + n, bdspac);
                 }
             } else {
                 maxwrk = 3 * m + lworkDgebrd;
@@ -236,10 +250,12 @@ interface Dgesvd {
                     maxwrk = max(maxwrk, 3 * m + lworkDorgbrQ);
                 }
                 maxwrk = max(maxwrk, bdspac);
+                minwrk = max(3 * m + n, bdspac);
             }
         }
 
-        maxwrk = max(maxwrk, minwork);
+        maxwrk = max(maxwrk, minwrk);
+        if (lwork < minwrk && lwork != -1) return -13;
         if (lwork == -1) {
             work[workOff] = maxwrk;
             return 0;
@@ -265,22 +281,29 @@ interface Dgesvd {
         if (m >= n) {
             if (m >= mnthr) {
                 if (wantun) {
-                    ie = path1(m, n, A, aOff, lda, s, sOff, vt, vtOff, ldvt,
-                               work, workOff, lwork, wantvo, wantvas);
+                    ie = wantvo
+                        ? path1(m, n, A, aOff, lda, s, sOff, vt, vtOff, ldvt,
+                            work, workOff, lwork, true, false)
+                            : path1(m, n, A, aOff, lda, s, sOff, vt, vtOff, ldvt,
+                                    work, workOff, lwork, false, wantvas);
                     ok = ie >= 0;
                     if (ie < 0) ie = 0;
-                } else if (wantuo && wantvn) {
-                    return -1;
-                } else if (wantuo && wantvas) {
-                    return -1;
+                } else if (wantuo) {
+                    ie = path23(m, n, A, aOff, lda, s, sOff,
+                            vt, vtOff, ldvt, work, workOff, lwork, wantvas);
+                    ok = ie >= 0;
+                    if (ie < 0) ie = 0;
                 } else if (wantus) {
-                    if (wantvn) {
+                    if (wantvo) {
+                    ie = path58(m, n, A, aOff, lda, s, sOff,
+                                u, uOff, ldu, work, workOff, lwork, 'S');
+                        ok = ie >= 0;
+                        if (ie < 0) ie = 0;
+                    } else if (wantvn) {
                         ie = path4(m, n, A, aOff, lda, s, sOff, u, uOff, ldu, vt, vtOff, ldvt,
                                    work, workOff, lwork, wrkbl, bdspac, lda);
                         ok = ie >= 0;
                         if (ie < 0) ie = 0;
-                    } else if (wantvo) {
-                        return -1;
                     } else if (wantvas) {
                         ie = path6(m, n, A, aOff, lda, s, sOff, u, uOff, ldu, vt, vtOff, ldvt,
                                    work, workOff, lwork, wrkbl, bdspac, lda);
@@ -288,13 +311,16 @@ interface Dgesvd {
                         if (ie < 0) ie = 0;
                     }
                 } else if (wantua) {
-                    if (wantvn) {
+                    if (wantvo) {
+                    ie = path58(m, n, A, aOff, lda, s, sOff,
+                                u, uOff, ldu, work, workOff, lwork, 'A');
+                        ok = ie >= 0;
+                        if (ie < 0) ie = 0;
+                    } else if (wantvn) {
                         ie = path7(m, n, A, aOff, lda, s, sOff, u, uOff, ldu, vt, vtOff, ldvt,
                                    work, workOff, lwork, wrkbl, bdspac, lda);
                         ok = ie >= 0;
                         if (ie < 0) ie = 0;
-                    } else if (wantvo) {
-                        return -1;
                     } else if (wantvas) {
                         ie = path9(m, n, A, aOff, lda, s, sOff, u, uOff, ldu, vt, vtOff, ldvt,
                                    work, workOff, lwork, wrkbl, bdspac, lda);
@@ -304,29 +330,36 @@ interface Dgesvd {
                 }
             } else {
                 ie = path10(m, n, A, aOff, lda, s, sOff, u, uOff, ldu, vt, vtOff, ldvt,
-                            work, workOff, lwork, wantuas, wantua, wantvas, wantva);
+                            work, workOff, lwork, wantuas, wantua, wantuo, wantvas, wantva, wantvo);
                 ok = ie >= 0;
                 if (ie < 0) ie = 0;
             }
         } else {
             if (n >= mnthr) {
                 if (wantvn) {
-                    ie = path1t(m, n, A, aOff, lda, s, sOff, u, uOff, ldu,
-                                work, workOff, lwork, wantuo, wantuas);
+                    ie = wantuo
+                        ? path1t(m, n, A, aOff, lda, s, sOff, u, uOff, ldu,
+                            work, workOff, lwork, true, false)
+                            : path1t(m, n, A, aOff, lda, s, sOff, u, uOff, ldu,
+                                    work, workOff, lwork, false, wantuas);
                     ok = ie >= 0;
                     if (ie < 0) ie = 0;
-                } else if (wantvo && wantun) {
-                    return -1;
-                } else if (wantvo && wantuas) {
-                    return -1;
+                } else if (wantvo) {
+                    ie = path2t3t(m, n, A, aOff, lda, s, sOff,
+                            u, uOff, ldu, work, workOff, lwork, wantuas);
+                    ok = ie >= 0;
+                    if (ie < 0) ie = 0;
                 } else if (wantvs) {
-                    if (wantun) {
+                    if (wantuo) {
+                    ie = path5t8t(m, n, A, aOff, lda, s, sOff,
+                                vt, vtOff, ldvt, work, workOff, lwork, 'S');
+                        ok = ie >= 0;
+                        if (ie < 0) ie = 0;
+                    } else if (wantun) {
                         ie = path4t(m, n, A, aOff, lda, s, sOff, u, uOff, ldu, vt, vtOff, ldvt,
                                     work, workOff, lwork, wrkbl, bdspac, lda);
                         ok = ie >= 0;
                         if (ie < 0) ie = 0;
-                    } else if (wantuo) {
-                        return -1;
                     } else if (wantuas) {
                         ie = path6t(m, n, A, aOff, lda, s, sOff, u, uOff, ldu, vt, vtOff, ldvt,
                                     work, workOff, lwork, wrkbl, bdspac, lda);
@@ -334,13 +367,16 @@ interface Dgesvd {
                         if (ie < 0) ie = 0;
                     }
                 } else if (wantva) {
-                    if (wantun) {
+                    if (wantuo) {
+                    ie = path5t8t(m, n, A, aOff, lda, s, sOff,
+                                vt, vtOff, ldvt, work, workOff, lwork, 'A');
+                        ok = ie >= 0;
+                        if (ie < 0) ie = 0;
+                    } else if (wantun) {
                         ie = path7t(m, n, A, aOff, lda, s, sOff, u, uOff, ldu, vt, vtOff, ldvt,
                                     work, workOff, lwork, wrkbl, bdspac, lda);
                         ok = ie >= 0;
                         if (ie < 0) ie = 0;
-                    } else if (wantuo) {
-                        return -1;
                     } else if (wantuas) {
                         ie = path9t(m, n, A, aOff, lda, s, sOff, u, uOff, ldu, vt, vtOff, ldvt,
                                     work, workOff, lwork, wrkbl, bdspac, lda);
@@ -350,7 +386,7 @@ interface Dgesvd {
                 }
             } else {
                 ie = path10t(m, n, A, aOff, lda, s, sOff, u, uOff, ldu, vt, vtOff, ldvt,
-                             work, workOff, lwork, wantuas, wantva, wantvas, wantva);
+                             work, workOff, lwork, wantuas, wantuo, wantvas, wantva, wantvo);
                 ok = ie >= 0;
                 if (ie < 0) ie = 0;
             }
@@ -386,6 +422,393 @@ interface Dgesvd {
 
         work[workOff] = maxwrk;
         return ok ? 0 : 1;
+    }
+
+    // Row-major translation of Netlib DGESVD paths 2/3.
+    // A evolves from the QR factors into the final thin U, while VT stays in its normal output buffer.
+    // The reduced-work branch keeps all bidiagonal dataflow on A/VT directly instead of materializing an n-by-n copy.
+    static int path23(int m, int n, double[] A, int aOff, int lda, double[] s, int sOff,
+                                  double[] vt, int vtOff, int ldvt,
+                                  double[] work, int workOff, int lwork, boolean wantVT) {
+        int bdspac = 5 * n;
+        if (lwork < n * n + max(4 * n, bdspac)) {
+            if (!wantVT) {
+            int ie = 0;
+            int itauq = ie + n;
+            int itaup = itauq + n;
+            int iwork = itaup + n;
+
+            Dgebrd.dgebrd(m, n, A, aOff, lda, s, sOff, work, workOff + ie,
+                work, workOff + itauq, work, workOff + itaup, work, workOff + iwork, lwork - iwork);
+            Dorgbr.dorgbr('Q', m, n, n, A, aOff, lda, work, workOff + itauq,
+                work, workOff + iwork, lwork - iwork);
+            iwork = ie + n;
+
+            boolean ok = Dbdsqr.dbdsqr(BLAS.Uplo.Upper, n, 0, m, 0, s, sOff, work, workOff + ie,
+                work, workOff, 1, A, aOff, lda, work, workOff, 1, work, workOff + iwork);
+            return ok ? ie : -ie;
+            }
+
+            int itau = 0;
+            int iwork = itau + n;
+
+            Dgeqr.dgeqrf(m, n, A, aOff, lda, work, workOff + itau, work, workOff + iwork, lwork - iwork);
+            Dlamv.dlacpy('U', n, n, A, aOff, lda, vt, vtOff, ldvt);
+            if (n > 1) {
+            Dlamv.dlaset('L', n - 1, n - 1, 0, 0, vt, vtOff + ldvt, ldvt);
+            }
+
+            Dgeqr.dorgqr(m, n, n, A, aOff, lda, work, workOff + itau, work, workOff + iwork, lwork - iwork);
+
+            int ie = itau;
+            int itauq = ie + n;
+            int itaup = itauq + n;
+            iwork = itaup + n;
+
+            Dgebrd.dgebrd(n, n, vt, vtOff, ldvt, s, sOff, work, workOff + ie,
+                work, workOff + itauq, work, workOff + itaup, work, workOff + iwork, lwork - iwork);
+            Dormbr.dormbr('Q', BLAS.Side.Right, BLAS.Trans.NoTrans, m, n, n, vt, vtOff, ldvt, work, workOff + itauq,
+                A, aOff, lda, work, workOff + iwork, lwork - iwork);
+            Dorgbr.dorgbr('P', n, n, n, vt, vtOff, ldvt, work, workOff + itaup,
+                work, workOff + iwork, lwork - iwork);
+            iwork = ie + n;
+
+            boolean ok = Dbdsqr.dbdsqr(BLAS.Uplo.Upper, n, n, m, 0, s, sOff, work, workOff + ie,
+                vt, vtOff, ldvt, A, aOff, lda, work, workOff, 1, work, workOff + iwork);
+            return ok ? ie : -ie;
+        }
+
+        int iu = 0;
+        int itau = iu + n * n;
+        int iwork = itau + n;
+
+        Dgeqr.dgeqrf(m, n, A, aOff, lda, work, workOff + itau, work, workOff + iwork, lwork - iwork);
+
+        Dlamv.dlacpy('U', n, n, A, aOff, lda, work, workOff + iu, n);
+        if (n > 1) {
+            Dlamv.dlaset('L', n - 1, n - 1, 0, 0, work, workOff + iu + n, n);
+        }
+
+        Dgeqr.dorgqr(m, n, n, A, aOff, lda, work, workOff + itau, work, workOff + iwork, lwork - iwork);
+
+        int ie = itau;
+        int itauq = ie + n;
+        int itaup = itauq + n;
+        iwork = itaup + n;
+
+        Dgebrd.dgebrd(n, n, work, workOff + iu, n, s, sOff, work, workOff + ie,
+            work, workOff + itauq, work, workOff + itaup, work, workOff + iwork, lwork - iwork);
+
+        if (wantVT) {
+            Dlamv.dlacpy('U', n, n, work, workOff + iu, n, vt, vtOff, ldvt);
+            Dorgbr.dorgbr('P', n, n, n, vt, vtOff, ldvt, work, workOff + itaup,
+                work, workOff + iwork, lwork - iwork);
+        }
+
+        Dorgbr.dorgbr('Q', n, n, n, work, workOff + iu, n, work, workOff + itauq,
+            work, workOff + iwork, lwork - iwork);
+
+        iwork = ie + n;
+        boolean ok = Dbdsqr.dbdsqr(BLAS.Uplo.Upper, n, wantVT ? n : 0, n, 0, s, sOff, work, workOff + ie,
+                wantVT ? vt : work, wantVT ? vtOff : workOff, wantVT ? ldvt : 1,
+            work, workOff + iu, n, work, workOff, 1, work, workOff + iwork);
+
+        int ir = iwork;
+        int chunk = max(1, (lwork - ir) / n);
+        for (int row = 0; row < m; row += chunk) {
+            int rows = min(chunk, m - row);
+            Dgemm.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, rows, n, n, 1,
+                A, aOff + row * lda, lda, work, workOff + iu, n, 0,
+                work, workOff + ir, n);
+            Dlamv.dlacpy('A', rows, n, work, workOff + ir, n, A, aOff + row * lda, lda);
+        }
+
+        return ok ? ie : -ie;
+    }
+
+    // Row-major translation of Netlib DGESVD paths 5/8.
+    // The leading n-by-n block of A becomes VT, while U is accumulated in its dedicated output buffer.
+    // In the reduced-work branch Dbdsqr writes VT back to A directly, matching Netlib's overwrite slot usage.
+    static int path58(int m, int n, double[] A, int aOff, int lda, double[] s, int sOff,
+                                   double[] u, int uOff, int ldu,
+                                   double[] work, int workOff, int lwork, char jobU) {
+        int bdspac = 5 * n;
+        if (lwork < 2 * n * n + max(max(n + m, 4 * n), bdspac)) {
+            int itau = 0;
+            int iwork = itau + n;
+
+            Dgeqr.dgeqrf(m, n, A, aOff, lda, work, workOff + itau, work, workOff + iwork, lwork - iwork);
+            Dlamv.dlacpy('L', m, n, A, aOff, lda, u, uOff, ldu);
+            Dgeqr.dorgqr(m, jobU == 'A' || jobU == 'a' ? m : n, n, u, uOff, ldu, work, workOff + itau,
+                work, workOff + iwork, lwork - iwork);
+
+            int ie = itau;
+            int itauq = ie + n;
+            int itaup = itauq + n;
+            iwork = itaup + n;
+
+            Dlamv.dlaset('L', n - 1, n - 1, 0, 0, A, aOff + lda, lda);
+            Dgebrd.dgebrd(n, n, A, aOff, lda, s, sOff, work, workOff + ie,
+                work, workOff + itauq, work, workOff + itaup, work, workOff + iwork, lwork - iwork);
+            Dormbr.dormbr('Q', BLAS.Side.Right, BLAS.Trans.NoTrans, m, n, n, A, aOff, lda, work, workOff + itauq,
+                u, uOff, ldu, work, workOff + iwork, lwork - iwork);
+            Dorgbr.dorgbr('P', n, n, n, A, aOff, lda, work, workOff + itaup,
+                work, workOff + iwork, lwork - iwork);
+            iwork = ie + n;
+
+            boolean ok = Dbdsqr.dbdsqr(BLAS.Uplo.Upper, n, n, m, 0, s, sOff, work, workOff + ie,
+                A, aOff, lda, u, uOff, ldu, work, workOff, 1, work, workOff + iwork);
+            return ok ? ie : -ie;
+        }
+
+        int iu = 0;
+        int ir = iu + n * n;
+        int itau = ir + n * n;
+        int iwork = itau + n;
+
+        if (jobU == 'A' || jobU == 'a') {
+            Dgeqr.dgeqrf(m, n, A, aOff, lda, work, workOff + itau, work, workOff + iwork, lwork - iwork);
+            Dlamv.dlacpy('L', m, n, A, aOff, lda, u, uOff, ldu);
+            Dgeqr.dorgqr(m, m, n, u, uOff, ldu, work, workOff + itau, work, workOff + iwork, lwork - iwork);
+        } else {
+            Dgeqr.dgeqrf(m, n, A, aOff, lda, work, workOff + itau, work, workOff + iwork, lwork - iwork);
+        }
+
+        Dlamv.dlacpy('U', n, n, A, aOff, lda, work, workOff + iu, n);
+        if (n > 1) {
+            Dlamv.dlaset('L', n - 1, n - 1, 0, 0, work, workOff + iu + n, n);
+        }
+
+        if (jobU == 'S' || jobU == 's') {
+            Dgeqr.dorgqr(m, n, n, A, aOff, lda, work, workOff + itau, work, workOff + iwork, lwork - iwork);
+        }
+
+        int ie = itau;
+        int itauq = ie + n;
+        int itaup = itauq + n;
+        iwork = itaup + n;
+
+        Dgebrd.dgebrd(n, n, work, workOff + iu, n, s, sOff, work, workOff + ie,
+                work, workOff + itauq, work, workOff + itaup, work, workOff + iwork, lwork - iwork);
+        Dlamv.dlacpy('U', n, n, work, workOff + iu, n, work, workOff + ir, n);
+
+        Dorgbr.dorgbr('Q', n, n, n, work, workOff + iu, n, work, workOff + itauq,
+                work, workOff + iwork, lwork - iwork);
+        Dorgbr.dorgbr('P', n, n, n, work, workOff + ir, n, work, workOff + itaup,
+                work, workOff + iwork, lwork - iwork);
+        iwork = ie + n;
+
+        boolean ok = Dbdsqr.dbdsqr(BLAS.Uplo.Upper, n, n, n, 0, s, sOff, work, workOff + ie,
+                work, workOff + ir, n, work, workOff + iu, n, work, workOff, 1, work, workOff + iwork);
+
+        if (jobU == 'A' || jobU == 'a') {
+            Dgemm.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, m, n, n, 1,
+                    u, uOff, ldu, work, workOff + iu, n, 0, A, aOff, lda);
+            Dlamv.dlacpy('A', m, n, A, aOff, lda, u, uOff, ldu);
+        } else {
+            Dgemm.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, m, n, n, 1,
+                    A, aOff, lda, work, workOff + iu, n, 0, u, uOff, ldu);
+        }
+        Dlamv.dlacpy('A', n, n, work, workOff + ir, n, A, aOff, lda);
+
+        return ok ? ie : -ie;
+    }
+
+    // Row-major translation of Netlib DGESVD paths 2t/3t.
+    // A keeps the overwritten leading m-by-n slice of VT, and U stays separate when requested.
+    // The reduced-work branch avoids the extra m-by-m scratch copy by feeding Dbdsqr and Dormbr from A in place.
+    static int path2t3t(int m, int n, double[] A, int aOff, int lda, double[] s, int sOff,
+                                   double[] u, int uOff, int ldu,
+                                   double[] work, int workOff, int lwork, boolean wantU) {
+        int bdspac = 5 * m;
+        if (lwork < m * m + max(4 * m, bdspac)) {
+            if (!wantU) {
+            int ie = 0;
+            int itauq = ie + m;
+            int itaup = itauq + m;
+            int iwork = itaup + m;
+
+            Dgebrd.dgebrd(m, n, A, aOff, lda, s, sOff, work, workOff + ie,
+                work, workOff + itauq, work, workOff + itaup, work, workOff + iwork, lwork - iwork);
+            Dorgbr.dorgbr('P', m, n, m, A, aOff, lda, work, workOff + itaup,
+                work, workOff + iwork, lwork - iwork);
+            iwork = ie + m;
+
+            boolean ok = Dbdsqr.dbdsqr(BLAS.Uplo.Lower, m, n, 0, 0, s, sOff, work, workOff + ie,
+                A, aOff, lda, work, workOff, 1, work, workOff, 1, work, workOff + iwork);
+            return ok ? ie : -ie;
+            }
+
+            int itau = 0;
+            int iwork = itau + m;
+
+            Dgelq.dgelqf(m, n, A, aOff, lda, work, workOff + itau, work, workOff + iwork, lwork - iwork);
+            Dlamv.dlacpy('L', m, m, A, aOff, lda, u, uOff, ldu);
+            Dlamv.dlaset('U', m - 1, m - 1, 0, 0, u, uOff + 1, ldu);
+            Dgelq.dorglq(m, n, m, A, aOff, lda, work, workOff + itau, work, workOff + iwork, lwork - iwork);
+
+            int ie = itau;
+            int itauq = ie + m;
+            int itaup = itauq + m;
+            iwork = itaup + m;
+
+            Dgebrd.dgebrd(m, m, u, uOff, ldu, s, sOff, work, workOff + ie,
+                work, workOff + itauq, work, workOff + itaup, work, workOff + iwork, lwork - iwork);
+            Dormbr.dormbr('P', BLAS.Side.Left, BLAS.Trans.Trans, m, n, m, u, uOff, ldu, work, workOff + itaup,
+                A, aOff, lda, work, workOff + iwork, lwork - iwork);
+            Dorgbr.dorgbr('Q', m, m, m, u, uOff, ldu, work, workOff + itauq,
+                work, workOff + iwork, lwork - iwork);
+            iwork = ie + m;
+
+            boolean ok = Dbdsqr.dbdsqr(BLAS.Uplo.Upper, m, n, m, 0, s, sOff, work, workOff + ie,
+                A, aOff, lda, u, uOff, ldu, work, workOff, 1, work, workOff + iwork);
+            return ok ? ie : -ie;
+        }
+
+        int ir = 0;
+        int itau = ir + m * m;
+        int iwork = itau + m;
+
+        Dgelq.dgelqf(m, n, A, aOff, lda, work, workOff + itau, work, workOff + iwork, lwork - iwork);
+
+        if (wantU) {
+            Dlamv.dlacpy('L', m, m, A, aOff, lda, u, uOff, ldu);
+            if (m > 1) {
+                Dlamv.dlaset('U', m - 1, m - 1, 0, 0, u, uOff + 1, ldu);
+            }
+        } else {
+            Dlamv.dlacpy('L', m, m, A, aOff, lda, work, workOff + ir, m);
+            if (m > 1) {
+                Dlamv.dlaset('U', m - 1, m - 1, 0, 0, work, workOff + ir + 1, m);
+            }
+        }
+
+        Dgelq.dorglq(m, n, m, A, aOff, lda, work, workOff + itau, work, workOff + iwork, lwork - iwork);
+
+        int ie = itau;
+        int itauq = ie + m;
+        int itaup = itauq + m;
+        iwork = itaup + m;
+
+        if (wantU) {
+            Dgebrd.dgebrd(m, m, u, uOff, ldu, s, sOff, work, workOff + ie,
+                    work, workOff + itauq, work, workOff + itaup, work, workOff + iwork, lwork - iwork);
+            Dlamv.dlacpy('L', m, m, u, uOff, ldu, work, workOff + ir, m);
+            Dorgbr.dorgbr('P', m, m, m, work, workOff + ir, m, work, workOff + itaup,
+                    work, workOff + iwork, lwork - iwork);
+            Dorgbr.dorgbr('Q', m, m, m, u, uOff, ldu, work, workOff + itauq,
+                    work, workOff + iwork, lwork - iwork);
+        } else {
+            Dgebrd.dgebrd(m, m, work, workOff + ir, m, s, sOff, work, workOff + ie,
+                    work, workOff + itauq, work, workOff + itaup, work, workOff + iwork, lwork - iwork);
+            Dorgbr.dorgbr('P', m, m, m, work, workOff + ir, m, work, workOff + itaup,
+                    work, workOff + iwork, lwork - iwork);
+        }
+
+        iwork = ie + m;
+        boolean ok = Dbdsqr.dbdsqr(BLAS.Uplo.Upper, m, m, wantU ? m : 0, 0, s, sOff, work, workOff + ie,
+                work, workOff + ir, m, wantU ? u : work, wantU ? uOff : workOff, wantU ? ldu : 1,
+                work, workOff, 1, work, workOff + iwork);
+
+        int iu = iwork;
+        int chunk = max(1, (lwork - iu) / m);
+        for (int col = 0; col < n; col += chunk) {
+            int cols = min(chunk, n - col);
+            Dgemm.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, m, cols, m, 1,
+                    work, workOff + ir, m, A, aOff + col, lda, 0,
+                    work, workOff + iu, cols);
+            Dlamv.dlacpy('A', m, cols, work, workOff + iu, cols, A, aOff + col, lda);
+        }
+
+        return ok ? ie : -ie;
+    }
+
+    // Row-major translation of Netlib DGESVD paths 5t/8t.
+    // U is left in the leading m columns of A with row stride lda, while VT stays in its explicit output buffer.
+    // The reduced-work branch mirrors Netlib's overwrite flow, but the final U layout still follows row-major storage.
+    static int path5t8t(int m, int n, double[] A, int aOff, int lda, double[] s, int sOff,
+                                  double[] vt, int vtOff, int ldvt,
+                                  double[] work, int workOff, int lwork, char jobVT) {
+        int bdspac = 5 * m;
+        if (lwork < 2 * m * m + max(max(m + n, 4 * m), bdspac)) {
+            int itau = 0;
+            int iwork = itau + m;
+
+            Dgelq.dgelqf(m, n, A, aOff, lda, work, workOff + itau, work, workOff + iwork, lwork - iwork);
+            Dlamv.dlacpy('U', m, n, A, aOff, lda, vt, vtOff, ldvt);
+            Dgelq.dorglq(jobVT == 'A' || jobVT == 'a' ? n : m, n, m, vt, vtOff, ldvt, work, workOff + itau,
+                work, workOff + iwork, lwork - iwork);
+
+            int ie = itau;
+            int itauq = ie + m;
+            int itaup = itauq + m;
+            iwork = itaup + m;
+
+            Dlamv.dlaset('U', m - 1, m - 1, 0, 0, A, aOff + 1, lda);
+            Dgebrd.dgebrd(m, m, A, aOff, lda, s, sOff, work, workOff + ie,
+                work, workOff + itauq, work, workOff + itaup, work, workOff + iwork, lwork - iwork);
+            Dormbr.dormbr('P', BLAS.Side.Left, BLAS.Trans.Trans, m, n, m, A, aOff, lda, work, workOff + itaup,
+                vt, vtOff, ldvt, work, workOff + iwork, lwork - iwork);
+            Dorgbr.dorgbr('Q', m, m, m, A, aOff, lda, work, workOff + itauq,
+                work, workOff + iwork, lwork - iwork);
+            iwork = ie + m;
+
+            boolean ok = Dbdsqr.dbdsqr(BLAS.Uplo.Upper, m, n, m, 0, s, sOff, work, workOff + ie,
+                vt, vtOff, ldvt, A, aOff, lda, work, workOff, 1, work, workOff + iwork);
+            return ok ? ie : -ie;
+        }
+
+        int iu = 0;
+        int ir = iu + m * m;
+        int itau = ir + m * m;
+        int iwork = itau + m;
+
+        if (jobVT == 'A' || jobVT == 'a') {
+            Dgelq.dgelqf(m, n, A, aOff, lda, work, workOff + itau, work, workOff + iwork, lwork - iwork);
+            Dlamv.dlacpy('U', m, n, A, aOff, lda, vt, vtOff, ldvt);
+            Dgelq.dorglq(n, n, m, vt, vtOff, ldvt, work, workOff + itau, work, workOff + iwork, lwork - iwork);
+        } else {
+            Dgelq.dgelqf(m, n, A, aOff, lda, work, workOff + itau, work, workOff + iwork, lwork - iwork);
+        }
+
+        Dlamv.dlacpy('L', m, m, A, aOff, lda, work, workOff + iu, m);
+        if (m > 1) {
+            Dlamv.dlaset('U', m - 1, m - 1, 0, 0, work, workOff + iu + 1, m);
+        }
+
+        if (jobVT == 'S' || jobVT == 's') {
+            Dgelq.dorglq(m, n, m, A, aOff, lda, work, workOff + itau, work, workOff + iwork, lwork - iwork);
+        }
+
+        int ie = itau;
+        int itauq = ie + m;
+        int itaup = itauq + m;
+        iwork = itaup + m;
+
+        Dgebrd.dgebrd(m, m, work, workOff + iu, m, s, sOff, work, workOff + ie,
+                work, workOff + itauq, work, workOff + itaup, work, workOff + iwork, lwork - iwork);
+        Dlamv.dlacpy('L', m, m, work, workOff + iu, m, work, workOff + ir, m);
+
+        Dorgbr.dorgbr('P', m, m, m, work, workOff + iu, m, work, workOff + itaup,
+                work, workOff + iwork, lwork - iwork);
+        Dorgbr.dorgbr('Q', m, m, m, work, workOff + ir, m, work, workOff + itauq,
+                work, workOff + iwork, lwork - iwork);
+        iwork = ie + m;
+
+        boolean ok = Dbdsqr.dbdsqr(BLAS.Uplo.Upper, m, m, m, 0, s, sOff, work, workOff + ie,
+                work, workOff + iu, m, work, workOff + ir, m, work, workOff, 1, work, workOff + iwork);
+
+        if (jobVT == 'A' || jobVT == 'a') {
+            Dgemm.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, m, n, m, 1,
+                    work, workOff + iu, m, vt, vtOff, ldvt, 0, A, aOff, lda);
+            Dlamv.dlacpy('A', m, n, A, aOff, lda, vt, vtOff, ldvt);
+        } else {
+            Dgemm.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, m, n, m, 1,
+                    work, workOff + iu, m, A, aOff, lda, 0, vt, vtOff, ldvt);
+        }
+        Dlamv.dlacpy('A', m, m, work, workOff + ir, m, A, aOff, lda);
+
+        return ok ? ie : -ie;
     }
 
     static int path1(int m, int n, double[] A, int aOff, int lda, double[] s, int sOff,
@@ -725,7 +1148,8 @@ interface Dgesvd {
     static int path10(int m, int n, double[] A, int aOff, int lda, double[] s, int sOff,
                       double[] u, int uOff, int ldu, double[] vt, int vtOff, int ldvt,
                       double[] work, int workOff, int lwork,
-                      boolean wantuas, boolean wantua, boolean wantvas, boolean wantva) {
+                      boolean wantuas, boolean wantua, boolean wantuo,
+                      boolean wantvas, boolean wantva, boolean wantvo) {
         int ie = 0;
         int itauq = ie + n;
         int itaup = itauq + n;
@@ -747,12 +1171,32 @@ interface Dgesvd {
                           work, workOff + iwork, lwork - iwork);
         }
 
-        iwork = ie + n;
-        int nru = wantuas ? m : 0;
-        int ncvt = wantvas ? n : 0;
+        if (wantuo) {
+            Dorgbr.dorgbr('Q', m, n, n, A, aOff, lda, work, workOff + itauq,
+                          work, workOff + iwork, lwork - iwork);
+        }
 
-        boolean ok = Dbdsqr.dbdsqr(BLAS.Uplo.Upper, n, ncvt, nru, 0, s, sOff, work, workOff + ie, vt, vtOff, ldvt,
-                                   u, uOff, ldu, work, workOff, 1, work, workOff + iwork);
+        if (wantvo) {
+            Dorgbr.dorgbr('P', n, n, n, A, aOff, lda, work, workOff + itaup,
+                          work, workOff + iwork, lwork - iwork);
+        }
+
+        iwork = ie + n;
+        int nru = (wantuas || wantuo) ? m : 0;
+        int ncvt = (wantvas || wantvo) ? n : 0;
+
+        // Dbdsqr expects separate VT and U destinations; when one side is overwritten we retarget that slot to A.
+        boolean ok;
+        if (!wantuo && !wantvo) {
+            ok = Dbdsqr.dbdsqr(BLAS.Uplo.Upper, n, ncvt, nru, 0, s, sOff, work, workOff + ie, vt, vtOff, ldvt,
+                    u, uOff, ldu, work, workOff, 1, work, workOff + iwork);
+        } else if (!wantuo) {
+            ok = Dbdsqr.dbdsqr(BLAS.Uplo.Upper, n, ncvt, nru, 0, s, sOff, work, workOff + ie, A, aOff, lda,
+                    u, uOff, ldu, work, workOff, 1, work, workOff + iwork);
+        } else {
+            ok = Dbdsqr.dbdsqr(BLAS.Uplo.Upper, n, ncvt, nru, 0, s, sOff, work, workOff + ie, vt, vtOff, ldvt,
+                    A, aOff, lda, work, workOff, 1, work, workOff + iwork);
+        }
 
         return ok ? ie : -ie;
     }
@@ -1094,7 +1538,8 @@ interface Dgesvd {
     static int path10t(int m, int n, double[] A, int aOff, int lda, double[] s, int sOff,
                        double[] u, int uOff, int ldu, double[] vt, int vtOff, int ldvt,
                        double[] work, int workOff, int lwork,
-                       boolean wantuas, boolean wantva, boolean wantvas, boolean wantvs) {
+                       boolean wantuas, boolean wantuo,
+                       boolean wantvas, boolean wantva, boolean wantvo) {
         int ie = 0;
         int itauq = ie + m;
         int itaup = itauq + m;
@@ -1116,12 +1561,32 @@ interface Dgesvd {
                           work, workOff + iwork, lwork - iwork);
         }
 
-        iwork = ie + m;
-        int nru = wantuas ? m : 0;
-        int ncvt = wantvas ? n : 0;
+        if (wantuo) {
+            Dorgbr.dorgbr('Q', m, m, n, A, aOff, lda, work, workOff + itauq,
+                          work, workOff + iwork, lwork - iwork);
+        }
 
-        boolean ok = Dbdsqr.dbdsqr(BLAS.Uplo.Lower, m, ncvt, nru, 0, s, sOff, work, workOff + ie, vt, vtOff, ldvt,
-                                   u, uOff, ldu, work, workOff, 1, work, workOff + iwork);
+        if (wantvo) {
+            Dorgbr.dorgbr('P', m, n, m, A, aOff, lda, work, workOff + itaup,
+                          work, workOff + iwork, lwork - iwork);
+        }
+
+        iwork = ie + m;
+        int nru = (wantuas || wantuo) ? m : 0;
+        int ncvt = (wantvas || wantvo) ? n : 0;
+
+        // Lower-bidiagonal small-path overwrite uses the same slot swap as Netlib: the overwritten side is emitted to A.
+        boolean ok;
+        if (!wantuo && !wantvo) {
+            ok = Dbdsqr.dbdsqr(BLAS.Uplo.Lower, m, ncvt, nru, 0, s, sOff, work, workOff + ie, vt, vtOff, ldvt,
+                    u, uOff, ldu, work, workOff, 1, work, workOff + iwork);
+        } else if (!wantuo) {
+            ok = Dbdsqr.dbdsqr(BLAS.Uplo.Lower, m, ncvt, nru, 0, s, sOff, work, workOff + ie, A, aOff, lda,
+                    u, uOff, ldu, work, workOff, 1, work, workOff + iwork);
+        } else {
+            ok = Dbdsqr.dbdsqr(BLAS.Uplo.Lower, m, ncvt, nru, 0, s, sOff, work, workOff + ie, vt, vtOff, ldvt,
+                    A, aOff, lda, work, workOff, 1, work, workOff + iwork);
+        }
 
         return ok ? ie : -ie;
     }
