@@ -90,7 +90,6 @@ public final class SubplexWorkspace {
         xbar = new double[nsmax];
         xr = new double[nsmax];
         xc = new double[nsmax];
-        xc = new double[nsmax];
 
         // Outer-loop arrays
         xprev = new double[n];
@@ -114,7 +113,6 @@ public final class SubplexWorkspace {
             fsim = new double[ns + 1];
             xbar = new double[ns];
             xr = new double[ns];
-            xc = new double[ns];
             xc = new double[ns];
             xs = new double[ns];
             xsstep = new double[ns];

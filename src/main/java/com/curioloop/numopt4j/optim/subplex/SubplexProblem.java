@@ -178,13 +178,9 @@ public final class SubplexProblem
         double[] step = new double[n];
         for (int i = 0; i < n; i++) {
             double s = Double.MAX_VALUE;
-            double lb = Double.NEGATIVE_INFINITY, ub = Double.POSITIVE_INFINITY;
-            if (bounds != null && bounds[i] != null) {
-                if (bounds[i].hasLower()) lb = bounds[i].getLower();
-                if (bounds[i].hasUpper()) ub = bounds[i].getUpper();
-            }
-            boolean hasLb = lb > Double.NEGATIVE_INFINITY;
-            boolean hasUb = ub < Double.POSITIVE_INFINITY;
+            Bound b = Bound.of(bounds, i, Bound.unbounded());
+            double lb = b.getLower(), ub = b.getUpper();
+            boolean hasLb = b.hasLower(), hasUb = b.hasUpper();
 
             // Bounded: use fraction of range
             if (hasLb && hasUb && ub > lb && (ub - lb) * 0.25 < s)

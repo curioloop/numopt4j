@@ -288,8 +288,8 @@ final class NelderMead {
             if (bounds != null) {
                 Bound b = bounds[k];
                 if (b != null) {
-                    double lb = b.hasLower() ? b.getLower() : Double.NEGATIVE_INFINITY;
-                    double ub = b.hasUpper() ? b.getUpper() : Double.POSITIVE_INFINITY;
+                    double lb = b.getLower();
+                    double ub = b.getUpper();
                     if (pt > ub) {
                         // Try bound itself if far enough from x; else opposite direction
                         pt = (ub - x[k] > Math.abs(step) * 0.1) ? ub : x[k] - Math.abs(step);

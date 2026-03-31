@@ -17,6 +17,7 @@ package com.curioloop.numopt4j.linalg.blas;
  * <h2>Optimization Techniques</h2>
  * <ul>
  *   <li>4-way loop unrolling with multiple accumulators for normInf</li>
+ *   <li>4-column blocking with row-major traversal for norm1 (cache-friendly)</li>
  * </ul>
  * 
  * <p>Reference: LAPACK DLANGE</p>
@@ -56,10 +57,28 @@ public interface Dlange {
     /**
      * 1-norm: maximum absolute column sum.
      * ||A||₁ = max_j Σᵢ |A[i,j]|
+     * 
+     * <p>Uses 4-column blocking with row-major traversal for cache efficiency.
+     * Each block processes 4 columns at a time using 4 accumulators.</p>
      */
     static double norm1(int m, int n, double[] A, int aOff, int lda) {
         double maxColSum = 0.0;
-        for (int j = 0; j < n; j++) {
+        int j = 0;
+        int j4 = (n / 4) * 4;
+
+        for (; j < j4; j += 4) {
+            double col0 = 0.0, col1 = 0.0, col2 = 0.0, col3 = 0.0;
+            for (int i = 0; i < m; i++) {
+                int rowOff = aOff + i * lda;
+                col0 += Math.abs(A[rowOff + j]);
+                col1 += Math.abs(A[rowOff + j + 1]);
+                col2 += Math.abs(A[rowOff + j + 2]);
+                col3 += Math.abs(A[rowOff + j + 3]);
+            }
+            maxColSum = Math.max(maxColSum, Math.max(Math.max(col0, col1), Math.max(col2, col3)));
+        }
+
+        for (; j < n; j++) {
             double colSum = 0.0;
             for (int i = 0; i < m; i++) {
                 colSum += Math.abs(A[aOff + i * lda + j]);
@@ -68,6 +87,7 @@ public interface Dlange {
                 maxColSum = colSum;
             }
         }
+
         return maxColSum;
     }
 

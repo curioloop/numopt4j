@@ -105,24 +105,18 @@ interface Dlamv {
         switch (u) {
             case 'U':
                 for (int i = 0; i < m; i++) {
-                    for (int j = i; j < n; j++) {
-                        B[bOff + i * ldb + j] = A[aOff + i * lda + j];
-                    }
+                    System.arraycopy(A, aOff + i * lda + i, B, bOff + i * ldb + i, n - i);
                 }
                 break;
             case 'L':
                 for (int i = 0; i < m; i++) {
                     int maxJ = Math.min(i + 1, n);
-                    for (int j = 0; j < maxJ; j++) {
-                        B[bOff + i * ldb + j] = A[aOff + i * lda + j];
-                    }
+                    System.arraycopy(A, aOff + i * lda, B, bOff + i * ldb, maxJ);
                 }
                 break;
             default:
                 for (int i = 0; i < m; i++) {
-                    for (int j = 0; j < n; j++) {
-                        B[bOff + i * ldb + j] = A[aOff + i * lda + j];
-                    }
+                    System.arraycopy(A, aOff + i * lda, B, bOff + i * ldb, n);
                 }
                 break;
         }
