@@ -9,9 +9,10 @@ High-performance numerical optimization library for Java.
 - **SLSQP**: Sequential Least Squares Programming with equality/inequality constraints
 - **TRF**: Trust Region Reflective for nonlinear least squares
 - **Root finding**: Brentq (1-D), HYBR and Broyden (N-D) via `RootFinder`
+- **Numerical integration**: adaptive GK15, fixed Gauss-Legendre, oscillatory, improper, endpoint-singular, Cauchy principal value, and sampled-data quadrature via `Integrator`
 - **Linear regression**: OLS and WLS with SVD/QR solvers, full statistical output via `Regressor`
 - **Matrix decompositions**: LU, QR, LQ, SVD, Cholesky/LDLᵀ, Schur, Eigen, GEVD, GGEVD, GSVD via `Decomposer`
-- Workspace reuse for high-frequency optimization scenarios
+- Workspace reuse for high-frequency scenarios
 - Multiple numerical gradient/Jacobian methods with different accuracy/speed tradeoffs
 
 ## Requirements
@@ -218,6 +219,55 @@ for (double[] x0 : initialPoints) {
 }
 ```
 
+### Quadrature (Numerical Integration)
+
+```java
+import com.curioloop.numopt4j.quad.*;
+import com.curioloop.numopt4j.quad.gauss.*;
+import com.curioloop.numopt4j.quad.adapt.*;
+import com.curioloop.numopt4j.quad.special.*;
+import com.curioloop.numopt4j.quad.sampled.*;
+
+// Fixed Gauss-Legendre on [a, b]
+double v = Integrator.fixed()
+    .function(x -> Math.exp(-x * x)).bounds(0.0, 1.0).points(8).integrate();
+
+// Adaptive GK15 on [a, b] with error estimate
+Quadrature r = Integrator.adaptive()
+    .function(Math::sin).bounds(0.0, Math.PI).tolerances(1e-10, 1e-10).integrate();
+System.out.printf("value=%.10f  error=%.2e%n", r.getValue(), r.getEstimatedError());
+
+// Oscillatory: ∫₀^∞ e^{-x}·cos(2x) dx
+Quadrature r2 = Integrator.oscillatory(OscillatoryOpts.COS_UPPER)
+    .function(x -> Math.exp(-x)).lowerBound(0.0).omega(2.0)
+    .tolerances(1e-10, 1e-10).integrate();
+
+// Improper: ∫₀^∞ e^{-x} dx  (adaptive with error control)
+Quadrature r3 = Integrator.improper(ImproperOpts.UPPER)
+    .function(x -> Math.exp(-x)).lowerBound(0.0).tolerances(1e-10, 1e-10).integrate();
+
+// Endpoint-singular: ∫₋₁^1 (1-x)^{-0.5}(1+x)^{-0.5} f(x) dx
+Quadrature r4 = Integrator.endpointSingular(EndpointOpts.ALGEBRAIC)
+    .function(x -> 1.0).bounds(-1.0, 1.0).exponents(-0.5, -0.5)
+    .tolerances(1e-10, 1e-10).integrate();
+
+// Cauchy principal value: P.V. ∫₀^1 f(x)/(x-0.5) dx
+Quadrature r5 = Integrator.principalValue()
+    .function(x -> 1.0).bounds(0.0, 1.0).pole(0.5).tolerances(1e-12, 1e-12).integrate();
+
+// Sampled data
+double total = Integrator.sampled(SampledRule.SIMPSON).samples(y, dx).integrate();
+double[] cumulative = Integrator.cumulative(SampledRule.TRAPEZOIDAL).samples(y, dx).integrate();
+
+// Workspace reuse
+AdaptiveIntegral problem = Integrator.adaptive()
+    .function(Math::sin).bounds(0.0, Math.PI).tolerances(1e-10, 1e-10);
+AdaptivePool ws = problem.alloc();
+for (double[] bounds : intervals) {
+    Quadrature result = problem.bounds(bounds[0], bounds[1]).integrate(ws);
+}
+```
+
 ## API Reference
 
 ### Minimizer (facade — static factory entry point)
@@ -314,6 +364,39 @@ for (double[] mat : matrices) {
 | `GEVD` | `toV()`, `toS()`, `eigenvalues()`, `cond()` |
 | `GGEVD` | `toVR()`, `toVL()`, `toS()`, `alphar()`, `alphai()`, `beta()` |
 | `GSVD` | `toU()`, `toV()`, `toQ()`, `toS()`, `sigma()`, `rank()`, `cond()` |
+
+### Integrator (facade — numerical integration)
+
+```java
+Integrator.fixed()                              // → FixedIntegral (Gauss-Legendre on [a,b])
+Integrator.weighted()                           // → WeightedIntegral (rule's natural domain)
+Integrator.adaptive()                           // → AdaptiveIntegral (adaptive GK15)
+Integrator.oscillatory(OscillatoryOpts)         // → OscillatoryIntegral
+Integrator.principalValue()                     // → PrincipalValueIntegral (Cauchy P.V.)
+Integrator.endpointSingular(EndpointOpts)       // → EndpointSingularIntegral
+Integrator.improper(ImproperOpts)               // → ImproperIntegral.Adaptive (with error)
+Integrator.improperFixed(ImproperOpts)          // → ImproperIntegral.Fixed (fast, no error)
+Integrator.sampled(SampledRule)                 // → SampledIntegral (scalar total)
+Integrator.cumulative(SampledRule)              // → CumulativeIntegral (running total array)
+```
+
+**OscillatoryOpts**: `COS`, `SIN` (finite interval); `COS_UPPER`, `SIN_UPPER` (semi-infinite)
+
+**EndpointOpts**: `ALGEBRAIC` (Gauss-Jacobi); `LOG_LEFT`, `LOG_RIGHT`, `LOG_BOTH` (tanh-sinh)
+
+**ImproperOpts**: `UPPER` (∫ₐ^∞), `LOWER` (∫₋∞^b), `WHOLE_LINE` (∫₋∞^∞)
+
+**SampledRule**: `TRAPEZOIDAL`, `SIMPSON`, `ROMBERG` (ROMBERG not supported for cumulative)
+
+**Quadrature result**:
+```java
+r.getValue()           // integral estimate
+r.getEstimatedError()  // absolute error bound
+r.getStatus()          // Quadrature.Status enum
+r.isSuccessful()       // true if CONVERGED
+r.getIterations()      // adaptive subdivisions or refinement levels
+r.getEvaluations()     // total function evaluations
+```
 
 ### Bound
 

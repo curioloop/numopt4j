@@ -1,8 +1,8 @@
 # numopt4j
 
-> High-performance Java numerical optimization library providing Subplex, L-BFGS-B, SLSQP, TRF, and root-finding algorithms.
+> High-performance Java numerical optimization and integration library providing Subplex, L-BFGS-B, SLSQP, TRF, root-finding, and numerical quadrature algorithms.
 
-numopt4j is a Java numerical optimization library supporting derivative-free optimization, unconstrained/bound-constrained optimization, equality/inequality constrained optimization, nonlinear least-squares fitting, and root finding.
+numopt4j is a Java numerical library supporting derivative-free optimization, unconstrained/bound-constrained optimization, equality/inequality constrained optimization, nonlinear least-squares fitting, root finding, and one-dimensional numerical integration.
 
 ## Algorithm Selection
 
@@ -13,6 +13,7 @@ numopt4j is a Java numerical optimization library supporting derivative-free opt
 - Scalar root-finding → Brentq (`RootFinder.brentq()`)
 - Multivariate root-finding with Jacobian → HYBR (`RootFinder.hybr()`)
 - Multivariate root-finding Jacobian-free → Broyden (`RootFinder.broyden()`)
+- Numerical integration (adaptive/fixed/oscillatory/improper/singular/sampled) → `Integrator`
 - Matrix decompositions → `Decomposer` facade (LU, QR, LQ, SVD, Cholesky, Schur, Eigen, GEVD, GGEVD, GSVD)
 - Linear regression (OLS/WLS) → `Regressor` facade
 
@@ -25,9 +26,24 @@ com.curioloop.numopt4j.optim.lbfgsb      # LBFGSBProblem, LBFGSBWorkspace
 com.curioloop.numopt4j.optim.slsqp       # SLSQPProblem, SLSQPWorkspace
 com.curioloop.numopt4j.optim.trf         # TRFProblem, TRFWorkspace
 com.curioloop.numopt4j.optim.root        # BrentqProblem, HYBRProblem, HYBRWorkspace, BroydenProblem, BroydenWorkspace
+com.curioloop.numopt4j.quad              # Integrator, Integral, Quadrature (result + Status)
+com.curioloop.numopt4j.quad.adapt        # AdaptiveIntegral, AdaptivePool
+com.curioloop.numopt4j.quad.gauss        # FixedIntegral, WeightedIntegral, GaussRule, JacobiRule, GaussPool
+com.curioloop.numopt4j.quad.special      # OscillatoryIntegral, OscillatoryOpts, EndpointSingularIntegral, EndpointOpts
+                                         # PrincipalValueIntegral, ImproperIntegral, ImproperOpts
+com.curioloop.numopt4j.quad.sampled      # SampledIntegral, CumulativeIntegral, SampledRule
 com.curioloop.numopt4j.linalg            # Decomposer, Decomposition, Regression, Regressor
 com.curioloop.numopt4j.linalg.mat        # LU, QR, LQ, SVD, Cholesky, Schur, Eigen, GEVD, GGEVD, GSVD
-com.curioloop.numopt4j.linalg.reg    # OLS, WLS, Prediction
+com.curioloop.numopt4j.linalg.reg        # OLS, WLS, Prediction
+```
+
+Typical import for quadrature:
+```java
+import com.curioloop.numopt4j.quad.*;
+import com.curioloop.numopt4j.quad.adapt.*;
+import com.curioloop.numopt4j.quad.gauss.*;
+import com.curioloop.numopt4j.quad.special.*;
+import com.curioloop.numopt4j.quad.sampled.*;
 ```
 
 Typical import for optimization:
@@ -527,6 +543,193 @@ LU.Pool ws = Decomposer.lu(A, n).pool();
 for (double[] mat : matrices) {
     LU result = Decomposer.lu(mat, n, ws);
 }
+```
+
+## Integrator (Numerical Integration)
+
+`com.curioloop.numopt4j.quad.Integrator`
+
+Unified facade for one-dimensional numerical integration. All factory methods return a builder implementing `Integral<R, W>` with `alloc()` / `integrate()` / `integrate(workspace)` lifecycle.
+
+### Factory Methods
+
+```java
+Integrator.fixed()                        // → FixedIntegral
+Integrator.weighted()                     // → WeightedIntegral
+Integrator.adaptive()                     // → AdaptiveIntegral
+Integrator.oscillatory(OscillatoryOpts)   // → OscillatoryIntegral
+Integrator.principalValue()               // → PrincipalValueIntegral
+Integrator.endpointSingular(EndpointOpts) // → EndpointSingularIntegral
+Integrator.improper(ImproperOpts)         // → ImproperIntegral.Adaptive
+Integrator.improperFixed(ImproperOpts)    // → ImproperIntegral.Fixed
+Integrator.sampled(SampledRule)           // → SampledIntegral
+Integrator.cumulative(SampledRule)        // → CumulativeIntegral
+```
+
+### FixedIntegral — Gauss-Legendre on [a, b]
+
+```java
+Integrator.fixed()
+    .function(DoubleUnaryOperator)   // required
+    .bounds(double min, double max)  // required, finite
+    .points(int n)                   // required, exact for degree ≤ 2n-1
+    .integrate()                     // → Double
+    .integrate(GaussPool)            // with workspace reuse
+    .alloc()                         // → GaussPool
+```
+
+### WeightedIntegral — rule's natural domain
+
+```java
+Integrator.weighted()
+    .function(DoubleUnaryOperator)   // required
+    .points(int n)                   // required
+    .rule(GaussRule)                 // required: GaussRule.Legendre/Hermite/Laguerre or new JacobiRule(α,β)
+    .integrate()                     // → Double
+    .integrate(GaussPool)
+    .alloc()                         // → GaussPool
+```
+
+### AdaptiveIntegral — adaptive GK15 on [a, b]
+
+```java
+Integrator.adaptive()
+    .function(DoubleUnaryOperator)   // required
+    .bounds(double min, double max)  // required
+    .tolerances(double abs, double rel)  // required, at least one > 0; default 1e-10
+    .breakpoints(double...)          // optional, split domain at discontinuities
+    .maxSubdivisions(int)            // default 256
+    .maxEvaluations(int)             // default 16384
+    .integrate()                     // → Quadrature
+    .integrate(AdaptivePool)
+    .alloc()                         // → AdaptivePool
+```
+
+### OscillatoryIntegral — ∫ f(x)·w(ω·x) dx
+
+```java
+Integrator.oscillatory(OscillatoryOpts opts)  // COS/SIN (finite) or COS_UPPER/SIN_UPPER (semi-∞)
+    .function(DoubleUnaryOperator)
+    .lowerBound(double)              // required for all opts
+    .upperBound(double)              // required for COS/SIN (finite interval)
+    .omega(double)                   // required, angular frequency; 0 is allowed
+    .tolerances(double abs, double rel)
+    .maxCycles(int)                  // semi-infinite only, default 64
+    .maxSubdivisions(int)            // default 256
+    .maxEvaluations(int)             // default 16384
+    .integrate()                     // → Quadrature
+    .integrate(AdaptivePool)
+    .alloc()                         // → AdaptivePool
+```
+
+### PrincipalValueIntegral — Cauchy P.V. ∫ f(x)/(x-c) dx
+
+```java
+Integrator.principalValue()
+    .function(DoubleUnaryOperator)
+    .bounds(double min, double max)
+    .pole(double c)                  // must be finite, must not equal min or max
+    .tolerances(double abs, double rel)
+    .maxSubdivisions(int)
+    .maxEvaluations(int)
+    .integrate()                     // → Quadrature
+    .integrate(AdaptivePool)
+    .alloc()                         // → AdaptivePool
+```
+
+### EndpointSingularIntegral — ∫ (x-a)^α (b-x)^β · log-factor · f(x) dx
+
+```java
+Integrator.endpointSingular(EndpointOpts opts) // ALGEBRAIC/LOG_LEFT/LOG_RIGHT/LOG_BOTH
+    .function(DoubleUnaryOperator)
+    .bounds(double min, double max)
+    .exponents(double alpha, double beta)  // both > -1
+    .tolerances(double abs, double rel)
+    .maxRefinements(int)             // default 12
+    .integrate()                     // → Quadrature
+    .integrate(GaussPool)
+    .alloc()                         // → GaussPool
+```
+
+### ImproperIntegral — semi-infinite or infinite domain
+
+```java
+// Adaptive (with error estimate)
+Integrator.improper(ImproperOpts opts)   // UPPER/LOWER/WHOLE_LINE
+    .function(DoubleUnaryOperator)
+    .lowerBound(double)              // UPPER only
+    .upperBound(double)              // LOWER only
+    .tolerances(double abs, double rel)
+    .maxSubdivisions(int)
+    .maxEvaluations(int)
+    .integrate()                     // → Quadrature
+    .integrate(AdaptivePool)
+    .alloc()                         // → AdaptivePool
+
+// Fixed-point (fast, no error estimate)
+Integrator.improperFixed(ImproperOpts opts)
+    .function(DoubleUnaryOperator)
+    .lowerBound(double)              // UPPER only
+    .upperBound(double)              // LOWER only
+    .points(int n)                   // required
+    .integrate()                     // → Quadrature (estimatedError = 0)
+    .integrate(GaussPool)
+    .alloc()                         // → GaussPool
+```
+
+### SampledIntegral / CumulativeIntegral
+
+```java
+// Scalar total
+Integrator.sampled(SampledRule rule)     // TRAPEZOIDAL / SIMPSON / ROMBERG
+    .samples(double[] y)                 // equally spaced, dx=1
+    .samples(double[] y, double dx)      // equally spaced
+    .samples(double[] x, double[] y)     // explicit coordinates (strictly increasing)
+    .integrate()                         // → Double
+
+// Running total array (result[0] == 0 always)
+Integrator.cumulative(SampledRule rule)  // TRAPEZOIDAL / SIMPSON (ROMBERG not supported)
+    .samples(...)
+    .integrate()                         // → double[]
+```
+
+### Quadrature (result type)
+
+```java
+r.getValue()           // integral estimate
+r.getEstimatedError()  // absolute error bound (0 for fixed-point methods)
+r.getStatus()          // Quadrature.Status enum
+r.isSuccessful()       // true if Status.CONVERGED
+r.getIterations()      // adaptive subdivisions or refinement levels
+r.getEvaluations()     // total function evaluations
+r.getSummary()         // single-line summary string
+```
+
+**Quadrature.Status values**: `CONVERGED`, `MAX_SUBDIVISIONS_REACHED`, `MAX_EVALUATIONS_REACHED`, `MAX_CYCLES_REACHED`, `MAX_REFINEMENTS_REACHED`, `ROUND_OFF_DETECTED`, `ABNORMAL_TERMINATION`, `INVALID_ARGUMENT`
+
+### GaussRule constants
+
+```java
+GaussRule.Legendre   // ∫₋₁^1 f(x) dx
+GaussRule.Hermite    // ∫₋∞^∞ e^{-x²} f(x) dx
+GaussRule.Laguerre   // ∫₀^∞ e^{-x} f(x) dx
+new JacobiRule(α, β) // ∫₋₁^1 (1-x)^α (1+x)^β f(x) dx,  α,β > -1
+```
+
+### Workspace reuse
+
+```java
+// Reuse AdaptivePool across repeated adaptive calls
+AdaptiveIntegral problem = Integrator.adaptive()
+    .function(Math::sin).bounds(0.0, Math.PI).tolerances(1e-10, 1e-10);
+AdaptivePool ws = problem.alloc();
+Quadrature r1 = problem.integrate(ws);
+Quadrature r2 = problem.bounds(0.0, 2.0).integrate(ws);  // ws reused
+
+// Reuse GaussPool across fixed-point calls
+GaussPool gws = new GaussPool();
+double v1 = Integrator.fixed().function(f1).bounds(0,1).points(8).integrate(gws);
+double v2 = Integrator.fixed().function(f2).bounds(0,1).points(8).integrate(gws);
 ```
 
 ## Documentation

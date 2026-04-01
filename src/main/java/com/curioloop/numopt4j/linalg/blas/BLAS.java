@@ -774,6 +774,17 @@ public interface BLAS {
         return Dsteqr.dsteqr(jobz, n, d, 0, e, 0, z, 0, ldz, work, 0);
     }
 
+    /**
+     * Computes all eigenvalues of a symmetric tridiagonal matrix using array offsets.
+     */
+    static int dsteqr(char jobz, int n,
+                      double[] d, int dOff,
+                      double[] e, int eOff,
+                      double[] z, int zOff, int ldz,
+                      double[] work, int workOff) {
+        return Dsteqr.dsteqr(jobz, n, d, dOff, e, eOff, z, zOff, ldz, work, workOff);
+    }
+
     // ==================== Dsymv ====================
 
     /**
