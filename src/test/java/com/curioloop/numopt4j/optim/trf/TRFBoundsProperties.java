@@ -4,8 +4,8 @@
 package com.curioloop.numopt4j.optim.trf;
 
 import com.curioloop.numopt4j.optim.Bound;
-import com.curioloop.numopt4j.optim.OptimizationResult;
-import com.curioloop.numopt4j.optim.OptimizationStatus;
+import com.curioloop.numopt4j.optim.Optimization;
+
 import net.jqwik.api.*;
 
 import java.util.function.BiConsumer;
@@ -34,10 +34,10 @@ public class TRFBoundsProperties {
             Bound.between(-10.0, 10.0),
             Bound.between(-10.0, 10.0)
         };
-        OptimizationResult r = p.solve(bounds, 10000);
+        Optimization r = p.solve(bounds, 10000);
         assertThat(r.getStatus())
             .as("Bounded optimization should not terminate abnormally")
-            .isNotEqualTo(OptimizationStatus.ABNORMAL_TERMINATION);
+            .isNotEqualTo(Optimization.Status.ABNORMAL_TERMINATION);
     }
 
     @Property(tries = 100)
@@ -47,10 +47,10 @@ public class TRFBoundsProperties {
         for (int i = 0; i < 3; i++) {
             bounds[i] = Bound.between(p.initialGuess[i] - 0.1, p.initialGuess[i] + 0.1);
         }
-        OptimizationResult r = p.solve(bounds, 2000);
+        Optimization r = p.solve(bounds, 2000);
         assertThat(r.getStatus())
             .as("Tight bounded optimization should complete")
-            .isNotEqualTo(OptimizationStatus.ABNORMAL_TERMINATION);
+            .isNotEqualTo(Optimization.Status.ABNORMAL_TERMINATION);
     }
 
     // ── Problem helper ────────────────────────────────────────────────────────
@@ -80,7 +80,7 @@ public class TRFBoundsProperties {
             };
         }
 
-        OptimizationResult solve(Bound[] bounds, int maxfev) {
+        Optimization solve(Bound[] bounds, int maxfev) {
             return new TRFProblem()
                 .residuals(fn, m).initialPoint(initialGuess.clone())
                 .gradientTolerance(1e-15).parameterTolerance(1e-15).functionTolerance(1e-15)

@@ -36,9 +36,9 @@ import static com.curioloop.numopt4j.linalg.blas.BLAS.*;
  * @see LBFGSBWorkspace
  * @see CauchyPoint
  */
-final class BfgsUpdater implements LBFGSBConstants {
+final class BfgsUpdate implements LBFGSBConstants {
 
-    private BfgsUpdater() {}
+    private BfgsUpdate() {}
 
     // ========================================================================
     // Cholesky Factorization (moved from Linpack for better locality)

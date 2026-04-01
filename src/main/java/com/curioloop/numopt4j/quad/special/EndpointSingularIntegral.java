@@ -94,11 +94,6 @@ public class EndpointSingularIntegral implements Integral<Quadrature, GaussPool>
     }
 
     @Override
-    public Quadrature integrate() {
-        return integrate((GaussPool) null);
-    }
-
-    @Override
     public Quadrature integrate(GaussPool workspace) {
         Checks.validateFunction(function);
         Checks.validateFiniteInterval(min, max);
@@ -108,7 +103,7 @@ public class EndpointSingularIntegral implements Integral<Quadrature, GaussPool>
         GaussPool pool = workspace != null ? workspace : alloc();
 
         if (opts == EndpointOpts.ALGEBRAIC) {
-            return EndpointSingularQuadrature.algebraic(function, min, max, alpha, beta, absTol, relTol, maxRefinements, pool);
+            return EndpointSingularCore.algebraic(function, min, max, alpha, beta, absTol, relTol, maxRefinements, pool);
         }
 
         DoubleUnaryOperator weighted = x -> {
@@ -118,7 +113,7 @@ public class EndpointSingularIntegral implements Integral<Quadrature, GaussPool>
             if (opts.logRight) v *= Math.log(right);
             return v;
         };
-        return EndpointSingularQuadrature.tanhSinh(weighted, min, max, absTol, relTol, maxRefinements);
+        return EndpointSingularCore.tanhSinh(weighted, min, max, absTol, relTol, maxRefinements);
     }
 
 }

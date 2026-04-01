@@ -1,7 +1,7 @@
 package com.curioloop.numopt4j.optim.root;
 
 import com.curioloop.numopt4j.optim.NumericalJacobian;
-import com.curioloop.numopt4j.optim.OptimizationResult;
+import com.curioloop.numopt4j.optim.Optimization;
 import com.curioloop.numopt4j.optim.RootFinder;
 
 import java.util.function.BiConsumer;
@@ -16,7 +16,7 @@ import java.util.function.BiConsumer;
  * HYBRProblem finder = RootFinder.hybr((x, f) -> { f[0] = x[0] - 1; }, 1)
  *     .initialPoint(0.0);
  * HYBRWorkspace ws = finder.alloc();
- * OptimizationResult r = finder.solve(ws);
+ * Optimization r = finder.solve(ws);
  * }</pre>
  */
 public final class HYBRProblem extends RootFinder<BiConsumer<double[], double[]>, HYBRWorkspace, HYBRProblem> {
@@ -72,12 +72,7 @@ public final class HYBRProblem extends RootFinder<BiConsumer<double[], double[]>
     }
 
     @Override
-    public OptimizationResult solve() {
-        return solve((HYBRWorkspace) null);
-    }
-
-    @Override
-    public OptimizationResult solve(HYBRWorkspace ws) {
+    public Optimization solve(HYBRWorkspace ws) {
         if (function == null)
             throw new IllegalStateException(
                 "Missing required parameter: equations. Call .equations(fn, n) before .solve().");

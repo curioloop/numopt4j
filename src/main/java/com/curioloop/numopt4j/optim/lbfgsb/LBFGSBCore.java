@@ -638,7 +638,7 @@ final class LBFGSBCore implements LBFGSBConstants {
             if (ws.getFree() > 0 && ws.getCol() > 0) {
                 // Build K matrix if needed
                 if (wrk != 0) {
-                    int formkInfo = BfgsUpdater.formK(n, m, ws);
+                    int formkInfo = BfgsUpdate.formK(n, m, ws);
                     if (formkInfo != ERR_NONE) {
                         // Non-positive definite matrix - try BFGS reset
                         info = formkInfo;
@@ -817,11 +817,11 @@ final class LBFGSBCore implements LBFGSBConstants {
             // ================================================================
 
             // Update BFGS matrices with new (s, y) pair
-            BfgsUpdater.updateCorrection(n, m, g, ws);
+            BfgsUpdate.updateCorrection(n, m, g, ws);
 
             // Form T matrix if update was performed
             if (ws.isUpdated()) {
-                int formtInfo = BfgsUpdater.formT(m, ws);
+                int formtInfo = BfgsUpdate.formT(m, ws);
                 if (formtInfo != ERR_NONE) {
                     // form_t failed - T matrix is not positive definite
                     // Try to recover by resetting BFGS approximation

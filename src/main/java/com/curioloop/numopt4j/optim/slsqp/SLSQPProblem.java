@@ -5,8 +5,7 @@ package com.curioloop.numopt4j.optim.slsqp;
 
 import com.curioloop.numopt4j.optim.Minimizer;
 import com.curioloop.numopt4j.optim.NumericalGradient;
-import com.curioloop.numopt4j.optim.OptimizationFailure;
-import com.curioloop.numopt4j.optim.OptimizationResult;
+import com.curioloop.numopt4j.optim.Optimization;
 import com.curioloop.numopt4j.optim.Univariate;
 
 import java.time.Duration;
@@ -25,13 +24,13 @@ import java.util.function.ToDoubleFunction;
  *
  * <p>{@code SLSQPProblem} is the public fluent API that validates inputs, manages
  * workspaces, and stores the solution in
- * {@link com.curioloop.numopt4j.optim.OptimizationResult#getSolution()}.</p>
+ * {@link Optimization#getSolution()}.</p>
  *
  * <h2>Basic Usage</h2>
  * <pre>{@code
  * // Recommended entry point: ToDoubleFunction lambda (no gradient required)
  * // Equality constraint: x[0] + x[1] = 1
- * OptimizationResult result = new SLSQPProblem()
+ * Optimization result = new SLSQPProblem()
  *     .objective(x -> x[0]*x[0] + x[1]*x[1])
  *     .equalityConstraints(x -> x[0] + x[1] - 1)
  *     .initialPoint(0.5, 0.5)
@@ -45,7 +44,7 @@ import java.util.function.ToDoubleFunction;
  * <h2>Advanced Usage</h2>
  * <pre>{@code
  * // Mixed constraints with analytical gradients for best performance
- * OptimizationResult result = new SLSQPProblem()
+ * Optimization result = new SLSQPProblem()
  *     .objective((x, g) -> {
  *         double f = x[0]*x[0] + x[1]*x[1];
  *         if (g != null) { g[0] = 2*x[0]; g[1] = 2*x[1]; }
@@ -63,7 +62,7 @@ import java.util.function.ToDoubleFunction;
  *     .solve();
  * }</pre>
  *
- * @see com.curioloop.numopt4j.optim.Minimize
+ * @see com.curioloop.numopt4j.optim.Minimizer
  * @see com.curioloop.numopt4j.optim.Bound
  */
 public final class SLSQPProblem extends Minimizer<Univariate, SLSQPWorkspace, SLSQPProblem> {
@@ -149,17 +148,17 @@ public final class SLSQPProblem extends Minimizer<Univariate, SLSQPWorkspace, SL
 
     private void validate() {
         if (objective == null) {
-            throw new OptimizationFailure("MISSING_PARAM",
+            throw new IllegalStateException(
                 "objective is required. Call .objective(fn) before .solve().");
         }
         if (initialPoint == null || initialPoint.length == 0) {
-            throw new OptimizationFailure("MISSING_PARAM",
+            throw new IllegalStateException(
                 "initialPoint is required. Call .initialPoint(x0) before .solve().");
         }
         for (int i = 0; i < initialPoint.length; i++) {
             double v = initialPoint[i];
             if (Double.isNaN(v) || Double.isInfinite(v)) {
-                throw new OptimizationFailure("INVALID_INPUT",
+                throw new IllegalArgumentException(
                     "initialPoint[" + i + "] is " + v + ". All initial values must be finite.");
             }
         }
@@ -178,19 +177,14 @@ public final class SLSQPProblem extends Minimizer<Univariate, SLSQPWorkspace, SL
      * Solves the optimization problem.
      *
      * <p>The initial point is cloned internally; {@code initialPoint} is not modified.
-     * The solution is stored in {@link OptimizationResult#getSolution()} and returned
+     * The solution is stored in {@link Optimization#getSolution()} and returned
      * as a direct reference (no defensive copy). The caller owns the returned array.</p>
      *
      * @param workspace optional pre-allocated workspace for reuse
      * @return optimization result
      */
     @Override
-    public OptimizationResult solve() {
-        return solve((SLSQPWorkspace) null);
-    }
-
-    @Override
-    public OptimizationResult solve(SLSQPWorkspace workspace) {
+    public Optimization solve(SLSQPWorkspace workspace) {
         validate();
         SLSQPWorkspace ws = workspace;
         if (ws != null) {
@@ -207,7 +201,7 @@ public final class SLSQPProblem extends Minimizer<Univariate, SLSQPWorkspace, SL
         ws.reset();
         double[] x = initialPoint.clone();
 
-        OptimizationResult r = SLSQPCore.optimize(
+        Optimization r = SLSQPCore.optimize(
                 x,
                 objective,
                 equalityConstraints,
@@ -224,7 +218,7 @@ public final class SLSQPProblem extends Minimizer<Univariate, SLSQPWorkspace, SL
                 variableDifferenceTolerance,
                 ws
         );
-        return new OptimizationResult(Double.NaN, x, r.getCost(), r.getStatus(), r.getIterations(), r.getEvaluations());
+        return new Optimization(Double.NaN, x, r.getCost(), r.getStatus(), r.getIterations(), r.getEvaluations());
     }
 
     private int numEqualityConstraints() { return equalityConstraints != null ? equalityConstraints.length : 0; }
@@ -241,7 +235,7 @@ public final class SLSQPProblem extends Minimizer<Univariate, SLSQPWorkspace, SL
      * Termination criterion: algorithm stops when iteration count reaches maxIterations.
      * This prevents infinite loops in case of non-convergent problems.
      * If the optimizer hits this limit,
-     * {@link com.curioloop.numopt4j.optim.OptimizationStatus#MAX_ITERATIONS_REACHED} is returned.</p>
+     * {@link Optimization.Status#MAX_ITERATIONS_REACHED} is returned.</p>
      *
      * @param value maximum number of iterations (must be positive)
      * @return this problem instance
@@ -262,7 +256,7 @@ public final class SLSQPProblem extends Minimizer<Univariate, SLSQPWorkspace, SL
      * Termination criterion: algorithm stops when function evaluation count reaches maxEvaluations.
      * This limits computational cost and prevents excessive resource consumption.
      * If the optimizer hits this limit,
-     * {@link com.curioloop.numopt4j.optim.OptimizationStatus#MAX_EVALUATIONS_REACHED} is returned.</p>
+     * {@link Optimization.Status#MAX_EVALUATIONS_REACHED} is returned.</p>
      *
      * @param value maximum number of function evaluations (must be positive)
      * @return this problem instance

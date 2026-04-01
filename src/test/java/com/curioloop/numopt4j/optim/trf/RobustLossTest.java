@@ -3,7 +3,7 @@
  */
 package com.curioloop.numopt4j.optim.trf;
 
-import com.curioloop.numopt4j.optim.OptimizationResult;
+import com.curioloop.numopt4j.optim.Optimization;
 import org.junit.jupiter.api.Test;
 
 import java.util.function.BiConsumer;
@@ -58,7 +58,7 @@ class RobustLossTest {
 
     /** Solve with given loss and return the solution. */
     static double[] solve(RobustLoss loss, double lossScale) {
-        OptimizationResult r = new TRFProblem()
+        Optimization r = new TRFProblem()
                 .residuals(residualFn(), M_OUTLIER)
                 .initialPoint(1.0, 0.0)
                 .loss(loss)
@@ -80,7 +80,7 @@ class RobustLossTest {
                 r[i] = Y_CLEAN[i] - (c[0] * X_DATA[i] + c[1]);
             }
         };
-        OptimizationResult r = new TRFProblem()
+        Optimization r = new TRFProblem()
                 .residuals(fn, M_CLEAN)
                 .initialPoint(1.0, 0.0)
                 .loss(RobustLoss.LINEAR)

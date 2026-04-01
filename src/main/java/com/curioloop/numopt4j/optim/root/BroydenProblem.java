@@ -1,6 +1,6 @@
 package com.curioloop.numopt4j.optim.root;
 
-import com.curioloop.numopt4j.optim.OptimizationResult;
+import com.curioloop.numopt4j.optim.Optimization;
 import com.curioloop.numopt4j.optim.RootFinder;
 
 import java.util.function.BiConsumer;
@@ -13,7 +13,7 @@ import java.util.function.BiConsumer;
  *
  * <h2>Usage</h2>
  * <pre>{@code
- * OptimizationResult r = RootFinder.broyden((x, f) -> { f[0] = x[0] - 1; f[1] = x[1] - 2; }, 2)
+ * Optimization r = RootFinder.broyden((x, f) -> { f[0] = x[0] - 1; f[1] = x[1] - 2; }, 2)
  *     .initialPoint(0.0, 0.0)
  *     .solve();
  * }</pre>
@@ -61,12 +61,7 @@ public final class BroydenProblem extends RootFinder<BiConsumer<double[], double
     }
 
     @Override
-    public OptimizationResult solve() {
-        return solve((BroydenWorkspace) null);
-    }
-
-    @Override
-    public OptimizationResult solve(BroydenWorkspace ws) {
+    public Optimization solve(BroydenWorkspace ws) {
         if (function == null)
             throw new IllegalStateException(
                 "Missing required parameter: equations. Call .equations(fn, n) before .solve().");

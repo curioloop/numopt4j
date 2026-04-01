@@ -2,8 +2,7 @@ package com.curioloop.numopt4j.optim.root;
 
 import com.curioloop.numopt4j.optim.Multivariate;
 import com.curioloop.numopt4j.optim.NumericalJacobian;
-import com.curioloop.numopt4j.optim.OptimizationResult;
-import com.curioloop.numopt4j.optim.OptimizationStatus;
+import com.curioloop.numopt4j.optim.Optimization;
 
 
 import net.jqwik.api.*;
@@ -41,7 +40,7 @@ class HYBRSolverTest {
         };
         Multivariate eval = NumericalJacobian.FORWARD.wrap(fn, 2, 2, true);
         HYBRWorkspace ws = new HYBRWorkspace(2);
-        OptimizationResult res = HYBRSolver.solve(eval, new double[]{0.0, 1.0}, TOL, 2000, ws);
+        Optimization res = HYBRSolver.solve(eval, new double[]{0.0, 1.0}, TOL, 2000, ws);
 
         assertTrue(res.isSuccessful(), "status=" + res.getStatus());
         double[] f = new double[2];
@@ -65,7 +64,7 @@ class HYBRSolverTest {
             }
         };
         HYBRWorkspace ws = new HYBRWorkspace(2);
-        OptimizationResult res = HYBRSolver.solve(eval, new double[]{-1.2, 1.0}, TOL, 1000, ws);
+        Optimization res = HYBRSolver.solve(eval, new double[]{-1.2, 1.0}, TOL, 1000, ws);
 
         assertTrue(res.isSuccessful(), "status=" + res.getStatus());
         double[] sol = res.getSolution();
@@ -87,7 +86,7 @@ class HYBRSolverTest {
         };
         Multivariate eval = NumericalJacobian.FORWARD.wrap(fn, 3, 3, true);
         HYBRWorkspace ws = new HYBRWorkspace(3);
-        OptimizationResult res = HYBRSolver.solve(eval, new double[]{-1.0, 0.0, 0.0}, TOL, 1000, ws);
+        Optimization res = HYBRSolver.solve(eval, new double[]{-1.0, 0.0, 0.0}, TOL, 1000, ws);
 
         assertTrue(res.isSuccessful(), "status=" + res.getStatus());
         double[] f = new double[3];
@@ -99,7 +98,7 @@ class HYBRSolverTest {
 
     @Test
     void rootFinder_hybr() {
-        OptimizationResult res = new HYBRProblem()
+        Optimization res = new HYBRProblem()
                 .equations((x, f) -> { f[0] = x[0] - 2.0; f[1] = x[1] + 3.0; }, 2)
                 .initialPoint(0.0, 0.0)
                 .solve();
@@ -126,8 +125,8 @@ class HYBRSolverTest {
     void nanFunctionOutput_returnsAbnormal() {
         Multivariate eval = (x, f, jac) -> f[0] = Double.NaN;
         HYBRWorkspace ws = new HYBRWorkspace(1);
-        OptimizationResult res = HYBRSolver.solve(eval, new double[]{1.0}, TOL, 100, ws);
-        assertEquals(OptimizationStatus.INVALID_INPUT, res.getStatus());
+        Optimization res = HYBRSolver.solve(eval, new double[]{1.0}, TOL, 100, ws);
+        assertEquals(Optimization.Status.INVALID_INPUT, res.getStatus());
     }
 
     // ── 7. fnorm==0 fast-return ───────────────────────────────────────────────
@@ -136,7 +135,7 @@ class HYBRSolverTest {
     void fnormZero_fastReturn() {
         Multivariate eval = (x, f, jac) -> f[0] = 0.0;
         HYBRWorkspace ws = new HYBRWorkspace(1);
-        OptimizationResult res = HYBRSolver.solve(eval, new double[]{5.0}, TOL, 100, ws);
+        Optimization res = HYBRSolver.solve(eval, new double[]{5.0}, TOL, 100, ws);
         assertTrue(res.isSuccessful());
         assertEquals(1, res.getEvaluations());
     }
@@ -161,7 +160,7 @@ class HYBRSolverTest {
         };
         Multivariate eval = NumericalJacobian.FORWARD.wrap(fn, 2, 2, true);
         HYBRWorkspace ws = new HYBRWorkspace(2);
-        OptimizationResult res = HYBRSolver.solve(eval, new double[]{0.0, 0.0}, TOL, 500, ws);
+        Optimization res = HYBRSolver.solve(eval, new double[]{0.0, 0.0}, TOL, 500, ws);
 
         assertTrue(res.isSuccessful(), "det=" + det + " status=" + res.getStatus());
         double[] f = new double[2];

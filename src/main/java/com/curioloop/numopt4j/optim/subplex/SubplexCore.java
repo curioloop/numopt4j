@@ -66,8 +66,8 @@
 package com.curioloop.numopt4j.optim.subplex;
 
 import com.curioloop.numopt4j.optim.Bound;
-import com.curioloop.numopt4j.optim.OptimizationResult;
-import com.curioloop.numopt4j.optim.OptimizationStatus;
+import com.curioloop.numopt4j.optim.Optimization;
+
 
 import java.util.function.ToDoubleFunction;
 final class SubplexCore {
@@ -93,7 +93,7 @@ final class SubplexCore {
      * @param nmWs    pre-allocated NM workspace (dimension &ge; NSMAX)
      * @return optimization result
      */
-    static OptimizationResult optimize(
+    static Optimization optimize(
             int n,
             double[] x,
             ToDoubleFunction<double[]> func,
@@ -120,7 +120,7 @@ final class SubplexCore {
         if (!Double.isFinite(minf)) minf = Double.MAX_VALUE;
         evalCounter[0] = 1;
 
-        OptimizationStatus status = OptimizationStatus.MAX_EVALUATIONS_REACHED;
+        Optimization.Status status = Optimization.Status.MAX_EVALUATIONS_REACHED;
         int outerIter = 0;
 
         while (evalCounter[0] < maxEval) {
@@ -180,7 +180,7 @@ final class SubplexCore {
                 // Run NM on this subspace with psi-convergence
                 nmWs.ensureNmCapacity(ns);
                 nmWs.resetNm();
-                OptimizationStatus subStatus = NelderMead.optimize(
+                Optimization.Status subStatus = NelderMead.optimize(
                         ns, xs, subFunc,
                         subBounds,
                         Integer.MAX_VALUE, maxEval,
@@ -201,12 +201,12 @@ final class SubplexCore {
                 if (subCost < minf) minf = subCost;
                 nsubs++;
 
-                if (subStatus == OptimizationStatus.ABNORMAL_TERMINATION) {
-                    status = OptimizationStatus.COEFFICIENT_TOLERANCE_REACHED;
+                if (subStatus == Optimization.Status.ABNORMAL_TERMINATION) {
+                    status = Optimization.Status.COEFFICIENT_TOLERANCE_REACHED;
                     break;
                 }
-                if (subStatus != OptimizationStatus.COEFFICIENT_TOLERANCE_REACHED
-                        && subStatus != OptimizationStatus.FUNCTION_TOLERANCE_REACHED) {
+                if (subStatus != Optimization.Status.COEFFICIENT_TOLERANCE_REACHED
+                        && subStatus != Optimization.Status.FUNCTION_TOLERANCE_REACHED) {
                     status = subStatus;
                     break;
                 }
@@ -214,13 +214,13 @@ final class SubplexCore {
                 i += ns;
             }
 
-            if (status != OptimizationStatus.MAX_EVALUATIONS_REACHED) break;
+            if (status != Optimization.Status.MAX_EVALUATIONS_REACHED) break;
 
             // ── Termination tests ──────────────────────────────────────────────
 
             // Function tolerance: max simplex spread across all subproblems
             if (fdiffMax <= fatol) {
-                status = OptimizationStatus.FUNCTION_TOLERANCE_REACHED;
+                status = Optimization.Status.FUNCTION_TOLERANCE_REACHED;
                 break;
             }
 
@@ -241,7 +241,7 @@ final class SubplexCore {
                     }
                 }
                 if (stepsSmall) {
-                    status = OptimizationStatus.COEFFICIENT_TOLERANCE_REACHED;
+                    status = Optimization.Status.COEFFICIENT_TOLERANCE_REACHED;
                     break;
                 }
             }
@@ -273,12 +273,12 @@ final class SubplexCore {
         }
 
         int totalEvals = evalCounter[0];
-        if (status == OptimizationStatus.MAX_EVALUATIONS_REACHED && evalCounter[0] < maxEval) {
+        if (status == Optimization.Status.MAX_EVALUATIONS_REACHED && evalCounter[0] < maxEval) {
             // Exited loop without hitting maxEval → must be convergence from inner check
-            status = OptimizationStatus.FUNCTION_TOLERANCE_REACHED;
+            status = Optimization.Status.FUNCTION_TOLERANCE_REACHED;
         }
 
-        return new OptimizationResult(Double.NaN, null, minf, status, outerIter, totalEvals);
+        return new Optimization(Double.NaN, null, minf, status, outerIter, totalEvals);
     }
 
     /**

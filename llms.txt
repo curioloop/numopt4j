@@ -20,7 +20,7 @@ numopt4j is a Java numerical library supporting derivative-free optimization, un
 ## Package Structure
 
 ```
-com.curioloop.numopt4j.optim             # Minimizer, RootFinder, Bound, OptimizationResult, OptimizationStatus, OptimizationFailure
+com.curioloop.numopt4j.optim             # Minimizer, RootFinder, Bound, Optimization, Optimization.Status
 com.curioloop.numopt4j.optim.subplex     # SubplexProblem, SubplexWorkspace
 com.curioloop.numopt4j.optim.lbfgsb      # LBFGSBProblem, LBFGSBWorkspace
 com.curioloop.numopt4j.optim.slsqp       # SLSQPProblem, SLSQPWorkspace
@@ -77,13 +77,13 @@ import com.curioloop.numopt4j.optim.*;
 import com.curioloop.numopt4j.optim.subplex.*;
 
 // No gradient required — works for any dimension
-OptimizationResult r = Minimizer.subplex()
+Optimization r = Minimizer.subplex()
     .objective(x -> x[0]*x[0] + x[1]*x[1])
     .initialPoint(1.0, 1.0)
     .solve();
 
 // With bounds and custom step sizes
-OptimizationResult r2 = Minimizer.subplex()
+Optimization r2 = Minimizer.subplex()
     .objective(fn)
     .initialPoint(x0)
     .bounds(Bound.between(0, 10), Bound.between(0, 10))
@@ -99,7 +99,7 @@ OptimizationResult r2 = Minimizer.subplex()
 import com.curioloop.numopt4j.optim.*;
 import com.curioloop.numopt4j.optim.lbfgsb.*;
 
-OptimizationResult r = Minimizer.lbfgsb()
+Optimization r = Minimizer.lbfgsb()
     .objective(x -> x[0]*x[0] + x[1]*x[1])
     .bounds(Bound.atLeast(0.5), Bound.atLeast(0.5))
     .initialPoint(1.0, 1.0)
@@ -119,7 +119,7 @@ import com.curioloop.numopt4j.optim.*;
 import com.curioloop.numopt4j.optim.slsqp.*;
 
 // minimize x[0] + x[1], subject to x[0]^2 + x[1]^2 = 1
-OptimizationResult r = Minimizer.slsqp()
+Optimization r = Minimizer.slsqp()
     .objective(x -> x[0] + x[1])
     .equalityConstraints(x -> x[0]*x[0] + x[1]*x[1] - 1)
     .initialPoint(0.5, 0.5)
@@ -132,7 +132,7 @@ OptimizationResult r = Minimizer.slsqp()
 import com.curioloop.numopt4j.optim.*;
 import com.curioloop.numopt4j.optim.trf.*;
 
-OptimizationResult r = Minimizer.trf()
+Optimization r = Minimizer.trf()
     .residuals((x, res) -> {
         res[0] = x[0] - 3.0;
         res[1] = x[1] - 4.0;
@@ -148,7 +148,7 @@ import com.curioloop.numopt4j.optim.*;
 import com.curioloop.numopt4j.optim.root.*;
 
 // Find root of sin(x) in [3, 4] → π
-OptimizationResult r = RootFinder.brentq(Math::sin)
+Optimization r = RootFinder.brentq(Math::sin)
     .bracket(Bound.between(3.0, 4.0))
     .solve();
 double root = r.getRoot(); // ≈ π
@@ -161,7 +161,7 @@ import com.curioloop.numopt4j.optim.*;
 import com.curioloop.numopt4j.optim.root.*;
 
 // HYBR (Powell hybrid, requires Jacobian — numerical by default)
-OptimizationResult r = RootFinder.hybr((x, f) -> {
+Optimization r = RootFinder.hybr((x, f) -> {
         f[0] = x[0]*x[0] - 2;
         f[1] = x[1] - x[0];
     }, 2)
@@ -198,7 +198,7 @@ Minimizer.subplex()
     .parameterTolerance(double)              // default 1e-4
     .functionTolerance(double)               // default 1e-4
     .maxEvaluations(int)                     // default N * 200
-    .solve()                                 // → OptimizationResult
+    .solve()                                 // → Optimization
     .alloc()                                 // → SubplexWorkspace (for reuse)
 ```
 
@@ -216,7 +216,7 @@ Minimizer.lbfgsb()
     .functionTolerance(double)              // default 1e7 * ε
     .corrections(int)                       // L-BFGS memory parameter m, default 10
     .maxLineSearchSteps(int)                // default 20
-    .solve()                                // → OptimizationResult
+    .solve()                                // → Optimization
     .alloc()                                // → LBFGSBWorkspace (for reuse)
 ```
 
@@ -232,7 +232,7 @@ Minimizer.slsqp()
     .functionTolerance(double)              // default 1e-6
     .maxIterations(int)                     // default 100
     .maxEvaluations(int)                    // default 1000
-    .solve()                                // → OptimizationResult
+    .solve()                                // → Optimization
     .alloc()                                // → SLSQPWorkspace (for reuse)
 ```
 
@@ -250,7 +250,7 @@ Minimizer.trf()
     .maxEvaluations(int)                    // default 100 * n
     .loss(RobustLoss)                       // default LINEAR
     .lossScale(double)                      // soft margin C, default 1.0
-    .solve()                                // → OptimizationResult
+    .solve()                                // → Optimization
     .alloc()                                // → TRFWorkspace (for reuse)
 ```
 
@@ -270,7 +270,7 @@ RootFinder.brentq(DoubleUnaryOperator f)
     .absoluteTolerance(double)          // default 2e-12
     .relativeTolerance(double)          // default 4 * ε
     .maxIterations(int)
-    .solve()                            // → OptimizationResult
+    .solve()                            // → Optimization
 ```
 
 ### HYBRProblem (N-D Powell hybrid, MINPACK hybrd)
@@ -281,7 +281,7 @@ RootFinder.hybr(BiConsumer<double[],double[]> fn, int n)
     .functionTolerance(double)      // default 1.49e-8
     .maxEvaluations(int)                    // default 200*(n+1)
     .initialPoint(double...)        // required
-    .solve()                        // → OptimizationResult
+    .solve()                        // → Optimization
     .alloc()                        // → HYBRWorkspace (for reuse)
 ```
 
@@ -292,11 +292,11 @@ RootFinder.broyden(BiConsumer<double[],double[]> fn, int n)
     .functionTolerance(double)      // default 1.49e-8
     .maxEvaluations(int)                    // default 100*(n+1)
     .initialPoint(double...)        // required
-    .solve()                        // → OptimizationResult
+    .solve()                        // → Optimization
     .alloc()                        // → BroydenWorkspace (for reuse)
 ```
 
-### OptimizationResult
+### Optimization
 
 ```java
 result.isSuccessful()       // whether converged

@@ -199,7 +199,7 @@ public class NumericalGradientTest {
     @DisplayName("All methods should work with L-BFGS-B optimizer")
     void testWithLbfgsbOptimizer() {
         for (NumericalGradient method : NumericalGradient.values()) {
-            OptimizationResult result = new LBFGSBProblem()
+            Optimization result = new LBFGSBProblem()
                 .objective(method.wrap(p -> p[0] * p[0] + p[1] * p[1]))
                 .initialPoint(5.0, 5.0)
                 .solve();
@@ -216,7 +216,7 @@ public class NumericalGradientTest {
     @DisplayName("All methods should work with SLSQP optimizer")
     void testWithSlsqpOptimizer() {
         for (NumericalGradient method : NumericalGradient.values()) {
-            OptimizationResult result = new SLSQPProblem()
+            Optimization result = new SLSQPProblem()
                 .objective(method.wrap(p -> p[0] * p[0] + p[1] * p[1]))
                 .initialPoint(5.0, 5.0)
                 .solve();
@@ -237,7 +237,7 @@ public class NumericalGradientTest {
         ToDoubleFunction<double[]> rosenbrock = x -> 
             Math.pow(1 - x[0], 2) + 100 * Math.pow(x[1] - x[0] * x[0], 2);
         
-        OptimizationResult result = new LBFGSBProblem()
+        Optimization result = new LBFGSBProblem()
             .objective(NumericalGradient.FIVE_POINT.wrap(rosenbrock))
             .initialPoint(0.5, 0.5)
             .maxIterations(2000)

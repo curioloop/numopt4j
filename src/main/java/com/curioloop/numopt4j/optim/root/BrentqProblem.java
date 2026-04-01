@@ -1,7 +1,7 @@
 package com.curioloop.numopt4j.optim.root;
 
 import com.curioloop.numopt4j.optim.Bound;
-import com.curioloop.numopt4j.optim.OptimizationResult;
+import com.curioloop.numopt4j.optim.Optimization;
 import com.curioloop.numopt4j.optim.RootFinder;
 
 import java.util.function.DoubleUnaryOperator;
@@ -13,7 +13,7 @@ import java.util.function.DoubleUnaryOperator;
  *
  * <h2>Usage</h2>
  * <pre>{@code
- * OptimizationResult r = RootFinder.brentq(Math::sin)
+ * Optimization r = RootFinder.brentq(Math::sin)
  *     .bracket(Bound.between(3.0, 4.0))
  *     .solve();
  * }</pre>
@@ -79,12 +79,7 @@ public final class BrentqProblem extends RootFinder<DoubleUnaryOperator, Void, B
     public Void alloc() { return null; }
 
     @Override
-    public OptimizationResult solve() {
-        return solve((Void) null);
-    }
-
-    @Override
-    public OptimizationResult solve(Void ws) {
+    public Optimization solve(Void ws) {
         if (function == null)
             throw new IllegalStateException(
                 "Missing required parameter: function. Call .function(f) before .solve().");

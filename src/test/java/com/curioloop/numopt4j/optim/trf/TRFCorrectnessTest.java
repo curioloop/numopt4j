@@ -4,7 +4,7 @@
 package com.curioloop.numopt4j.optim.trf;
 
 import com.curioloop.numopt4j.optim.Bound;
-import com.curioloop.numopt4j.optim.OptimizationResult;
+import com.curioloop.numopt4j.optim.Optimization;
 
 import org.junit.jupiter.api.Test;
 
@@ -46,7 +46,7 @@ class TRFCorrectnessTest {
             r[1] = x[0] + 3*x[1] - 10;
             r[2] = x[1] - 3;
         };
-        OptimizationResult r = trf(m, n, fn, null, 200).initialPoint(0.0, 0.0).solve();
+        Optimization r = trf(m, n, fn, null, 200).initialPoint(0.0, 0.0).solve();
         double[] sol = r.getSolution();
 
         assertThat(r.isSuccessful()).isTrue();
@@ -62,7 +62,7 @@ class TRFCorrectnessTest {
             r[0] = 10 * (x[1] - x[0]*x[0]);
             r[1] = 1 - x[0];
         };
-        OptimizationResult r = trf(m, n, fn, null, 2000).initialPoint(-1.2, 1.0).solve();
+        Optimization r = trf(m, n, fn, null, 2000).initialPoint(-1.2, 1.0).solve();
         double[] sol = r.getSolution();
 
         assertThat(r.isSuccessful()).isTrue();
@@ -78,7 +78,7 @@ class TRFCorrectnessTest {
             r[1] = 1 - x[0];
         };
         Bound[] bounds = {Bound.between(-2, 2), Bound.between(-2, 2)};
-        OptimizationResult r = trf(m, n, fn, bounds, 2000).initialPoint(-1.2, 1.0).solve();
+        Optimization r = trf(m, n, fn, bounds, 2000).initialPoint(-1.2, 1.0).solve();
         double[] sol = r.getSolution();
 
         assertThat(r.isSuccessful()).isTrue();
@@ -95,7 +95,7 @@ class TRFCorrectnessTest {
             r[1] = 1 - x[0];
         };
         Bound[] bounds = {Bound.between(-2, 0.5), Bound.between(-2, 2)};
-        OptimizationResult r = trf(m, n, fn, bounds, 2000).initialPoint(-1.2, 1.0).solve();
+        Optimization r = trf(m, n, fn, bounds, 2000).initialPoint(-1.2, 1.0).solve();
         double[] sol = r.getSolution();
 
         assertThat(r.isSuccessful()).isTrue();
@@ -112,7 +112,7 @@ class TRFCorrectnessTest {
         BiConsumer<double[], double[]> fn = (x, r) -> {
             for (int i = 0; i < m; i++) r[i] = y[i] - x[0] * Math.exp(-x[1] * t[i]);
         };
-        OptimizationResult r = trf(m, n, fn, null, 500).initialPoint(1.0, 1.0).solve();
+        Optimization r = trf(m, n, fn, null, 500).initialPoint(1.0, 1.0).solve();
         double[] sol = r.getSolution();
 
         assertThat(r.isSuccessful()).isTrue();
@@ -129,7 +129,7 @@ class TRFCorrectnessTest {
             for (int i = 0; i < m; i++) r[i] = y[i] - x[0] * Math.exp(-x[1] * t[i]);
         };
         Bound[] bounds = {Bound.atLeast(0), Bound.atLeast(0)};
-        OptimizationResult r = trf(m, n, fn, bounds, 500).initialPoint(1.0, 1.0).solve();
+        Optimization r = trf(m, n, fn, bounds, 500).initialPoint(1.0, 1.0).solve();
         double[] sol = r.getSolution();
 
         assertThat(r.isSuccessful()).isTrue();
@@ -147,7 +147,7 @@ class TRFCorrectnessTest {
             r[2] = x[0] + x[1] - 0.0;
         };
         Bound[] bounds = {Bound.atLeast(0), Bound.atLeast(0)};
-        OptimizationResult r = trf(m, n, fn, bounds, 500).initialPoint(1.0, 1.0).solve();
+        Optimization r = trf(m, n, fn, bounds, 500).initialPoint(1.0, 1.0).solve();
         double[] sol = r.getSolution();
 
         assertThat(r.isSuccessful()).isTrue();
@@ -161,7 +161,7 @@ class TRFCorrectnessTest {
         int m = 1, n = 1;
         BiConsumer<double[], double[]> fn = (x, r) -> r[0] = x[0] - 5.0;
         Bound[] bounds = {Bound.between(0, 3)};
-        OptimizationResult r = trf(m, n, fn, bounds, 200).initialPoint(1.0).solve();
+        Optimization r = trf(m, n, fn, bounds, 200).initialPoint(1.0).solve();
         double[] sol = r.getSolution();
 
         assertThat(r.isSuccessful()).isTrue();

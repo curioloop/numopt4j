@@ -5,9 +5,8 @@ package com.curioloop.numopt4j.optim.lbfgsb;
 
 import com.curioloop.numopt4j.optim.Minimizer;
 import com.curioloop.numopt4j.optim.NumericalGradient;
-import com.curioloop.numopt4j.optim.OptimizationFailure;
-import com.curioloop.numopt4j.optim.OptimizationResult;
-import com.curioloop.numopt4j.optim.OptimizationStatus;
+import com.curioloop.numopt4j.optim.Optimization;
+
 import com.curioloop.numopt4j.optim.Univariate;
 
 import java.time.Duration;
@@ -24,12 +23,12 @@ import java.util.function.ToDoubleFunction;
  *
  * <p>{@code LBFGSBProblem} is the public fluent API that validates inputs, manages
  * workspaces, and stores the solution in
- * {@link com.curioloop.numopt4j.optim.OptimizationResult#getSolution()}.</p>
+ * {@link Optimization#getSolution()}.</p>
  *
  * <h2>Basic Usage</h2>
  * <pre>{@code
  * // Recommended entry point: ToDoubleFunction lambda (no gradient required)
- * OptimizationResult result = new LBFGSBProblem()
+ * Optimization result = new LBFGSBProblem()
  *     .objective(x -> x[0]*x[0] + x[1]*x[1])
  *     .initialPoint(1.0, 1.0)
  *     .solve();
@@ -42,7 +41,7 @@ import java.util.function.ToDoubleFunction;
  * <h2>Advanced Usage</h2>
  * <pre>{@code
  * // Bound-constrained with analytical gradient for best performance
- * OptimizationResult result = new LBFGSBProblem()
+ * Optimization result = new LBFGSBProblem()
  *     .objective((x, g) -> {
  *         double f = x[0]*x[0] + x[1]*x[1];
  *         if (g != null) { g[0] = 2*x[0]; g[1] = 2*x[1]; }
@@ -64,7 +63,7 @@ import java.util.function.ToDoubleFunction;
  * }
  * }</pre>
  *
- * @see com.curioloop.numopt4j.optim.Minimize
+ * @see com.curioloop.numopt4j.optim.Minimizer
  * @see com.curioloop.numopt4j.optim.Bound
  */
 public final class LBFGSBProblem extends Minimizer<Univariate, LBFGSBWorkspace, LBFGSBProblem> {
@@ -141,17 +140,17 @@ public final class LBFGSBProblem extends Minimizer<Univariate, LBFGSBWorkspace, 
 
     private void validate() {
         if (objective == null) {
-            throw new OptimizationFailure("MISSING_PARAM",
+            throw new IllegalStateException(
                 "objective is required. Call .objective(fn) before .solve().");
         }
         if (initialPoint == null || initialPoint.length == 0) {
-            throw new OptimizationFailure("MISSING_PARAM",
+            throw new IllegalStateException(
                 "initialPoint is required. Call .initialPoint(x0) before .solve().");
         }
         for (int i = 0; i < initialPoint.length; i++) {
             double v = initialPoint[i];
             if (Double.isNaN(v) || Double.isInfinite(v)) {
-                throw new OptimizationFailure("INVALID_INPUT",
+                throw new IllegalArgumentException(
                     "initialPoint[" + i + "] is " + v + ". All initial values must be finite.");
             }
         }
@@ -170,19 +169,14 @@ public final class LBFGSBProblem extends Minimizer<Univariate, LBFGSBWorkspace, 
      * Solves the optimization problem.
      *
      * <p>The initial point is cloned internally; {@code initialPoint} is not modified.
-     * The solution is stored in {@link OptimizationResult#getSolution()} and returned
+     * The solution is stored in {@link Optimization#getSolution()} and returned
      * as a direct reference (no defensive copy). The caller owns the returned array.</p>
      *
      * @param workspace optional pre-allocated workspace for reuse
      * @return optimization result
      */
     @Override
-    public OptimizationResult solve() {
-        return solve((LBFGSBWorkspace) null);
-    }
-
-    @Override
-    public OptimizationResult solve(LBFGSBWorkspace workspace) {
+    public Optimization solve(LBFGSBWorkspace workspace) {
         validate();
         LBFGSBWorkspace ws = workspace;
         if (ws != null && !ws.ensureCapacity(dimension, corrections)) {
@@ -213,20 +207,20 @@ public final class LBFGSBProblem extends Minimizer<Univariate, LBFGSBWorkspace, 
                 ws
         );
 
-        OptimizationStatus status = convertStatus(coreResult.status);
-        return new OptimizationResult(Double.NaN, x, coreResult.f, status, coreResult.iterations, coreResult.evaluations);
+        Optimization.Status status = convertStatus(coreResult.status);
+        return new Optimization(Double.NaN, x, coreResult.f, status, coreResult.iterations, coreResult.evaluations);
     }
 
-    private static OptimizationStatus convertStatus(int statusCode) {
-        if (statusCode == LBFGSBConstants.CONV_GRAD_PROG_NORM)  return OptimizationStatus.GRADIENT_TOLERANCE_REACHED;
-        if (statusCode == LBFGSBConstants.CONV_ENOUGH_ACCURACY) return OptimizationStatus.FUNCTION_TOLERANCE_REACHED;
-        if (statusCode == LBFGSBConstants.OVER_ITER_LIMIT)      return OptimizationStatus.MAX_ITERATIONS_REACHED;
-        if (statusCode == LBFGSBConstants.OVER_EVAL_LIMIT)      return OptimizationStatus.MAX_EVALUATIONS_REACHED;
-        if (statusCode == LBFGSBConstants.OVER_TIME_LIMIT)      return OptimizationStatus.MAX_COMPUTATIONS_REACHED;
-        if (statusCode == LBFGSBConstants.OVER_GRAD_THRESH)     return OptimizationStatus.GRADIENT_TOLERANCE_REACHED;
-        if (statusCode == LBFGSBConstants.STOP_ABNORMAL_SEARCH) return OptimizationStatus.LINE_SEARCH_FAILED;
-        if (statusCode == LBFGSBConstants.HALT_EVAL_PANIC)      return OptimizationStatus.CALLBACK_ERROR;
-        return OptimizationStatus.ABNORMAL_TERMINATION;
+    private static Optimization.Status convertStatus(int statusCode) {
+        if (statusCode == LBFGSBConstants.CONV_GRAD_PROG_NORM)  return Optimization.Status.GRADIENT_TOLERANCE_REACHED;
+        if (statusCode == LBFGSBConstants.CONV_ENOUGH_ACCURACY) return Optimization.Status.FUNCTION_TOLERANCE_REACHED;
+        if (statusCode == LBFGSBConstants.OVER_ITER_LIMIT)      return Optimization.Status.MAX_ITERATIONS_REACHED;
+        if (statusCode == LBFGSBConstants.OVER_EVAL_LIMIT)      return Optimization.Status.MAX_EVALUATIONS_REACHED;
+        if (statusCode == LBFGSBConstants.OVER_TIME_LIMIT)      return Optimization.Status.MAX_COMPUTATIONS_REACHED;
+        if (statusCode == LBFGSBConstants.OVER_GRAD_THRESH)     return Optimization.Status.GRADIENT_TOLERANCE_REACHED;
+        if (statusCode == LBFGSBConstants.STOP_ABNORMAL_SEARCH) return Optimization.Status.LINE_SEARCH_FAILED;
+        if (statusCode == LBFGSBConstants.HALT_EVAL_PANIC)      return Optimization.Status.CALLBACK_ERROR;
+        return Optimization.Status.ABNORMAL_TERMINATION;
     }
 
     public int corrections() { return corrections; }
@@ -242,7 +236,7 @@ public final class LBFGSBProblem extends Minimizer<Univariate, LBFGSBWorkspace, 
      * <p>Valid range: &gt; 0. Default: 15000.
      * Increasing this allows more iterations for convergence on difficult problems,
      * at the cost of longer runtime. If the optimizer hits this limit,
-     * {@link com.curioloop.numopt4j.optim.OptimizationStatus#MAX_ITERATIONS_REACHED} is returned.</p>
+     * {@link Optimization.Status#MAX_ITERATIONS_REACHED} is returned.</p>
      *
      * @param value maximum number of iterations (must be positive)
      * @return this problem instance
@@ -262,7 +256,7 @@ public final class LBFGSBProblem extends Minimizer<Univariate, LBFGSBWorkspace, 
      * <p>Valid range: &gt; 0. Default: 15000.
      * Limits total objective function calls. Useful for expensive functions where
      * computation budget is constrained. If the optimizer hits this limit,
-     * {@link com.curioloop.numopt4j.optim.OptimizationStatus#MAX_EVALUATIONS_REACHED} is returned.</p>
+     * {@link Optimization.Status#MAX_EVALUATIONS_REACHED} is returned.</p>
      *
      * @param value maximum number of function evaluations (must be positive)
      * @return this problem instance

@@ -3,8 +3,8 @@
  */
 package com.curioloop.numopt4j.optim.trf;
 
-import com.curioloop.numopt4j.optim.OptimizationResult;
-import com.curioloop.numopt4j.optim.OptimizationStatus;
+import com.curioloop.numopt4j.optim.Optimization;
+
 import net.jqwik.api.*;
 
 import java.util.function.BiConsumer;
@@ -46,7 +46,7 @@ public class TRFConvergenceProperties {
     @Label("Chi-squared must not increase after optimization (quadratic)")
     void chiSquaredShouldDecreaseOrStayConstant(@ForAll("quadraticProblems") QuadraticProblem p) {
         double initialChi2 = p.initialChi2();
-        OptimizationResult r = p.solve(1e-8, 1e-8, 1e-8, 2000);
+        Optimization r = p.solve(1e-8, 1e-8, 1e-8, 2000);
         assertThat(r.getCost())
             .as("Final χ² should be ≤ initial χ²")
             .isLessThanOrEqualTo(initialChi2 + 1e-10);
@@ -56,7 +56,7 @@ public class TRFConvergenceProperties {
     @Label("Chi-squared must not increase after optimization (exponential)")
     void chiSquaredShouldDecreaseForExponentialProblems(@ForAll("exponentialProblems") ExponentialProblem p) {
         double initialChi2 = p.initialChi2();
-        OptimizationResult r = p.solve(1e-8, 1e-8, 1e-8, 2000);
+        Optimization r = p.solve(1e-8, 1e-8, 1e-8, 2000);
         assertThat(r.getCost())
             .as("Final χ² should be ≤ initial χ²")
             .isLessThanOrEqualTo(initialChi2 + 1e-10);
@@ -67,8 +67,8 @@ public class TRFConvergenceProperties {
     @Property(tries = 100)
     @Label("Optimizer should converge or reach limit on quadratic problems")
     void optimizerShouldConvergeOnQuadraticProblems(@ForAll("quadraticProblems") QuadraticProblem p) {
-        OptimizationResult r = p.solve(1e-8, 1e-8, 1e-8, 3000);
-        assertThat(r.isSuccessful() || r.getStatus() == OptimizationStatus.MAX_EVALUATIONS_REACHED)
+        Optimization r = p.solve(1e-8, 1e-8, 1e-8, 3000);
+        assertThat(r.isSuccessful() || r.getStatus() == Optimization.Status.MAX_EVALUATIONS_REACHED)
             .as("Should converge or reach limit, not fail abnormally")
             .isTrue();
     }
@@ -78,8 +78,8 @@ public class TRFConvergenceProperties {
     @Property(tries = 100)
     @Label("GRADIENT_TOLERANCE_REACHED implies isConverged()")
     void gradientConvergenceImpliesConvergedStatus(@ForAll("quadraticProblems") QuadraticProblem p) {
-        OptimizationResult r = p.solve(1e-6, 1e-12, 1e-12, 5000);
-        if (r.getStatus() == OptimizationStatus.GRADIENT_TOLERANCE_REACHED) {
+        Optimization r = p.solve(1e-6, 1e-12, 1e-12, 5000);
+        if (r.getStatus() == Optimization.Status.GRADIENT_TOLERANCE_REACHED) {
             assertThat(r.isSuccessful()).isTrue();
         }
     }
@@ -87,8 +87,8 @@ public class TRFConvergenceProperties {
     @Property(tries = 100)
     @Label("COEFFICIENT_TOLERANCE_REACHED implies isConverged()")
     void coefficientConvergenceImpliesConvergedStatus(@ForAll("quadraticProblems") QuadraticProblem p) {
-        OptimizationResult r = p.solve(1e-12, 1e-4, 1e-12, 5000);
-        if (r.getStatus() == OptimizationStatus.COEFFICIENT_TOLERANCE_REACHED) {
+        Optimization r = p.solve(1e-12, 1e-4, 1e-12, 5000);
+        if (r.getStatus() == Optimization.Status.COEFFICIENT_TOLERANCE_REACHED) {
             assertThat(r.isSuccessful()).isTrue();
         }
     }
@@ -96,8 +96,8 @@ public class TRFConvergenceProperties {
     @Property(tries = 100)
     @Label("CHI_SQUARED_TOLERANCE_REACHED implies isConverged()")
     void chiSquaredConvergenceImpliesConvergedStatus(@ForAll("quadraticProblems") QuadraticProblem p) {
-        OptimizationResult r = p.solve(1e-12, 1e-12, 0.5, 5000);
-        if (r.getStatus() == OptimizationStatus.CHI_SQUARED_TOLERANCE_REACHED) {
+        Optimization r = p.solve(1e-12, 1e-12, 0.5, 5000);
+        if (r.getStatus() == Optimization.Status.CHI_SQUARED_TOLERANCE_REACHED) {
             assertThat(r.isSuccessful()).isTrue();
         }
     }
@@ -108,7 +108,7 @@ public class TRFConvergenceProperties {
     @Label("Evaluation count must not exceed maxEvaluations")
     void evaluationLimitShouldBeEnforced(@ForAll("quadraticProblems") QuadraticProblem p) {
         int limit = 10;
-        OptimizationResult r = p.solve(1e-15, 1e-15, 1e-15, limit);
+        Optimization r = p.solve(1e-15, 1e-15, 1e-15, limit);
         assertThat(r.getEvaluations())
             .as("Evaluations should not exceed limit")
             .isLessThanOrEqualTo(limit);
@@ -119,7 +119,7 @@ public class TRFConvergenceProperties {
     @Property(tries = 100)
     @Label("Status must be either converged or limit-reached")
     void statusMustBeConvergedOrLimitReached(@ForAll("quadraticProblems") QuadraticProblem p) {
-        OptimizationResult r = p.solve(1e-8, 1e-8, 1e-8, 2000);
+        Optimization r = p.solve(1e-8, 1e-8, 1e-8, 2000);
         assertThat(r.getStatus().isConverged() || r.getStatus().isLimitReached())
             .as("Status should be converged or limit reached, not abnormal")
             .isTrue();
@@ -159,7 +159,7 @@ public class TRFConvergenceProperties {
             return s;
         }
 
-        OptimizationResult solve(double gtol, double xtol, double ftol, int maxfev) {
+        Optimization solve(double gtol, double xtol, double ftol, int maxfev) {
             return new TRFProblem()
                 .residuals(fn, m).initialPoint(initialGuess.clone())
                 .gradientTolerance(gtol).parameterTolerance(xtol).functionTolerance(ftol)
@@ -194,7 +194,7 @@ public class TRFConvergenceProperties {
             return s;
         }
 
-        OptimizationResult solve(double gtol, double xtol, double ftol, int maxfev) {
+        Optimization solve(double gtol, double xtol, double ftol, int maxfev) {
             return new TRFProblem()
                 .residuals(fn, m).initialPoint(initialGuess.clone())
                 .gradientTolerance(gtol).parameterTolerance(xtol).functionTolerance(ftol)

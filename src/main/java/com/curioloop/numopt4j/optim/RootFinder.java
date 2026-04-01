@@ -13,15 +13,15 @@ import com.curioloop.numopt4j.optim.root.HYBRProblem;
  * <p>Use the static factory methods as the primary entry point:</p>
  * <pre>{@code
  * // 1-D: Brent's method
- * OptimizationResult r = RootFinder.brentq(x -> Math.sin(x))
+ * Optimization r = RootFinder.brentq(x -> Math.sin(x))
  *     .bracket(Bound.between(3.0, 4.0)).solve();
  *
  * // N-D: Powell hybrid (requires Jacobian, numerical by default)
- * OptimizationResult r = RootFinder.hybr((x, f) -> { f[0] = x[0] - 1; }, 1)
+ * Optimization r = RootFinder.hybr((x, f) -> { f[0] = x[0] - 1; }, 1)
  *     .initialPoint(0.0).solve();
  *
  * // N-D: Broyden (Jacobian-free)
- * OptimizationResult r = RootFinder.broyden((x, f) -> { f[0] = x[0] - 1; }, 1)
+ * Optimization r = RootFinder.broyden((x, f) -> { f[0] = x[0] - 1; }, 1)
  *     .initialPoint(0.0).solve();
  * }</pre>
  *
@@ -36,7 +36,7 @@ import com.curioloop.numopt4j.optim.root.HYBRProblem;
  * @param <W> workspace type ({@code Void} for stateless solvers)
  * @param <S> self type for fluent builder chaining
  */
-public abstract class RootFinder<F, W, S extends RootFinder<F, W, S>> implements OptimizationProblem<OptimizationResult, W> {
+public abstract class RootFinder<F, W, S extends RootFinder<F, W, S>> implements Problem<W> {
 
     /** Problem dimension (number of variables) */
     protected int dimension = 0;

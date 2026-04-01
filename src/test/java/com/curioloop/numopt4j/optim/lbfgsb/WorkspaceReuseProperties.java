@@ -3,7 +3,7 @@
  */
 package com.curioloop.numopt4j.optim.lbfgsb;
 
-import com.curioloop.numopt4j.optim.OptimizationResult;
+import com.curioloop.numopt4j.optim.Optimization;
 import com.curioloop.numopt4j.optim.Univariate;
 import net.jqwik.api.*;
 import net.jqwik.api.constraints.*;
@@ -260,14 +260,14 @@ public class WorkspaceReuseProperties implements LBFGSBConstants {
         LBFGSBWorkspace ws = problem.alloc();
 
         // First run
-        OptimizationResult result1 = problem.solve(ws);
+        Optimization result1 = problem.solve(ws);
         assertThat(result1.getStatus().isConverged())
                 .as("First run should converge")
                 .isTrue();
 
         // Second run with same workspace
         problem.initialPoint(-2.0, 3.0);
-        OptimizationResult result2 = problem.solve(ws);
+        Optimization result2 = problem.solve(ws);
         assertThat(result2.getStatus().isConverged())
                 .as("Second run should converge")
                 .isTrue();

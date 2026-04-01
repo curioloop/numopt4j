@@ -26,7 +26,7 @@ High-performance numerical optimization library for Java.
 <dependency>
     <groupId>com.curioloop</groupId>
     <artifactId>numopt4j</artifactId>
-    <version>0.9.0</version>
+    <version>${version}</version>
 </dependency>
 ```
 
@@ -40,13 +40,13 @@ If you are using an AI coding assistant (e.g. GitHub Copilot, Cursor, Claude), y
 
 ```java
 // No gradient required — works for any dimension
-OptimizationResult result = Minimizer.subplex()
+Optimization result = Minimizer.subplex()
     .objective(x -> x[0]*x[0] + x[1]*x[1])
     .initialPoint(1.0, 1.0)
     .solve();
 
 // High-dimensional with bounds
-OptimizationResult result = Minimizer.subplex()
+Optimization result = Minimizer.subplex()
     .objective(x -> { double s = 0; for (double v : x) s += v*v; return s; })
     .initialPoint(new double[20])
     .bounds(...)
@@ -58,7 +58,7 @@ OptimizationResult result = Minimizer.subplex()
 ### Unconstrained Optimization (L-BFGS-B)
 
 ```java
-OptimizationResult result = Minimizer.lbfgsb()
+Optimization result = Minimizer.lbfgsb()
     .objective(x -> x[0]*x[0] + x[1]*x[1])
     .initialPoint(1.0, 1.0)
     .solve();
@@ -71,7 +71,7 @@ if (result.isSuccessful()) {
 ### With Analytical Gradient
 
 ```java
-OptimizationResult result = Minimizer.lbfgsb()
+Optimization result = Minimizer.lbfgsb()
     .objective((x, g) -> {
         double f = x[0]*x[0] + x[1]*x[1];
         if (g != null) { g[0] = 2*x[0]; g[1] = 2*x[1]; }
@@ -84,7 +84,7 @@ OptimizationResult result = Minimizer.lbfgsb()
 ### Bound Constraints
 
 ```java
-OptimizationResult result = Minimizer.lbfgsb()
+Optimization result = Minimizer.lbfgsb()
     .objective(x -> x[0]*x[0] + x[1]*x[1])
     .bounds(Bound.between(0, 10), Bound.between(0, 10))
     .initialPoint(1.0, 1.0)
@@ -96,7 +96,7 @@ OptimizationResult result = Minimizer.lbfgsb()
 ```java
 // Equality constraint: x[0] + x[1] = 1
 // Inequality constraint: x[0] >= 0.5
-OptimizationResult result = Minimizer.slsqp()
+Optimization result = Minimizer.slsqp()
     .objective(x -> x[0]*x[0] + x[1]*x[1])
     .equalityConstraints(x -> x[0] + x[1] - 1)
     .inequalityConstraints(x -> x[0] - 0.5)
@@ -111,7 +111,7 @@ OptimizationResult result = Minimizer.slsqp()
 double[] tData = {0.0, 1.0, 2.0, 3.0};
 double[] yData = {2.0, 1.2, 0.7, 0.4};
 
-OptimizationResult result = Minimizer.trf()
+Optimization result = Minimizer.trf()
     .residuals((x, r) -> {
         for (int i = 0; i < tData.length; i++) {
             r[i] = yData[i] - x[0] * Math.exp(-x[1] * tData[i]);
@@ -161,7 +161,7 @@ double[][] ci   = pred.confInt(0.05);  // 95% prediction interval
 
 ```java
 // Find root of sin(x) in [3, 4] → π
-OptimizationResult result = RootFinder.brentq(Math::sin)
+Optimization result = RootFinder.brentq(Math::sin)
     .bracket(Bound.between(3.0, 4.0))
     .solve();
 
@@ -172,7 +172,7 @@ double root = result.getRoot(); // ≈ π
 
 ```java
 // Powell hybrid method (HYBR)
-OptimizationResult result = RootFinder.hybr((x, f) -> {
+Optimization result = RootFinder.hybr((x, f) -> {
         f[0] = x[0]*x[0] - 2;
         f[1] = x[1] - x[0];
     }, 2)
@@ -207,7 +207,7 @@ LBFGSBProblem problem = Minimizer.lbfgsb()
 
 LBFGSBWorkspace workspace = problem.alloc();  // allocate once
 for (double[] point : points) {
-    OptimizationResult result = problem.initialPoint(point).solve(workspace);
+    Optimization result = problem.initialPoint(point).solve(workspace);
     // process result
 }
 
@@ -215,7 +215,7 @@ for (double[] point : points) {
 HYBRProblem finder = RootFinder.hybr(fn, 2).initialPoint(0.0, 0.0);
 HYBRWorkspace ws = finder.alloc();
 for (double[] x0 : initialPoints) {
-    OptimizationResult r = finder.initialPoint(x0).solve(ws);
+    Optimization r = finder.initialPoint(x0).solve(ws);
 }
 ```
 

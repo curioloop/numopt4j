@@ -4,7 +4,7 @@
 package com.curioloop.numopt4j.optim.trf;
 
 import com.curioloop.numopt4j.optim.Bound;
-import com.curioloop.numopt4j.optim.OptimizationResult;
+import com.curioloop.numopt4j.optim.Optimization;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -67,7 +67,7 @@ class TRFExtremeConvergenceTest {
             r[1] = x[1] - 5.0;
         };
         Bound[] bounds = { Bound.between(0.0, 2.0), Bound.between(0.0, 8.0) };
-        OptimizationResult result = trf(2, fn, bounds).initialPoint(0.5, 0.5).solve();
+        Optimization result = trf(2, fn, bounds).initialPoint(0.5, 0.5).solve();
         double[] sol = result.getSolution();
 
         assertThat(result.isSuccessful()).isTrue();
@@ -104,7 +104,7 @@ class TRFExtremeConvergenceTest {
                 for (int j = 0; j < 4; j++) r[i] += H[i][j] * x[j];
             }
         };
-        OptimizationResult result = trf(4, fn, null).initialPoint(0.0, 0.0, 0.0, 0.0).solve();
+        Optimization result = trf(4, fn, null).initialPoint(0.0, 0.0, 0.0, 0.0).solve();
         double[] sol = result.getSolution();
 
         assertThat(result.isSuccessful()).isTrue();
@@ -132,7 +132,7 @@ class TRFExtremeConvergenceTest {
             for (int i = 0; i < m; i++) r[i] = (i % n + 1.0) * x[i % n] - b[i];
         };
         double[] x0 = new double[n]; // all-zero initial point
-        OptimizationResult result = trf(m, fn, null).initialPoint(x0).solve();
+        Optimization result = trf(m, fn, null).initialPoint(x0).solve();
         double[] sol = result.getSolution();
 
         assertThat(result.isSuccessful()).isTrue();
@@ -152,7 +152,7 @@ class TRFExtremeConvergenceTest {
             r[1] = x[1] - 2.0;
         };
         Bound[] bounds = { Bound.between(0.0, 1.0), Bound.between(0.0, 1.0) };
-        OptimizationResult result = trf(2, fn, bounds).initialPoint(0.5, 0.5).solve();
+        Optimization result = trf(2, fn, bounds).initialPoint(0.5, 0.5).solve();
         double[] sol = result.getSolution();
 
         assertThat(result.isSuccessful()).isTrue();
@@ -172,7 +172,7 @@ class TRFExtremeConvergenceTest {
             r[0] = x[0] - 1.0;
             r[1] = x[1] - 2.0;
         };
-        OptimizationResult result = trf(2, fn, null).initialPoint(1e6, 1e6).solve();
+        Optimization result = trf(2, fn, null).initialPoint(1e6, 1e6).solve();
         double[] sol = result.getSolution();
 
         assertThat(result.isSuccessful()).isTrue();
@@ -191,7 +191,7 @@ class TRFExtremeConvergenceTest {
             r[0] = 100.0 * (x[1] - x[0] * x[0]);
             r[1] = 1.0 - x[0];
         };
-        OptimizationResult result = trf(2, fn, null)
+        Optimization result = trf(2, fn, null)
             .maxEvaluations(10000)
             .initialPoint(-1.2, 1.0)
             .solve();
@@ -214,7 +214,7 @@ class TRFExtremeConvergenceTest {
             r[1] = x[0] - x[1] - 2.0;
             r[2] = x[0] + 2.0 * x[1] - 3.0;
         };
-        OptimizationResult result = trf(3, fn, null).initialPoint(0.0, 0.0).solve();
+        Optimization result = trf(3, fn, null).initialPoint(0.0, 0.0).solve();
         double[] sol = result.getSolution();
 
         assertThat(result.isSuccessful()).isTrue();
@@ -242,7 +242,7 @@ class TRFExtremeConvergenceTest {
             Bound.between(0.0, 2.0),
             Bound.between(0.0, 1.5)
         };
-        OptimizationResult result = trf(3, fn, bounds).initialPoint(0.5, 0.5, 0.5).solve();
+        Optimization result = trf(3, fn, bounds).initialPoint(0.5, 0.5, 0.5).solve();
         double[] sol = result.getSolution();
 
         assertThat(result.isSuccessful()).isTrue();
@@ -261,7 +261,7 @@ class TRFExtremeConvergenceTest {
     void singleVariableBoundedConvergence() {
         BiConsumer<double[], double[]> fn = (x, r) -> r[0] = x[0] - 5.0;
         Bound[] bounds = { Bound.between(0.0, 3.0) };
-        OptimizationResult result = trf(1, fn, bounds).initialPoint(1.0).solve();
+        Optimization result = trf(1, fn, bounds).initialPoint(1.0).solve();
         double[] sol = result.getSolution();
 
         assertThat(result.isSuccessful()).isTrue();
@@ -288,7 +288,7 @@ class TRFExtremeConvergenceTest {
         };
         Bound[] bounds = { Bound.atLeast(0.0), Bound.atLeast(0.0) };
         // Starting from a positive initial point (negative would be pushed to 0 by applyBounds)
-        OptimizationResult result = trf(m, fn, bounds).initialPoint(0.5, 0.1).solve();
+        Optimization result = trf(m, fn, bounds).initialPoint(0.5, 0.1).solve();
         double[] sol = result.getSolution();
 
         assertThat(result.isSuccessful()).isTrue();
@@ -324,7 +324,7 @@ class TRFExtremeConvergenceTest {
         };
         Bound[] bounds = { Bound.between(0.0, 5.0), Bound.between(0.0, 2.0) };
 
-        OptimizationResult result = new TRFProblem()
+        Optimization result = new TRFProblem()
             .residuals(fn, m)
             .bounds(bounds)
             .loss(loss)

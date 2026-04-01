@@ -5,7 +5,7 @@ package com.curioloop.numopt4j.optim.subplex;
 
 import com.curioloop.numopt4j.optim.Bound;
 import com.curioloop.numopt4j.optim.Minimizer;
-import com.curioloop.numopt4j.optim.OptimizationResult;
+import com.curioloop.numopt4j.optim.Optimization;
 
 import java.util.function.ToDoubleFunction;
 
@@ -34,7 +34,7 @@ public class NLoptEvalCountTest {
                              int nloptEvals, double nloptCost) {
         double[] x0 = mid(lb, ub);
         Bound[] bounds = box(lb, ub);
-        OptimizationResult r = Minimizer.subplex()
+        Optimization r = Minimizer.subplex()
                 .objective(f).initialPoint(x0).bounds(bounds)
                 .functionTolerance(1e-6).parameterTolerance(1e-6)
                 .maxEvaluations(maxEval).solve();

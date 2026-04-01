@@ -2,7 +2,6 @@
  * Copyright (c) 2025 curioloop. All rights reserved.
  */
 package com.curioloop.numopt4j.optim;
-
 import com.curioloop.numopt4j.optim.lbfgsb.LBFGSBProblem;
 import com.curioloop.numopt4j.optim.slsqp.SLSQPProblem;
 import org.junit.jupiter.api.DisplayName;
@@ -19,7 +18,7 @@ public class ApiUsabilityTest {
     @DisplayName("L-BFGS-B: Simple minimize with function only (numerical gradient)")
     void testLbfgsbSimpleMinimize() {
         // Minimize x^2 + y^2, minimum at (0, 0) using NumericalGradient.wrap()
-        OptimizationResult result = new LBFGSBProblem()
+        Optimization result = new LBFGSBProblem()
             .objective(NumericalGradient.CENTRAL.wrap(x -> x[0] * x[0] + x[1] * x[1]))
             .initialPoint(1.0, 1.0)
             .solve();
@@ -35,7 +34,7 @@ public class ApiUsabilityTest {
         // Minimum at (2, 3)
         Univariate quadratic = TestTemplates.quadraticWithTarget(new double[]{2, 3});
         
-        OptimizationResult result = new LBFGSBProblem()
+        Optimization result = new LBFGSBProblem()
             .objective(quadratic)
             .initialPoint(0.0, 0.0)
             .solve();
@@ -50,7 +49,7 @@ public class ApiUsabilityTest {
     @DisplayName("L-BFGS-B: Builder with function-only objective")
     void testLbfgsbBuilderWithFunctionOnly() {
         // Using LBFGSBProblem with NumericalGradient.wrap()
-        OptimizationResult result = new LBFGSBProblem()
+        Optimization result = new LBFGSBProblem()
             .objective(NumericalGradient.CENTRAL.wrap(x -> x[0] * x[0] + x[1] * x[1]))
             .initialPoint(1.0, 1.0)
             .maxIterations(50)
@@ -65,7 +64,7 @@ public class ApiUsabilityTest {
     @DisplayName("L-BFGS-B: Builder with bounds")
     void testLbfgsbBuilderWithBounds() {
         // Minimize (x-5)^2 + (y-5)^2 with bounds [0, 3]
-        OptimizationResult result = new LBFGSBProblem()
+        Optimization result = new LBFGSBProblem()
             .objective(NumericalGradient.CENTRAL.wrap(x -> Math.pow(x[0] - 5, 2) + Math.pow(x[1] - 5, 2)))
             .initialPoint(1.0, 1.0)
             .bounds(Bound.between(0.0, 3.0), Bound.between(0.0, 3.0))
@@ -80,7 +79,7 @@ public class ApiUsabilityTest {
     @Test
     @DisplayName("L-BFGS-B: Builder with single bound for all variables")
     void testLbfgsbBuilderWithSingleBound() {
-        OptimizationResult result = new LBFGSBProblem()
+        Optimization result = new LBFGSBProblem()
             .objective(NumericalGradient.CENTRAL.wrap(x -> x[0] * x[0] + x[1] * x[1] + x[2] * x[2]))
             .initialPoint(1.0, 1.0, 1.0)
             .bounds(Bound.atLeast(0), Bound.atLeast(0), Bound.atLeast(0))  // x >= 0 for all variables
@@ -117,7 +116,7 @@ public class ApiUsabilityTest {
     void testSlsqpSimpleMinimize() {
         Univariate objective = TestTemplates.quadratic();
         
-        OptimizationResult result = new SLSQPProblem()
+        Optimization result = new SLSQPProblem()
             .objective(objective)
             .initialPoint(1.0, 1.0)
             .solve();
@@ -139,7 +138,7 @@ public class ApiUsabilityTest {
         Univariate c2 = TestTemplates.inequalityAtIndex(1, -1.0);
         
         // Using SLSQPProblem with varargs constraints
-        OptimizationResult result = new SLSQPProblem()
+        Optimization result = new SLSQPProblem()
             .objective(objective)
             .initialPoint(0.0, 0.0)
             .inequalityConstraints(c1, c2)
@@ -156,7 +155,7 @@ public class ApiUsabilityTest {
     void testLbfgsbMaxComputations() {
         Univariate slowObjective = TestTemplates.slowQuadratic(1);
 
-        OptimizationResult result = new LBFGSBProblem()
+        Optimization result = new LBFGSBProblem()
             .objective(slowObjective)
             .initialPoint(10.0, 10.0)
             .maxIterations(1000)
@@ -164,7 +163,7 @@ public class ApiUsabilityTest {
             .solve();
         
         assertThat(result.getStatus().isConverged() || 
-                   result.getStatus() == OptimizationStatus.MAX_COMPUTATIONS_REACHED).isTrue();
+                   result.getStatus() == Optimization.Status.MAX_COMPUTATIONS_REACHED).isTrue();
     }
     
 
@@ -176,7 +175,7 @@ public class ApiUsabilityTest {
         Univariate slowObjective = TestTemplates.slowQuadratic(2);
         
         // Set a 3ms time limit - should trigger after 1-2 evaluations
-        OptimizationResult result = new SLSQPProblem()
+        Optimization result = new SLSQPProblem()
             .objective(slowObjective)
             .initialPoint(100.0, 100.0)
             .maxIterations(1000)
@@ -184,6 +183,6 @@ public class ApiUsabilityTest {
             .solve();
         
         // Should terminate due to time limit
-        assertThat(result.getStatus()).isEqualTo(OptimizationStatus.MAX_COMPUTATIONS_REACHED);
+        assertThat(result.getStatus()).isEqualTo(Optimization.Status.MAX_COMPUTATIONS_REACHED);
     }
 }

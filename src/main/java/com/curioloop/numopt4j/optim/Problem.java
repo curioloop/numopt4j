@@ -26,10 +26,9 @@ package com.curioloop.numopt4j.optim;
  * problem.solve(ws);  // reuse workspace
  * }</pre>
  *
- * @param <R> the result type returned by solve()
  * @param <W> the workspace type
  */
-public interface OptimizationProblem<R extends OptimizationResult, W> {
+public interface Problem<W> {
 
     /**
      * Allocates a workspace for this optimization problem.
@@ -48,7 +47,9 @@ public interface OptimizationProblem<R extends OptimizationResult, W> {
      *
      * @return optimization result
      */
-    R solve();
+    default Optimization solve() {
+        return solve(null);
+    }
 
     /**
      * Solves the optimization problem with a pre-allocated workspace for reuse.
@@ -57,5 +58,5 @@ public interface OptimizationProblem<R extends OptimizationResult, W> {
      * @return optimization result
      * @throws IllegalArgumentException if workspace is incompatible
      */
-    R solve(W workspace);
+    Optimization solve(W workspace);
 }

@@ -67,7 +67,8 @@
 package com.curioloop.numopt4j.optim.subplex;
 
 import com.curioloop.numopt4j.optim.Bound;
-import com.curioloop.numopt4j.optim.OptimizationStatus;
+import com.curioloop.numopt4j.optim.Optimization;
+
 
 import java.util.function.ToDoubleFunction;
 final class NelderMead {
@@ -99,7 +100,7 @@ final class NelderMead {
      * @return termination status (cost available in {@code ws.fsim[0]},
      *         solution written to {@code x} in-place)
      */
-    static OptimizationStatus optimize(
+    static Optimization.Status optimize(
             int n,
             double[] x,
             ToDoubleFunction<double[]> func,
@@ -159,7 +160,7 @@ final class NelderMead {
 
         // ── Main loop ──────────────────────────────────────────────────────────
         int iterations = 1;
-        OptimizationStatus status = OptimizationStatus.MAX_ITERATIONS_REACHED;
+        Optimization.Status status = Optimization.Status.MAX_ITERATIONS_REACHED;
 
         while (nfev < maxEval && iterations < maxIter) {
 
@@ -170,11 +171,11 @@ final class NelderMead {
                     diam += Math.abs(sim[j] - sim[n * n + j]);
                 }
                 if (diam < psiDiam * initDiam) {
-                    status = OptimizationStatus.COEFFICIENT_TOLERANCE_REACHED;
+                    status = Optimization.Status.COEFFICIENT_TOLERANCE_REACHED;
                     break;
                 }
             } else if (converged(sim, fsim, n, xatol, fatol)) {
-                status = OptimizationStatus.FUNCTION_TOLERANCE_REACHED;
+                status = Optimization.Status.FUNCTION_TOLERANCE_REACHED;
                 break;
             }
 
@@ -184,7 +185,7 @@ final class NelderMead {
             // Reflect
             reflect(xbar, sim, worst, 1 + rho, -rho, xr, n);
             if (hasBounds && !clipAndCheck(xr, xbar, sim, worst, bounds, n)) {
-                status = OptimizationStatus.COEFFICIENT_TOLERANCE_REACHED;
+                status = Optimization.Status.COEFFICIENT_TOLERANCE_REACHED;
                 break;
             }
             double fxr = safeEval(func, xr, n);
@@ -218,7 +219,7 @@ final class NelderMead {
                         reflect(xbar, sim, worst, 1 - psi, psi, xc, n);
                     }
                     if (hasBounds && !clipAndCheck(xc, xbar, sim, worst, bounds, n)) {
-                        status = OptimizationStatus.COEFFICIENT_TOLERANCE_REACHED;
+                        status = Optimization.Status.COEFFICIENT_TOLERANCE_REACHED;
                         break;
                     }
                     double fxc = safeEval(func, xc, n);
@@ -255,11 +256,11 @@ final class NelderMead {
             }
         }
 
-        if (status != OptimizationStatus.FUNCTION_TOLERANCE_REACHED
-                && status != OptimizationStatus.COEFFICIENT_TOLERANCE_REACHED) {
+        if (status != Optimization.Status.FUNCTION_TOLERANCE_REACHED
+                && status != Optimization.Status.COEFFICIENT_TOLERANCE_REACHED) {
             status = nfev >= maxEval
-                    ? OptimizationStatus.MAX_EVALUATIONS_REACHED
-                    : OptimizationStatus.MAX_ITERATIONS_REACHED;
+                    ? Optimization.Status.MAX_EVALUATIONS_REACHED
+                    : Optimization.Status.MAX_ITERATIONS_REACHED;
         }
 
         System.arraycopy(sim, 0, x, 0, n);

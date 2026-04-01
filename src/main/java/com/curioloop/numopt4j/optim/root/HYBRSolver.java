@@ -2,8 +2,8 @@ package com.curioloop.numopt4j.optim.root;
 
 import com.curioloop.numopt4j.optim.Multivariate;
 import com.curioloop.numopt4j.optim.NumericalJacobian;
-import com.curioloop.numopt4j.optim.OptimizationResult;
-import com.curioloop.numopt4j.optim.OptimizationStatus;
+import com.curioloop.numopt4j.optim.Optimization;
+
 
 import java.util.function.BiConsumer;
 
@@ -99,7 +99,7 @@ public final class HYBRSolver {
      * @param ws     pre-allocated workspace (must satisfy {@code ws.isCompatible(x0.length)})
      * @return root-finding result containing the final iterate, ‖F‖₂, status, and nfev
      */
-    public static OptimizationResult solve(
+    public static Optimization solve(
             Multivariate eval,
             double[] x0, double xtol, int maxfev, HYBRWorkspace ws) {
 
@@ -134,12 +134,12 @@ public final class HYBRSolver {
         int nfev = 1;
         for (double v : fvec) {
             if (Double.isNaN(v) || Double.isInfinite(v))
-                return new OptimizationResult(Double.NaN, x.clone(), Double.NaN, OptimizationStatus.INVALID_INPUT, nfev, nfev);
+                return new Optimization(Double.NaN, x.clone(), Double.NaN, Optimization.Status.INVALID_INPUT, nfev, nfev);
         }
 
         double fnorm = Minpack.enorm(n, fvec);
         if (fnorm == 0.0)
-            return new OptimizationResult(Double.NaN, x.clone(), fnorm, OptimizationStatus.COEFFICIENT_TOLERANCE_REACHED, nfev, nfev);
+            return new Optimization(Double.NaN, x.clone(), fnorm, Optimization.Status.COEFFICIENT_TOLERANCE_REACHED, nfev, nfev);
 
         int    iter   = 1;
         double delta  = 0.0;
@@ -307,11 +307,11 @@ public final class HYBRSolver {
             }
         }
 
-        OptimizationStatus status;
-        if      (info == 1)  status = OptimizationStatus.COEFFICIENT_TOLERANCE_REACHED;
-        else if (info == -1) status = OptimizationStatus.ABNORMAL_TERMINATION;
-        else                 status = OptimizationStatus.MAX_ITERATIONS_REACHED;
+        Optimization.Status status;
+        if      (info == 1)  status = Optimization.Status.COEFFICIENT_TOLERANCE_REACHED;
+        else if (info == -1) status = Optimization.Status.ABNORMAL_TERMINATION;
+        else                 status = Optimization.Status.MAX_ITERATIONS_REACHED;
 
-        return new OptimizationResult(Double.NaN, x.clone(), fnorm, status, nfev, nfev);
+        return new Optimization(Double.NaN, x.clone(), fnorm, status, nfev, nfev);
     }
 }

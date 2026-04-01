@@ -88,11 +88,6 @@ public class PrincipalValueIntegral implements Integral<Quadrature, AdaptivePool
     }
 
     @Override
-    public Quadrature integrate() {
-        return integrate((AdaptivePool) null);
-    }
-
-    @Override
     public Quadrature integrate(AdaptivePool workspace) {
         Checks.validateFunction(function);
         Checks.validateFiniteInterval(min, max);

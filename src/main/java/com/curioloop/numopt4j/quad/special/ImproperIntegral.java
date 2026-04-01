@@ -156,11 +156,6 @@ public abstract class ImproperIntegral<T extends ImproperIntegral<T>> {
         }
 
         @Override
-        public Quadrature integrate() {
-            return integrate((GaussPool) null);
-        }
-
-        @Override
         public Quadrature integrate(GaussPool workspace) {
             validateCommon();
             validateBounds();
@@ -249,11 +244,6 @@ public abstract class ImproperIntegral<T extends ImproperIntegral<T>> {
             if (workspace == null) workspace = new AdaptivePool();
             workspace.ensure(maxSubdivisions);
             return workspace;
-        }
-
-        @Override
-        public Quadrature integrate() {
-            return integrate((AdaptivePool) null);
         }
 
         @Override

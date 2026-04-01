@@ -21,26 +21,26 @@ import com.curioloop.numopt4j.optim.trf.TRFProblem;
  * <p>Use the static factory methods as the primary entry point:</p>
  * <pre>{@code
  * // Derivative-free (Nelder-Mead)
- * OptimizationResult r = Minimizer.subplex()
+ * Optimization r = Minimizer.subplex()
  *     .objective(x -> x[0]*x[0] + x[1]*x[1])
  *     .initialPoint(1.0, 1.0)
  *     .solve();
  *
  * // Bound-constrained (L-BFGS-B)
- * OptimizationResult r = Minimizer.lbfgsb()
+ * Optimization r = Minimizer.lbfgsb()
  *     .objective(x -> x[0]*x[0] + x[1]*x[1])
  *     .initialPoint(1.0, 1.0)
  *     .solve();
  *
  * // Constrained (SLSQP)
- * OptimizationResult r = Minimizer.slsqp()
+ * Optimization r = Minimizer.slsqp()
  *     .objective(x -> x[0] + x[1])
  *     .equalityConstraints(x -> x[0]*x[0] + x[1]*x[1] - 1)
  *     .initialPoint(0.5, 0.5)
  *     .solve();
  *
  * // Nonlinear least squares (TRF)
- * OptimizationResult r = Minimizer.trf()
+ * Optimization r = Minimizer.trf()
  *     .residuals((x, r) -> { r[0] = x[0] - 1; r[1] = x[1] - 2; }, 2)
  *     .initialPoint(0.0, 0.0)
  *     .solve();
@@ -55,7 +55,7 @@ import com.curioloop.numopt4j.optim.trf.TRFProblem;
  * @see SLSQPProblem
  * @see TRFProblem
  */
-public abstract class Minimizer<O, W, S extends Minimizer<O, W, S>> implements OptimizationProblem<OptimizationResult, W> {
+public abstract class Minimizer<O, W, S extends Minimizer<O, W, S>> implements Problem<W> {
 
     /** Problem dimension (number of variables, inferred from initialPoint) */
     protected int dimension;

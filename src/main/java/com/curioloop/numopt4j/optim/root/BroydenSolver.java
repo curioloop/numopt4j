@@ -1,7 +1,7 @@
 package com.curioloop.numopt4j.optim.root;
 
-import com.curioloop.numopt4j.optim.OptimizationResult;
-import com.curioloop.numopt4j.optim.OptimizationStatus;
+import com.curioloop.numopt4j.optim.Optimization;
+
 import com.curioloop.numopt4j.linalg.blas.BLAS;
 
 import java.util.Arrays;
@@ -36,7 +36,7 @@ public final class BroydenSolver {
     /** Default f_tol: {@code eps^(1/3) ≈ 6e-6} — matches scipy's TerminationCondition default. */
     public static final double DEFAULT_FTOL = 6e-6;
 
-    public static OptimizationResult solve(
+    public static Optimization solve(
             BiConsumer<double[], double[]> fn,
             double[] x0,
             double ftol,
@@ -68,15 +68,15 @@ public final class BroydenSolver {
 
         for (double v : fx) {
             if (Double.isNaN(v) || Double.isInfinite(v))
-                return new OptimizationResult(Double.NaN, x.clone(), Double.NaN,
-                        OptimizationStatus.ABNORMAL_TERMINATION, nfev, nfev);
+                return new Optimization(Double.NaN, x.clone(), Double.NaN,
+                        Optimization.Status.ABNORMAL_TERMINATION, nfev, nfev);
         }
 
         // ── initial convergence check ────────────────────────────────────────
         double fnorm = maxnorm(fx, n);
         if (fnorm <= ftol)
-            return new OptimizationResult(Double.NaN, x.clone(), fnorm,
-                    OptimizationStatus.COEFFICIENT_TOLERANCE_REACHED, 0, 0);
+            return new Optimization(Double.NaN, x.clone(), fnorm,
+                    Optimization.Status.COEFFICIENT_TOLERANCE_REACHED, 0, 0);
 
         // ── H₀ = -alpha·I  (scipy GenericBroyden.setup) ─────────────────────
         // alpha = 0.5 * max(‖x₀‖₂, 1) / ‖F₀‖₂
@@ -169,15 +169,15 @@ public final class BroydenSolver {
             // ── NaN/Inf guard ────────────────────────────────────────────────
             for (double v : fNew) {
                 if (Double.isNaN(v) || Double.isInfinite(v))
-                    return new OptimizationResult(Double.NaN, x.clone(), fnorm,
-                            OptimizationStatus.ABNORMAL_TERMINATION, nfev, nfev);
+                    return new Optimization(Double.NaN, x.clone(), fnorm,
+                            Optimization.Status.ABNORMAL_TERMINATION, nfev, nfev);
             }
 
             // ── convergence check ────────────────────────────────────────────
             if (fnormNew <= ftol) {
                 BLAS.dcopy(n, xNew, 0, 1, x, 0, 1);
-                return new OptimizationResult(Double.NaN, x.clone(), fnormNew,
-                        OptimizationStatus.COEFFICIENT_TOLERANCE_REACHED, iter, iter);
+                return new Optimization(Double.NaN, x.clone(), fnormNew,
+                        Optimization.Status.COEFFICIENT_TOLERANCE_REACHED, iter, iter);
             }
 
             // ── actual dx = s·dx, dF = F_new - F ────────────────────────────
@@ -214,8 +214,8 @@ public final class BroydenSolver {
             fnorm = fnormNew;
         }
 
-        return new OptimizationResult(Double.NaN, x.clone(), fnorm,
-                OptimizationStatus.MAX_ITERATIONS_REACHED, maxiter, maxiter);
+        return new Optimization(Double.NaN, x.clone(), fnorm,
+                Optimization.Status.MAX_ITERATIONS_REACHED, maxiter, maxiter);
     }
 
     // ── Armijo cubic interpolation loop ──────────────────────────────────────

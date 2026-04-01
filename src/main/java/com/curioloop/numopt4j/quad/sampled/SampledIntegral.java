@@ -64,9 +64,6 @@ public class SampledIntegral implements Integral<Double, Void> {
     public Void alloc() { return null; }
 
     @Override
-    public Double integrate() { return integrate(null); }
-
-    @Override
     public Double integrate(Void workspace) {
         switch (rule) {
             case TRAPEZOIDAL: return x != null ? trapezoidalXY() : trapezoidalY();

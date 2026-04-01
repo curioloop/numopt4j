@@ -3,8 +3,8 @@
  */
 package com.curioloop.numopt4j.optim.trf;
 
-import com.curioloop.numopt4j.optim.OptimizationResult;
-import com.curioloop.numopt4j.optim.OptimizationStatus;
+import com.curioloop.numopt4j.optim.Optimization;
+
 import net.jqwik.api.*;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -37,7 +37,7 @@ public class MultiDimensionalFittingTest {
             for (int i = 0; i < m; i++)
                 r[i] = zData[i] - (c[0] + c[1]*xData[i] + c[2]*yData[i] + c[3]*xData[i]*yData[i]);
         };
-        OptimizationResult result = new TRFProblem()
+        Optimization result = new TRFProblem()
             .residuals(residualFunc, m)
             .initialPoint(0.5, 1.5, -1.0, 0.3)
             .gradientTolerance(1e-10).maxEvaluations(2000)
@@ -67,7 +67,7 @@ public class MultiDimensionalFittingTest {
                 r[i] = zData[i] - c[0]*Math.exp(-(dx*dx+dy*dy)/(2*c[3]*c[3]));
             }
         };
-        OptimizationResult result = new TRFProblem()
+        Optimization result = new TRFProblem()
             .residuals(residualFunc, m)
             .initialPoint(4.5, 0.3, -0.5, 1.0)
             .gradientTolerance(1e-8).maxEvaluations(2000)
@@ -96,7 +96,7 @@ public class MultiDimensionalFittingTest {
                 r[i] = zData[i] - (c[0] + c[1]*xData[i] + c[2]*yData[i]
                      + c[3]*xData[i]*xData[i] + c[4]*yData[i]*yData[i] + c[5]*xData[i]*yData[i]);
         };
-        OptimizationResult result = new TRFProblem()
+        Optimization result = new TRFProblem()
             .residuals(residualFunc, m)
             .initialPoint(0.8, 0.4, -0.2, 0.15, 0.08, -0.1)
             .gradientTolerance(1e-10).maxEvaluations(2000)
@@ -117,13 +117,13 @@ public class MultiDimensionalFittingTest {
         problem.residualFunction.accept(problem.initialGuess, ir);
         double initialChiSq = 0; for (double v : ir) initialChiSq += v*v;
 
-        OptimizationResult result = new TRFProblem()
+        Optimization result = new TRFProblem()
             .residuals(problem.residualFunction, problem.m)
             .initialPoint(problem.initialGuess.clone())
             .gradientTolerance(1e-8).maxEvaluations(2000)
             .solve();
 
-        assertTrue(result.isSuccessful() || result.getStatus() == OptimizationStatus.MAX_EVALUATIONS_REACHED,
+        assertTrue(result.isSuccessful() || result.getStatus() == Optimization.Status.MAX_EVALUATIONS_REACHED,
             "Multi-dimensional fitting should converge or reach limit");
         assertTrue(result.getCost() <= initialChiSq,
             "Chi² should improve: initial=" + initialChiSq + ", final=" + result.getCost());
@@ -180,7 +180,7 @@ public class MultiDimensionalFittingTest {
                 r[i] = z - (c[0] + c[1]*x + c[2]*y + c[3]*x*y);
             }
         };
-        OptimizationResult result = new TRFProblem()
+        Optimization result = new TRFProblem()
             .residuals(residualFunc, m)
             .initialPoint(0.5, 1.5, -1.0, 0.3)
             .gradientTolerance(1e-10).maxEvaluations(2000)

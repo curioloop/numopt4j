@@ -64,9 +64,6 @@ public class CumulativeIntegral implements Integral<double[], Void> {
     public Void alloc() { return null; }
 
     @Override
-    public double[] integrate() { return integrate(null); }
-
-    @Override
     public double[] integrate(Void workspace) {
         if (rule == SampledRule.ROMBERG)
             throw new IllegalArgumentException("ROMBERG is not supported for cumulative integration");

@@ -1,7 +1,7 @@
 package com.curioloop.numopt4j.optim.root;
 
-import com.curioloop.numopt4j.optim.OptimizationResult;
-import com.curioloop.numopt4j.optim.OptimizationStatus;
+import com.curioloop.numopt4j.optim.Optimization;
+
 
 import java.util.function.DoubleUnaryOperator;
 
@@ -38,7 +38,7 @@ public final class BrentqSolver {
      *   <li>Each iteration chooses between inverse quadratic interpolation, secant step,
      *       or bisection, accepting the interpolation only when it is safe.</li>
      *   <li>If {@code f(x)} returns {@code NaN} or {@code Infinity} at any point,
-     *       {@link OptimizationStatus#ABNORMAL_TERMINATION} is returned.</li>
+     *       {@link Optimization.Status#ABNORMAL_TERMINATION} is returned.</li>
      * </ol>
      *
      * @param f       the scalar function whose root is sought
@@ -47,10 +47,10 @@ public final class BrentqSolver {
      * @param xtol    absolute tolerance (must be &gt;= 0)
      * @param rtol    relative tolerance (must be &gt;= 0)
      * @param maxiter maximum number of iterations
-     * @return an {@link OptimizationResult} describing the outcome
+     * @return an {@link Optimization} describing the outcome
      * @throws IllegalArgumentException if {@code f(xa) * f(xb) > 0}
      */
-    public static OptimizationResult solve(
+    public static Optimization solve(
             DoubleUnaryOperator f,
             double xa, double xb,
             double xtol, double rtol,
@@ -64,10 +64,10 @@ public final class BrentqSolver {
 
         // Handle endpoints that are already roots
         if (fpre == 0) {
-            return new OptimizationResult(xpre, null, 0, OptimizationStatus.COEFFICIENT_TOLERANCE_REACHED, 0, 0);
+            return new Optimization(xpre, null, 0, Optimization.Status.COEFFICIENT_TOLERANCE_REACHED, 0, 0);
         }
         if (fcur == 0) {
-            return new OptimizationResult(xcur, null, 0, OptimizationStatus.COEFFICIENT_TOLERANCE_REACHED, 0, 0);
+            return new Optimization(xcur, null, 0, Optimization.Status.COEFFICIENT_TOLERANCE_REACHED, 0, 0);
         }
 
         // Bracket condition check
@@ -79,7 +79,7 @@ public final class BrentqSolver {
 
         // Check for NaN/Inf in initial evaluations
         if (!Double.isFinite(fpre) || !Double.isFinite(fcur)) {
-            return new OptimizationResult(xcur, null, Math.abs(fcur), OptimizationStatus.ABNORMAL_TERMINATION, 0, 0);
+            return new Optimization(xcur, null, Math.abs(fcur), Optimization.Status.ABNORMAL_TERMINATION, 0, 0);
         }
 
         for (int i = 1; i <= maxiter; i++) {
@@ -102,7 +102,7 @@ public final class BrentqSolver {
 
             // Convergence check
             if (fcur == 0 || Math.abs(sbis) < delta) {
-                return new OptimizationResult(xcur, null, Math.abs(fcur), OptimizationStatus.COEFFICIENT_TOLERANCE_REACHED, i, i);
+                return new Optimization(xcur, null, Math.abs(fcur), Optimization.Status.COEFFICIENT_TOLERANCE_REACHED, i, i);
             }
 
             // Step selection
@@ -138,10 +138,10 @@ public final class BrentqSolver {
 
             // Check for NaN/Inf after function evaluation
             if (!Double.isFinite(fcur)) {
-                return new OptimizationResult(xcur, null, Math.abs(fcur), OptimizationStatus.ABNORMAL_TERMINATION, i, i);
+                return new Optimization(xcur, null, Math.abs(fcur), Optimization.Status.ABNORMAL_TERMINATION, i, i);
             }
         }
 
-        return new OptimizationResult(xcur, null, Math.abs(fcur), OptimizationStatus.MAX_ITERATIONS_REACHED, maxiter, maxiter);
+        return new Optimization(xcur, null, Math.abs(fcur), Optimization.Status.MAX_ITERATIONS_REACHED, maxiter, maxiter);
     }
 }

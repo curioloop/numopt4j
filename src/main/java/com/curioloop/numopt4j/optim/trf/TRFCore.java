@@ -65,8 +65,8 @@ package com.curioloop.numopt4j.optim.trf;
 import com.curioloop.numopt4j.linalg.blas.BLAS;
 import com.curioloop.numopt4j.optim.Bound;
 import com.curioloop.numopt4j.optim.Multivariate;
-import com.curioloop.numopt4j.optim.OptimizationResult;
-import com.curioloop.numopt4j.optim.OptimizationStatus;
+import com.curioloop.numopt4j.optim.Optimization;
+
 
 import java.util.Arrays;
 
@@ -870,13 +870,13 @@ final class TRFCore {
      * @param x        initial guess on entry; solution on exit
      * @param ws       pre-allocated workspace
      */
-    static OptimizationResult optimize(int m, int n,
-                                       Multivariate fcn,
-                                       double ftol, double xtol, double gtol,
-                                       int maxfev, double factor,
-                                       double[] userDiag, Bound[] bounds,
-                                       RobustLoss loss, double lossScale,
-                                       double[] x, TRFWorkspace ws) {
+    static Optimization optimize(int m, int n,
+                                 Multivariate fcn,
+                                 double ftol, double xtol, double gtol,
+                                 int maxfev, double factor,
+                                 double[] userDiag, Bound[] bounds,
+                                 RobustLoss loss, double lossScale,
+                                 double[] x, TRFWorkspace ws) {
 
         // ── eval-facing standalone arrays ─────────────────────────────────────
         double[] fvec = ws.fvec;   // f(xₖ)
@@ -909,7 +909,7 @@ final class TRFCore {
 
         double par  = 0.0;
         int    iter = 1;
-        OptimizationStatus status = null;
+        Optimization.Status status = null;
 
         // Tracks cost at current x; updated at outer loop top and on each accepted step.
         // For LINEAR: cost = 0.5*‖f‖²; for robust: cost = 0.5*C²*Σρ(f²/C²).
@@ -986,7 +986,7 @@ final class TRFCore {
                 }
             }
 
-            if (gnorm <= gtol) { status = OptimizationStatus.GRADIENT_TOLERANCE_REACHED; break; }
+            if (gnorm <= gtol) { status = Optimization.Status.GRADIENT_TOLERANCE_REACHED; break; }
 
             if (userDiag == null) {
                 for (int j = 0; j < n; j++)
@@ -1133,18 +1133,18 @@ final class TRFCore {
 
                 // ── Convergence checks ────────────────────────────────────────
                 if (Math.abs(actred) <= ftol && prered <= ftol && P5 * ratio <= 1.0)
-                    status = OptimizationStatus.CHI_SQUARED_TOLERANCE_REACHED;
+                    status = Optimization.Status.CHI_SQUARED_TOLERANCE_REACHED;
                 if (ws.delta <= xtol * ws.xnorm)
-                    status = OptimizationStatus.COEFFICIENT_TOLERANCE_REACHED;
+                    status = Optimization.Status.COEFFICIENT_TOLERANCE_REACHED;
                 if (status != null) break outer;
 
-                if (nfev >= maxfev) { status = OptimizationStatus.MAX_EVALUATIONS_REACHED; break outer; }
+                if (nfev >= maxfev) { status = Optimization.Status.MAX_EVALUATIONS_REACHED; break outer; }
                 if (Math.abs(actred) <= EPSMCH && prered <= EPSMCH && P5 * ratio <= 1.0)
-                    { status = OptimizationStatus.CHI_SQUARED_TOLERANCE_REACHED; break outer; }
+                    { status = Optimization.Status.CHI_SQUARED_TOLERANCE_REACHED; break outer; }
                 if (ws.delta <= EPSMCH * ws.xnorm)
-                    { status = OptimizationStatus.COEFFICIENT_TOLERANCE_REACHED; break outer; }
+                    { status = Optimization.Status.COEFFICIENT_TOLERANCE_REACHED; break outer; }
                 if (gnorm <= EPSMCH)
-                    { status = OptimizationStatus.GRADIENT_TOLERANCE_REACHED; break outer; }
+                    { status = Optimization.Status.GRADIENT_TOLERANCE_REACHED; break outer; }
 
                 if (ratio >= P0001) break;
             }
@@ -1153,6 +1153,6 @@ final class TRFCore {
         // For LINEAR: return ‖f‖² (RSS), consistent with original behavior.
         // For robust: return scipy cost = 0.5*C²*Σρ(f²/C²).
         double finalCost = (loss == RobustLoss.LINEAR) ? fnorm * fnorm : cost;
-        return new OptimizationResult(Double.NaN, null, finalCost, status, iter - 1, nfev);
+        return new Optimization(Double.NaN, null, finalCost, status, iter - 1, nfev);
     }
 }

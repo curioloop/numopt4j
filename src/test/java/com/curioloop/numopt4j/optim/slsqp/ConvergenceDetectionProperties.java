@@ -6,9 +6,9 @@
  * **Property 11: Convergence Detection Correctness**
  */
 package com.curioloop.numopt4j.optim.slsqp;
-
+import com.curioloop.numopt4j.optim.Optimization;
 import com.curioloop.numopt4j.linalg.blas.BLAS;
-import com.curioloop.numopt4j.optim.OptimizationStatus;
+
 import net.jqwik.api.*;
 import net.jqwik.api.constraints.*;
 import org.junit.jupiter.api.Tag;
@@ -106,7 +106,7 @@ class ConvergenceDetectionProperties {
         double[] x0 = x.clone();
         double[] u = new double[n];
 
-        OptimizationStatus result = SLSQPCore.checkStop(vio, TOL, false, f, f0,
+        Optimization.Status result = SLSQPCore.checkStop(vio, TOL, false, f, f0,
                 s, 0, n, -1, -1, -1, x, 0, x0, 0, u, 0);
 
         assertNull(result, "Should return 0 when vio >= tol");
@@ -130,7 +130,7 @@ class ConvergenceDetectionProperties {
         double[] x0 = x.clone();
         double[] u = new double[n];
 
-        OptimizationStatus result = SLSQPCore.checkStop(vio, TOL, false, f, f0,
+        Optimization.Status result = SLSQPCore.checkStop(vio, TOL, false, f, f0,
                 s, 0, n, -1, -1, -1, x, 0, x0, 0, u, 0);
 
         assertNull(result, "Should return 0 when vio == tol");
@@ -159,7 +159,7 @@ class ConvergenceDetectionProperties {
         double[] x0 = x.clone();
         double[] u = new double[n];
 
-        OptimizationStatus result = SLSQPCore.checkStop(vio, TOL, true, f, f0,
+        Optimization.Status result = SLSQPCore.checkStop(vio, TOL, true, f, f0,
                 s, 0, n, -1, -1, -1, x, 0, x0, 0, u, 0);
 
         assertNull(result, "Should return 0 when badQP is true");
@@ -183,7 +183,7 @@ class ConvergenceDetectionProperties {
         double[] x0 = x.clone();
         double[] u = new double[n];
 
-        OptimizationStatus result = SLSQPCore.checkStop(vio, TOL, false, f, f0,
+        Optimization.Status result = SLSQPCore.checkStop(vio, TOL, false, f, f0,
                 s, 0, n, -1, -1, -1, x, 0, x0, 0, u, 0);
 
         assertNotNull(result, "Should return non-zero when badQP is false and criteria met");
@@ -212,7 +212,7 @@ class ConvergenceDetectionProperties {
         double[] x0 = x.clone();
         double[] u = new double[n];
 
-        OptimizationStatus result = SLSQPCore.checkStop(vio, TOL, false, f, f0,
+        Optimization.Status result = SLSQPCore.checkStop(vio, TOL, false, f, f0,
                 s, 0, n, -1, -1, -1, x, 0, x0, 0, u, 0);
 
         assertNull(result, "Should return 0 when f is NaN");
@@ -237,7 +237,7 @@ class ConvergenceDetectionProperties {
         double[] x0 = x.clone();
         double[] u = new double[n];
 
-        OptimizationStatus result = SLSQPCore.checkStop(vio, TOL, false, f, f0,
+        Optimization.Status result = SLSQPCore.checkStop(vio, TOL, false, f, f0,
                 s, 0, n, -1, -1, -1, x, 0, x0, 0, u, 0);
 
         assertNotNull(result, "Should return non-zero when f is finite and criteria met");
@@ -272,7 +272,7 @@ class ConvergenceDetectionProperties {
         double[] x0 = generateVector(n, rand);
         double[] u = new double[n];
 
-        OptimizationStatus result = SLSQPCore.checkStop(vio, TOL, false, f, f0,
+        Optimization.Status result = SLSQPCore.checkStop(vio, TOL, false, f, f0,
                 s, 0, n, -1, -1, -1, x, 0, x0, 0, u, 0);
 
         assertNotNull(result, "Should return non-zero when |f - f0| < tol");
@@ -299,7 +299,7 @@ class ConvergenceDetectionProperties {
         double[] x0 = generateVector(n, rand);
         double[] u = new double[n];
 
-        OptimizationStatus result = SLSQPCore.checkStop(vio, TOL, false, f, f0,
+        Optimization.Status result = SLSQPCore.checkStop(vio, TOL, false, f, f0,
                 s, 0, n, -1, -1, -1, x, 0, x0, 0, u, 0);
 
         assertNull(result, "Should return 0 when |f - f0| >= tol");
@@ -332,7 +332,7 @@ class ConvergenceDetectionProperties {
         double[] x0 = generateVector(n, rand);
         double[] u = new double[n];
 
-        OptimizationStatus result = SLSQPCore.checkStop(vio, TOL, false, f, f0,
+        Optimization.Status result = SLSQPCore.checkStop(vio, TOL, false, f, f0,
                 s, 0, n, -1, -1, -1, x, 0, x0, 0, u, 0);
 
         assertNotNull(result, "Should return non-zero when ||s||_2 < tol");
@@ -360,7 +360,7 @@ class ConvergenceDetectionProperties {
         double[] x0 = generateVector(n, rand);
         double[] u = new double[n];
 
-        OptimizationStatus result = SLSQPCore.checkStop(vio, TOL, false, f, f0,
+        Optimization.Status result = SLSQPCore.checkStop(vio, TOL, false, f, f0,
                 s, 0, n, -1, -1, -1, x, 0, x0, 0, u, 0);
 
         assertNull(result, "Should return 0 when ||s||_2 >= tol");
@@ -393,7 +393,7 @@ class ConvergenceDetectionProperties {
         double[] x0 = generateVector(n, rand);
         double[] u = new double[n];
 
-        OptimizationStatus result = SLSQPCore.checkStop(vio, TOL, false, f, f0,
+        Optimization.Status result = SLSQPCore.checkStop(vio, TOL, false, f, f0,
                 s, 0, n, fEvalTol, -1, -1, x, 0, x0, 0, u, 0);
 
         assertNotNull(result, "Should return non-zero when |f| < fEvalTol");
@@ -420,7 +420,7 @@ class ConvergenceDetectionProperties {
         double[] x0 = generateVector(n, rand);
         double[] u = new double[n];
 
-        OptimizationStatus result = SLSQPCore.checkStop(vio, TOL, false, f, f0,
+        Optimization.Status result = SLSQPCore.checkStop(vio, TOL, false, f, f0,
                 s, 0, n, -1, -1, -1, x, 0, x0, 0, u, 0);
 
         assertNull(result, "Should return 0 when fEvalTol disabled");
@@ -456,7 +456,7 @@ class ConvergenceDetectionProperties {
         double[] x0 = generateVector(n, rand);
         double[] u = new double[n];
 
-        OptimizationStatus result = SLSQPCore.checkStop(vio, TOL, false, f, f0,
+        Optimization.Status result = SLSQPCore.checkStop(vio, TOL, false, f, f0,
                 s, 0, n, -1, fDiffTol, -1, x, 0, x0, 0, u, 0);
 
         assertNotNull(result, "Should return non-zero when |f - f0| < fDiffTol");
@@ -483,7 +483,7 @@ class ConvergenceDetectionProperties {
         double[] x0 = generateVector(n, rand);
         double[] u = new double[n];
 
-        OptimizationStatus result = SLSQPCore.checkStop(vio, TOL, false, f, f0,
+        Optimization.Status result = SLSQPCore.checkStop(vio, TOL, false, f, f0,
                 s, 0, n, -1, -1, -1, x, 0, x0, 0, u, 0);
 
         assertNull(result, "Should return 0 when fDiffTol disabled");
@@ -521,7 +521,7 @@ class ConvergenceDetectionProperties {
         double xNormDiff = norm2(xDiff);
         Assume.that(xNormDiff < xDiffTol);
 
-        OptimizationStatus result = SLSQPCore.checkStop(vio, TOL, false, f, f0,
+        Optimization.Status result = SLSQPCore.checkStop(vio, TOL, false, f, f0,
                 s, 0, n, -1, -1, xDiffTol, x, 0, x0, 0, u, 0);
 
         assertNotNull(result, "Should return non-zero when ||x - x0||_2 < xDiffTol");
@@ -548,7 +548,7 @@ class ConvergenceDetectionProperties {
         double[] x0 = x.clone();
         double[] u = new double[n];
 
-        OptimizationStatus result = SLSQPCore.checkStop(vio, TOL, false, f, f0,
+        Optimization.Status result = SLSQPCore.checkStop(vio, TOL, false, f, f0,
                 s, 0, n, -1, -1, -1, x, 0, x0, 0, u, 0);
 
         assertNull(result, "Should return 0 when xDiffTol disabled");
@@ -754,10 +754,10 @@ class ConvergenceDetectionProperties {
         double[] u1 = new double[n];
         double[] u2 = new double[n];
 
-        OptimizationStatus result1 = SLSQPCore.checkStop(vio, TOL, false, f, f0,
+        Optimization.Status result1 = SLSQPCore.checkStop(vio, TOL, false, f, f0,
                 s.clone(), 0, n, -1, -1, -1, x.clone(), 0, x0.clone(), 0, u1, 0);
 
-        OptimizationStatus result2 = SLSQPCore.checkStop(vio, TOL, false, f, f0,
+        Optimization.Status result2 = SLSQPCore.checkStop(vio, TOL, false, f, f0,
                 s.clone(), 0, n, -1, -1, -1, x.clone(), 0, x0.clone(), 0, u2, 0);
 
         assertEquals(result1, result2, "checkStop should be deterministic");
@@ -793,10 +793,10 @@ class ConvergenceDetectionProperties {
         double[] vioOut1 = new double[1];
         double[] vioOut2 = new double[1];
 
-        OptimizationStatus result1 = SLSQPCore.checkConv(c.clone(), 0, m, meq, TOL, false, f, f0,
+        Optimization.Status result1 = SLSQPCore.checkConv(c.clone(), 0, m, meq, TOL, false, f, f0,
                 s.clone(), 0, n, -1, -1, -1, x.clone(), 0, x0.clone(), 0, u1, 0, vioOut1);
 
-        OptimizationStatus result2 = SLSQPCore.checkConv(c.clone(), 0, m, meq, TOL, false, f, f0,
+        Optimization.Status result2 = SLSQPCore.checkConv(c.clone(), 0, m, meq, TOL, false, f, f0,
                 s.clone(), 0, n, -1, -1, -1, x.clone(), 0, x0.clone(), 0, u2, 0, vioOut2);
 
         assertEquals(result1, result2, "checkConv should be deterministic");
@@ -826,7 +826,7 @@ class ConvergenceDetectionProperties {
         double[] x0 = x.clone();
         double[] u = new double[n];
 
-        OptimizationStatus result = SLSQPCore.checkStop(vio, TOL, false, f, f0,
+        Optimization.Status result = SLSQPCore.checkStop(vio, TOL, false, f, f0,
                 s, 0, n, TOL, TOL, TOL, x, 0, x0, 0, u, 0);
 
         assertNotNull(result, "Should return non-zero when all criteria met");
@@ -853,7 +853,7 @@ class ConvergenceDetectionProperties {
         double[] x0 = generateVector(n, rand);
         double[] u = new double[n];
 
-        OptimizationStatus result = SLSQPCore.checkStop(vio, TOL, false, f, f0,
+        Optimization.Status result = SLSQPCore.checkStop(vio, TOL, false, f, f0,
                 s, 0, n, -1, -1, -1, x, 0, x0, 0, u, 0);
 
         assertNull(result, "Should return 0 when no criteria met");
@@ -878,7 +878,7 @@ class ConvergenceDetectionProperties {
         double[] x0 = {1.0};
         double[] u = new double[1];
 
-        OptimizationStatus result = SLSQPCore.checkStop(vio, TOL, false, f, f0,
+        Optimization.Status result = SLSQPCore.checkStop(vio, TOL, false, f, f0,
                 s, 0, n, -1, -1, -1, x, 0, x0, 0, u, 0);
 
         if (vio < TOL && !Double.isNaN(f) && Math.abs(f - f0) < TOL) {
@@ -908,7 +908,7 @@ class ConvergenceDetectionProperties {
         double[] u = new double[n];
         double[] vioOut = new double[1];
 
-        OptimizationStatus result = SLSQPCore.checkConv(c, 0, m, meq, TOL, false, f, f0,
+        Optimization.Status result = SLSQPCore.checkConv(c, 0, m, meq, TOL, false, f, f0,
                 s, 0, n, -1, -1, -1, x, 0, x0, 0, u, 0, vioOut);
 
         assertEquals(0.0, vioOut[0], EPSILON, "No constraints should have zero violation");

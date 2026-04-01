@@ -7,7 +7,7 @@
  */
 package com.curioloop.numopt4j.optim.slsqp;
 
-import com.curioloop.numopt4j.optim.OptimizationResult;
+import com.curioloop.numopt4j.optim.Optimization;
 import com.curioloop.numopt4j.optim.Univariate;
 import net.jqwik.api.*;
 import net.jqwik.api.constraints.*;
@@ -70,7 +70,7 @@ class WorkspaceReuseProperties {
             double[] x = new double[n];
             for (int j = 0; j < n; j++) x[j] = rand.nextDouble() * 2 - 1;
             problem.initialPoint(x);
-            OptimizationResult result = problem.solve(workspace);
+            Optimization result = problem.solve(workspace);
             assertNotNull(result, "Optimization " + i + " should return a result");
             assertNotNull(result.getStatus(), "Optimization " + i + " should have a status");
         }
@@ -87,7 +87,7 @@ class WorkspaceReuseProperties {
 
         for (int i = 0; i < 3; i++) {
             problem.initialPoint(generateInitialPoint(n, rand));
-            OptimizationResult result = problem.solve(workspace);
+            Optimization result = problem.solve(workspace);
             if (result.isSuccessful()) {
                 assertTrue(result.getCost() < TOLERANCE,
                         "Optimization " + i + " should find minimum near 0, got: " + result.getCost());
@@ -230,9 +230,9 @@ class WorkspaceReuseProperties {
         SLSQPProblem problem = quadraticProblem(n, initialPoint.clone());
         SLSQPWorkspace workspace = new SLSQPWorkspace(n, 0, 0);
 
-        OptimizationResult result1 = problem.solve(workspace);
+        Optimization result1 = problem.solve(workspace);
         problem.initialPoint(initialPoint.clone());
-        OptimizationResult result2 = problem.solve(workspace);
+        Optimization result2 = problem.solve(workspace);
 
         assertEquals(result1.getCost(), result2.getCost(), TOLERANCE);
         assertEquals(result1.getStatus(), result2.getStatus());
@@ -247,10 +247,10 @@ class WorkspaceReuseProperties {
         double[] initialPoint = generateInitialPoint(n, rand);
 
         SLSQPProblem p1 = quadraticProblem(n, initialPoint.clone());
-        OptimizationResult result1 = p1.solve(new SLSQPWorkspace(n, 0, 0));
+        Optimization result1 = p1.solve(new SLSQPWorkspace(n, 0, 0));
 
         SLSQPProblem p2 = quadraticProblem(n, initialPoint.clone());
-        OptimizationResult result2 = p2.solve(new SLSQPWorkspace(n, 0, 0));
+        Optimization result2 = p2.solve(new SLSQPWorkspace(n, 0, 0));
 
         assertEquals(result1.getCost(), result2.getCost(), EPSILON);
         assertEquals(result1.getStatus(), result2.getStatus());
@@ -269,7 +269,7 @@ class WorkspaceReuseProperties {
         double[] initialPoint = generateInitialPoint(n, rand);
 
         SLSQPProblem problem = quadraticProblem(n, initialPoint.clone());
-        OptimizationResult resultFresh = problem.solve(new SLSQPWorkspace(n, 0, 0));
+        Optimization resultFresh = problem.solve(new SLSQPWorkspace(n, 0, 0));
 
         SLSQPWorkspace reusedWs = new SLSQPWorkspace(n, 0, 0);
         // "dirty" the workspace
@@ -277,7 +277,7 @@ class WorkspaceReuseProperties {
         problem.solve(reusedWs);
         // now run with original initial point
         problem.initialPoint(initialPoint.clone());
-        OptimizationResult resultReused = problem.solve(reusedWs);
+        Optimization resultReused = problem.solve(reusedWs);
 
         assertEquals(resultFresh.getCost(), resultReused.getCost(), TOLERANCE);
         assertEquals(resultFresh.getStatus(), resultReused.getStatus());
@@ -294,7 +294,7 @@ class WorkspaceReuseProperties {
 
         for (int i = 0; i < 10; i++) {
             problem.initialPoint(generateInitialPoint(n, rand));
-            OptimizationResult result = problem.solve(workspace);
+            Optimization result = problem.solve(workspace);
             if (result.isSuccessful()) {
                 assertTrue(result.getCost() < TOLERANCE,
                         "After " + (i + 1) + " reuses, should still find minimum");

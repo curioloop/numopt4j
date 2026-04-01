@@ -99,7 +99,7 @@ public class LbfgsbIntegrationTest {
         };
         
         // Build the optimizer
-        OptimizationResult result = new LBFGSBProblem()
+        Optimization result = new LBFGSBProblem()
                 .objective(logLikelihood)
                 .initialPoint(0.0, 0.0, 0.0)
                 .maxIterations(50)
@@ -250,7 +250,7 @@ public class LbfgsbIntegrationTest {
             x0[i] = 3.0;
         }
         
-        OptimizationResult result = new LBFGSBProblem()
+        Optimization result = new LBFGSBProblem()
                 .objective(rosenbrock)
                 .initialPoint(x0)
                 .corrections(5)
@@ -340,7 +340,7 @@ public class LbfgsbIntegrationTest {
         Univariate quadratic = TestTemplates.quadraticWithTarget(new double[]{1});;
         
         // Build the optimizer with the specified bound
-        OptimizationResult result = new LBFGSBProblem()
+        Optimization result = new LBFGSBProblem()
                 .objective(quadratic)
                 .initialPoint(initialValue)
                 .bounds(bound)

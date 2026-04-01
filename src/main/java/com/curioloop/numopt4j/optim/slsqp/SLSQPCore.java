@@ -100,8 +100,8 @@
  */
 package com.curioloop.numopt4j.optim.slsqp;
 
-import com.curioloop.numopt4j.optim.OptimizationResult;
-import com.curioloop.numopt4j.optim.OptimizationStatus;
+import com.curioloop.numopt4j.optim.Optimization;
+
 import com.curioloop.numopt4j.optim.Univariate;
 import com.curioloop.numopt4j.optim.Bound;
 
@@ -184,9 +184,9 @@ final class SLSQPCore {
      * @param x0Off     offset into x0 array
      * @param u         workspace for ‖x - x₀‖₂ computation
      * @param uOff      offset into u array
-     * @return OptimizationStatus (null = not converged)
+     * @return Optimization.Status (null = not converged)
      */
-    static OptimizationStatus checkStop(
+    static Optimization.Status checkStop(
             double vio, double tol, boolean badQP,
             double f, double f0,
             double[] s, int sOff, int n,
@@ -202,22 +202,22 @@ final class SLSQPCore {
 
         // Matches C: if (fabs(f - f0) < tol) { return 1; }
         if (Math.abs(f - f0) < tol) {
-            return OptimizationStatus.FUNCTION_TOLERANCE_REACHED;
+            return Optimization.Status.FUNCTION_TOLERANCE_REACHED;
         }
 
         // Matches C: if (dnrm2(n, s, 1) < tol) { return 1; }
         if (BLAS.dnrm2(n, s, sOff, 1) < tol) {
-            return OptimizationStatus.GRADIENT_TOLERANCE_REACHED;
+            return Optimization.Status.GRADIENT_TOLERANCE_REACHED;
         }
 
         // Matches C: if (config->f_eval_tol >= ZERO && fabs(f) < config->f_eval_tol) { return 1; }
         if (fEvalTol >= 0.0 && Math.abs(f) < fEvalTol) {
-            return OptimizationStatus.FUNCTION_TOLERANCE_REACHED;
+            return Optimization.Status.FUNCTION_TOLERANCE_REACHED;
         }
 
         // Matches C: if (config->f_diff_tol >= ZERO && fabs(f - f0) < config->f_diff_tol) { return 1; }
         if (fDiffTol >= 0.0 && Math.abs(f - f0) < fDiffTol) {
-            return OptimizationStatus.FUNCTION_TOLERANCE_REACHED;
+            return Optimization.Status.FUNCTION_TOLERANCE_REACHED;
         }
 
         // Matches C: if (config->x_diff_tol >= ZERO) { ... }
@@ -226,7 +226,7 @@ final class SLSQPCore {
             BLAS.dcopy(n, x, xOff, 1, u, uOff, 1);
             BLAS.daxpy(n, -1.0, x0, x0Off, 1, u, uOff, 1);
             if (BLAS.dnrm2(n, u, uOff, 1) < xDiffTol) {
-                return OptimizationStatus.COEFFICIENT_TOLERANCE_REACHED;
+                return Optimization.Status.COEFFICIENT_TOLERANCE_REACHED;
             }
         }
 
@@ -265,9 +265,9 @@ final class SLSQPCore {
      * @param u         workspace
      * @param uOff      offset into u array
      * @param vioOut    output: constraint violation Ĉ𝑣𝑖𝑜 (array of length 1, can be null)
-     * @return OptimizationStatus (null = not converged)
+     * @return Optimization.Status (null = not converged)
      */
-    static OptimizationStatus checkConv(
+    static Optimization.Status checkConv(
             double[] c, int cOff, int m, int meq,
             double tol, boolean badQP,
             double f, double f0,
@@ -339,7 +339,7 @@ final class SLSQPCore {
      * @param ws            workspace
      * @return optimization result
      */
-    static OptimizationResult optimize(
+    static Optimization optimize(
             double[] x,
             Univariate objEval,
             Univariate[] eqCons,
@@ -352,7 +352,7 @@ final class SLSQPCore {
 
         // Validate inputs
         if (x == null || objEval == null) {
-            return new OptimizationResult(Double.NaN, null, 0.0, OptimizationStatus.INVALID_ARGUMENT, 0, 0);
+            return new Optimization(Double.NaN, null, 0.0, Optimization.Status.INVALID_ARGUMENT, 0, 0);
         }
 
         int meq = (eqCons != null) ? eqCons.length : 0;
@@ -411,7 +411,7 @@ final class SLSQPCore {
         System.arraycopy(g, 0, buffer, gOff, n);
 
         if (Double.isNaN(f) || Double.isInfinite(f)) {
-            return new OptimizationResult(Double.NaN, null, f, OptimizationStatus.CALLBACK_ERROR, 0, nfev);
+            return new Optimization(Double.NaN, null, f, Optimization.Status.CALLBACK_ERROR, 0, nfev);
         }
 
         // Evaluate constraints and their gradients (if provided)
@@ -443,7 +443,7 @@ final class SLSQPCore {
             if (maxTimeNanos > 0) {
                 long elapsedNanos = System.nanoTime() - startTimeNanos;
                 if (elapsedNanos >= maxTimeNanos) {
-                    return new OptimizationResult(Double.NaN, null, f, OptimizationStatus.MAX_COMPUTATIONS_REACHED, iter, nfev);
+                    return new Optimization(Double.NaN, null, f, Optimization.Status.MAX_COMPUTATIONS_REACHED, iter, nfev);
                 }
             }
 
@@ -520,7 +520,7 @@ final class SLSQPCore {
 
             // Unable to solve LSQ even the augmented one
             if (lsqMode != MODE_HAS_SOLUTION) {
-                return new OptimizationResult(Double.NaN, null, f, OptimizationStatus.CONSTRAINT_INCOMPATIBLE, iter, nfev);
+                return new Optimization(Double.NaN, null, f, Optimization.Status.CONSTRAINT_INCOMPATIBLE, iter, nfev);
             }
 
             // Update multipliers for L1-test: v[i] = g[i] - λᵀ∇c[i]
@@ -547,7 +547,7 @@ final class SLSQPCore {
 
             // Check convergence
             if (h1 < accuracy && h2 < accuracy && !badQP && !Double.isNaN(f)) {
-                return new OptimizationResult(Double.NaN, null, f, OptimizationStatus.GRADIENT_TOLERANCE_REACHED, iter, nfev);
+                return new Optimization(Double.NaN, null, f, Optimization.Status.GRADIENT_TOLERANCE_REACHED, iter, nfev);
             }
 
             // Compute directional derivative of merit function
@@ -566,14 +566,14 @@ final class SLSQPCore {
                 if (resetCount > 5) {
                     // Check relaxed convergence
                     double[] vio = new double[1];
-                    OptimizationStatus convStatus = checkConv(buffer, cOff, m, meq, tol, badQP, f, f0,
+                    Optimization.Status convStatus = checkConv(buffer, cOff, m, meq, tol, badQP, f, f0,
                             buffer, sOff, n, fEvalTol, fDiffTol, xDiffTol,
                             x, 0, buffer, x0Off, buffer, uOff, vio);
                     if (convStatus != null) {
-                        return new OptimizationResult(Double.NaN, null, f, convStatus, iter, nfev);
+                        return new Optimization(Double.NaN, null, f, convStatus, iter, nfev);
                     }
                     // Not converged even with relaxed tolerance
-                    return new OptimizationResult(Double.NaN, null, f, OptimizationStatus.LINE_SEARCH_FAILED, iter, nfev);
+                    return new Optimization(Double.NaN, null, f, Optimization.Status.LINE_SEARCH_FAILED, iter, nfev);
                 }
                 // Reset L = I, D = I
                 BLAS.dset(n2 + 1, 0, buffer, lOff, 1);
@@ -620,10 +620,10 @@ final class SLSQPCore {
                 nfev++;
 
                 if (Double.isNaN(f) || Double.isInfinite(f)) {
-                    return new OptimizationResult(Double.NaN, null, f0, OptimizationStatus.CALLBACK_ERROR, iter, nfev);
+                    return new Optimization(Double.NaN, null, f0, Optimization.Status.CALLBACK_ERROR, iter, nfev);
                 }
                 if (maxEval > 0 && nfev >= maxEval) {
-                    return new OptimizationResult(Double.NaN, null, f, OptimizationStatus.MAX_EVALUATIONS_REACHED, iter, nfev);
+                    return new Optimization(Double.NaN, null, f, Optimization.Status.MAX_EVALUATIONS_REACHED, iter, nfev);
                 }
 
                 // Evaluate constraint values only (no gradient)
@@ -653,13 +653,13 @@ final class SLSQPCore {
                     if (h1Ls <= h3 / 10.0 || lineCount > 10) {
                         // Armijo condition satisfied or max iterations reached
                         double[] vio = new double[1];
-                        OptimizationStatus convStatus = checkConv(buffer, cOff, m, meq, accuracy, badQP, f, f0,
+                        Optimization.Status convStatus = checkConv(buffer, cOff, m, meq, accuracy, badQP, f, f0,
                                 buffer, sOff, n, fEvalTol, fDiffTol, xDiffTol,
                                 x, 0, buffer, x0Off, buffer, uOff, vio);
                         if (convStatus != null) {
                             // Evaluate gradients at accepted point before returning
                             evalGradients(x, n, m, meq, mineq, la, objEval, eqCons, ineqCons, g, buffer, gOff, cOff, aOff);
-                            return new OptimizationResult(Double.NaN, null, f, convStatus, iter, nfev);
+                            return new Optimization(Double.NaN, null, f, convStatus, iter, nfev);
                         }
                         h3 = vio[0];
                         lsDone = true;
@@ -685,13 +685,13 @@ final class SLSQPCore {
                     if (fm == FIND_CONV) {
                         // Search converged
                         double[] vio = new double[1];
-                        OptimizationStatus convStatus = checkConv(buffer, cOff, m, meq, accuracy, badQP, f, f0,
+                        Optimization.Status convStatus = checkConv(buffer, cOff, m, meq, accuracy, badQP, f, f0,
                                 buffer, sOff, n, fEvalTol, fDiffTol, xDiffTol,
                                 x, 0, buffer, x0Off, buffer, uOff, vio);
                         if (convStatus != null) {
                             // Evaluate gradients at accepted point before returning
                             evalGradients(x, n, m, meq, mineq, la, objEval, eqCons, ineqCons, g, buffer, gOff, cOff, aOff);
-                            return new OptimizationResult(Double.NaN, null, f, convStatus, iter, nfev);
+                            return new Optimization(Double.NaN, null, f, convStatus, iter, nfev);
                         }
                         h3 = vio[0];
                         lsDone = true;
@@ -755,14 +755,14 @@ final class SLSQPCore {
                 if (resetCount > 5) {
                     // Check relaxed convergence
                     double[] vio = new double[1];
-                    OptimizationStatus convStatus = checkConv(buffer, cOff, m, meq, tol, badQP, f, f0,
+                    Optimization.Status convStatus = checkConv(buffer, cOff, m, meq, tol, badQP, f, f0,
                             buffer, sOff, n, fEvalTol, fDiffTol, xDiffTol,
                             x, 0, buffer, x0Off, buffer, uOff, vio);
                     if (convStatus != null) {
-                        return new OptimizationResult(Double.NaN, null, f, convStatus, iter, nfev);
+                        return new Optimization(Double.NaN, null, f, convStatus, iter, nfev);
                     }
                     // Not converged even with relaxed tolerance
-                    return new OptimizationResult(Double.NaN, null, f, OptimizationStatus.LINE_SEARCH_FAILED, iter, nfev);
+                    return new Optimization(Double.NaN, null, f, Optimization.Status.LINE_SEARCH_FAILED, iter, nfev);
                 }
                 // Reset L = I, D = I
                 BLAS.dset(n2 + 1, 0, buffer, lOff, 1);
@@ -778,7 +778,7 @@ final class SLSQPCore {
         }
 
         // Maximum iterations reached
-        return new OptimizationResult(Double.NaN, null, f, OptimizationStatus.MAX_ITERATIONS_REACHED, maxIter, nfev);
+        return new Optimization(Double.NaN, null, f, Optimization.Status.MAX_ITERATIONS_REACHED, maxIter, nfev);
     }
 
     /**

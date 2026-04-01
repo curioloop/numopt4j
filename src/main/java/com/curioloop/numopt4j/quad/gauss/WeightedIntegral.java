@@ -57,11 +57,6 @@ public class WeightedIntegral implements Integral<Double, GaussPool> {
     }
 
     @Override
-    public Double integrate() {
-        return integrate((GaussPool) null);
-    }
-
-    @Override
     public Double integrate(GaussPool workspace) {
         Checks.validateFunction(function);
         requireReady();

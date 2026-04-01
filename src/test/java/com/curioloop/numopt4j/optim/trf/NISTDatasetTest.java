@@ -3,8 +3,8 @@
  */
 package com.curioloop.numopt4j.optim.trf;
 
-import com.curioloop.numopt4j.optim.OptimizationResult;
-import com.curioloop.numopt4j.optim.OptimizationStatus;
+import com.curioloop.numopt4j.optim.Optimization;
+
 import net.jqwik.api.*;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -53,13 +53,13 @@ public class NISTDatasetTest {
         residualFunc.accept(initialGuess, ir);
         double initialRss = 0; for (double v : ir) initialRss += v * v;
 
-        OptimizationResult result = new TRFProblem()
+        Optimization result = new TRFProblem()
             .residuals(residualFunc, m)
             .initialPoint(initialGuess.clone())
             .gradientTolerance(1e-8).parameterTolerance(1e-8).functionTolerance(1e-6).maxEvaluations(20000)
             .solve();
 
-        assertTrue(result.isSuccessful() || result.getStatus() == OptimizationStatus.MAX_EVALUATIONS_REACHED,
+        assertTrue(result.isSuccessful() || result.getStatus() == Optimization.Status.MAX_EVALUATIONS_REACHED,
             "Misra1a (" + label + ") should converge");
         assertTrue(result.getCost() <= initialRss,
             "Misra1a (" + label + ") RSS should improve");
@@ -93,13 +93,13 @@ public class NISTDatasetTest {
                 r[i] = LANCZOS1_Y[i] - (c[0]*Math.exp(-c[1]*x) + c[2]*Math.exp(-c[3]*x) + c[4]*Math.exp(-c[5]*x));
             }
         };
-        OptimizationResult result = new TRFProblem()
+        Optimization result = new TRFProblem()
             .residuals(residualFunc, m)
             .initialPoint(initialGuess.clone())
             .gradientTolerance(1e-10).parameterTolerance(1e-10).functionTolerance(1e-10).maxEvaluations(20000)
             .solve();
 
-        assertTrue(result.isSuccessful() || result.getStatus() == OptimizationStatus.MAX_EVALUATIONS_REACHED,
+        assertTrue(result.isSuccessful() || result.getStatus() == Optimization.Status.MAX_EVALUATIONS_REACHED,
             "Lanczos1 (" + label + ") should converge");
         assertTrue(result.getCost() < 1.0,
             "Lanczos1 (" + label + ") RSS should be < 1.0: " + result.getCost());
@@ -158,13 +158,13 @@ public class NISTDatasetTest {
         residualFunc.accept(initialGuess, ir);
         double initialRss = 0; for (double v : ir) initialRss += v * v;
 
-        OptimizationResult result = new TRFProblem()
+        Optimization result = new TRFProblem()
             .residuals(residualFunc, m)
             .initialPoint(initialGuess.clone())
             .gradientTolerance(1e-6).parameterTolerance(1e-6).functionTolerance(0.1).maxEvaluations(20000)
             .solve();
 
-        assertTrue(result.isSuccessful() || result.getStatus() == OptimizationStatus.MAX_EVALUATIONS_REACHED,
+        assertTrue(result.isSuccessful() || result.getStatus() == Optimization.Status.MAX_EVALUATIONS_REACHED,
             "Gauss1 should converge, status=" + result.getStatus());
         assertTrue(result.getCost() <= initialRss,
             "Gauss1 RSS should improve");
@@ -184,7 +184,7 @@ public class NISTDatasetTest {
             for (int i = 0; i < m; i++)
                 r[i] = MISRA1A_Y[i] - c[0] * (1.0 - Math.exp(-c[1] * MISRA1A_X[i]));
         };
-        OptimizationResult result = new TRFProblem()
+        Optimization result = new TRFProblem()
             .residuals(residualFunc, m)
             .initialPoint(startingPoint.clone())
             .gradientTolerance(1e-10).maxEvaluations(5000)

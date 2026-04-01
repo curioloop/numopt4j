@@ -33,9 +33,9 @@ import java.util.function.DoubleUnaryOperator;
  *       Experimental Mathematics 2005.</li>
  * </ul>
  */
-final class EndpointSingularQuadrature {
+final class EndpointSingularCore {
 
-    private EndpointSingularQuadrature() {}
+    private EndpointSingularCore() {}
 
     // -----------------------------------------------------------------------
     // Gauss-Jacobi refinement (algebraic singularities only)

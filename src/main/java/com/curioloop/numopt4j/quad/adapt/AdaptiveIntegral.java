@@ -93,11 +93,6 @@ public class AdaptiveIntegral implements Integral<Quadrature, AdaptivePool> {
     }
 
     @Override
-    public Quadrature integrate() {
-        return integrate((AdaptivePool) null);
-    }
-
-    @Override
     public Quadrature integrate(AdaptivePool workspace) {
         Checks.validateFunction(function);
         Checks.validateFiniteInterval(min, max);
@@ -129,7 +124,7 @@ public class AdaptiveIntegral implements Integral<Quadrature, AdaptivePool> {
                                        AdaptivePool pool) {
         double[] internalPoints = Checks.validateBreakpoints(points, min, max);
         if (internalPoints.length == 0) {
-            return AdaptiveQuadrature.integrate(f, min, max, absTol, relTol, maxSubdivisions, maxEvaluations, pool);
+            return AdaptiveCore.integrate(f, min, max, absTol, relTol, maxSubdivisions, maxEvaluations, pool);
         }
 
         double totalValue = 0.0, totalError = 0.0;
@@ -140,7 +135,7 @@ public class AdaptiveIntegral implements Integral<Quadrature, AdaptivePool> {
 
         for (int i = 0; i <= internalPoints.length; i++) {
             double right = i == internalPoints.length ? max : internalPoints[i];
-            Quadrature partial = AdaptiveQuadrature.integrate(
+            Quadrature partial = AdaptiveCore.integrate(
                     f, left, right, segmentAbsTol, relTol,
                     Math.max(1, remainingSubdivisions), Math.max(1, remainingEvaluations), pool);
 

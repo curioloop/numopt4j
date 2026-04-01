@@ -25,7 +25,7 @@ import java.util.function.DoubleUnaryOperator;
  *
  * <p>Finite-interval variants use adaptive GK15 directly on the weighted integrand.
  * Semi-infinite variants use the Longman/QUADPACK cycle-by-cycle strategy with
- * Wynn ε-algorithm acceleration (see {@link OscillatoryQuadrature}).</p>
+ * Wynn ε-algorithm acceleration (see {@link OscillatoryCore}).</p>
  *
  * <p>When ω = 0 and the kernel is sine, the result is exactly zero.
  * When ω = 0 and the kernel is cosine, the integral reduces to a plain adaptive integral.</p>
@@ -121,11 +121,6 @@ public class OscillatoryIntegral implements Integral<Quadrature, AdaptivePool> {
     }
 
     @Override
-    public Quadrature integrate() {
-        return integrate((AdaptivePool) null);
-    }
-
-    @Override
     public Quadrature integrate(AdaptivePool workspace) {
         Checks.validateFunction(function);
         if (opts == null) throw new IllegalStateException("Missing required parameter: opts. Call .opts(OscillatoryOpts) before .integrate().");
@@ -160,7 +155,7 @@ public class OscillatoryIntegral implements Integral<Quadrature, AdaptivePool> {
                     : Integrator.adaptive().function(t -> { double d = 1.0 - t; return function.applyAsDouble(min + t / d) / (d * d); }).bounds(0.0, 1.0)
                             .tolerances(absTol, relTol).maxSubdivisions(maxSubdivisions).maxEvaluations(maxEvaluations).integrate(pool);
         }
-        return OscillatoryQuadrature.integrateUpper(function, min, omega, opts.sine, absTol, relTol,
+        return OscillatoryCore.integrateUpper(function, min, omega, opts.sine, absTol, relTol,
                 maxCycles, maxSubdivisions, maxEvaluations, pool);
     }
 

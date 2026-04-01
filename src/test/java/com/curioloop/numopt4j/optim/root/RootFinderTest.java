@@ -1,7 +1,7 @@
 package com.curioloop.numopt4j.optim.root;
 
 import com.curioloop.numopt4j.optim.Bound;
-import com.curioloop.numopt4j.optim.OptimizationResult;
+import com.curioloop.numopt4j.optim.Optimization;
 
 import net.jqwik.api.*;
 import net.jqwik.api.constraints.DoubleRange;
@@ -114,7 +114,7 @@ class RootFinderTest {
         double a = root - halfWidth;
         double b = root + halfWidth;
 
-        OptimizationResult result = new BrentqProblem()
+        Optimization result = new BrentqProblem()
             .function(f)
             .bracket(Bound.between(a, b))
             .solve();
@@ -137,7 +137,7 @@ class RootFinderTest {
             f[1] = x[1] - r2;
         };
 
-        OptimizationResult result = new HYBRProblem()
+        Optimization result = new HYBRProblem()
             .equations(fn, 2)
             .initialPoint(0.0, 0.0)
             .solve();
@@ -158,7 +158,7 @@ class RootFinderTest {
 
     @Test
     void integrationTest_brentqViaSolve() {
-        OptimizationResult result = new BrentqProblem()
+        Optimization result = new BrentqProblem()
             .function(Math::sin)
             .bracket(Bound.between(3.0, 4.0))
             .solve();
@@ -174,7 +174,7 @@ class RootFinderTest {
             f[1] = 10.0 * (x[1] - x[0] * x[0]);
         };
 
-        OptimizationResult result = new HYBRProblem()
+        Optimization result = new HYBRProblem()
             .equations(fn, 2)
             .initialPoint(-1.0, 1.0)
             .solve();
@@ -192,7 +192,7 @@ class RootFinderTest {
             f[1] = 10.0 * (x[1] - x[0] * x[0]);
         };
 
-        OptimizationResult result = new BroydenProblem()
+        Optimization result = new BroydenProblem()
             .equations(fn, 2)
             .initialPoint(0.5, 0.5)
             .solve();
@@ -216,8 +216,8 @@ class RootFinderTest {
 
         HYBRWorkspace ws = finder.alloc();
 
-        OptimizationResult r1 = finder.solve(ws);
-        OptimizationResult r2 = finder.solve(ws);
+        Optimization r1 = finder.solve(ws);
+        Optimization r2 = finder.solve(ws);
 
         assertTrue(r1.isSuccessful());
         assertTrue(r2.isSuccessful());
@@ -230,7 +230,7 @@ class RootFinderTest {
 
     @Test
     void integrationTest_autoSelectHybrWhenEquationsSet() {
-        OptimizationResult result = new HYBRProblem()
+        Optimization result = new HYBRProblem()
             .equations((x, f) -> { f[0] = x[0] - 5.0; }, 1)
             .initialPoint(0.0)
             .solve();

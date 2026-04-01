@@ -45,11 +45,11 @@ public class WorkspaceReuseProperties {
                 .gradientTolerance(1e-6);
 
         // First, get the baseline result without workspace reuse
-        OptimizationResult baselineResult = problem.initialPoint(createInitialPoint(n, 1.0)).solve();
+        Optimization baselineResult = problem.initialPoint(createInitialPoint(n, 1.0)).solve();
 
         // Now test with workspace reuse
         LBFGSBWorkspace workspace = new LBFGSBWorkspace(n, 10);
-            OptimizationResult[] results = new OptimizationResult[numOptimizations];
+            Optimization[] results = new Optimization[numOptimizations];
 
             // Run multiple optimizations with the same workspace
             for (int i = 0; i < numOptimizations; i++) {
@@ -125,11 +125,11 @@ public class WorkspaceReuseProperties {
                 .functionTolerance(1e-8);
 
         // First, get the baseline result without workspace reuse
-        OptimizationResult baselineResult = problem.initialPoint(createInitialPoint(n, 1.0)).solve();
+        Optimization baselineResult = problem.initialPoint(createInitialPoint(n, 1.0)).solve();
 
         // Now test with workspace reuse
         SLSQPWorkspace workspace = new SLSQPWorkspace(n, 0, 0);
-            OptimizationResult[] results = new OptimizationResult[numOptimizations];
+            Optimization[] results = new Optimization[numOptimizations];
 
             // Run multiple optimizations with the same workspace
             for (int i = 0; i < numOptimizations; i++) {

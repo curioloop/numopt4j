@@ -32,7 +32,9 @@ public interface Integral<R, W> {
     W alloc();
 
     /** Computes the integral using an internally managed workspace. */
-    R integrate();
+    default R integrate() {
+        return integrate(null);
+    }
 
     /** Computes the integral using the caller-provided workspace, avoiding internal allocation. */
     R integrate(W workspace);

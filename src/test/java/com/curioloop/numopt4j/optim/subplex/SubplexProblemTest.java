@@ -5,8 +5,8 @@ package com.curioloop.numopt4j.optim.subplex;
 
 import com.curioloop.numopt4j.optim.Bound;
 import com.curioloop.numopt4j.optim.Minimizer;
-import com.curioloop.numopt4j.optim.OptimizationResult;
-import com.curioloop.numopt4j.optim.OptimizationStatus;
+import com.curioloop.numopt4j.optim.Optimization;
+
 
 import org.junit.jupiter.api.Test;
 
@@ -22,7 +22,7 @@ class SubplexProblemTest {
 
     @Test
     void rosenbrock2D() {
-        OptimizationResult r = Minimizer.subplex()
+        Optimization r = Minimizer.subplex()
                 .objective(x -> 100 * Math.pow(x[1] - x[0] * x[0], 2) + Math.pow(1 - x[0], 2))
                 .initialPoint(-1.0, 1.0)
                 .functionTolerance(1e-8)
@@ -37,7 +37,7 @@ class SubplexProblemTest {
 
     @Test
     void sphere3D() {
-        OptimizationResult r = Minimizer.subplex()
+        Optimization r = Minimizer.subplex()
                 .objective(x -> x[0] * x[0] + x[1] * x[1] + x[2] * x[2])
                 .initialPoint(3.0, -4.0, 5.0)
                 .functionTolerance(1e-10)
@@ -53,7 +53,7 @@ class SubplexProblemTest {
 
     @Test
     void beale() {
-        OptimizationResult r = Minimizer.subplex()
+        Optimization r = Minimizer.subplex()
                 .objective(x -> {
                     double x0 = x[0], x1 = x[1];
                     double t1 = 1.5 - x0 + x0 * x1;
@@ -73,7 +73,7 @@ class SubplexProblemTest {
 
     @Test
     void booth() {
-        OptimizationResult r = Minimizer.subplex()
+        Optimization r = Minimizer.subplex()
                 .objective(x -> {
                     double t1 = x[0] + 2 * x[1] - 7;
                     double t2 = 2 * x[0] + x[1] - 5;
@@ -92,7 +92,7 @@ class SubplexProblemTest {
 
     @Test
     void matyas() {
-        OptimizationResult r = Minimizer.subplex()
+        Optimization r = Minimizer.subplex()
                 .objective(x -> 0.26 * (x[0] * x[0] + x[1] * x[1]) - 0.48 * x[0] * x[1])
                 .initialPoint(5.0, -5.0)
                 .functionTolerance(1e-10)
@@ -106,7 +106,7 @@ class SubplexProblemTest {
 
     @Test
     void oneDimensional() {
-        OptimizationResult r = Minimizer.subplex()
+        Optimization r = Minimizer.subplex()
                 .objective(x -> (x[0] - 3) * (x[0] - 3))
                 .initialPoint(0.0)
                 .functionTolerance(1e-10)
@@ -124,7 +124,7 @@ class SubplexProblemTest {
         double[] x0 = new double[20];
         for (int i = 0; i < 20; i++) x0[i] = i + 1;
 
-        OptimizationResult r = Minimizer.subplex()
+        Optimization r = Minimizer.subplex()
                 .objective(x -> {
                     double s = 0;
                     for (double v : x) s += v * v;
@@ -147,7 +147,7 @@ class SubplexProblemTest {
         double[] x0 = new double[10];
         for (int i = 0; i < 10; i++) x0[i] = (i % 2 == 0) ? -1.2 : 1.0;
 
-        OptimizationResult r = Minimizer.subplex()
+        Optimization r = Minimizer.subplex()
                 .objective(x -> {
                     double s = 0;
                     for (int i = 0; i < x.length - 1; i++) {
@@ -169,7 +169,7 @@ class SubplexProblemTest {
 
     @Test
     void bounded3D() {
-        OptimizationResult r = Minimizer.subplex()
+        Optimization r = Minimizer.subplex()
                 .objective(x -> (x[0] - 0.5) * (x[0] - 0.5)
                         + (x[1] - 1.5) * (x[1] - 1.5)
                         + (x[2] - 2.5) * (x[2] - 2.5))
@@ -189,7 +189,7 @@ class SubplexProblemTest {
 
     @Test
     void boundedRosenbrock() {
-        OptimizationResult r = Minimizer.subplex()
+        Optimization r = Minimizer.subplex()
                 .objective(x -> 100 * Math.pow(x[1] - x[0] * x[0], 2) + Math.pow(1 - x[0], 2))
                 .initialPoint(0.0, 0.0)
                 .bounds(Bound.between(-2, 2), Bound.between(-2, 2))
@@ -204,7 +204,7 @@ class SubplexProblemTest {
 
     @Test
     void boundedMinimumOnBoundary() {
-        OptimizationResult r = Minimizer.subplex()
+        Optimization r = Minimizer.subplex()
                 .objective(x -> x[0] * x[0])
                 .initialPoint(4.0)
                 .bounds(Bound.atLeast(2.0))
@@ -217,7 +217,7 @@ class SubplexProblemTest {
 
     @Test
     void startAtBoundCorner() {
-        OptimizationResult r = Minimizer.subplex()
+        Optimization r = Minimizer.subplex()
                 .objective(x -> (x[0] - 0.5) * (x[0] - 0.5) + (x[1] - 0.5) * (x[1] - 0.5))
                 .initialPoint(0.0, 0.0)
                 .bounds(Bound.between(0, 1), Bound.between(0, 1))
@@ -232,7 +232,7 @@ class SubplexProblemTest {
 
     @Test
     void tightBounds() {
-        OptimizationResult r = Minimizer.subplex()
+        Optimization r = Minimizer.subplex()
                 .objective(x -> (x[0] - 1) * (x[0] - 1) + (x[1] - 2) * (x[1] - 2))
                 .initialPoint(0.99, 1.99)
                 .bounds(Bound.between(0.9, 1.1), Bound.between(1.9, 2.1))
@@ -249,7 +249,7 @@ class SubplexProblemTest {
 
     @Test
     void nanInObjective() {
-        OptimizationResult r = Minimizer.subplex()
+        Optimization r = Minimizer.subplex()
                 .objective(x -> x[0] < 0 ? Double.NaN : (x[0] - 2) * (x[0] - 2))
                 .initialPoint(5.0)
                 .functionTolerance(1e-10)
@@ -272,10 +272,10 @@ class SubplexProblemTest {
 
         SubplexWorkspace ws = p.alloc();
 
-        OptimizationResult r1 = p.solve(ws);
+        Optimization r1 = p.solve(ws);
         assertThat(r1.isSuccessful()).isTrue();
 
-        OptimizationResult r2 = p.initialPoint(-3.0, 4.0).solve(ws);
+        Optimization r2 = p.initialPoint(-3.0, 4.0).solve(ws);
         assertThat(r2.isSuccessful()).isTrue();
         assertThat(r2.getSolution()[0]).isCloseTo(0.0, within(1e-4));
         assertThat(r2.getSolution()[1]).isCloseTo(0.0, within(1e-4));
@@ -286,7 +286,7 @@ class SubplexProblemTest {
     @Test
     void customStepSizes() {
         // Different scales per dimension
-        OptimizationResult r = Minimizer.subplex()
+        Optimization r = Minimizer.subplex()
                 .objective(x -> (x[0] - 1) * (x[0] - 1) + (x[1] - 1000) * (x[1] - 1000))
                 .initialPoint(0.5, 500.0)
                 .initialStep(0.1, 100.0)
@@ -304,13 +304,13 @@ class SubplexProblemTest {
 
     @Test
     void maxEvaluationsReached() {
-        OptimizationResult r = Minimizer.subplex()
+        Optimization r = Minimizer.subplex()
                 .objective(x -> x[0] * x[0] + x[1] * x[1] + x[2] * x[2])
                 .initialPoint(10.0, 10.0, 10.0)
                 .maxEvaluations(5)
                 .solve();
 
-        assertThat(r.getStatus()).isEqualTo(OptimizationStatus.MAX_EVALUATIONS_REACHED);
+        assertThat(r.getStatus()).isEqualTo(Optimization.Status.MAX_EVALUATIONS_REACHED);
         assertThat(r.isSuccessful()).isFalse();
     }
 }

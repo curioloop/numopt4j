@@ -25,7 +25,7 @@ numopt4j is a high-performance Java numerical library providing optimization, ro
 ### Package Structure
 
 ```
-com.curioloop.numopt4j.optim          # Minimizer, RootFinder, Bound, OptimizationResult, OptimizationStatus, OptimizationFailure
+com.curioloop.numopt4j.optim          # Minimizer, RootFinder, Bound, Optimization, Optimization.Status
 com.curioloop.numopt4j.optim.subplex  # SubplexProblem, SubplexWorkspace
 com.curioloop.numopt4j.optim.lbfgsb   # LBFGSBProblem, LBFGSBWorkspace
 com.curioloop.numopt4j.optim.slsqp    # SLSQPProblem, SLSQPWorkspace
@@ -102,13 +102,13 @@ import com.curioloop.numopt4j.optim.trf.*;
 import java.util.Arrays;
 
 // Derivative-free optimization (Subplex)
-OptimizationResult r0 = Minimizer.subplex()
+Optimization r0 = Minimizer.subplex()
     .objective(x -> x[0]*x[0] + x[1]*x[1])
     .initialPoint(1.0, 1.0)
     .solve();
 
 // Derivative-free with bounds and step sizes
-OptimizationResult r0b = Minimizer.subplex()
+Optimization r0b = Minimizer.subplex()
     .objective(fn)
     .initialPoint(x0)
     .bounds(Bound.between(0, 10), Bound.between(0, 10))
@@ -118,14 +118,14 @@ OptimizationResult r0b = Minimizer.subplex()
     .solve();
 
 // Unconstrained optimization (L-BFGS-B)
-OptimizationResult r1 = Minimizer.lbfgsb()
+Optimization r1 = Minimizer.lbfgsb()
     .objective(x -> x[0]*x[0] + x[1]*x[1])
     .initialPoint(1.0, 1.0)
     .solve();
 System.out.println(Arrays.toString(r1.getSolution())); // [0.0, 0.0]
 
 // Box-constrained optimization (L-BFGS-B)
-OptimizationResult r2 = Minimizer.lbfgsb()
+Optimization r2 = Minimizer.lbfgsb()
     .objective(x -> x[0]*x[0] + x[1]*x[1])
     .bounds(Bound.atLeast(0.5), Bound.atLeast(0.5))
     .initialPoint(1.0, 1.0)
@@ -133,7 +133,7 @@ OptimizationResult r2 = Minimizer.lbfgsb()
 
 // Inequality-constrained optimization (SLSQP)
 // minimize x[0] + x[1], subject to x[0]^2 + x[1]^2 >= 1
-OptimizationResult r3 = Minimizer.slsqp()
+Optimization r3 = Minimizer.slsqp()
     .objective(x -> x[0] + x[1])
     .inequalityConstraints(x -> x[0]*x[0] + x[1]*x[1] - 1)
     .initialPoint(1.0, 1.0)
@@ -141,14 +141,14 @@ OptimizationResult r3 = Minimizer.slsqp()
 
 // Equality-constrained optimization (SLSQP)
 // minimize x[0]^2 + x[1]^2, subject to x[0] + x[1] = 1
-OptimizationResult r4 = Minimizer.slsqp()
+Optimization r4 = Minimizer.slsqp()
     .objective(x -> x[0]*x[0] + x[1]*x[1])
     .equalityConstraints(x -> x[0] + x[1] - 1)
     .initialPoint(0.5, 0.5)
     .solve();
 
 // Least squares (TRF)
-OptimizationResult r5 = Minimizer.trf()
+Optimization r5 = Minimizer.trf()
     .residuals((x, res) -> {
         res[0] = x[0] - 3.0;
         res[1] = x[1] - 4.0;
@@ -190,13 +190,13 @@ new SubplexProblem()
 
 ```java
 // Basic usage: derivative-free optimization
-OptimizationResult result = new SubplexProblem()
+Optimization result = new SubplexProblem()
     .objective(x -> x[0]*x[0] + x[1]*x[1])
     .initialPoint(1.0, 1.0)
     .solve();
 
 // High-dimensional with bounds and custom step sizes
-OptimizationResult result2 = Minimizer.subplex()
+Optimization result2 = Minimizer.subplex()
     .objective(x -> {
         double sum = 0;
         for (int i = 0; i < x.length - 1; i++)
@@ -216,7 +216,7 @@ SubplexProblem problem = Minimizer.subplex()
     .initialPoint(new double[n]);
 SubplexWorkspace ws = problem.alloc();
 for (double[] x0 : startingPoints) {
-    OptimizationResult r = problem.initialPoint(x0).solve(ws);
+    Optimization r = problem.initialPoint(x0).solve(ws);
 }
 ```
 
@@ -254,7 +254,7 @@ new LBFGSBProblem()
 
 ```java
 // Basic usage: unconstrained optimization
-OptimizationResult result = new LBFGSBProblem()
+Optimization result = new LBFGSBProblem()
     .objective(x -> x[0]*x[0] + x[1]*x[1])
     .initialPoint(1.0, 1.0)
     .solve();
@@ -264,7 +264,7 @@ if (result.isSuccessful()) {
 }
 
 // Advanced usage: box constraints + analytic gradient
-OptimizationResult result2 = new LBFGSBProblem()
+Optimization result2 = new LBFGSBProblem()
     .objective((x, g) -> {
         double f = x[0]*x[0] + x[1]*x[1];
         if (g != null) { g[0] = 2*x[0]; g[1] = 2*x[1]; }
@@ -282,7 +282,7 @@ LBFGSBProblem problem = new LBFGSBProblem()
     .initialPoint(1.0);
 LBFGSBWorkspace ws = problem.alloc();
 for (double[] point : points) {
-    OptimizationResult r = problem.initialPoint(point).solve(ws);
+    Optimization r = problem.initialPoint(point).solve(ws);
 }
 ```
 
@@ -321,7 +321,7 @@ new SLSQPProblem()
 
 ```java
 // Equality constraint: minimize x[0]^2 + x[1]^2, subject to x[0] + x[1] = 1
-OptimizationResult result = new SLSQPProblem()
+Optimization result = new SLSQPProblem()
     .objective(x -> x[0]*x[0] + x[1]*x[1])
     .equalityConstraints(x -> x[0] + x[1] - 1)
     .initialPoint(0.5, 0.5)
@@ -329,7 +329,7 @@ OptimizationResult result = new SLSQPProblem()
 // solution: [0.5, 0.5]
 
 // Mixed constraints + analytic gradient
-OptimizationResult result2 = new SLSQPProblem()
+Optimization result2 = new SLSQPProblem()
     .objective((x, g) -> {
         double f = x[0]*x[0] + x[1]*x[1];
         if (g != null) { g[0] = 2*x[0]; g[1] = 2*x[1]; }
@@ -383,7 +383,7 @@ new TRFProblem()
 double[] tData = {0.0, 1.0, 2.0, 3.0};
 double[] yData = {2.0, 1.2, 0.7, 0.4};
 
-OptimizationResult result = new TRFProblem()
+Optimization result = new TRFProblem()
     .residuals((x, r) -> {
         for (int i = 0; i < tData.length; i++) {
             r[i] = yData[i] - x[0] * Math.exp(-x[1] * tData[i]);
@@ -398,7 +398,7 @@ double a = result.getSolution()[0];
 double b = result.getSolution()[1];
 
 // Simple example: find the point where residuals are zero
-OptimizationResult r2 = new TRFProblem()
+Optimization r2 = new TRFProblem()
     .residuals((x, r) -> { r[0] = x[0] - 1; r[1] = x[1] - 2; }, 2)
     .initialPoint(0.0, 0.0)
     .solve();
@@ -428,7 +428,7 @@ RootFinder.broyden(BiConsumer<double[],double[]> fn, int n) // → BroydenProble
 | `absoluteTolerance(double)` | Absolute convergence tolerance | 2e-12 |
 | `relativeTolerance(double)` | Relative convergence tolerance | 4 * ε |
 | `maxIterations(int)` | Maximum iterations | 100 |
-| `solve()` | Execute, return OptimizationResult | — |
+| `solve()` | Execute, return Optimization | — |
 
 ### HYBRProblem (N-D Powell hybrid, MINPACK hybrd)
 
@@ -439,7 +439,7 @@ RootFinder.broyden(BiConsumer<double[],double[]> fn, int n) // → BroydenProble
 | `functionTolerance(double)` | Convergence tolerance ‖F(x)‖₂ ≤ ftol | 1.49e-8 |
 | `maxEvaluations(int)` | Maximum function evaluations | 200*(n+1) |
 | `initialPoint(double...)` | Initial point | — (required) |
-| `solve(HYBRWorkspace...)` | Execute, return OptimizationResult | — |
+| `solve(HYBRWorkspace...)` | Execute, return Optimization | — |
 | `alloc()` | Pre-allocate HYBRWorkspace (for reuse) | — |
 
 ### BroydenProblem (N-D Broyden's method, Jacobian-free)
@@ -450,20 +450,20 @@ RootFinder.broyden(BiConsumer<double[],double[]> fn, int n) // → BroydenProble
 | `functionTolerance(double)` | Convergence tolerance ‖F(x)‖₂ ≤ ftol | 1.49e-8 |
 | `maxEvaluations(int)` | Maximum iterations | 100*(n+1) |
 | `initialPoint(double...)` | Initial point | — (required) |
-| `solve(BroydenWorkspace...)` | Execute, return OptimizationResult | — |
+| `solve(BroydenWorkspace...)` | Execute, return Optimization | — |
 | `alloc()` | Pre-allocate BroydenWorkspace (for reuse) | — |
 
 ### Complete Example
 
 ```java
 // 1-D: find root of sin(x) in [3, 4] → π
-OptimizationResult r1 = RootFinder.brentq(Math::sin)
+Optimization r1 = RootFinder.brentq(Math::sin)
     .bracket(Bound.between(3.0, 4.0))
     .solve();
 double root = r1.getRoot(); // ≈ 3.14159...
 
 // N-D: HYBR, forward-difference Jacobian (default)
-OptimizationResult r2 = RootFinder.hybr((x, f) -> {
+Optimization r2 = RootFinder.hybr((x, f) -> {
         f[0] = x[0]*x[0] - 2;
         f[1] = x[1] - x[0];
     }, 2)
@@ -472,13 +472,13 @@ OptimizationResult r2 = RootFinder.hybr((x, f) -> {
 double[] sol = r2.getSolution(); // [√2, √2]
 
 // N-D: HYBR + central difference (higher accuracy)
-OptimizationResult r3 = RootFinder.hybr(fn, 2)
+Optimization r3 = RootFinder.hybr(fn, 2)
     .jacobian(NumericalJacobian.CENTRAL)
     .initialPoint(1.0, 1.0)
     .solve();
 
 // N-D: Broyden (Jacobian-free)
-OptimizationResult r4 = RootFinder.broyden(fn, 2)
+Optimization r4 = RootFinder.broyden(fn, 2)
     .initialPoint(1.0, 1.0)
     .solve();
 
@@ -486,14 +486,14 @@ OptimizationResult r4 = RootFinder.broyden(fn, 2)
 HYBRProblem finder = RootFinder.hybr(fn, n).initialPoint(x0);
 HYBRWorkspace ws = finder.alloc();
 for (double[] pt : points) {
-    OptimizationResult r = finder.initialPoint(pt).solve(ws);
+    Optimization r = finder.initialPoint(pt).solve(ws);
 }
 ```
 
 
-## 9. OptimizationResult API
+## 9. Optimization API
 
-`com.curioloop.numopt4j.optim.OptimizationResult`
+`com.curioloop.numopt4j.optim.Optimization`
 
 Return value of all Problem.solve() methods.
 
@@ -504,7 +504,7 @@ Return value of all Problem.solve() methods.
 double[]           getSolution()        // Solution vector (non-null when using Problem.solve())
 double             getRoot()            // Scalar root for 1-D root-finding (NaN for N-D / minimizers)
 double             getCost()            // Objective / residual-norm value at termination
-OptimizationStatus getStatus()          // Optimization status enum
+Optimization.Status getStatus()          // Optimization status enum
 int                getIterations()      // Number of iterations
 int                getEvaluations()     // Number of function evaluations
 
@@ -518,7 +518,7 @@ String   toString()        // Multi-line structured diagnostic output
 ### Usage Example
 
 ```java
-OptimizationResult r = Minimizer.lbfgsb()
+Optimization r = Minimizer.lbfgsb()
     .objective(x -> x[0]*x[0] + x[1]*x[1])
     .initialPoint(1.0, 1.0)
     .solve();
@@ -536,7 +536,7 @@ if (r.isSuccessful()) {
 ### toString() Output Format
 
 ```
-OptimizationResult {
+Optimization {
   status: Converged: gradient norm below tolerance
   cost: 0.0
   iterations: 2
@@ -550,9 +550,11 @@ When not converged, additionally includes:
 ```
 
 
-## 10. OptimizationStatus Enum
+## 10. Optimization.Status Enum
 
-`com.curioloop.numopt4j.optim.OptimizationStatus`
+`com.curioloop.numopt4j.optim.Optimization.Status`
+
+Status is now an inner enum of `Optimization`. Reference it as `Optimization.Status` or via `result.getStatus()`.
 
 ### Enum Values
 
@@ -570,6 +572,8 @@ When not converged, additionally includes:
 | `CONSTRAINT_INCOMPATIBLE` | -3 | false | Constraints are incompatible or infeasible | Check that constraints do not contradict each other |
 | `LINE_SEARCH_FAILED` | -4 | false | Line search failed to find acceptable step | Check objective function continuity and gradient accuracy |
 | `CALLBACK_ERROR` | -5 | false | Error in callback function evaluation | Check objective/constraint functions for exceptions |
+| `INVALID_BRACKET` | -6 | false | Bracket condition f(a)*f(b) <= 0 not satisfied | Verify the bracket [a,b] contains a root |
+| `INVALID_INPUT` | -7 | false | Initial point or function output contains NaN or Infinity | Provide finite initial values and check function for numerical issues |
 
 ### Methods
 
@@ -580,57 +584,31 @@ String  getSuggestion()    // Suggested action (null for converged states)
 boolean isConverged()      // Whether converged successfully
 boolean isLimitReached()   // Whether a resource limit was reached (code 1, 2, 5)
 boolean isError()          // Whether an error occurred (code < 0)
+static Status fromCode(int code) // Look up by numeric code; returns ABNORMAL_TERMINATION if not found
 ```
 
 
-## 11. OptimizationFailure
+## 11. Validation Exceptions
 
-`com.curioloop.numopt4j.optim.OptimizationFailure`
+Problem builders throw standard Java exceptions when required parameters are missing or invalid:
 
-Extends `RuntimeException`, thrown by Problem.solve() when parameter issues are detected.
-
-### Error Codes
-
-| Error Code | Trigger Scenario | Message Format |
+| Scenario | Exception | Message |
 |---|---|---|
-| `MISSING_PARAM` | Missing required parameter (objective or initialPoint) | `[MISSING_PARAM] {param} is required. Call .{method}() before .solve(). See: {url}` |
-| `INVALID_INPUT` | Initial point contains NaN or Infinity | `[INVALID_INPUT] initialPoint[{i}] is {NaN/Infinity}. All initial values must be finite. See: {url}` |
-| `DIMENSION_MISMATCH` | Array dimension mismatch | `[DIMENSION_MISMATCH] initialPoint.length={n} but dimension={expected}. See: {url}` |
-| `INVALID_VALUE` | Parameter value does not satisfy constraint | `[INVALID_VALUE] {param} must be {constraint}, got {value}. See: {url}` |
-
-### Methods
-
-```java
-String getErrorCode()   // Returns error code string (e.g. "MISSING_PARAM")
-String getMessage()     // Full message including error code, description, and documentation URL
-```
-
-### Documentation URL Configuration
-
-Error messages include a documentation URL, defaulting to `https://github.com/curioloop/numopt4j/wiki/{ERROR_CODE}`.
-
-Customize via:
-```java
-// Option 1: System property (highest priority)
-System.setProperty("numopt4j.doc.baseUrl", "https://internal.docs.com/numopt4j/");
-
-// Option 2: Environment variable
-// export NUMOPT4J_DOC_BASE_URL=https://internal.docs.com/numopt4j/
-```
+| Missing required parameter (objective, initialPoint, residuals) | `IllegalStateException` | `{param} is required. Call .{method}() before .solve().` |
+| Initial point contains NaN or Infinity | `IllegalArgumentException` | `initialPoint[{i}] is {NaN/Infinity}. All initial values must be finite.` |
+| Parameter value violates constraint (e.g. negative tolerance) | `IllegalArgumentException` | `{param} must be {constraint}, got {value}.` |
 
 ### Usage Example
 
 ```java
 try {
-    OptimizationResult r = new LBFGSBProblem()
+    Optimization r = new SubplexProblem()
         .objective(x -> x[0]*x[0])
         // forgot to set initialPoint
         .solve();
-} catch (OptimizationFailure e) {
-    System.out.println(e.getErrorCode()); // "MISSING_PARAM"
+} catch (IllegalStateException e) {
     System.out.println(e.getMessage());
-    // "[MISSING_PARAM] initialPoint is required. Call .initialPoint(x0) before .solve().
-    //  See: https://github.com/curioloop/numopt4j/wiki/MISSING_PARAM"
+    // "initialPoint is required. Call .initialPoint(x0) before .solve()."
 }
 ```
 
@@ -776,14 +754,22 @@ Multivariate eval = NumericalJacobian.CENTRAL.wrap(residuals, 2, 2);
 ### Issue 1: Missing Required Parameters
 
 ```java
-// Wrong: initialPoint not set
+// Wrong: initialPoint not set — LBFGSBProblem throws IllegalStateException
 try {
     new LBFGSBProblem()
         .objective(x -> x[0]*x[0])
         .solve();
-} catch (OptimizationFailure e) {
-    // [MISSING_PARAM] initialPoint is required. Call .initialPoint(x0) before .solve().
-    // See: https://github.com/curioloop/numopt4j/wiki/MISSING_PARAM
+} catch (IllegalStateException e) {
+    // initialPoint is required. Call .initialPoint(x0) before .solve().
+}
+
+// SubplexProblem / TRFProblem also throw IllegalStateException
+try {
+    new SubplexProblem()
+        .objective(x -> x[0]*x[0])
+        .solve();
+} catch (IllegalStateException e) {
+    // initialPoint is required. Call .initialPoint(x0) before .solve().
 }
 
 // Correct
@@ -796,13 +782,24 @@ new LBFGSBProblem()
 ### Issue 2: Initial Point Contains NaN or Infinity
 
 ```java
+// LBFGSBProblem throws IllegalArgumentException
 try {
     new LBFGSBProblem()
         .objective(x -> x[0]*x[0])
         .initialPoint(Double.NaN)
         .solve();
-} catch (OptimizationFailure e) {
-    // [INVALID_INPUT] initialPoint[0] is NaN. All initial values must be finite.
+} catch (IllegalArgumentException e) {
+    // initialPoint[0] is NaN. All initial values must be finite.
+}
+
+// SubplexProblem / TRFProblem also throw IllegalArgumentException
+try {
+    new SubplexProblem()
+        .objective(x -> x[0]*x[0])
+        .initialPoint(Double.NaN)
+        .solve();
+} catch (IllegalArgumentException e) {
+    // initialPoint[0] is NaN. All initial values must be finite.
 }
 ```
 
@@ -840,7 +837,7 @@ try {
 ### Issue 5: Optimization Did Not Converge
 
 ```java
-OptimizationResult r = new LBFGSBProblem()
+Optimization r = new LBFGSBProblem()
     .objective(x -> x[0]*x[0])
     .initialPoint(1.0)
     .maxIterations(1)  // intentionally small
@@ -850,7 +847,7 @@ if (!r.isSuccessful()) {
     System.out.println(r.getStatus());       // MAX_ITERATIONS_REACHED(1)
     System.out.println(r.getErrorMessage()); // null (not an error state)
     System.out.println(r.toString());
-    // OptimizationResult {
+    // Optimization {
     //   status: Maximum iterations reached without convergence
     //   cost: ...
     //   iterations: 1
@@ -864,7 +861,7 @@ if (!r.isSuccessful()) {
 
 ```java
 // SLSQP returns CONSTRAINT_INCOMPATIBLE when constraints conflict
-OptimizationResult r = new SLSQPProblem()
+Optimization r = new SLSQPProblem()
     .objective(x -> x[0])
     .equalityConstraints(x -> x[0] - 1)   // x[0] = 1
     .equalityConstraints(x -> x[0] - 2)   // x[0] = 2 (contradiction)
@@ -899,7 +896,7 @@ LBFGSBProblem problem = new LBFGSBProblem()
 
 LBFGSBWorkspace ws = problem.alloc();
 for (double[] startPoint : startPoints) {
-    OptimizationResult r = problem.initialPoint(startPoint).solve(ws);
+    Optimization r = problem.initialPoint(startPoint).solve(ws);
     // process r
 }
 ```

@@ -3,8 +3,8 @@
  */
 package com.curioloop.numopt4j.optim.root;
 
-import com.curioloop.numopt4j.optim.OptimizationResult;
-import com.curioloop.numopt4j.optim.OptimizationStatus;
+import com.curioloop.numopt4j.optim.Optimization;
+
 import net.jqwik.api.*;
 import net.jqwik.api.constraints.IntRange;
 
@@ -88,7 +88,7 @@ public class BroydenSolverTest {
         int maxiter = Math.max(50 * n, 200);
         BroydenWorkspace ws = new BroydenWorkspace(n);
 
-        OptimizationResult result = BroydenSolver.solve(fn, x0, ftol, maxiter, ws);
+        Optimization result = BroydenSolver.solve(fn, x0, ftol, maxiter, ws);
 
         assertThat(result.isSuccessful())
                 .as("Broyden must converge for diagonally dominant linear system (n=%d)", n)
@@ -135,7 +135,7 @@ public class BroydenSolverTest {
         int maxiter = 500;
         BroydenWorkspace ws = new BroydenWorkspace(n);
 
-        OptimizationResult result = BroydenSolver.solve(fn, x0, BroydenSolver.DEFAULT_FTOL, maxiter, ws);
+        Optimization result = BroydenSolver.solve(fn, x0, BroydenSolver.DEFAULT_FTOL, maxiter, ws);
 
         assertThat(result.isSuccessful())
                 .as("Broyden must converge on Rosenbrock system from (0.5, 0.5)")
@@ -164,10 +164,10 @@ public class BroydenSolverTest {
         int n = 2;
         BroydenWorkspace ws = new BroydenWorkspace(n);
 
-        OptimizationResult result = BroydenSolver.solve(fn, x0, BroydenSolver.DEFAULT_FTOL, 2, ws);
+        Optimization result = BroydenSolver.solve(fn, x0, BroydenSolver.DEFAULT_FTOL, 2, ws);
 
         assertThat(result.getStatus())
                 .as("Status must be MAX_ITERATIONS_REACHED when maxiter=2 and solution is far")
-                .isEqualTo(OptimizationStatus.MAX_ITERATIONS_REACHED);
+                .isEqualTo(Optimization.Status.MAX_ITERATIONS_REACHED);
     }
 }

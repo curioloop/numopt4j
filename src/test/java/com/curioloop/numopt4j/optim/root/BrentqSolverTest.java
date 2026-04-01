@@ -3,8 +3,8 @@
  */
 package com.curioloop.numopt4j.optim.root;
 
-import com.curioloop.numopt4j.optim.OptimizationResult;
-import com.curioloop.numopt4j.optim.OptimizationStatus;
+import com.curioloop.numopt4j.optim.Optimization;
+
 import net.jqwik.api.*;
 import net.jqwik.api.constraints.IntRange;
 
@@ -56,7 +56,7 @@ public class BrentqSolverTest {
         // Skip if bracket is invalid (same sign)
         Assume.that(fpre * fcur <= 0);
 
-        OptimizationResult result = BrentqSolver.solve(f, xa, xb,
+        Optimization result = BrentqSolver.solve(f, xa, xb,
                 BrentqSolver.DEFAULT_XTOL, BrentqSolver.DEFAULT_RTOL, BrentqSolver.DEFAULT_MAXITER);
 
         assertThat(result.isSuccessful())
@@ -142,7 +142,7 @@ public class BrentqSolverTest {
     /**
      * For any function that returns {@code NaN} on the {@code k}-th call
      * (k randomly chosen between 1 and 5), the solver SHALL stop and return
-     * {@link OptimizationStatus#ABNORMAL_TERMINATION} rather than throwing an exception
+     * {@link Optimization.Status#ABNORMAL_TERMINATION} rather than throwing an exception
      * or looping infinitely.
      */
     @Property(tries = 50)
@@ -161,14 +161,14 @@ public class BrentqSolverTest {
             return Math.sin(x);
         };
 
-        OptimizationResult result = BrentqSolver.solve(
+        Optimization result = BrentqSolver.solve(
                 f, 3.0, 4.0,
                 BrentqSolver.DEFAULT_XTOL, BrentqSolver.DEFAULT_RTOL,
                 BrentqSolver.DEFAULT_MAXITER);
 
         assertThat(result.getStatus())
                 .as("Solver must return ABNORMAL_TERMINATION when function returns NaN")
-                .isEqualTo(OptimizationStatus.ABNORMAL_TERMINATION);
+                .isEqualTo(Optimization.Status.ABNORMAL_TERMINATION);
     }
 
     // ========================================================================
@@ -181,7 +181,7 @@ public class BrentqSolverTest {
      */
     @Example
     void sinRootApproximatesPi() {
-        OptimizationResult result = BrentqSolver.solve(
+        Optimization result = BrentqSolver.solve(
                 Math::sin, 3.0, 4.0,
                 BrentqSolver.DEFAULT_XTOL, BrentqSolver.DEFAULT_RTOL,
                 BrentqSolver.DEFAULT_MAXITER);
@@ -199,7 +199,7 @@ public class BrentqSolverTest {
     @Example
     void cubicRootPrecision() {
         DoubleUnaryOperator f = x -> x * x * x - x - 2.0;
-        OptimizationResult result = BrentqSolver.solve(
+        Optimization result = BrentqSolver.solve(
                 f, 1.0, 2.0,
                 BrentqSolver.DEFAULT_XTOL, BrentqSolver.DEFAULT_RTOL,
                 BrentqSolver.DEFAULT_MAXITER);
@@ -218,7 +218,7 @@ public class BrentqSolverTest {
     @Example
     void expMinusTwoRoot() {
         DoubleUnaryOperator f = x -> Math.exp(x) - 2.0;
-        OptimizationResult result = BrentqSolver.solve(
+        Optimization result = BrentqSolver.solve(
                 f, 0.0, 1.0,
                 BrentqSolver.DEFAULT_XTOL, BrentqSolver.DEFAULT_RTOL,
                 BrentqSolver.DEFAULT_MAXITER);
@@ -237,7 +237,7 @@ public class BrentqSolverTest {
     @Example
     void endpointRootReturnedDirectly() {
         DoubleUnaryOperator f = x -> x - 1.5;
-        OptimizationResult result = BrentqSolver.solve(
+        Optimization result = BrentqSolver.solve(
                 f, 1.5, 3.0,
                 BrentqSolver.DEFAULT_XTOL, BrentqSolver.DEFAULT_RTOL,
                 BrentqSolver.DEFAULT_MAXITER);
@@ -257,13 +257,13 @@ public class BrentqSolverTest {
      */
     @Example
     void maxIterationsOneReturnsMaxIterationsReached() {
-        OptimizationResult result = BrentqSolver.solve(
+        Optimization result = BrentqSolver.solve(
                 Math::sin, 3.0, 4.0,
                 BrentqSolver.DEFAULT_XTOL, BrentqSolver.DEFAULT_RTOL,
                 1);
 
         assertThat(result.getStatus())
                 .as("Status must be MAX_ITERATIONS_REACHED when maxIterations=1")
-                .isEqualTo(OptimizationStatus.MAX_ITERATIONS_REACHED);
+                .isEqualTo(Optimization.Status.MAX_ITERATIONS_REACHED);
     }
 }

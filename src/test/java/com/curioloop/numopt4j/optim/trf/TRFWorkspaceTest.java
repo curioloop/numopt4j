@@ -3,7 +3,7 @@
  */
 package com.curioloop.numopt4j.optim.trf;
 
-import com.curioloop.numopt4j.optim.OptimizationResult;
+import com.curioloop.numopt4j.optim.Optimization;
 import net.jqwik.api.*;
 
 import org.junit.jupiter.api.Test;
@@ -71,9 +71,9 @@ class TRFWorkspaceTest {
         TRFWorkspace ws = p.alloc();
         double[] x0 = {0.0, 1.0};
 
-        OptimizationResult r1 = p.solve(ws);
+        Optimization r1 = p.solve(ws);
         p.initialPoint(x0.clone());
-        OptimizationResult r2 = p.solve(ws);
+        Optimization r2 = p.solve(ws);
 
         assertThat(r1.getCost()).isCloseTo(r2.getCost(), within(1e-10));
         assertThat(r1.getStatus()).isEqualTo(r2.getStatus());
@@ -90,8 +90,8 @@ class TRFWorkspaceTest {
             .residuals(fn, m).initialPoint(1.0, 1.5)
             .gradientTolerance(1e-10).parameterTolerance(1e-10);
 
-        OptimizationResult r1 = p.solve();
-        OptimizationResult r2 = p.solve(p.alloc());
+        Optimization r1 = p.solve();
+        Optimization r2 = p.solve(p.alloc());
 
         assertThat(r1.getCost()).isCloseTo(r2.getCost(), within(1e-10));
         assertThat(r1.getStatus()).isEqualTo(r2.getStatus());
@@ -111,8 +111,8 @@ class TRFWorkspaceTest {
             .gradientTolerance(1e-10).parameterTolerance(1e-10);
         TRFWorkspace ws = p.alloc();
 
-        OptimizationResult r1 = p.solve(ws);
-        OptimizationResult r2 = p.solve(ws);
+        Optimization r1 = p.solve(ws);
+        Optimization r2 = p.solve(ws);
 
         assertThat(r1.getCost()).isCloseTo(r2.getCost(), within(1e-10));
         assertThat(r1.getStatus()).isEqualTo(r2.getStatus());
@@ -146,8 +146,8 @@ class TRFWorkspaceTest {
             .gradientTolerance(1e-15).parameterTolerance(1e-15).functionTolerance(1e-15)
             .maxEvaluations(10000);
 
-        OptimizationResult r1 = p.solve();
-        OptimizationResult r2 = p.solve(p.alloc());
+        Optimization r1 = p.solve();
+        Optimization r2 = p.solve(p.alloc());
 
         assertThat(r1.getCost()).isCloseTo(r2.getCost(), within(1e-10));
         assertThat(r1.getIterations()).isEqualTo(r2.getIterations());
@@ -168,8 +168,8 @@ class TRFWorkspaceTest {
             .maxEvaluations(10000);
         TRFWorkspace ws = p.alloc();
 
-        OptimizationResult r1 = p.solve(ws);
-        OptimizationResult r2 = p.solve(ws);
+        Optimization r1 = p.solve(ws);
+        Optimization r2 = p.solve(ws);
 
         assertThat(r1.getCost()).isCloseTo(r2.getCost(), within(1e-10));
     }

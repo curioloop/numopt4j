@@ -6,8 +6,7 @@ package com.curioloop.numopt4j.optim.trf;
 import com.curioloop.numopt4j.optim.Minimizer;
 import com.curioloop.numopt4j.optim.Multivariate;
 import com.curioloop.numopt4j.optim.NumericalJacobian;
-import com.curioloop.numopt4j.optim.OptimizationFailure;
-import com.curioloop.numopt4j.optim.OptimizationResult;
+import com.curioloop.numopt4j.optim.Optimization;
 
 import java.util.function.BiConsumer;
 
@@ -25,12 +24,12 @@ import static com.curioloop.numopt4j.optim.trf.TRFConstants.*;
  *
  * <p>{@code TRFProblem} is the public fluent API that validates inputs, manages
  * workspaces, and stores the solution in
- * {@link com.curioloop.numopt4j.optim.OptimizationResult#getSolution()}.</p>
+ * {@link Optimization#getSolution()}.</p>
  *
  * <h2>Basic Usage</h2>
  * <pre>{@code
  * // Recommended entry point: BiConsumer lambda (no Jacobian required)
- * OptimizationResult result = new TRFProblem()
+ * Optimization result = new TRFProblem()
  *     .residuals((x, r) -> { r[0] = x[0] - 1; r[1] = x[1] - 2; }, 2)
  *     .initialPoint(0.0, 0.0)
  *     .solve();
@@ -46,7 +45,7 @@ import static com.curioloop.numopt4j.optim.trf.TRFConstants.*;
  * double[] tData = {0.0, 1.0, 2.0, 3.0};
  * double[] yData = {2.0, 1.2, 0.7, 0.4};
  *
- * OptimizationResult result = new TRFProblem()
+ * Optimization result = new TRFProblem()
  *     .residuals((x, r) -> {
  *         for (int i = 0; i < tData.length; i++) {
  *             r[i] = yData[i] - x[0] * Math.exp(-x[1] * tData[i]);
@@ -68,7 +67,7 @@ import static com.curioloop.numopt4j.optim.trf.TRFConstants.*;
  * }
  * }</pre>
  *
- * @see com.curioloop.numopt4j.optim.Minimize
+ * @see com.curioloop.numopt4j.optim.Minimizer
  * @see TRFWorkspace
  */
 public final class TRFProblem extends Minimizer<Multivariate, TRFWorkspace, TRFProblem> {
@@ -108,22 +107,22 @@ public final class TRFProblem extends Minimizer<Multivariate, TRFWorkspace, TRFP
 
     private void validate() {
         if (objective == null && pendingFn == null) {
-            throw new OptimizationFailure("MISSING_PARAM",
+            throw new IllegalStateException(
                 "residuals/objective is required. Call .residuals(fn, m) before .solve().");
         }
         if (initialPoint == null || initialPoint.length == 0) {
-            throw new OptimizationFailure("MISSING_PARAM",
+            throw new IllegalStateException(
                 "initialPoint is required. Call .initialPoint(x0) before .solve().");
         }
         for (int i = 0; i < initialPoint.length; i++) {
             double v = initialPoint[i];
             if (Double.isNaN(v) || Double.isInfinite(v)) {
-                throw new OptimizationFailure("INVALID_INPUT",
+                throw new IllegalArgumentException(
                     "initialPoint[" + i + "] is " + v + ". All initial values must be finite.");
             }
         }
         if (numResiduals <= 0) {
-            throw new OptimizationFailure("MISSING_PARAM",
+            throw new IllegalStateException(
                 "number of residuals m must be set. Call .residuals(fn, m) before .solve().");
         }
         if (numResiduals < dimension) {
@@ -143,23 +142,23 @@ public final class TRFProblem extends Minimizer<Multivariate, TRFWorkspace, TRFP
         return workspace;
     }
 
+    @Override
+    public Optimization solve() {
+        return solve(null);
+    }
+
     /**
      * Solves the optimization problem.
      *
      * <p>The initial point is cloned internally; {@code initialPoint} is not modified.
-     * The solution is stored in {@link OptimizationResult#getSolution()} and returned
+     * The solution is stored in {@link Optimization#getSolution()} and returned
      * as a direct reference (no defensive copy). The caller owns the returned array.</p>
      *
      * @param workspace optional pre-allocated workspace for reuse
      * @return optimization result
      */
     @Override
-    public OptimizationResult solve() {
-        return solve((TRFWorkspace) null);
-    }
-
-    @Override
-    public OptimizationResult solve(TRFWorkspace workspace) {
+    public Optimization solve(TRFWorkspace workspace) {
         validate();
         TRFWorkspace ws = workspace;
         if (ws == null) {
@@ -172,10 +171,10 @@ public final class TRFProblem extends Minimizer<Multivariate, TRFWorkspace, TRFP
 
         double[] x = initialPoint.clone();
         int maxfev = (maxEvaluations > 0) ? maxEvaluations : 100 * dimension;
-        OptimizationResult r = TRFCore.optimize(numResiduals, dimension, resolveObjective(),
+        Optimization r = TRFCore.optimize(numResiduals, dimension, resolveObjective(),
                 functionTolerance, parameterTolerance, gradientTolerance,
                 maxfev, factor, diag, bounds, loss, lossScale, x, ws);
-        return new OptimizationResult(Double.NaN, x, r.getCost(), r.getStatus(), r.getIterations(), r.getEvaluations());
+        return new Optimization(Double.NaN, x, r.getCost(), r.getStatus(), r.getIterations(), r.getEvaluations());
     }
 
     // ── Getters ──────────────────────────────────────────────────────────────
@@ -289,7 +288,7 @@ public final class TRFProblem extends Minimizer<Multivariate, TRFWorkspace, TRFP
      * <p>Valid range: &gt; 0. Default: 0 (auto = 100 * n, where n is the number of parameters).
      * Limits total residual function calls. Useful for expensive functions where
      * computation budget is constrained. If the optimizer hits this limit,
-     * {@link com.curioloop.numopt4j.optim.OptimizationStatus#MAX_EVALUATIONS_REACHED} is returned.</p>
+     * {@link Optimization.Status#MAX_EVALUATIONS_REACHED} is returned.</p>
      *
      * @param value maximum evaluations (must be positive)
      * @return this problem instance

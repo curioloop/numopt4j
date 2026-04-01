@@ -3,7 +3,7 @@
  */
 package com.curioloop.numopt4j.optim.lbfgsb;
 
-import com.curioloop.numopt4j.optim.OptimizationResult;
+import com.curioloop.numopt4j.optim.Optimization;
 import com.curioloop.numopt4j.optim.TestTemplates;
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.infra.Blackhole;
@@ -57,7 +57,7 @@ public class LBFGSBDetailedBenchmark {
 
         workspace = problem.alloc();
 
-        OptimizationResult result = problem.solve(workspace);
+        Optimization result = problem.solve(workspace);
         System.out.printf("Dimension %d: iterations=%d%n", dimension, result.getIterations());
     }
 

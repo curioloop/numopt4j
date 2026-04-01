@@ -2,7 +2,6 @@
  * Copyright (c) 2025 curioloop. All rights reserved.
  */
 package com.curioloop.numopt4j.optim;
-
 import com.curioloop.numopt4j.optim.slsqp.SLSQPProblem;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -56,7 +55,7 @@ public class SlsqpIntegrationTest {
         Univariate circleConstraint = TestTemplates.unitBallConstraint(1);;
         
         // Build the optimizer with inequality constraint
-        OptimizationResult result = new SLSQPProblem()
+        Optimization result = new SLSQPProblem()
                 .objective(rosenbrock2D)
                 .initialPoint(0.0, 0.0)
                 .inequalityConstraints(circleConstraint)
@@ -181,7 +180,7 @@ public class SlsqpIntegrationTest {
         
         // Build the optimizer with both equality and inequality constraints
         // Using default inexact line search mode
-        OptimizationResult result = new SLSQPProblem()
+        Optimization result = new SLSQPProblem()
                 .objective(objective)
                 .initialPoint(1.0, 2.0, 3.0)
                 .equalityConstraints(equalityConstraint)
@@ -291,7 +290,7 @@ public class SlsqpIntegrationTest {
         
         // Build the optimizer with both equality and inequality constraints
         // Using exact line search mode
-        OptimizationResult result = new SLSQPProblem()
+        Optimization result = new SLSQPProblem()
                 .objective(objective)
                 .initialPoint(1.0, 2.0, 3.0)
                 .equalityConstraints(equalityConstraint)
@@ -436,7 +435,7 @@ public class SlsqpIntegrationTest {
         };
         
         // Build the optimizer with two equality constraints
-        OptimizationResult result = new SLSQPProblem()
+        Optimization result = new SLSQPProblem()
                 .objective(objective)
                 .initialPoint(1.0, 5.0, 5.0, 1.0, -24.0)
                 .equalityConstraints(cons1, cons2)
@@ -547,7 +546,7 @@ public class SlsqpIntegrationTest {
         Univariate quadratic = TestTemplates.quadraticWithTarget(new double[]{1});;
         
         // Build the optimizer with the specified bound
-        OptimizationResult result = new SLSQPProblem()
+        Optimization result = new SLSQPProblem()
                 .objective(quadratic)
                 .initialPoint(initialValue)
                 .bounds(bound)
@@ -681,7 +680,7 @@ public class SlsqpIntegrationTest {
         // Add all inequality constraints
         problem.inequalityConstraints(constraints);
 
-        OptimizationResult result = problem.solve();
+        Optimization result = problem.solve();
         double[] x0 = result.getSolution();
         
         // Verify convergence
@@ -742,7 +741,7 @@ public class SlsqpIntegrationTest {
         };
         
         // Build the optimizer with contradictory inequality constraints
-        OptimizationResult result = new SLSQPProblem()
+        Optimization result = new SLSQPProblem()
                 .objective(quadratic)
                 .initialPoint(1.0)
                 .inequalityConstraints(lowerBoundConstraint, upperBoundConstraint)
@@ -759,7 +758,7 @@ public class SlsqpIntegrationTest {
         // Verify appropriate error status
         // Requirements 9.2: WHEN inconsistent constraints detected THEN return appropriate status code
         // The optimizer should return LINE_SEARCH_FAILED, CONSTRAINT_INCOMPATIBLE, or similar error status
-        OptimizationStatus status = result.getStatus();
+        Optimization.Status status = result.getStatus();
         assertThat(status.isError())
                 .as("Status should indicate an error when constraints are inconsistent")
                 .isTrue();
@@ -767,9 +766,9 @@ public class SlsqpIntegrationTest {
         // Verify the status is one of the expected error codes for inconsistent constraints
         assertThat(status)
                 .as("Status should be LINE_SEARCH_FAILED or CONSTRAINT_INCOMPATIBLE for inconsistent constraints")
-                .isIn(OptimizationStatus.LINE_SEARCH_FAILED, 
-                      OptimizationStatus.CONSTRAINT_INCOMPATIBLE,
-                      OptimizationStatus.ABNORMAL_TERMINATION);
+                .isIn(Optimization.Status.LINE_SEARCH_FAILED,
+                      Optimization.Status.CONSTRAINT_INCOMPATIBLE,
+                      Optimization.Status.ABNORMAL_TERMINATION);
         
         // Verify the optimizer terminates within reasonable iterations
         assertThat(result.getIterations())
@@ -806,7 +805,7 @@ public class SlsqpIntegrationTest {
         // x[0] is fixed at 0 (bounds [0,0]), x[1] is unbounded
         Bound[] bounds = new Bound[]{ Bound.between(0.0, 0.0), Bound.unbounded() };
 
-        OptimizationResult result = new SLSQPProblem()
+        Optimization result = new SLSQPProblem()
                 .objective(objective)
                 .initialPoint(0.0, 1.0)
                 .equalityConstraints(equality)
@@ -854,7 +853,7 @@ public class SlsqpIntegrationTest {
 
         Bound[] bounds = new Bound[]{ Bound.between(-5.0, 5.0), Bound.between(-5.0, 5.0) };
 
-        OptimizationResult result = new SLSQPProblem()
+        Optimization result = new SLSQPProblem()
                 .objective(objective)
                 .initialPoint(1.0, 5.0)
                 .inequalityConstraints(cons1, cons2)
@@ -904,7 +903,7 @@ public class SlsqpIntegrationTest {
                 .maxIterations(50)
                 .functionTolerance(1e-6);
 
-        OptimizationResult result = problem.solve();
+        Optimization result = problem.solve();
 
         assertThat(result.isSuccessful())
                 .as("Optimization should converge")

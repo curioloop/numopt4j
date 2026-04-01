@@ -5,8 +5,8 @@ package com.curioloop.numopt4j.optim.subplex;
 
 import com.curioloop.numopt4j.optim.Bound;
 import com.curioloop.numopt4j.optim.Minimizer;
-import com.curioloop.numopt4j.optim.OptimizationFailure;
-import com.curioloop.numopt4j.optim.OptimizationResult;
+import com.curioloop.numopt4j.optim.Optimization;
+
 import java.util.function.ToDoubleFunction;
 
 /**
@@ -18,7 +18,7 @@ import java.util.function.ToDoubleFunction;
  *
  * <h2>Basic Usage</h2>
  * <pre>{@code
- * OptimizationResult result = Minimizer.subplex()
+ * Optimization result = Minimizer.subplex()
  *     .objective(x -> { double s = 0; for (double v : x) s += v*v; return s; })
  *     .initialPoint(new double[20])
  *     .solve();
@@ -27,7 +27,7 @@ import java.util.function.ToDoubleFunction;
  * <h2>With Step Sizes</h2>
  * <pre>{@code
  * // Specify per-dimension step sizes for better initial exploration
- * OptimizationResult result = Minimizer.subplex()
+ * Optimization result = Minimizer.subplex()
  *     .objective(fn)
  *     .initialPoint(x0)
  *     .initialStep(0.1, 10.0, 0.01)  // different scales per dimension
@@ -49,17 +49,17 @@ public final class SubplexProblem
 
     private void validate() {
         if (objective == null) {
-            throw new OptimizationFailure("MISSING_PARAM",
+            throw new IllegalStateException(
                     "objective is required. Call .objective(fn) before .solve().");
         }
         if (initialPoint == null || initialPoint.length == 0) {
-            throw new OptimizationFailure("MISSING_PARAM",
+            throw new IllegalStateException(
                     "initialPoint is required. Call .initialPoint(x0) before .solve().");
         }
         for (int i = 0; i < initialPoint.length; i++) {
             double v = initialPoint[i];
             if (Double.isNaN(v) || Double.isInfinite(v)) {
-                throw new OptimizationFailure("INVALID_INPUT",
+                throw new IllegalArgumentException(
                         "initialPoint[" + i + "] is " + v + ". All initial values must be finite.");
             }
         }
@@ -82,12 +82,7 @@ public final class SubplexProblem
     }
 
     @Override
-    public OptimizationResult solve() {
-        return solve((SubplexWorkspace) null);
-    }
-
-    @Override
-    public OptimizationResult solve(SubplexWorkspace workspace) {
+    public Optimization solve(SubplexWorkspace workspace) {
         validate();
         SubplexWorkspace ws = workspace;
         if (ws == null) {
@@ -108,11 +103,11 @@ public final class SubplexProblem
             xstep = defaultStep(x, bounds, dimension);
         }
 
-        OptimizationResult r = SubplexCore.optimize(
+        Optimization r = SubplexCore.optimize(
                 dimension, x, objective, bounds, xstep,
                 maxEval, parameterTolerance, functionTolerance, ws);
 
-        return new OptimizationResult(Double.NaN, x, r.getCost(), r.getStatus(),
+        return new Optimization(Double.NaN, x, r.getCost(), r.getStatus(),
                 r.getIterations(), r.getEvaluations());
     }
 

@@ -5,7 +5,7 @@ package com.curioloop.numopt4j.optim.subplex;
 
 import com.curioloop.numopt4j.optim.Bound;
 import com.curioloop.numopt4j.optim.Minimizer;
-import com.curioloop.numopt4j.optim.OptimizationResult;
+import com.curioloop.numopt4j.optim.Optimization;
 
 import org.junit.jupiter.api.Test;
 
@@ -31,8 +31,8 @@ class NLoptTestFunctionsTest {
     private static double sqr(double x) { return x * x; }
 
     /** Solve from center of bounds — matches NLopt testopt -c */
-    private static OptimizationResult solve(ToDoubleFunction<double[]> f,
-                                            double[] lb, double[] ub, int maxEval) {
+    private static Optimization solve(ToDoubleFunction<double[]> f,
+                                      double[] lb, double[] ub, int maxEval) {
         int n = lb.length;
         double[] x0 = new double[n];
         Bound[] bounds = new Bound[n];
@@ -51,7 +51,7 @@ class NLoptTestFunctionsTest {
     /** NLopt: 47 evals, cost=-0.765 */
     @Test
     void oscillating1D() {
-        OptimizationResult r = solve(x -> {
+        Optimization r = solve(x -> {
             double y = x[0] - 1.23456789;
             return sqr(y * 0.1) - Math.cos(y - 2 * Math.sin(3 * y));
         }, new double[]{-5}, new double[]{5}, 2000);
@@ -63,7 +63,7 @@ class NLoptTestFunctionsTest {
     /** NLopt: 175 evals, cost=1.1e-7 */
     @Test
     void rosenbrock() {
-        OptimizationResult r = solve(
+        Optimization r = solve(
                 x -> 100 * sqr(x[1] - x[0] * x[0]) + sqr(1 - x[0]),
                 new double[]{-2, -2}, new double[]{2, 2}, 5000);
         assertThat(r.getCost()).isCloseTo(0.0, within(1e-3));
@@ -72,7 +72,7 @@ class NLoptTestFunctionsTest {
     /** NLopt: 73 evals, cost=1.23 (local) */
     @Test
     void mccormic() {
-        OptimizationResult r = solve(
+        Optimization r = solve(
                 x -> Math.sin(x[0] + x[1]) + sqr(x[0] - x[1]) - 1.5 * x[0] + 2.5 * x[1] + 1,
                 new double[]{-1.5, -3}, new double[]{4, 4}, 5000);
         assertThat(r.getCost()).isLessThan(2.0);
@@ -81,7 +81,7 @@ class NLoptTestFunctionsTest {
     /** NLopt: 114 evals, cost=3.0 — multimodal, may find local min */
     @Test
     void goldsteinPrice() {
-        OptimizationResult r = solve(x -> {
+        Optimization r = solve(x -> {
             double x0 = x[0], x1 = x[1];
             double a1 = x0+x1+1, a12 = sqr(a1);
             double a2 = 19-14*x0+3*x0*x0-14*x1+6*x0*x1+3*x1*x1;
@@ -95,7 +95,7 @@ class NLoptTestFunctionsTest {
     /** NLopt: 99 evals, cost=-1.032 */
     @Test
     void sixHumpCamel() {
-        OptimizationResult r = solve(
+        Optimization r = solve(
                 x -> 4*sqr(x[0])-2.1*Math.pow(x[0],4)+Math.pow(x[0],6)/3.0
                         +x[0]*x[1]-4*sqr(x[1])+4*Math.pow(x[1],4),
                 new double[]{-5, -5}, new double[]{5, 5}, 5000);
@@ -105,7 +105,7 @@ class NLoptTestFunctionsTest {
     /** NLopt: 81 evals, cost=0.102 (local) */
     @Test
     void branin() {
-        OptimizationResult r = solve(x -> {
+        Optimization r = solve(x -> {
             double a = 1-2*x[1]+0.05*Math.sin(PI4*x[1])-x[0];
             double b = x[1]-0.5*Math.sin(PI2*x[0]);
             return sqr(a)+sqr(b);
@@ -116,7 +116,7 @@ class NLoptTestFunctionsTest {
     /** NLopt: 95 evals, cost=-5.26 (local) */
     @Test
     void shubert() {
-        OptimizationResult r = solve(x -> {
+        Optimization r = solve(x -> {
             double f = 0;
             for (int j = 1; j <= 5; j++)
                 for (int i = 0; i < 2; i++)
@@ -129,7 +129,7 @@ class NLoptTestFunctionsTest {
     /** NLopt: 136 evals, cost=-176.54 */
     @Test
     void hansen() {
-        OptimizationResult r = solve(x -> {
+        Optimization r = solve(x -> {
             double a = 0, b = 0;
             for (int i = 1; i <= 5; i++) a += i*Math.cos((i-1)*x[0]+i);
             for (int i = 1; i <= 5; i++) b += i*Math.cos((i+1)*x[1]+i);
@@ -143,7 +143,7 @@ class NLoptTestFunctionsTest {
     /** NLopt: 140 evals, cost=3.0e-4 */
     @Test
     void boxBetts() {
-        OptimizationResult r = solve(x -> {
+        Optimization r = solve(x -> {
             double f = 0;
             for (int i = 1; i <= 10; i++) {
                 double e0 = Math.exp(-0.1*i*x[0]), e1 = Math.exp(-0.1*i*x[1]);
@@ -160,7 +160,7 @@ class NLoptTestFunctionsTest {
     /** NLopt: 177 evals, cost=-2.68 (local) */
     @Test
     void shekelM5() {
-        OptimizationResult r = solve(shekelFunc(5),
+        Optimization r = solve(shekelFunc(5),
                 new double[]{0,0,0,0}, new double[]{10,10,10,10}, 20000);
         assertThat(r.isSuccessful()).isTrue(); // multimodal
     }
@@ -168,7 +168,7 @@ class NLoptTestFunctionsTest {
     /** NLopt: 177 evals, cost=-2.75 (local) */
     @Test
     void shekelM7() {
-        OptimizationResult r = solve(shekelFunc(7),
+        Optimization r = solve(shekelFunc(7),
                 new double[]{0,0,0,0}, new double[]{10,10,10,10}, 20000);
         assertThat(r.isSuccessful()).isTrue(); // multimodal
     }
@@ -176,7 +176,7 @@ class NLoptTestFunctionsTest {
     /** NLopt: 176 evals, cost=-2.87 (local) */
     @Test
     void shekelM10() {
-        OptimizationResult r = solve(shekelFunc(10),
+        Optimization r = solve(shekelFunc(10),
                 new double[]{0,0,0,0}, new double[]{10,10,10,10}, 20000);
         assertThat(r.isSuccessful()).isTrue(); // multimodal
     }
@@ -184,7 +184,7 @@ class NLoptTestFunctionsTest {
     /** NLopt: 275 evals, cost=-20.50 */
     @Test
     void levyN4() {
-        OptimizationResult r = solve(levyFunc(),
+        Optimization r = solve(levyFunc(),
                 new double[]{-10,-10,-10,-10}, new double[]{10,10,10,10}, 20000);
         assertThat(r.isSuccessful()).isTrue(); // multimodal
     }
@@ -192,7 +192,7 @@ class NLoptTestFunctionsTest {
     /** NLopt: 90 evals, cost=1.0 */
     @Test
     void corner4D() {
-        OptimizationResult r = solve(x -> {
+        Optimization r = solve(x -> {
             double u = x[0]+x[1]*x[2]*Math.sin(2*x[3]);
             double v = x[0]+2*Math.sin(u);
             return 1+v*v+0.1*(x[1]+x[2]+x[3]);
@@ -203,7 +203,7 @@ class NLoptTestFunctionsTest {
     /** NLopt: 1080 evals, cost=-141.28 */
     @Test
     void side4D() {
-        OptimizationResult r = solve(x -> {
+        Optimization r = solve(x -> {
             double x0=+0.4977*x[0]-0.3153*x[1]-0.5066*x[2]-0.4391*x[3];
             double x1=-0.3153*x[0]+0.3248*x[1]-0.4382*x[2]-0.4096*x[3];
             double x2=-0.5066*x[0]-0.4382*x[1]+0.3807*x[2]-0.4543*x[3];
@@ -218,7 +218,7 @@ class NLoptTestFunctionsTest {
     /** NLopt: 261 evals, cost=-10.50 (local) */
     @Test
     void levyN5() {
-        OptimizationResult r = solve(levyFunc(),
+        Optimization r = solve(levyFunc(),
                 new double[]{-5,-5,-5,-5,-5}, new double[]{5,5,5,5,5}, 30000);
         assertThat(r.isSuccessful()).isTrue(); // multimodal
     }
@@ -226,7 +226,7 @@ class NLoptTestFunctionsTest {
     /** NLopt: 447 evals, cost=-11.50 */
     @Test
     void levyN7() {
-        OptimizationResult r = solve(levyFunc(),
+        Optimization r = solve(levyFunc(),
                 new double[]{-5,-5,-5,-5,-5,-5,-5}, new double[]{5,5,5,5,5,5,5}, 50000);
         assertThat(r.isSuccessful()).isTrue(); // multimodal
     }
@@ -238,7 +238,7 @@ class NLoptTestFunctionsTest {
     void paviani() {
         double[] lb = new double[10], ub = new double[10];
         for (int i = 0; i < 10; i++) { lb[i] = 2.001; ub[i] = 9.999; }
-        OptimizationResult r = solve(x -> {
+        Optimization r = solve(x -> {
             double f = 0, prod = 1;
             for (int i = 0; i < 10; i++) {
                 f += sqr(Math.log(x[i]-2))+sqr(Math.log(10-x[i]));
@@ -254,7 +254,7 @@ class NLoptTestFunctionsTest {
     void griewank() {
         double[] lb = new double[10], ub = new double[10];
         for (int i = 0; i < 10; i++) { lb[i] = -500; ub[i] = 600; }
-        OptimizationResult r = solve(x -> {
+        Optimization r = solve(x -> {
             double f = 1, p = 1;
             for (int i = 0; i < x.length; i++) {
                 f += sqr(x[i])*0.00025;
@@ -268,7 +268,7 @@ class NLoptTestFunctionsTest {
     /** NLopt: 610 evals, cost=1.0 */
     @Test
     void convexCosh() {
-        OptimizationResult r = solve(x -> {
+        Optimization r = solve(x -> {
             double f = 1;
             for (int i = 0; i < x.length; i++) f *= Math.cosh((x[i]-i)*(i+1));
             return f;
@@ -283,7 +283,7 @@ class NLoptTestFunctionsTest {
     void generalizedRosenbrock30D() {
         double[] lb = new double[30], ub = new double[30];
         for (int i = 0; i < 30; i++) { lb[i] = -30; ub[i] = 30; }
-        OptimizationResult r = solve(x -> {
+        Optimization r = solve(x -> {
             double f = 0;
             for (int i = 0; i < 29; i++) f += 100*sqr(x[i+1]-x[i]*x[i])+sqr(1-x[i]);
             return f;

@@ -9,14 +9,14 @@ import com.curioloop.numopt4j.quad.adapt.AdaptiveIntegral;
 
 import java.util.function.DoubleUnaryOperator;
 
-final class OscillatoryQuadrature {
+final class OscillatoryCore {
 
     private static final double PI = Math.PI;
     private static final double CYCLE_TOL_SCALE = 0.1;
     private static final double CYCLE_TOL_DECAY = 0.9;
     private static final double RECIPROCAL_EPS = 64.0 * Math.ulp(1.0);
 
-    private OscillatoryQuadrature() {}
+    private OscillatoryCore() {}
 
     /**
      * Integrates ∫_{a}^{+∞} f(x)·w(ω·x) dx  where w = cos or sin,
