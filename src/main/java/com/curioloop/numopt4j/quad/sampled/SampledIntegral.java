@@ -5,6 +5,8 @@ package com.curioloop.numopt4j.quad.sampled;
 
 import com.curioloop.numopt4j.quad.Integral;
 
+import java.util.function.DoubleUnaryOperator;
+
 /**
  * Builder for integrating one-dimensional sampled data, returning a scalar total.
  *
@@ -28,6 +30,12 @@ public class SampledIntegral implements Integral<Double, Void> {
     private double[] y;
     private double dx = 1.0;
     private SampledRule rule = SampledRule.TRAPEZOIDAL;
+
+    // function-based path (zero allocation for TRAPEZOIDAL and SIMPSON)
+    private DoubleUnaryOperator function;
+    private double fnMin = Double.NaN;
+    private double fnMax = Double.NaN;
+    private int fnPoints;
 
     public SampledIntegral() {}
 
@@ -60,17 +68,99 @@ public class SampledIntegral implements Integral<Double, Void> {
         return this;
     }
 
+    /**
+     * Sets a function to be sampled at {@code n} equally spaced points over {@code [a, b]}.
+     *
+     * <p>For TRAPEZOIDAL and SIMPSON rules this path is zero-allocation: the function
+     * is evaluated once per point and the running sum is accumulated directly.
+     * For ROMBERG the function values are stored in a temporary array.</p>
+     *
+     * @param f      integrand
+     * @param n      number of evaluation points (≥ 2 for TRAPEZOIDAL/ROMBERG, ≥ 3 for SIMPSON)
+     * @param a      lower bound
+     * @param b      upper bound
+     */
+    public SampledIntegral function(DoubleUnaryOperator f, int n, double a, double b) {
+        if (f == null) throw new IllegalArgumentException("function must not be null");
+        if (n < 2) throw new IllegalArgumentException("n must be >= 2");
+        if (!Double.isFinite(a) || !Double.isFinite(b) || !(a < b))
+            throw new IllegalArgumentException("bounds must be finite with a < b");
+        this.function = f;
+        this.fnPoints = n;
+        this.fnMin    = a;
+        this.fnMax    = b;
+        this.x = null; this.y = null; // clear sampled-data path
+        return this;
+    }
+
     @Override
     public Void alloc() { return null; }
 
     @Override
     public Double integrate(Void workspace) {
+        if (function != null) return integrateFunction();
         switch (rule) {
             case TRAPEZOIDAL: return x != null ? trapezoidalXY() : trapezoidalY();
             case SIMPSON:     return x != null ? simpsonXY()     : simpsonY();
             case ROMBERG:     return rombergY();
             default: throw new IllegalStateException("Unknown rule: " + rule);
         }
+    }
+
+    // -----------------------------------------------------------------------
+    // Function-based path (zero allocation for TRAPEZOIDAL and SIMPSON)
+    // -----------------------------------------------------------------------
+
+    private double integrateFunction() {
+        final int n = fnPoints;
+        final double h = (fnMax - fnMin) / (n - 1);
+        switch (rule) {
+            case TRAPEZOIDAL: return trapezoidalFn(n, h);
+            case SIMPSON:     return simpsonFn(n, h);
+            case ROMBERG:     return rombergFn(n, h);
+            default: throw new IllegalStateException("Unknown rule: " + rule);
+        }
+    }
+
+    /**
+     * Composite trapezoidal rule on equally spaced function evaluations.
+     * Zero allocation: h/2·[f(x₀) + 2f(x₁) + ... + 2f(xₙ₋₂) + f(xₙ₋₁)]
+     */
+    private double trapezoidalFn(int n, double h) {
+        if (n < 2) throw new IllegalArgumentException("trapezoidal requires n >= 2");
+        double sum = function.applyAsDouble(fnMin) + function.applyAsDouble(fnMax);
+        for (int i = 1; i < n - 1; i++)
+            sum += 2.0 * function.applyAsDouble(fnMin + i * h);
+        return 0.5 * h * sum;
+    }
+
+    /**
+     * Composite Simpson's rule on equally spaced function evaluations.
+     * Zero allocation: h/3·[f(x₀) + 4f(x₁) + 2f(x₂) + 4f(x₃) + ... + f(xₙ)]
+     * Requires n to be odd (even number of intervals); if n is even, n+1 points are used.
+     */
+    private double simpsonFn(int n, double h) {
+        if (n < 3) throw new IllegalArgumentException("simpson requires n >= 3");
+        // ensure even number of intervals (odd number of points)
+        if ((n & 1) == 0) { n++; h = (fnMax - fnMin) / (n - 1); }
+        double sum = function.applyAsDouble(fnMin) + function.applyAsDouble(fnMax);
+        for (int i = 1; i < n - 1; i++)
+            sum += (i % 2 == 0 ? 2.0 : 4.0) * function.applyAsDouble(fnMin + i * h);
+        return h / 3.0 * sum;
+    }
+
+    /**
+     * Romberg extrapolation on equally spaced function evaluations.
+     * Requires n = 2^k + 1; allocates a temporary array of size n.
+     */
+    private double rombergFn(int n, double h) {
+        int intervals = n - 1;
+        if ((intervals & (intervals - 1)) != 0)
+            throw new IllegalArgumentException("Romberg requires n = 2^k + 1");
+        y = new double[n];
+        for (int i = 0; i < n; i++) y[i] = function.applyAsDouble(fnMin + i * h);
+        dx = h;
+        return rombergY();
     }
 
     // -----------------------------------------------------------------------

@@ -9,7 +9,7 @@ High-performance numerical optimization library for Java.
 - **SLSQP**: Sequential Least Squares Programming with equality/inequality constraints
 - **TRF**: Trust Region Reflective for nonlinear least squares
 - **Root finding**: Brentq (1-D), HYBR and Broyden (N-D) via `RootFinder`
-- **Numerical integration**: adaptive GK15, fixed Gauss-Legendre, oscillatory, improper, endpoint-singular, Cauchy principal value, and sampled-data quadrature via `Integrator`
+- **Numerical integration**: adaptive GK15, fixed Gauss-Legendre, oscillatory, improper, endpoint-singular, Cauchy principal value, Filon (highly oscillatory), and sampled-data quadrature via `Integrator`
 - **Linear regression**: OLS and WLS with SVD/QR solvers, full statistical output via `Regressor`
 - **Matrix decompositions**: LU, QR, LQ, SVD, Cholesky/LDLᵀ, Schur, Eigen, GEVD, GGEVD, GSVD via `Decomposer`
 - Workspace reuse for high-frequency scenarios
@@ -259,6 +259,14 @@ Quadrature r5 = Integrator.principalValue()
 double total = Integrator.sampled(SampledRule.SIMPSON).samples(y, dx).integrate();
 double[] cumulative = Integrator.cumulative(SampledRule.TRAPEZOIDAL).samples(y, dx).integrate();
 
+// Function-based sampled integration (zero allocation for TRAPEZOIDAL/SIMPSON)
+double total2 = Integrator.sampled(SampledRule.SIMPSON).function(Math::sin, 101, 0.0, Math.PI).integrate();
+
+// Filon: highly oscillatory ∫ f(x)·cos(t·x) dx  (efficient for large t)
+double filon = Integrator.filon(FilonOpts.COSINE)
+    .function(x -> Math.exp(-0.5 * x)).bounds(0.0, 2 * Math.PI).frequency(10.0).intervals(100)
+    .integrate();
+
 // Workspace reuse
 AdaptiveIntegral problem = Integrator.adaptive()
     .function(Math::sin).bounds(0.0, Math.PI).tolerances(1e-10, 1e-10);
@@ -370,7 +378,7 @@ for (double[] mat : matrices) {
 ```java
 Integrator.fixed()                              // → FixedIntegral (Gauss-Legendre on [a,b])
 Integrator.weighted()                           // → WeightedIntegral (rule's natural domain)
-Integrator.adaptive()                           // → AdaptiveIntegral (adaptive GK15)
+Integrator.adaptive()                           // → AdaptiveIntegral (adaptive GK15 or Gauss-Lobatto)
 Integrator.oscillatory(OscillatoryOpts)         // → OscillatoryIntegral
 Integrator.principalValue()                     // → PrincipalValueIntegral (Cauchy P.V.)
 Integrator.endpointSingular(EndpointOpts)       // → EndpointSingularIntegral
@@ -378,6 +386,7 @@ Integrator.improper(ImproperOpts)               // → ImproperIntegral.Adaptive
 Integrator.improperFixed(ImproperOpts)          // → ImproperIntegral.Fixed (fast, no error)
 Integrator.sampled(SampledRule)                 // → SampledIntegral (scalar total)
 Integrator.cumulative(SampledRule)              // → CumulativeIntegral (running total array)
+Integrator.filon(FilonOpts)                     // → FilonIntegral (highly oscillatory finite interval)
 ```
 
 **OscillatoryOpts**: `COS`, `SIN` (finite interval); `COS_UPPER`, `SIN_UPPER` (semi-infinite)
@@ -385,6 +394,10 @@ Integrator.cumulative(SampledRule)              // → CumulativeIntegral (runni
 **EndpointOpts**: `ALGEBRAIC` (Gauss-Jacobi); `LOG_LEFT`, `LOG_RIGHT`, `LOG_BOTH` (tanh-sinh)
 
 **ImproperOpts**: `UPPER` (∫ₐ^∞), `LOWER` (∫₋∞^b), `WHOLE_LINE` (∫₋∞^∞)
+
+**FilonOpts**: `COSINE` (∫ f·cos(tx) dx), `SINE` (∫ f·sin(tx) dx)
+
+**AdaptiveRule**: `GK15` (default, degree 29, 15 evals/interval), `GAUSS_LOBATTO` (degree 5, endpoint reuse, fewer evals/subdivision)
 
 **SampledRule**: `TRAPEZOIDAL`, `SIMPSON`, `ROMBERG` (ROMBERG not supported for cumulative)
 

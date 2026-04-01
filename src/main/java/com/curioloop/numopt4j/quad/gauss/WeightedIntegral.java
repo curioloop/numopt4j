@@ -15,9 +15,9 @@ import java.util.function.DoubleUnaryOperator;
  *   ∫ w(x)·f(x) dx ≈ Σᵢ wᵢ · f(xᵢ)
  * where xᵢ and wᵢ are the rule's nodes and weights (which already absorb the weight function w).</p>
  *
- * <p>Supported rules: {@link GaussRule#Legendre} (∫_{−1}^{1} f dx),
- * {@link GaussRule#Hermite} (∫ e^{−x²} f dx),
- * {@link GaussRule#Laguerre} (∫_{0}^{+∞} e^{−x} f dx),
+ * <p>Supported rules: {@link GaussRule#LEGENDRE} (∫_{−1}^{1} f dx),
+ * {@link GaussRule#HERMITE} (∫ e^{−x²} f dx),
+ * {@link GaussRule#LAGUERRE} (∫_{0}^{+∞} e^{−x} f dx),
  * and any {@link JacobiRule} (∫_{−1}^{1} (1−x)^α (1+x)^β f dx).</p>
  *
  * <p>Minimum required setters: {@code .function()}, {@code .points()}, {@code .rule()}.</p>

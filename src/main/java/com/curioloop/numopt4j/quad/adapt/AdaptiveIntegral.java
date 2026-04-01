@@ -32,6 +32,7 @@ public class AdaptiveIntegral implements Integral<Quadrature, AdaptivePool> {
     private int maxSubdivisions = Checks.DEFAULT_MAX_SUBDIVISIONS;
     private int maxEvaluations = Checks.DEFAULT_MAX_EVALUATIONS;
     private double[] breakpoints;
+    private AdaptiveRule rule = AdaptiveRule.GK15;
     private transient AdaptivePool workspace;
 
     public AdaptiveIntegral() {}
@@ -85,6 +86,19 @@ public class AdaptiveIntegral implements Integral<Quadrature, AdaptivePool> {
         return this;
     }
 
+    /**
+     * Sets the underlying quadrature rule (default {@link AdaptiveRule#GK15}).
+     *
+     * <p>Use {@link AdaptiveRule#GAUSS_LOBATTO} when function evaluations are expensive:
+     * the 4-point Gauss-Lobatto rule reuses endpoint values across bisections,
+     * requiring only 2 new evaluations per subdivision instead of 15.</p>
+     */
+    public AdaptiveIntegral rule(AdaptiveRule rule) {
+        if (rule == null) throw new IllegalArgumentException("rule must not be null");
+        this.rule = rule;
+        return this;
+    }
+
     @Override
     public AdaptivePool alloc() {
         if (workspace == null) workspace = new AdaptivePool();
@@ -99,6 +113,10 @@ public class AdaptiveIntegral implements Integral<Quadrature, AdaptivePool> {
         Checks.validateTolerances(absTol, relTol);
         Checks.validateAdaptiveLimits(maxSubdivisions, maxEvaluations);
         AdaptivePool pool = workspace != null ? workspace.ensure(maxSubdivisions) : alloc();
+        if (rule == AdaptiveRule.GAUSS_LOBATTO) {
+            return GaussLobattoCore.integrate(function, min, max,
+                    absTol, relTol, maxSubdivisions, maxEvaluations, pool);
+        }
         return integrate(function, min, max, breakpoints, absTol, relTol, maxSubdivisions, maxEvaluations, pool);
     }
 
@@ -124,7 +142,7 @@ public class AdaptiveIntegral implements Integral<Quadrature, AdaptivePool> {
                                        AdaptivePool pool) {
         double[] internalPoints = Checks.validateBreakpoints(points, min, max);
         if (internalPoints.length == 0) {
-            return AdaptiveCore.integrate(f, min, max, absTol, relTol, maxSubdivisions, maxEvaluations, pool);
+            return GK15Core.integrate(f, min, max, absTol, relTol, maxSubdivisions, maxEvaluations, pool);
         }
 
         double totalValue = 0.0, totalError = 0.0;
@@ -135,7 +153,7 @@ public class AdaptiveIntegral implements Integral<Quadrature, AdaptivePool> {
 
         for (int i = 0; i <= internalPoints.length; i++) {
             double right = i == internalPoints.length ? max : internalPoints[i];
-            Quadrature partial = AdaptiveCore.integrate(
+            Quadrature partial = GK15Core.integrate(
                     f, left, right, segmentAbsTol, relTol,
                     Math.max(1, remainingSubdivisions), Math.max(1, remainingEvaluations), pool);
 

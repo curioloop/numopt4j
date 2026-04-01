@@ -13,7 +13,7 @@ numopt4j is a Java numerical library supporting derivative-free optimization, un
 - Scalar root-finding → Brentq (`RootFinder.brentq()`)
 - Multivariate root-finding with Jacobian → HYBR (`RootFinder.hybr()`)
 - Multivariate root-finding Jacobian-free → Broyden (`RootFinder.broyden()`)
-- Numerical integration (adaptive/fixed/oscillatory/improper/singular/sampled) → `Integrator`
+- Numerical integration (adaptive/fixed/oscillatory/improper/singular/sampled/Filon) → `Integrator`
 - Matrix decompositions → `Decomposer` facade (LU, QR, LQ, SVD, Cholesky, Schur, Eigen, GEVD, GGEVD, GSVD)
 - Linear regression (OLS/WLS) → `Regressor` facade
 
@@ -31,7 +31,7 @@ com.curioloop.numopt4j.quad.adapt        # AdaptiveIntegral, AdaptivePool
 com.curioloop.numopt4j.quad.gauss        # FixedIntegral, WeightedIntegral, GaussRule, JacobiRule, GaussPool
 com.curioloop.numopt4j.quad.special      # OscillatoryIntegral, OscillatoryOpts, EndpointSingularIntegral, EndpointOpts
                                          # PrincipalValueIntegral, ImproperIntegral, ImproperOpts
-com.curioloop.numopt4j.quad.sampled      # SampledIntegral, CumulativeIntegral, SampledRule
+com.curioloop.numopt4j.quad.sampled      # SampledIntegral, CumulativeIntegral, SampledRule, FilonIntegral, FilonOpts
 com.curioloop.numopt4j.linalg            # Decomposer, Decomposition, Regression, Regressor
 com.curioloop.numopt4j.linalg.mat        # LU, QR, LQ, SVD, Cholesky, Schur, Eigen, GEVD, GGEVD, GSVD
 com.curioloop.numopt4j.linalg.reg        # OLS, WLS, Prediction
@@ -556,7 +556,7 @@ Unified facade for one-dimensional numerical integration. All factory methods re
 ```java
 Integrator.fixed()                        // → FixedIntegral
 Integrator.weighted()                     // → WeightedIntegral
-Integrator.adaptive()                     // → AdaptiveIntegral
+Integrator.adaptive()                     // → AdaptiveIntegral (GK15 or Gauss-Lobatto)
 Integrator.oscillatory(OscillatoryOpts)   // → OscillatoryIntegral
 Integrator.principalValue()               // → PrincipalValueIntegral
 Integrator.endpointSingular(EndpointOpts) // → EndpointSingularIntegral
@@ -564,6 +564,7 @@ Integrator.improper(ImproperOpts)         // → ImproperIntegral.Adaptive
 Integrator.improperFixed(ImproperOpts)    // → ImproperIntegral.Fixed
 Integrator.sampled(SampledRule)           // → SampledIntegral
 Integrator.cumulative(SampledRule)        // → CumulativeIntegral
+Integrator.filon(FilonOpts)               // → FilonIntegral
 ```
 
 ### FixedIntegral — Gauss-Legendre on [a, b]
@@ -584,7 +585,7 @@ Integrator.fixed()
 Integrator.weighted()
     .function(DoubleUnaryOperator)   // required
     .points(int n)                   // required
-    .rule(GaussRule)                 // required: GaussRule.Legendre/Hermite/Laguerre or new JacobiRule(α,β)
+    .rule(GaussRule)                 // required: GaussRule.LEGENDRE/Hermite/Laguerre or new JacobiRule(α,β)
     .integrate()                     // → Double
     .integrate(GaussPool)
     .alloc()                         // → GaussPool
@@ -600,6 +601,7 @@ Integrator.adaptive()
     .breakpoints(double...)          // optional, split domain at discontinuities
     .maxSubdivisions(int)            // default 256
     .maxEvaluations(int)             // default 16384
+    .rule(AdaptiveRule)              // optional: GK15 (default) or GAUSS_LOBATTO
     .integrate()                     // → Quadrature
     .integrate(AdaptivePool)
     .alloc()                         // → AdaptivePool
@@ -680,11 +682,16 @@ Integrator.improperFixed(ImproperOpts opts)
 ### SampledIntegral / CumulativeIntegral
 
 ```java
-// Scalar total
+// Scalar total — from pre-sampled data
 Integrator.sampled(SampledRule rule)     // TRAPEZOIDAL / SIMPSON / ROMBERG
     .samples(double[] y)                 // equally spaced, dx=1
     .samples(double[] y, double dx)      // equally spaced
     .samples(double[] x, double[] y)     // explicit coordinates (strictly increasing)
+    .integrate()                         // → Double
+
+// Scalar total — from function (zero allocation for TRAPEZOIDAL and SIMPSON)
+Integrator.sampled(SampledRule rule)
+    .function(DoubleUnaryOperator f, int n, double a, double b)
     .integrate()                         // → Double
 
 // Running total array (result[0] == 0 always)
@@ -692,6 +699,21 @@ Integrator.cumulative(SampledRule rule)  // TRAPEZOIDAL / SIMPSON (ROMBERG not s
     .samples(...)
     .integrate()                         // → double[]
 ```
+
+### FilonIntegral — highly oscillatory ∫ f(x)·cos(t·x) dx or ∫ f(x)·sin(t·x) dx
+
+```java
+Integrator.filon(FilonOpts opts)         // COSINE or SINE
+    .function(DoubleUnaryOperator f)     // required
+    .bounds(double a, double b)          // required, finite
+    .frequency(double t)                 // required, t > 0
+    .intervals(int n)                    // required, even, >= 2; integrand evaluated at n+1 points
+    .integrate()                         // → Double
+```
+
+Filon's method approximates f(x) by a piecewise quadratic and integrates the product with the
+trigonometric factor analytically (Abramowitz & Stegun §25.4.62–63). Far more efficient than
+adaptive GK15 when t is large (high-frequency oscillation).
 
 ### Quadrature (result type)
 
@@ -710,10 +732,17 @@ r.getSummary()         // single-line summary string
 ### GaussRule constants
 
 ```java
-GaussRule.Legendre   // ∫₋₁^1 f(x) dx
-GaussRule.Hermite    // ∫₋∞^∞ e^{-x²} f(x) dx
-GaussRule.Laguerre   // ∫₀^∞ e^{-x} f(x) dx
+GaussRule.LEGENDRE   // ∫₋₁^1 f(x) dx
+GaussRule.HERMITE    // ∫₋∞^∞ e^{-x²} f(x) dx
+GaussRule.LAGUERRE   // ∫₀^∞ e^{-x} f(x) dx
 new JacobiRule(α, β) // ∫₋₁^1 (1-x)^α (1+x)^β f(x) dx,  α,β > -1
+```
+
+### AdaptiveRule
+
+```java
+AdaptiveRule.GK15           // 15-point Gauss-Kronrod, exact degree 29 (default)
+AdaptiveRule.GAUSS_LOBATTO  // 4-point Gauss-Lobatto, exact degree 5, endpoint reuse
 ```
 
 ### Workspace reuse

@@ -40,7 +40,7 @@ class QuadratureTest {
     void ruleIntegralProblemMatchesHermiteRule() {
         double integral = Integrator.weighted().function(x -> 1.0)
                 .points(1)
-                .rule(GaussRule.Hermite)
+                .rule(GaussRule.HERMITE)
                 .integrate();
 
         assertThat(integral).isCloseTo(Math.sqrt(Math.PI), offset(EPS));
@@ -118,21 +118,21 @@ class QuadratureTest {
 
     @Test
     void canonicalLegendreRuleIntegratesOnMinusOneToOne() {
-        double integral = Integrator.weighted().function(x -> x * x).points(2).rule(GaussRule.Legendre).integrate();
+        double integral = Integrator.weighted().function(x -> x * x).points(2).rule(GaussRule.LEGENDRE).integrate();
 
         assertThat(integral).isCloseTo(2.0 / 3.0, offset(EPS));
     }
 
     @Test
     void hermiteRuleIntegratesConstantWeightExactly() {
-        double integral = Integrator.weighted().function(x -> 1.0).points(1).rule(GaussRule.Hermite).integrate();
+        double integral = Integrator.weighted().function(x -> 1.0).points(1).rule(GaussRule.HERMITE).integrate();
 
         assertThat(integral).isCloseTo(Math.sqrt(Math.PI), offset(EPS));
     }
 
     @Test
     void laguerreRuleIntegratesLinearMomentExactly() {
-        double integral = Integrator.weighted().function(x -> x).points(1).rule(GaussRule.Laguerre).integrate();
+        double integral = Integrator.weighted().function(x -> x).points(1).rule(GaussRule.LAGUERRE).integrate();
 
         assertThat(integral).isCloseTo(1.0, offset(EPS));
     }
@@ -447,7 +447,7 @@ class QuadratureTest {
         GaussPool pool = new GaussPool();
 
         double fixed = Integrator.fixed().function(x -> x * x).bounds(0.0, 1.0).points(8).integrate(pool);
-        double weighted = Integrator.weighted().function(x -> x).points(4).rule(GaussRule.Laguerre).integrate(pool);
+        double weighted = Integrator.weighted().function(x -> x).points(4).rule(GaussRule.LAGUERRE).integrate(pool);
 
         assertThat(fixed).isCloseTo(1.0 / 3.0, offset(EPS));
         assertThat(weighted).isCloseTo(1.0, offset(EPS));
@@ -472,7 +472,7 @@ class QuadratureTest {
         Integrator.fixed().function(x -> x * x).bounds(0.0, 1.0).points(8).integrate(pool);
         double[] arena = pool.arena();
 
-        Integrator.weighted().function(x -> x).points(4).rule(GaussRule.Laguerre).integrate(pool);
+        Integrator.weighted().function(x -> x).points(4).rule(GaussRule.LAGUERRE).integrate(pool);
 
         assertThat(pool.arena()).isSameAs(arena);
         assertThat(pool.arena().length).isGreaterThanOrEqualTo(96);
@@ -521,9 +521,9 @@ class QuadratureTest {
 
     @Test
     void fixedRejectsNaturalDomainRule() {
-        assertThatThrownBy(() -> Integrator.fixed().function(Math::sin).bounds(0.0, 1.0).points(8).rule(GaussRule.Hermite))
+        assertThatThrownBy(() -> Integrator.fixed().function(Math::sin).bounds(0.0, 1.0).points(8).rule(GaussRule.HERMITE))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("GaussRule.Legendre");
+                .hasMessageContaining("GaussRule.LEGENDRE");
     }
 
     // -----------------------------------------------------------------------
@@ -606,7 +606,51 @@ class QuadratureTest {
     }
 
     // -----------------------------------------------------------------------
-    // scipy test_indefinite: ∫₀^∞ -e^{-x}·ln(x) dx = γ (Euler-Mascheroni)
+    // Gauss-Lobatto adaptive rule
+    // -----------------------------------------------------------------------
+
+    @Test
+    void gaussLobattoMatchesSineIntegral() {
+        Quadrature result = Integrator.adaptive()
+                .function(Math::sin).bounds(0.0, Math.PI)
+                .tolerances(1e-10, 1e-10)
+                .rule(com.curioloop.numopt4j.quad.adapt.AdaptiveRule.GAUSS_LOBATTO)
+                .integrate();
+
+        assertThat(result.isSuccessful()).isTrue();
+        assertThat(result.getValue()).isCloseTo(2.0, offset(1e-9));
+    }
+
+    @Test
+    void gaussLobattoUsesFewerEvaluationsPerSubdivision() {
+        // For the same number of subdivisions, Gauss-Lobatto needs fewer evaluations
+        // per subdivision than GK15 due to endpoint reuse (2 new evals vs 15).
+        // We verify this by checking evaluations / subdivisions ratio.
+        Quadrature lobatto = Integrator.adaptive()
+                .function(Math::sin).bounds(0.0, Math.PI)
+                .tolerances(1e-6, 1e-6)
+                .rule(com.curioloop.numopt4j.quad.adapt.AdaptiveRule.GAUSS_LOBATTO)
+                .integrate();
+
+        Quadrature gk15 = Integrator.adaptive()
+                .function(Math::sin).bounds(0.0, Math.PI)
+                .tolerances(1e-6, 1e-6)
+                .integrate();
+
+        // Both should converge
+        assertThat(lobatto.isSuccessful()).isTrue();
+        assertThat(gk15.isSuccessful()).isTrue();
+
+        // Lobatto: ~3 new evals per subdivision (1 midpoint + 2 interior nodes)
+        // GK15: 15 evals per subdivision
+        // So evals/subdivisions ratio should be much lower for Lobatto
+        double lobattoRatio = (double) lobatto.getEvaluations() / Math.max(1, lobatto.getIterations());
+        double gk15Ratio    = (double) gk15.getEvaluations()    / Math.max(1, gk15.getIterations());
+        assertThat(lobattoRatio).isLessThan(gk15Ratio);
+    }
+
+    // -----------------------------------------------------------------------
+    // Filon quadrature
     // -----------------------------------------------------------------------
 
     @Test
@@ -660,5 +704,65 @@ class QuadratureTest {
 
         assertThat(result.isSuccessful()).isTrue();
         assertThat(result.getValue()).isCloseTo(expected, offset(1e-9));
+    }
+
+    // -----------------------------------------------------------------------
+    // Filon quadrature
+    // -----------------------------------------------------------------------
+
+    @Test
+    void filonCosineMatchesAnalyticFormula() {
+        // ∫₀^{2π} e^{-0.5x}·cos(t·x) dx = (0.5·(1 - e^{-π}·cos(2πt)) + t·e^{-π}·sin(2πt)) / (0.25 + t²)
+        double t = 10.0;
+        double expected = (0.5 * (1 - Math.exp(-Math.PI) * Math.cos(2 * Math.PI * t))
+                         + t * Math.exp(-Math.PI) * Math.sin(2 * Math.PI * t))
+                         / (0.25 + t * t);
+
+        double result = Integrator.filon(com.curioloop.numopt4j.quad.sampled.FilonOpts.COSINE)
+                .function(x -> Math.exp(-0.5 * x))
+                .bounds(0.0, 2 * Math.PI).frequency(t).intervals(100)
+                .integrate();
+
+        assertThat(result).isCloseTo(expected, offset(1e-6));
+    }
+
+    @Test
+    void filonSineMatchesAnalyticFormula() {
+        // ∫₀^{2π} e^{-0.5x}·sin(t·x) dx = (t·(1 - e^{-π}·cos(2πt)) - 0.5·e^{-π}·sin(2πt)) / (0.25 + t²)
+        double t = 10.0;
+        double expected = (t * (1 - Math.exp(-Math.PI) * Math.cos(2 * Math.PI * t))
+                         - 0.5 * Math.exp(-Math.PI) * Math.sin(2 * Math.PI * t))
+                         / (0.25 + t * t);
+
+        double result = Integrator.filon(com.curioloop.numopt4j.quad.sampled.FilonOpts.SINE)
+                .function(x -> Math.exp(-0.5 * x))
+                .bounds(0.0, 2 * Math.PI).frequency(t).intervals(100)
+                .integrate();
+
+        assertThat(result).isCloseTo(expected, offset(1e-6));
+    }
+
+    @Test
+    void filonCosineHighFrequencyConverges() {
+        // High frequency t=100: Filon should still converge where GK15 would struggle
+        double t = 100.0;
+        double expected = (0.5 * (1 - Math.exp(-Math.PI) * Math.cos(2 * Math.PI * t))
+                         + t * Math.exp(-Math.PI) * Math.sin(2 * Math.PI * t))
+                         / (0.25 + t * t);
+
+        double result = Integrator.filon(com.curioloop.numopt4j.quad.sampled.FilonOpts.COSINE)
+                .function(x -> Math.exp(-0.5 * x))
+                .bounds(0.0, 2 * Math.PI).frequency(t).intervals(200)
+                .integrate();
+
+        assertThat(result).isCloseTo(expected, offset(1e-5));
+    }
+
+    @Test
+    void filonRejectsOddIntervals() {
+        assertThatThrownBy(() -> Integrator.filon(com.curioloop.numopt4j.quad.sampled.FilonOpts.COSINE)
+                .function(x -> 1.0).bounds(0.0, 1.0).frequency(1.0).intervals(3).integrate())
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("even");
     }
 }

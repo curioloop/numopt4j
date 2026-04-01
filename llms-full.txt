@@ -36,7 +36,7 @@ com.curioloop.numopt4j.quad.adapt     # AdaptiveIntegral, AdaptivePool
 com.curioloop.numopt4j.quad.gauss     # FixedIntegral, WeightedIntegral, GaussRule, JacobiRule, GaussPool
 com.curioloop.numopt4j.quad.special   # OscillatoryIntegral, OscillatoryOpts, EndpointSingularIntegral, EndpointOpts
                                       # PrincipalValueIntegral, ImproperIntegral, ImproperOpts
-com.curioloop.numopt4j.quad.sampled   # SampledIntegral, CumulativeIntegral, SampledRule
+com.curioloop.numopt4j.quad.sampled   # SampledIntegral, CumulativeIntegral, SampledRule, FilonIntegral, FilonOpts
 ```
 
 
@@ -73,6 +73,7 @@ Have a residual function (least squares)?
 | Endpoint-singular ∫ | `EndpointSingularIntegral` | Algebraic or log-weighted |
 | Cauchy principal value | `PrincipalValueIntegral` | Sokhotski–Plemelj regularization |
 | Sampled-data integration | `SampledIntegral` / `CumulativeIntegral` | Trapezoidal, Simpson, Romberg |
+| Highly oscillatory finite ∫ | `FilonIntegral` | Filon's method, efficient for large t |
 | Matrix decomposition | `Decomposer` | LU, QR, LQ, SVD, Cholesky, Schur, Eigen, GEVD, GGEVD, GSVD |
 
 
@@ -1749,7 +1750,7 @@ Unified entry point for one-dimensional numerical integration. All factory metho
 ```java
 Integrator.fixed()                        // → FixedIntegral
 Integrator.weighted()                     // → WeightedIntegral
-Integrator.adaptive()                     // → AdaptiveIntegral
+Integrator.adaptive()                     // → AdaptiveIntegral (GK15 or Gauss-Lobatto)
 Integrator.oscillatory(OscillatoryOpts)   // → OscillatoryIntegral
 Integrator.principalValue()               // → PrincipalValueIntegral
 Integrator.endpointSingular(EndpointOpts) // → EndpointSingularIntegral
@@ -1757,6 +1758,7 @@ Integrator.improper(ImproperOpts)         // → ImproperIntegral.Adaptive
 Integrator.improperFixed(ImproperOpts)    // → ImproperIntegral.Fixed
 Integrator.sampled(SampledRule)           // → SampledIntegral
 Integrator.cumulative(SampledRule)        // → CumulativeIntegral
+Integrator.filon(FilonOpts)               // → FilonIntegral
 ```
 
 ---
@@ -1774,7 +1776,7 @@ Integrator.fixed()
     .function(DoubleUnaryOperator f)     // required
     .bounds(double min, double max)      // required, finite, min < max
     .points(int n)                       // required, n > 0
-    .rule(GaussRule)                     // optional, only GaussRule.Legendre accepted
+    .rule(GaussRule)                     // optional, only GaussRule.LEGENDRE accepted
     .integrate()                         // → Double
     .integrate(GaussPool workspace)      // with workspace reuse
     .alloc()                             // → GaussPool
@@ -1810,9 +1812,9 @@ Integrator.weighted()
 ### GaussRule Constants
 
 ```java
-GaussRule.Legendre          // ∫₋₁^1 f(x) dx,  μ₀ = 2
-GaussRule.Hermite           // ∫₋∞^∞ e^{-x²} f(x) dx,  μ₀ = √π
-GaussRule.Laguerre          // ∫₀^∞ e^{-x} f(x) dx,  μ₀ = 1
+GaussRule.LEGENDRE          // ∫₋₁^1 f(x) dx,  μ₀ = 2
+GaussRule.HERMITE           // ∫₋∞^∞ e^{-x²} f(x) dx,  μ₀ = √π
+GaussRule.LAGUERRE          // ∫₀^∞ e^{-x} f(x) dx,  μ₀ = 1
 new JacobiRule(alpha, beta) // ∫₋₁^1 (1-x)^α (1+x)^β f(x) dx,  α,β > -1
 ```
 
@@ -1821,7 +1823,7 @@ new JacobiRule(alpha, beta) // ∫₋₁^1 (1-x)^α (1+x)^β f(x) dx,  α,β > -
 ```java
 // ∫₋∞^∞ e^{-x²} dx = √π
 double v = Integrator.weighted()
-    .function(x -> 1.0).points(1).rule(GaussRule.Hermite).integrate();
+    .function(x -> 1.0).points(1).rule(GaussRule.HERMITE).integrate();
 // v ≈ 1.7724538509...
 
 // ∫₋₁^1 (1-x)^{-0.5}(1+x)^{-0.5} dx = π  (Chebyshev weight)
@@ -1832,11 +1834,21 @@ double v2 = Integrator.weighted()
 
 ---
 
-## 31. AdaptiveIntegral — Adaptive GK15 on [a, b]
+## 31. AdaptiveIntegral — Adaptive Quadrature on [a, b]
 
 `com.curioloop.numopt4j.quad.adapt.AdaptiveIntegral`
 
-Adaptive Gauss-Kronrod 15-point quadrature. Bisects the sub-interval with the largest local error at each step. Supports breakpoints for integrands with known discontinuities.
+Adaptive quadrature with pluggable underlying rule. Bisects the sub-interval with the largest local error at each step. Supports breakpoints for integrands with known discontinuities.
+
+### AdaptiveRule
+
+```java
+AdaptiveRule.GK15           // 15-point Gauss-Kronrod (default), exact degree 29, 15 evals/interval
+AdaptiveRule.GAUSS_LOBATTO  // 4-point Gauss-Lobatto, exact degree 5, endpoint reuse (~3 new evals/subdivision)
+```
+
+Use `GAUSS_LOBATTO` when function evaluations are expensive (e.g. Heston characteristic function):
+endpoint values are shared between adjacent sub-intervals, reducing new evaluations per bisection.
 
 ### Builder Methods
 
@@ -1848,6 +1860,7 @@ Integrator.adaptive()
     .breakpoints(double... pts)                // optional, strictly inside (min, max)
     .maxSubdivisions(int)                      // default 256
     .maxEvaluations(int)                       // default 16384
+    .rule(AdaptiveRule)                        // optional, default GK15
     .integrate()                               // → Quadrature
     .integrate(AdaptivePool workspace)
     .alloc()                                   // → AdaptivePool
@@ -1860,11 +1873,10 @@ Quadrature r = Integrator.adaptive()
     .function(Math::sin).bounds(0.0, Math.PI).tolerances(1e-12, 1e-12).integrate();
 // r.getValue() ≈ 2.0,  r.isSuccessful() == true
 
-// With breakpoint at discontinuity
+// Gauss-Lobatto for expensive integrand
 Quadrature r2 = Integrator.adaptive()
-    .function(x -> x < 0.0 ? 0.0 : 1.0).bounds(-1.0, 1.0)
-    .breakpoints(0.0).tolerances(1e-12, 1e-12).integrate();
-// r2.getValue() ≈ 1.0
+    .function(expensiveFn).bounds(0.0, 10.0).tolerances(1e-8, 1e-8)
+    .rule(AdaptiveRule.GAUSS_LOBATTO).integrate();
 ```
 
 ---
@@ -2082,10 +2094,16 @@ SampledRule.ROMBERG      // Richardson-extrapolated trapezoidal; requires 2^k+1 
 ### SampledIntegral (scalar total)
 
 ```java
+// From pre-sampled data
 Integrator.sampled(SampledRule rule)
     .samples(double[] y)               // equally spaced, dx=1
     .samples(double[] y, double dx)    // equally spaced with given spacing
     .samples(double[] x, double[] y)   // explicit coordinates (strictly increasing)
+    .integrate()                       // → Double
+
+// From function — zero allocation for TRAPEZOIDAL and SIMPSON
+Integrator.sampled(SampledRule rule)
+    .function(DoubleUnaryOperator f, int n, double a, double b)
     .integrate()                       // → Double
 ```
 
@@ -2106,8 +2124,50 @@ double[] y = {0.0, 1.0, 4.0, 9.0, 16.0};  // f(x) = x² at x = 0,1,2,3,4
 double total = Integrator.sampled(SampledRule.SIMPSON).samples(y, 1.0).integrate();
 // total ≈ 21.33  (exact: ∫₀^4 x² dx = 64/3)
 
+// Function-based (zero allocation)
+double total2 = Integrator.sampled(SampledRule.SIMPSON).function(Math::sin, 101, 0.0, Math.PI).integrate();
+// total2 ≈ 2.0
+
 double[] cumul = Integrator.cumulative(SampledRule.TRAPEZOIDAL).samples(y, 1.0).integrate();
 // cumul = [0.0, 0.5, 3.0, 8.5, 18.0]
+```
+
+---
+
+## 37. FilonIntegral — Highly Oscillatory Finite Interval
+
+`com.curioloop.numopt4j.quad.sampled.FilonIntegral`
+
+Filon's method for integrals of the form ∫_{a}^{b} f(x)·cos(t·x) dx or ∫_{a}^{b} f(x)·sin(t·x) dx.
+Approximates f(x) by a piecewise quadratic and integrates the product with the trigonometric factor
+analytically (Abramowitz & Stegun §25.4.62–63). Far more efficient than adaptive GK15 when t is large.
+
+### FilonOpts
+
+```java
+FilonOpts.COSINE  // ∫_{a}^{b} f(x)·cos(t·x) dx
+FilonOpts.SINE    // ∫_{a}^{b} f(x)·sin(t·x) dx
+```
+
+### Builder Methods
+
+```java
+Integrator.filon(FilonOpts opts)
+    .function(DoubleUnaryOperator f)     // required
+    .bounds(double a, double b)          // required, finite, a < b
+    .frequency(double t)                 // required, t > 0
+    .intervals(int n)                    // required, even, >= 2; evaluates f at n+1 points
+    .integrate()                         // → Double
+```
+
+### Example
+
+```java
+// ∫₀^{2π} e^{-0.5x}·cos(10x) dx
+double result = Integrator.filon(FilonOpts.COSINE)
+    .function(x -> Math.exp(-0.5 * x))
+    .bounds(0.0, 2 * Math.PI).frequency(10.0).intervals(100)
+    .integrate();
 ```
 
 ---

@@ -37,7 +37,7 @@ import java.util.function.DoubleUnaryOperator;
  * a negative return value means success (finite), positive means failure (non-finite);
  * the absolute value is the number of function evaluations performed.</p>
  */
-final class AdaptiveCore {
+final class GK15Core {
 
     // Gauss 7-point weights (for the 4 positive abscissae + centre)
     private static final double[] WG = {
@@ -71,7 +71,7 @@ final class AdaptiveCore {
             0.209482141084727828012999174891714
     };
 
-    private AdaptiveCore() {}
+    private GK15Core() {}
 
     static Quadrature integrate(DoubleUnaryOperator f, double min, double max,
                                 double absTol, double relTol,

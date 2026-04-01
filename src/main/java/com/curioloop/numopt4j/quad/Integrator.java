@@ -7,6 +7,8 @@ import com.curioloop.numopt4j.quad.adapt.AdaptiveIntegral;
 import com.curioloop.numopt4j.quad.gauss.FixedIntegral;
 import com.curioloop.numopt4j.quad.gauss.WeightedIntegral;
 import com.curioloop.numopt4j.quad.sampled.CumulativeIntegral;
+import com.curioloop.numopt4j.quad.sampled.FilonIntegral;
+import com.curioloop.numopt4j.quad.sampled.FilonOpts;
 import com.curioloop.numopt4j.quad.sampled.SampledIntegral;
 import com.curioloop.numopt4j.quad.sampled.SampledRule;
 import com.curioloop.numopt4j.quad.special.EndpointSingularIntegral;
@@ -66,6 +68,21 @@ public final class Integrator {
      */
     public static CumulativeIntegral cumulative(SampledRule opts) {
         return new CumulativeIntegral().rule(opts);
+    }
+
+    /**
+     * Returns a builder for Filon quadrature of highly oscillatory integrals
+     * ∫_{a}^{b} f(x)·cos(t·x) dx or ∫_{a}^{b} f(x)·sin(t·x) dx.
+     *
+     * <p>Filon's method handles the trigonometric factor analytically, making it
+     * far more efficient than adaptive GK15 when t is large.
+     * Requires {@code .function()}, {@code .bounds()}, {@code .frequency()},
+     * and {@code .intervals()}.</p>
+     *
+     * @see FilonOpts
+     */
+    public static FilonIntegral filon(FilonOpts opts) {
+        return new FilonIntegral(opts);
     }
 
     // -----------------------------------------------------------------------

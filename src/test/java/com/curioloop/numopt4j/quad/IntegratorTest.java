@@ -231,4 +231,40 @@ class IntegratorTest {
 
         assertThat(integral).isCloseTo(expected, offset(1e-8));
     }
+
+    // -----------------------------------------------------------------------
+    // SampledIntegral function-based path (zero allocation)
+    // -----------------------------------------------------------------------
+
+    @Test
+    void sampledTrapezoidalFunctionMatchesSineIntegral() {
+        // ∫₀^π sin(x) dx = 2
+        double result = Integrator.sampled(SampledRule.TRAPEZOIDAL)
+                .function(Math::sin, 1001, 0.0, Math.PI).integrate();
+        assertThat(result).isCloseTo(2.0, offset(1e-5));
+    }
+
+    @Test
+    void sampledSimpsonFunctionMatchesSineIntegral() {
+        // ∫₀^π sin(x) dx = 2, Simpson is O(h⁴) so 101 points is very accurate
+        double result = Integrator.sampled(SampledRule.SIMPSON)
+                .function(Math::sin, 101, 0.0, Math.PI).integrate();
+        assertThat(result).isCloseTo(2.0, offset(1e-7));
+    }
+
+    @Test
+    void sampledRombergFunctionMatchesCubicIntegral() {
+        // ∫₀^1 x³ dx = 0.25, Romberg requires n = 2^k + 1
+        double result = Integrator.sampled(SampledRule.ROMBERG)
+                .function(x -> x * x * x, 17, 0.0, 1.0).integrate();
+        assertThat(result).isCloseTo(0.25, offset(EPS));
+    }
+
+    @Test
+    void sampledFunctionRejectsInvalidBounds() {
+        assertThatThrownBy(() -> Integrator.sampled(SampledRule.TRAPEZOIDAL)
+                .function(Math::sin, 10, 1.0, 0.0).integrate())
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("a < b");
+    }
 }

@@ -8,12 +8,24 @@ import com.curioloop.numopt4j.linalg.blas.BLAS;
 import java.util.Arrays;
 
 /**
- * A Gaussian quadrature rule defined on its own canonical domain and weight.
+ * A Gaussian quadrature rule defined on its own canonical domain and weight function.
  *
- * <p>The generated nodes and weights satisfy the rule family's native integral form. For example,
- * Gauss-Jacobi approximates {@code integral_{-1}^{1} (1 - x)^alpha (1 + x)^beta f(x) dx},
- * Gauss-Hermite approximates {@code integral exp(-x^2) f(x) dx} on the whole real line, and
- * Gauss-Laguerre approximates {@code integral exp(-x) f(x) dx} on {@code [0, +inf)}.</p>
+ * <p>Implementations generate nodes xᵢ and weights wᵢ such that
+ *   ∫ w(x)·f(x) dx ≈ Σᵢ wᵢ·f(xᵢ)
+ * is exact for polynomials up to a degree determined by the number of points.</p>
+ *
+ * <p>Three standard rules are provided as pre-built constants:</p>
+ * <ul>
+ *   <li>{@link #LEGENDRE}  — ∫_{−1}^{1} f(x) dx,  w(x) = 1</li>
+ *   <li>{@link #LAGUERRE}  — ∫_{0}^{+∞} e^{−x}·f(x) dx</li>
+ *   <li>{@link #HERMITE}   — ∫_{−∞}^{+∞} e^{−x²}·f(x) dx</li>
+ * </ul>
+ *
+ * <p>For the Jacobi weight (1−x)^α·(1+x)^β on [−1,1], use {@link JacobiRule}.</p>
+ *
+ * <p>All rules are generated via the Golub-Welsch algorithm: nodes are eigenvalues
+ * of the symmetric tridiagonal Jacobi matrix, and weights are μ₀·v₀ᵢ² where
+ * μ₀ is the zero-th moment and v₀ᵢ is the first component of the i-th eigenvector.</p>
  */
 public interface GaussRule {
 
@@ -27,9 +39,10 @@ public interface GaussRule {
         fromJacobiMatrix(points, workspace);
     }
 
+    /** Returns the zero-th moment μ₀ = ∫ w(x) dx of this rule's weight function. */
     double zeroMoment();
 
-    /** Callback that fills the symmetric tridiagonal Jacobi matrix for a specific rule family. */
+    /** Fills the symmetric tridiagonal Jacobi matrix entries for this rule family. */
     void fillJacobi(int points, double[] arena, int diagonalOffset, int offDiagonalOffset);
 
     /**
@@ -70,20 +83,22 @@ public interface GaussRule {
         }
     }
 
-    GaussRule Laguerre = new Laguerre();
-    GaussRule Legendre = new Legendre();
-    GaussRule Hermite  = new Hermite();
-
     /** Gauss-Laguerre rule: ∫_{0}^{+∞} e^{−x} f(x) dx.  Zero-th moment μ₀ = 1. */
-    static final class Laguerre implements GaussRule {
-        public double zeroMoment() { return 1.0; }
+    GaussRule LAGUERRE = new Laguerre();
+    /** Gauss-Legendre rule: ∫_{−1}^{1} f(x) dx.  Zero-th moment μ₀ = 2. */
+    GaussRule LEGENDRE = new Legendre();
+    /** Gauss-Hermite rule: ∫_{−∞}^{+∞} e^{−x²} f(x) dx.  Zero-th moment μ₀ = √π. */
+    GaussRule HERMITE  = new Hermite();
+
+    /** @see #LAGUERRE */
+    static final class Laguerre implements GaussRule {        public double zeroMoment() { return 1.0; }
         public void fillJacobi(int points, double[] arena, int diag, int offDiag) {
             for (int i = 0; i < points; i++) arena[diag + i] = 2.0 * i + 1.0;
             for (int i = 1; i < points; i++) arena[offDiag + i - 1] = i;
         }
     }
 
-    /** Gauss-Legendre rule: ∫_{−1}^{1} f(x) dx.  Zero-th moment μ₀ = 2. */
+    /** @see #LEGENDRE */
     static final class Legendre implements GaussRule {
         public double zeroMoment() { return 2.0; }
         public void fillJacobi(int points, double[] arena, int diag, int offDiag) {
@@ -93,7 +108,7 @@ public interface GaussRule {
         }
     }
 
-    /** Gauss-Hermite rule: ∫_{−∞}^{+∞} e^{−x²} f(x) dx.  Zero-th moment μ₀ = √π. */
+    /** @see #HERMITE */
     static final class Hermite implements GaussRule {
         private static final double SQRT_PI = 1.7724538509055160272981674833411451;
         public double zeroMoment() { return SQRT_PI; }
