@@ -136,4 +136,99 @@ class IntegratorTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("dx must be > 0");
     }
+
+    // -----------------------------------------------------------------------
+    // Simpson even-count end-panel correction
+    // -----------------------------------------------------------------------
+
+    @Test
+    void simpsonEvenCountUsesEndPanelCorrection() {
+        // 4 samples (even): ∫₀³ x² dx = 9, last panel uses corrected formula
+        double[] y = {0.0, 1.0, 4.0, 9.0};
+
+        double integral = Integrator.sampled(SampledRule.SIMPSON).samples(y, 1.0).integrate();
+
+        assertThat(integral).isCloseTo(9.0, offset(1e-10));
+    }
+
+    @Test
+    void simpsonIrregularEvenCountUsesEndPanelCorrection() {
+        // 4 irregular samples: ∫₀³ x² dx = 9
+        double[] x = {0.0, 1.0, 2.0, 3.0};
+        double[] y = {0.0, 1.0, 4.0, 9.0};
+
+        double integral = Integrator.sampled(SampledRule.SIMPSON).samples(x, y).integrate();
+
+        assertThat(integral).isCloseTo(9.0, offset(1e-10));
+    }
+
+    // -----------------------------------------------------------------------
+    // CumulativeIntegral n=2 boundary (trapezoidal and Simpson)
+    // -----------------------------------------------------------------------
+
+    @Test
+    void cumulativeTrapezoidalHandlesTwoSamples() {
+        double[] y = {0.0, 2.0};
+
+        double[] cumulative = Integrator.cumulative(SampledRule.TRAPEZOIDAL).samples(y, 1.0).integrate();
+
+        assertThat(cumulative).hasSize(2);
+        assertThat(cumulative[0]).isCloseTo(0.0, offset(EPS));
+        assertThat(cumulative[1]).isCloseTo(1.0, offset(EPS));
+    }
+
+    @Test
+    void cumulativeSimpsonFallsBackToTrapezoidalForTwoSamples() {
+        // n=2: Simpson falls back to trapezoidal for the single panel
+        double[] y = {0.0, 2.0};
+
+        double[] cumulative = Integrator.cumulative(SampledRule.SIMPSON).samples(y, 1.0).integrate();
+
+        assertThat(cumulative).hasSize(2);
+        assertThat(cumulative[0]).isCloseTo(0.0, offset(EPS));
+        assertThat(cumulative[1]).isCloseTo(1.0, offset(EPS));
+    }
+
+    @Test
+    void cumulativeSimpsonIrregularTwoSamples() {
+        double[] x = {0.0, 2.0};
+        double[] y = {1.0, 3.0};
+
+        double[] cumulative = Integrator.cumulative(SampledRule.SIMPSON).samples(x, y).integrate();
+
+        assertThat(cumulative[0]).isCloseTo(0.0, offset(EPS));
+        assertThat(cumulative[1]).isCloseTo(4.0, offset(EPS)); // (1+3)/2 * 2
+    }
+
+    // -----------------------------------------------------------------------
+    // scipy fixed_quad: ∫₀^1 x^{2n-1} dx = 1/(2n), exact for n-point rule
+    // -----------------------------------------------------------------------
+
+    @Test
+    void fixedQuadIsExactForHighDegreePolynomial() {
+        // n=4 points: exact for degree ≤ 7, so x^7 is exact
+        // ∫₀^1 x^7 dx = 1/8
+        double integral = Integrator.fixed()
+                .function(x -> Math.pow(x, 7)).bounds(0.0, 1.0).points(4).integrate();
+
+        assertThat(integral).isCloseTo(1.0 / 8.0, offset(EPS));
+    }
+
+    // -----------------------------------------------------------------------
+    // scipy romb_gh_3731: Romberg on cos(0.2x) over [0, 16]
+    // -----------------------------------------------------------------------
+
+    @Test
+    void rombergMatchesCosineIntegral() {
+        // ∫₀^16 cos(0.2x) dx = sin(3.2) / 0.2 ≈ 4.7696...
+        int n = 16;
+        double dx = 1.0;
+        double[] y = new double[n + 1];
+        for (int i = 0; i <= n; i++) y[i] = Math.cos(0.2 * i * dx);
+
+        double integral = Integrator.sampled(SampledRule.ROMBERG).samples(y, dx).integrate();
+        double expected = Math.sin(0.2 * n * dx) / 0.2;
+
+        assertThat(integral).isCloseTo(expected, offset(1e-8));
+    }
 }

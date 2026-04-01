@@ -97,7 +97,7 @@ class QuadratureTest {
 
         double expected = 2.5 / (2.5 * 2.5 + 2.3 * 2.3);
         assertThat(result.isSuccessful()).isTrue();
-        assertThat(result.getValue()).isCloseTo(expected, offset(1e-7));
+        assertThat(result.getValue()).isCloseTo(expected, offset(1e-9));
     }
 
     @Test
@@ -168,7 +168,7 @@ class QuadratureTest {
                 .tolerances(1e-10, 1e-10).integrate();
 
         assertThat(result.isSuccessful()).isTrue();
-        assertThat(result.getValue()).isCloseTo(1.0, offset(1e-8));
+        assertThat(result.getValue()).isCloseTo(1.0, offset(1e-9));
     }
 
     @Test
@@ -178,7 +178,7 @@ class QuadratureTest {
                 .tolerances(1e-10, 1e-10).integrate();
 
         assertThat(result.isSuccessful()).isTrue();
-        assertThat(result.getValue()).isCloseTo(Math.PI, offset(1e-7));
+        assertThat(result.getValue()).isCloseTo(Math.PI, offset(1e-9));
     }
 
     @Test
@@ -220,7 +220,7 @@ class QuadratureTest {
                 .tolerances(1e-10, 1e-10).integrate();
 
         assertThat(result.isSuccessful()).isTrue();
-        assertThat(result.getValue()).isCloseTo(3.0 / 25.0, offset(1e-7));
+        assertThat(result.getValue()).isCloseTo(3.0 / 25.0, offset(1e-9));
     }
 
     @Test
@@ -231,7 +231,7 @@ class QuadratureTest {
 
         double expected = 2.5 / (2.5 * 2.5 + 2.3 * 2.3);
         assertThat(result.isSuccessful()).isTrue();
-        assertThat(result.getValue()).isCloseTo(expected, offset(1e-7));
+        assertThat(result.getValue()).isCloseTo(expected, offset(1e-9));
     }
 
     @Test
@@ -524,5 +524,141 @@ class QuadratureTest {
         assertThatThrownBy(() -> Integrator.fixed().function(Math::sin).bounds(0.0, 1.0).points(8).rule(GaussRule.Hermite))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("GaussRule.Legendre");
+    }
+
+    // -----------------------------------------------------------------------
+    // ImproperIntegral.Adaptive LOWER branch
+    // -----------------------------------------------------------------------
+
+    @Test
+    void adaptiveImproperLowerMatchesDecayingExponential() {
+        // ∫_{-∞}^{0} e^x dx = 1
+        Quadrature result = Integrator.improper(ImproperOpts.LOWER)
+                .function(Math::exp).upperBound(0.0)
+                .tolerances(1e-10, 1e-10).integrate();
+
+        assertThat(result.isSuccessful()).isTrue();
+        assertThat(result.getValue()).isCloseTo(1.0, offset(1e-9));
+    }
+
+    // -----------------------------------------------------------------------
+    // adaptive MAX_EVALUATIONS_REACHED
+    // -----------------------------------------------------------------------
+
+    @Test
+    void adaptiveReportsEvaluationLimit() {
+        // Highly oscillatory integrand forces many evaluations
+        Quadrature result = Integrator.adaptive()
+                .function(x -> Math.sin(1000.0 * x)).bounds(0.0, 1.0)
+                .tolerances(1e-14, 1e-14)
+                .maxEvaluations(30)
+                .integrate();
+
+        assertThat(result.getStatus()).isEqualTo(Quadrature.Status.MAX_EVALUATIONS_REACHED);
+        assertThat(result.isSuccessful()).isFalse();
+    }
+
+    // -----------------------------------------------------------------------
+    // endpointSingular MAX_REFINEMENTS_REACHED
+    // -----------------------------------------------------------------------
+
+    @Test
+    void endpointSingularReportsRefinementLimit() {
+        // Very tight tolerance forces many refinement levels
+        Quadrature result = Integrator.endpointSingular(EndpointOpts.ALGEBRAIC)
+                .function(x -> Math.sin(100.0 * x)).bounds(0.0, 1.0).exponents(-0.5, -0.5)
+                .tolerances(1e-15, 1e-15)
+                .maxRefinements(1)
+                .integrate();
+
+        assertThat(result.getStatus()).isEqualTo(Quadrature.Status.MAX_REFINEMENTS_REACHED);
+        assertThat(result.isSuccessful()).isFalse();
+    }
+
+    // -----------------------------------------------------------------------
+    // oscillatory MAX_EVALUATIONS_REACHED
+    // -----------------------------------------------------------------------
+
+    @Test
+    void oscillatoryUpperReportsEvaluationLimit() {
+        Quadrature result = Integrator.oscillatory(OscillatoryOpts.COS_UPPER)
+                .function(x -> Math.exp(-0.001 * x)).lowerBound(0.0).omega(1.0)
+                .tolerances(1e-14, 1e-14)
+                .maxEvaluations(30)
+                .integrate();
+
+        assertThat(result.getStatus()).isEqualTo(Quadrature.Status.MAX_EVALUATIONS_REACHED);
+        assertThat(result.isSuccessful()).isFalse();
+    }
+
+    // -----------------------------------------------------------------------
+    // principalValue ABNORMAL_TERMINATION when f(pole) is non-finite
+    // -----------------------------------------------------------------------
+
+    @Test
+    void principalValueReturnsAbnormalWhenFunctionNonFiniteAtPole() {
+        Quadrature result = Integrator.principalValue()
+                .function(x -> Double.NaN).bounds(0.0, 1.0).pole(0.5)
+                .tolerances(1e-8, 1e-8).integrate();
+
+        assertThat(result.getStatus()).isEqualTo(Quadrature.Status.ABNORMAL_TERMINATION);
+        assertThat(result.isSuccessful()).isFalse();
+    }
+
+    // -----------------------------------------------------------------------
+    // scipy test_indefinite: ∫₀^∞ -e^{-x}·ln(x) dx = γ (Euler-Mascheroni)
+    // -----------------------------------------------------------------------
+
+    @Test
+    void adaptiveImproperUpperMatchesEulerMascheroniConstant() {
+        // ∫₀^∞ -e^{-x}·ln(x) dx = γ ≈ 0.5772156649015329
+        double gamma = 0.5772156649015329;
+        Quadrature result = Integrator.improper(ImproperOpts.UPPER)
+                .function(x -> -Math.exp(-x) * Math.log(x)).lowerBound(0.0)
+                .tolerances(1e-8, 1e-8).integrate();
+
+        assertThat(result.isSuccessful()).isTrue();
+        assertThat(result.getValue()).isCloseTo(gamma, offset(1e-7));
+    }
+
+    // -----------------------------------------------------------------------
+    // scipy test_singular: breakpoints at discontinuities
+    // -----------------------------------------------------------------------
+
+    @Test
+    void adaptiveWithMultipleBreakpointsHandlesPiecewiseFunction() {
+        // f(x) = sin(x) for x ∈ (0, 2.5], exp(-x) for x ∈ (2.5, 5], 0 otherwise
+        // ∫₀^10 f(x) dx = 1 - cos(2.5) + exp(-2.5) - exp(-5)
+        double expected = 1.0 - Math.cos(2.5) + Math.exp(-2.5) - Math.exp(-5.0);
+        Quadrature result = Integrator.adaptive()
+                .function(x -> {
+                    if (x > 0 && x <= 2.5) return Math.sin(x);
+                    if (x > 2.5 && x <= 5.0) return Math.exp(-x);
+                    return 0.0;
+                })
+                .bounds(0.0, 10.0)
+                .breakpoints(2.5, 5.0)
+                .tolerances(1e-10, 1e-10).integrate();
+
+        assertThat(result.isSuccessful()).isTrue();
+        assertThat(result.getValue()).isCloseTo(expected, offset(1e-8));
+    }
+
+    // -----------------------------------------------------------------------
+    // scipy test_cosine_weighted_infinite via substitution x→-t
+    // -----------------------------------------------------------------------
+
+    @Test
+    void oscillatoryCosLowerViaSubstitution() {
+        // ∫_{-∞}^{0} e^{2.5x}·cos(2.3x) dx = 2.5/(2.5²+2.3²)
+        // via x→-t: ∫_{0}^{+∞} e^{-2.5t}·cos(2.3t) dt  (same value, cos is even)
+        double a = 2.5, ome = 2.3;
+        double expected = a / (a * a + ome * ome);
+        Quadrature result = Integrator.oscillatory(OscillatoryOpts.COS_UPPER)
+                .function(t -> Math.exp(-a * t)).lowerBound(0.0).omega(ome)
+                .tolerances(1e-10, 1e-10).integrate();
+
+        assertThat(result.isSuccessful()).isTrue();
+        assertThat(result.getValue()).isCloseTo(expected, offset(1e-9));
     }
 }
