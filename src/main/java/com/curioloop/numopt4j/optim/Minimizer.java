@@ -3,6 +3,7 @@
  */
 package com.curioloop.numopt4j.optim;
 
+import com.curioloop.numopt4j.optim.cmaes.CMAESProblem;
 import com.curioloop.numopt4j.optim.lbfgsb.LBFGSBProblem;
 import com.curioloop.numopt4j.optim.subplex.SubplexProblem;
 import com.curioloop.numopt4j.optim.slsqp.SLSQPProblem;
@@ -20,6 +21,12 @@ import com.curioloop.numopt4j.optim.trf.TRFProblem;
  *
  * <p>Use the static factory methods as the primary entry point:</p>
  * <pre>{@code
+ * // Global derivative-free (CMA-ES)
+ * Optimization r = Minimizer.cmaes()
+ *     .objective(x -> x[0]*x[0] + x[1]*x[1])
+ *     .initialPoint(1.0, 1.0)
+ *     .solve();
+ *
  * // Derivative-free (Nelder-Mead)
  * Optimization r = Minimizer.subplex()
  *     .objective(x -> x[0]*x[0] + x[1]*x[1])
@@ -50,6 +57,7 @@ import com.curioloop.numopt4j.optim.trf.TRFProblem;
  *            or {@code ToDoubleFunction<double[]>} for derivative-free solvers)
  * @param <W> workspace type
  * @param <S> self type for fluent builder chaining
+ * @see CMAESProblem
  * @see SubplexProblem
  * @see LBFGSBProblem
  * @see SLSQPProblem
@@ -170,5 +178,18 @@ public abstract class Minimizer<O, W, S extends Minimizer<O, W, S>> implements P
      */
     public static SubplexProblem subplex() {
         return new SubplexProblem();
+    }
+
+    /**
+     * Creates a {@link CMAESProblem} for derivative-free global optimization.
+     *
+     * <p>CMA-ES (Covariance Matrix Adaptation Evolution Strategy) is a stochastic
+     * optimizer suitable for non-convex, non-smooth, and noisy objective functions.
+     * Supports sep-CMA-ES (diagonal mode) and IPOP/BIPOP restart strategies.</p>
+     *
+     * @return new {@link CMAESProblem} builder
+     */
+    public static CMAESProblem cmaes() {
+        return new CMAESProblem();
     }
 }

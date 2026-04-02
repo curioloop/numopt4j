@@ -4,6 +4,7 @@ High-performance numerical optimization library for Java.
 
 ## Features
 
+- **CMA-ES**: Covariance Matrix Adaptation Evolution Strategy — derivative-free global optimizer for non-convex, noisy, and multimodal functions; supports sep-CMA-ES and IPOP/BIPOP restarts; arena-based workspace (zero per-iteration allocation), BLAS-accelerated matrix operations
 - **Subplex**: Derivative-free optimization (Nelder-Mead + subspace decomposition, no gradient required)
 - **L-BFGS-B**: Limited-memory BFGS with bound constraints
 - **SLSQP**: Sequential Least Squares Programming with equality/inequality constraints
@@ -35,6 +36,27 @@ High-performance numerical optimization library for Java.
 If you are using an AI coding assistant (e.g. GitHub Copilot, Cursor, Claude), you can provide the full API documentation by referencing `llms.txt` or `llms-full.txt` in the project root.
 
 ## Quick Start
+
+### Global Derivative-Free Optimization (CMA-ES)
+
+```java
+// Non-convex / multimodal — no gradient required
+Optimization result = Minimizer.cmaes()
+    .objective(x -> { double s = 0; for (double v : x) s += v*v; return s; })
+    .initialPoint(1.0, 1.0, 1.0)
+    .solve();
+
+// With IPOP restart and bounds
+Optimization result2 = Minimizer.cmaes()
+    .objective(fn)
+    .initialPoint(x0)
+    .sigma(0.5)
+    .restartMode(RestartStrategy.IPOP)
+    .maxRestarts(9)
+    .maxEvaluations(100000)
+    .bounds(Bound.between(-5, 5), Bound.between(-5, 5))
+    .solve();
+```
 
 ### Derivative-Free Optimization (Subplex)
 
@@ -281,6 +303,7 @@ for (double[] bounds : intervals) {
 ### Minimizer (facade — static factory entry point)
 
 ```java
+Minimizer.cmaes()    // → CMAESProblem (CMA-ES global optimizer)
 Minimizer.subplex()  // → SubplexProblem (Nelder-Mead)
 Minimizer.lbfgsb()   // → LBFGSBProblem
 Minimizer.slsqp()    // → SLSQPProblem
