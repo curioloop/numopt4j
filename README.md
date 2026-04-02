@@ -263,7 +263,7 @@ double[] cumulative = Integrator.cumulative(SampledRule.TRAPEZOIDAL).samples(y, 
 double total2 = Integrator.sampled(SampledRule.SIMPSON).function(Math::sin, 101, 0.0, Math.PI).integrate();
 
 // Filon: highly oscillatory ∫ f(x)·cos(t·x) dx  (efficient for large t)
-double filon = Integrator.filon(FilonOpts.COSINE)
+double filon = Integrator.filon(FilonOpts.COS)
     .function(x -> Math.exp(-0.5 * x)).bounds(0.0, 2 * Math.PI).frequency(10.0).intervals(100)
     .integrate();
 
@@ -395,7 +395,7 @@ Integrator.filon(FilonOpts)                     // → FilonIntegral (highly osc
 
 **ImproperOpts**: `UPPER` (∫ₐ^∞), `LOWER` (∫₋∞^b), `WHOLE_LINE` (∫₋∞^∞)
 
-**FilonOpts**: `COSINE` (∫ f·cos(tx) dx), `SINE` (∫ f·sin(tx) dx)
+**FilonOpts**: `COS` (∫ f·cos(tx) dx), `SIN` (∫ f·sin(tx) dx)
 
 **AdaptiveRule**: `GK15` (default, degree 29, 15 evals/interval), `GAUSS_LOBATTO` (degree 5, endpoint reuse, fewer evals/subdivision)
 

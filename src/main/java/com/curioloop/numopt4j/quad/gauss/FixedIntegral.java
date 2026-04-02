@@ -49,14 +49,14 @@ public class FixedIntegral implements Integral<Double, GaussPool> {
     }
 
     /**
-     * Sets the quadrature rule. Only {@link GaussRule#LEGENDRE} is accepted
+     * Sets the quadrature rule. Only {@link GaussRule#legendre()} is accepted
      * for interval-mapped fixed quadrature; any other rule will throw.
      */
     public FixedIntegral rule(GaussRule rule) {
         if (rule == null) throw new IllegalArgumentException("rule must not be null");
-        if (rule != GaussRule.LEGENDRE) {
+        if (!(rule instanceof com.curioloop.numopt4j.quad.gauss.rule.LegendreRule)) {
             throw new IllegalArgumentException(
-                    "fixed quadrature requires a plain-measure rule on [-1, 1]; use GaussRule.LEGENDRE");
+                    "fixed quadrature requires a plain-measure rule on [-1, 1]; use GaussRule.legendre()");
         }
         return this;
     }
@@ -75,7 +75,7 @@ public class FixedIntegral implements Integral<Double, GaussPool> {
         Checks.validateFiniteInterval(min, max);
         requirePoints();
         GaussPool pool = workspace != null ? workspace.ensure(points) : alloc();
-        GaussRule.LEGENDRE.generate(points, pool);
+        GaussRule.legendre().generate(points, pool);
 
         double center = 0.5 * (min + max);
         double halfWidth = 0.5 * (max - min);

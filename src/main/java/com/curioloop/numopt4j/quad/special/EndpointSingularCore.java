@@ -4,8 +4,9 @@
 package com.curioloop.numopt4j.quad.special;
 
 import com.curioloop.numopt4j.quad.Quadrature;
-import com.curioloop.numopt4j.quad.gauss.JacobiRule;
+
 import com.curioloop.numopt4j.quad.gauss.GaussPool;
+import com.curioloop.numopt4j.quad.gauss.GaussRule;
 
 import java.util.function.DoubleUnaryOperator;
 
@@ -67,7 +68,7 @@ final class EndpointSingularCore {
         // JacobiRule(a,b) generates weights for ∫(1-t)^a (1+t)^b g(t) dt,
         // so JacobiRule(beta, alpha) matches (1-t)^beta (1+t)^alpha.
         // The factor halfSpan^(alpha+beta+1) is absorbed into `scale`.
-        JacobiRule rule = new JacobiRule(beta, alpha);
+        GaussRule rule = GaussRule.jacobi(beta, alpha);
         double halfSpan = 0.5 * (max - min);
         double center   = 0.5 * (min + max);
         double scale    = Math.pow(halfSpan, alpha + beta + 1.0);

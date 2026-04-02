@@ -162,7 +162,7 @@ public abstract class ImproperIntegral<T extends ImproperIntegral<T>> {
             if (points <= 0) throw new IllegalStateException(
                     "Missing required parameter: points. Call .points(n) before .integrate().");
             GaussPool pool = workspace != null ? workspace.ensure(points) : alloc();
-            GaussRule.LEGENDRE.generate(points, pool);
+            GaussRule.legendre().generate(points, pool);
             double sum = 0.0;
             switch (opts) {
                 case UPPER:

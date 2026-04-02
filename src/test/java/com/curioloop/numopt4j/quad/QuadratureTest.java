@@ -6,7 +6,10 @@ package com.curioloop.numopt4j.quad;
 import com.curioloop.numopt4j.quad.adapt.AdaptivePool;
 import com.curioloop.numopt4j.quad.adapt.AdaptiveIntegral;
 import com.curioloop.numopt4j.quad.gauss.FixedIntegral;
-import com.curioloop.numopt4j.quad.gauss.JacobiRule;
+import com.curioloop.numopt4j.quad.gauss.rule.GeneralizedHermiteRule;
+import com.curioloop.numopt4j.quad.gauss.rule.GeneralizedLaguerreRule;
+import com.curioloop.numopt4j.quad.gauss.rule.JacobiRule;
+import com.curioloop.numopt4j.quad.gauss.GaussRule;
 import com.curioloop.numopt4j.quad.gauss.GaussRule;
 import com.curioloop.numopt4j.quad.special.EndpointOpts;
 import com.curioloop.numopt4j.quad.special.ImproperOpts;
@@ -40,7 +43,7 @@ class QuadratureTest {
     void ruleIntegralProblemMatchesHermiteRule() {
         double integral = Integrator.weighted().function(x -> 1.0)
                 .points(1)
-                .rule(GaussRule.HERMITE)
+                .rule(GaussRule.hermite())
                 .integrate();
 
         assertThat(integral).isCloseTo(Math.sqrt(Math.PI), offset(EPS));
@@ -118,21 +121,21 @@ class QuadratureTest {
 
     @Test
     void canonicalLegendreRuleIntegratesOnMinusOneToOne() {
-        double integral = Integrator.weighted().function(x -> x * x).points(2).rule(GaussRule.LEGENDRE).integrate();
+        double integral = Integrator.weighted().function(x -> x * x).points(2).rule(GaussRule.legendre()).integrate();
 
         assertThat(integral).isCloseTo(2.0 / 3.0, offset(EPS));
     }
 
     @Test
     void hermiteRuleIntegratesConstantWeightExactly() {
-        double integral = Integrator.weighted().function(x -> 1.0).points(1).rule(GaussRule.HERMITE).integrate();
+        double integral = Integrator.weighted().function(x -> 1.0).points(1).rule(GaussRule.hermite()).integrate();
 
         assertThat(integral).isCloseTo(Math.sqrt(Math.PI), offset(EPS));
     }
 
     @Test
     void laguerreRuleIntegratesLinearMomentExactly() {
-        double integral = Integrator.weighted().function(x -> x).points(1).rule(GaussRule.LAGUERRE).integrate();
+        double integral = Integrator.weighted().function(x -> x).points(1).rule(GaussRule.laguerre()).integrate();
 
         assertThat(integral).isCloseTo(1.0, offset(EPS));
     }
@@ -447,7 +450,7 @@ class QuadratureTest {
         GaussPool pool = new GaussPool();
 
         double fixed = Integrator.fixed().function(x -> x * x).bounds(0.0, 1.0).points(8).integrate(pool);
-        double weighted = Integrator.weighted().function(x -> x).points(4).rule(GaussRule.LAGUERRE).integrate(pool);
+        double weighted = Integrator.weighted().function(x -> x).points(4).rule(GaussRule.laguerre()).integrate(pool);
 
         assertThat(fixed).isCloseTo(1.0 / 3.0, offset(EPS));
         assertThat(weighted).isCloseTo(1.0, offset(EPS));
@@ -472,7 +475,7 @@ class QuadratureTest {
         Integrator.fixed().function(x -> x * x).bounds(0.0, 1.0).points(8).integrate(pool);
         double[] arena = pool.arena();
 
-        Integrator.weighted().function(x -> x).points(4).rule(GaussRule.LAGUERRE).integrate(pool);
+        Integrator.weighted().function(x -> x).points(4).rule(GaussRule.laguerre()).integrate(pool);
 
         assertThat(pool.arena()).isSameAs(arena);
         assertThat(pool.arena().length).isGreaterThanOrEqualTo(96);
@@ -521,9 +524,132 @@ class QuadratureTest {
 
     @Test
     void fixedRejectsNaturalDomainRule() {
-        assertThatThrownBy(() -> Integrator.fixed().function(Math::sin).bounds(0.0, 1.0).points(8).rule(GaussRule.HERMITE))
+        assertThatThrownBy(() -> Integrator.fixed().function(Math::sin).bounds(0.0, 1.0).points(8).rule(GaussRule.hermite()))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("GaussRule.LEGENDRE");
+                .hasMessageContaining("GaussRule.legendre()");
+    }
+
+    // -----------------------------------------------------------------------
+    // Generalized Laguerre and Hermite rules
+    // -----------------------------------------------------------------------
+
+    @Test
+    void generalizedLaguerreZeroMomentMatchesGamma() {
+        // ∫₀^∞ x^s·e^{-x} dx = Γ(s+1)  — integrate f(x)=1 with the weight absorbed
+        double s = 1.5;
+        double expected = Math.exp(GaussRule.logGamma(s + 1.0));
+        double result = Integrator.weighted()
+                .function(x -> 1.0).points(8)
+                .rule(new GeneralizedLaguerreRule(s))
+                .integrate();
+        assertThat(result).isCloseTo(expected, offset(EPS));
+    }
+
+    @Test
+    void generalizedLaguerreIntegratesExponential() {
+        // ∫₀^∞ x^s·e^{-x}·e^{-x} dx = ∫₀^∞ x^s·e^{-2x} dx = Γ(s+1)/2^{s+1}
+        double s = 0.5;
+        double expected = Math.exp(GaussRule.logGamma(s + 1.0))
+                         / Math.pow(2.0, s + 1.0);
+        double result = Integrator.weighted()
+                .function(x -> Math.exp(-x)).points(16)
+                .rule(new GeneralizedLaguerreRule(s))
+                .integrate();
+        assertThat(result).isCloseTo(expected, offset(1e-10));
+    }
+
+    @Test
+    void generalizedLaguerreS0MatchesStandardLaguerre() {
+        // s=0 should match GaussRule.laguerre() exactly
+        double r1 = Integrator.weighted().function(x -> x * x).points(4).rule(GaussRule.laguerre()).integrate();
+        double r2 = Integrator.weighted().function(x -> x * x).points(4)
+                .rule(new GeneralizedLaguerreRule(0.0)).integrate();
+        assertThat(r1).isCloseTo(r2, offset(EPS));
+    }
+
+    @Test
+    void generalizedHermiteZeroMomentMatchesGamma() {
+        // ∫₋∞^∞ |x|^{2s}·e^{-x²} dx = Γ(s+1/2)
+        double s = 1.0;
+        double expected = Math.exp(GaussRule.logGamma(s + 0.5));
+        double result = Integrator.weighted()
+                .function(x -> 1.0).points(8)
+                .rule(new GeneralizedHermiteRule(s))
+                .integrate();
+        assertThat(result).isCloseTo(expected, offset(EPS));
+    }
+
+    @Test
+    void generalizedHermiteS0MatchesStandardHermite() {
+        // s=0 should match GaussRule.hermite() exactly
+        double r1 = Integrator.weighted().function(x -> 1.0).points(1).rule(GaussRule.hermite()).integrate();
+        double r2 = Integrator.weighted().function(x -> 1.0).points(1)
+                .rule(new GeneralizedHermiteRule(0.0)).integrate();
+        assertThat(r1).isCloseTo(r2, offset(EPS));
+    }
+
+    @Test
+    void generalizedLaguerreRejectsInvalidS() {
+        assertThatThrownBy(() -> new GeneralizedLaguerreRule(-1.0))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("s must be > -1");
+    }
+
+    @Test
+    void generalizedHermiteRejectsInvalidS() {
+        assertThatThrownBy(() -> new GeneralizedHermiteRule(-0.5))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("s must be > -1/2");
+    }
+
+    // -----------------------------------------------------------------------
+    // Chebyshev and Gegenbauer rules
+    // -----------------------------------------------------------------------
+
+    @Test
+    void chebyshev1ZeroMomentIsPI() {
+        // ∫₋₁^1 1/√(1-x²) dx = π
+        double result = Integrator.weighted().function(x -> 1.0).points(1)
+                .rule(GaussRule.chebyshev1()).integrate();
+        assertThat(result).isCloseTo(Math.PI, offset(EPS));
+    }
+
+    @Test
+    void chebyshev2ZeroMomentIsHalfPI() {
+        // ∫₋₁^1 √(1-x²) dx = π/2
+        double result = Integrator.weighted().function(x -> 1.0).points(1)
+                .rule(GaussRule.chebyshev2()).integrate();
+        assertThat(result).isCloseTo(Math.PI / 2.0, offset(EPS));
+    }
+
+    @Test
+    void gegenbauerHalfIsLegendre() {
+        // λ=1/2: Gegenbauer reduces to Legendre, ∫₋₁^1 f(x) dx
+        double r1 = Integrator.weighted().function(x -> x * x).points(2)
+                .rule(GaussRule.legendre()).integrate();
+        double r2 = Integrator.weighted().function(x -> x * x).points(2)
+                .rule(GaussRule.gegenbauer(0.5)).integrate();
+        assertThat(r1).isCloseTo(r2, offset(EPS));
+    }
+
+    @Test
+    void gegenbauerZeroIsChebyshev1() {
+        // λ=0: Gegenbauer reduces to Chebyshev 1st kind
+        double r1 = Integrator.weighted().function(x -> 1.0).points(1)
+                .rule(GaussRule.chebyshev1()).integrate();
+        double r2 = Integrator.weighted().function(x -> 1.0).points(1)
+                .rule(GaussRule.gegenbauer(0.0)).integrate();
+        assertThat(r1).isCloseTo(r2, offset(EPS));
+    }
+
+    @Test
+    void gegenbauerOneIsChebyshev2() {
+        // λ=1: Gegenbauer reduces to Chebyshev 2nd kind
+        double r1 = Integrator.weighted().function(x -> 1.0).points(1)
+                .rule(GaussRule.chebyshev2()).integrate();
+        double r2 = Integrator.weighted().function(x -> 1.0).points(1)
+                .rule(GaussRule.gegenbauer(1.0)).integrate();
+        assertThat(r1).isCloseTo(r2, offset(EPS));
     }
 
     // -----------------------------------------------------------------------
@@ -718,7 +844,7 @@ class QuadratureTest {
                          + t * Math.exp(-Math.PI) * Math.sin(2 * Math.PI * t))
                          / (0.25 + t * t);
 
-        double result = Integrator.filon(com.curioloop.numopt4j.quad.sampled.FilonOpts.COSINE)
+        double result = Integrator.filon(com.curioloop.numopt4j.quad.sampled.FilonOpts.COS)
                 .function(x -> Math.exp(-0.5 * x))
                 .bounds(0.0, 2 * Math.PI).frequency(t).intervals(100)
                 .integrate();
@@ -734,7 +860,7 @@ class QuadratureTest {
                          - 0.5 * Math.exp(-Math.PI) * Math.sin(2 * Math.PI * t))
                          / (0.25 + t * t);
 
-        double result = Integrator.filon(com.curioloop.numopt4j.quad.sampled.FilonOpts.SINE)
+        double result = Integrator.filon(com.curioloop.numopt4j.quad.sampled.FilonOpts.SIN)
                 .function(x -> Math.exp(-0.5 * x))
                 .bounds(0.0, 2 * Math.PI).frequency(t).intervals(100)
                 .integrate();
@@ -750,7 +876,7 @@ class QuadratureTest {
                          + t * Math.exp(-Math.PI) * Math.sin(2 * Math.PI * t))
                          / (0.25 + t * t);
 
-        double result = Integrator.filon(com.curioloop.numopt4j.quad.sampled.FilonOpts.COSINE)
+        double result = Integrator.filon(com.curioloop.numopt4j.quad.sampled.FilonOpts.COS)
                 .function(x -> Math.exp(-0.5 * x))
                 .bounds(0.0, 2 * Math.PI).frequency(t).intervals(200)
                 .integrate();
@@ -760,7 +886,7 @@ class QuadratureTest {
 
     @Test
     void filonRejectsOddIntervals() {
-        assertThatThrownBy(() -> Integrator.filon(com.curioloop.numopt4j.quad.sampled.FilonOpts.COSINE)
+        assertThatThrownBy(() -> Integrator.filon(com.curioloop.numopt4j.quad.sampled.FilonOpts.COS)
                 .function(x -> 1.0).bounds(0.0, 1.0).frequency(1.0).intervals(3).integrate())
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("even");

@@ -5,6 +5,7 @@ package com.curioloop.numopt4j.quad.gauss;
 
 import com.curioloop.numopt4j.quad.Checks;
 import com.curioloop.numopt4j.quad.Integral;
+import com.curioloop.numopt4j.quad.gauss.rule.JacobiRule;
 
 import java.util.function.DoubleUnaryOperator;
 

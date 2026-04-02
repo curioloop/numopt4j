@@ -4,6 +4,12 @@
 package com.curioloop.numopt4j.quad.gauss;
 
 import com.curioloop.numopt4j.linalg.blas.BLAS;
+import com.curioloop.numopt4j.quad.gauss.rule.GeneralizedHermiteRule;
+import com.curioloop.numopt4j.quad.gauss.rule.GeneralizedLaguerreRule;
+import com.curioloop.numopt4j.quad.gauss.rule.HermiteRule;
+import com.curioloop.numopt4j.quad.gauss.rule.JacobiRule;
+import com.curioloop.numopt4j.quad.gauss.rule.LaguerreRule;
+import com.curioloop.numopt4j.quad.gauss.rule.LegendreRule;
 
 import java.util.Arrays;
 
@@ -12,32 +18,29 @@ import java.util.Arrays;
  *
  * <p>Implementations generate nodes xᵢ and weights wᵢ such that
  *   ∫ w(x)·f(x) dx ≈ Σᵢ wᵢ·f(xᵢ)
- * is exact for polynomials up to a degree determined by the number of points.</p>
+ * is exact for polynomials up to a degree determined by the number of points n.
+ * An n-point rule is exact for polynomials of degree ≤ 2n−1.</p>
  *
- * <p>Three standard rules are provided as pre-built constants:</p>
+ * <p>Standard rules (returned by the no-arg factory methods):</p>
  * <ul>
- *   <li>{@link #LEGENDRE}  — ∫_{−1}^{1} f(x) dx,  w(x) = 1</li>
- *   <li>{@link #LAGUERRE}  — ∫_{0}^{+∞} e^{−x}·f(x) dx</li>
- *   <li>{@link #HERMITE}   — ∫_{−∞}^{+∞} e^{−x²}·f(x) dx</li>
+ *   <li>{@link #legendre()} — ∫_{−1}^{1} f(x) dx,  w(x) = 1</li>
+ *   <li>{@link #laguerre()} — ∫_{0}^{+∞} e^{−x}·f(x) dx</li>
+ *   <li>{@link #hermite()}  — ∫_{−∞}^{+∞} e^{−x²}·f(x) dx</li>
  * </ul>
  *
- * <p>For the Jacobi weight (1−x)^α·(1+x)^β on [−1,1], use {@link JacobiRule}.</p>
+ * <p>Parameterized rules (returned by the factory methods with arguments):</p>
+ * <ul>
+ *   <li>{@link #laguerre(double)} — ∫_{0}^{+∞} x^s·e^{−x}·f(x) dx,  s &gt; −1</li>
+ *   <li>{@link #hermite(double)}  — ∫_{−∞}^{+∞} |x|^{2s}·e^{−x²}·f(x) dx,  s &gt; −1/2</li>
+ *   <li>{@link #jacobi(double, double)} — ∫_{−1}^{1} (1−x)^α·(1+x)^β·f(x) dx,  α,β &gt; −1</li>
+ * </ul>
  *
  * <p>All rules are generated via the Golub-Welsch algorithm: nodes are eigenvalues
- * of the symmetric tridiagonal Jacobi matrix, and weights are μ₀·v₀ᵢ² where
- * μ₀ is the zero-th moment and v₀ᵢ is the first component of the i-th eigenvector.</p>
+ * of the symmetric tridiagonal Jacobi matrix J, and weights are wᵢ = μ₀·v₀ᵢ² where
+ * μ₀ = ∫ w(x) dx is the zero-th moment and v₀ᵢ is the first component of the
+ * i-th normalised eigenvector of J.</p>
  */
 public interface GaussRule {
-
-    /**
-     * Generates nodes and weights for the given number of quadrature points.
-     *
-     * @param points    number of quadrature points, must be positive
-     * @param workspace reusable rule-generation workspace, must not be null
-     */
-    default void generate(int points, GaussPool workspace) {
-        fromJacobiMatrix(points, workspace);
-    }
 
     /** Returns the zero-th moment μ₀ = ∫ w(x) dx of this rule's weight function. */
     double zeroMoment();
@@ -46,19 +49,20 @@ public interface GaussRule {
     void fillJacobi(int points, double[] arena, int diagonalOffset, int offDiagonalOffset);
 
     /**
-     * Generates nodes and weights from a symmetric tridiagonal Jacobi matrix.
+     * Generates nodes and weights for the given number of quadrature points
+     * via the Golub-Welsch algorithm.
      *
-     * <p>The Golub-Welsch algorithm: given the three-term recurrence
-     *   p_{n+1}(x) = (x − αₙ)·pₙ(x) − βₙ·p_{n−1}(x)
+     * <p>Given the three-term recurrence
+     *   p_{n+1}(x) = (x − αₙ)·pₙ(x) − βₙ·p_{n−1}(x),
      * the quadrature nodes are the eigenvalues of the symmetric tridiagonal matrix
-     *   J = diag(α₀,…,αₙ₋₁) + off-diag(√β₁,…,√βₙ₋₁)
-     * and the weights are wᵢ = μ₀ · v₀ᵢ², where μ₀ = ∫ w(x) dx is the zero-th
-     * moment and v₀ᵢ is the first component of the i-th normalised eigenvector.</p>
+     *   J = diag(α₀,…,αₙ₋₁) + off-diag(√β₁,…,√βₙ₋₁),
+     * and the weights are wᵢ = μ₀·v₀ᵢ² where v₀ᵢ is the first component of the
+     * i-th normalised eigenvector.  The eigendecomposition uses LAPACK dsteqr.</p>
      *
-     * <p>The eigendecomposition is computed via LAPACK dsteqr (QR iteration on
-     * symmetric tridiagonal matrix with eigenvector accumulation).</p>
+     * @param points    number of quadrature points, must be positive
+     * @param workspace reusable rule-generation workspace, must not be null
      */
-    default void fromJacobiMatrix(int points, GaussPool workspace) {
+    default void generate(int points, GaussPool workspace) {
         if (points <= 0) throw new IllegalArgumentException("points must be > 0");
         if (workspace == null) throw new IllegalArgumentException("workspace must not be null");
         workspace.ensure(points);
@@ -83,38 +87,92 @@ public interface GaussRule {
         }
     }
 
-    /** Gauss-Laguerre rule: ∫_{0}^{+∞} e^{−x} f(x) dx.  Zero-th moment μ₀ = 1. */
-    GaussRule LAGUERRE = new Laguerre();
-    /** Gauss-Legendre rule: ∫_{−1}^{1} f(x) dx.  Zero-th moment μ₀ = 2. */
-    GaussRule LEGENDRE = new Legendre();
-    /** Gauss-Hermite rule: ∫_{−∞}^{+∞} e^{−x²} f(x) dx.  Zero-th moment μ₀ = √π. */
-    GaussRule HERMITE  = new Hermite();
+    // -----------------------------------------------------------------------
+    // Standard rule factory methods
+    // -----------------------------------------------------------------------
 
-    /** @see #LAGUERRE */
-    static final class Laguerre implements GaussRule {        public double zeroMoment() { return 1.0; }
-        public void fillJacobi(int points, double[] arena, int diag, int offDiag) {
-            for (int i = 0; i < points; i++) arena[diag + i] = 2.0 * i + 1.0;
-            for (int i = 1; i < points; i++) arena[offDiag + i - 1] = i;
-        }
+    /** Returns the standard Gauss-Legendre rule: ∫_{−1}^{1} f(x) dx.  μ₀ = 2. */
+    static GaussRule legendre() { return LegendreRule.INSTANCE; }
+
+    /** Returns the standard Gauss-Laguerre rule: ∫_{0}^{+∞} e^{−x} f(x) dx.  μ₀ = 1. */
+    static GaussRule laguerre() { return LaguerreRule.INSTANCE; }
+
+    /** Returns the standard Gauss-Hermite rule: ∫_{−∞}^{+∞} e^{−x²} f(x) dx.  μ₀ = √π. */
+    static GaussRule hermite()  { return HermiteRule.INSTANCE; }
+
+    // -----------------------------------------------------------------------
+    // Parameterized rule factory methods
+    // -----------------------------------------------------------------------
+
+    /**
+     * Returns a generalized Gauss-Laguerre rule for
+     *   ∫_{0}^{+∞} x^s · e^{−x} · f(x) dx,  s > −1.
+     * When s = 0 this is equivalent to {@link #laguerre()}.
+     */
+    static GaussRule laguerre(double s) { return new GeneralizedLaguerreRule(s); }
+
+    /**
+     * Returns a generalized Gauss-Hermite rule for
+     *   ∫_{−∞}^{+∞} |x|^{2s} · e^{−x²} · f(x) dx,  s > −1/2.
+     * When s = 0 this is equivalent to {@link #hermite()}.
+     */
+    static GaussRule hermite(double s)  { return new GeneralizedHermiteRule(s); }
+
+    /**
+     * Returns a Gauss-Jacobi rule for
+     *   ∫_{−1}^{1} (1−x)^α · (1+x)^β · f(x) dx,  α,β > −1.
+     * Special cases: α=β=0 → Legendre; α=β=−1/2 → Chebyshev 1st kind.
+     */
+    static GaussRule jacobi(double alpha, double beta) { return new JacobiRule(alpha, beta); }
+
+    /**
+     * Returns a Gauss-Chebyshev rule of the first kind for
+     *   ∫_{−1}^{1} f(x) / √(1−x²) dx.
+     * Equivalent to {@link #jacobi(double, double) jacobi(-0.5, -0.5)}.
+     * Zero-th moment: μ₀ = π.
+     */
+    static GaussRule chebyshev1() { return new JacobiRule(-0.5, -0.5); }
+
+    /**
+     * Returns a Gauss-Chebyshev rule of the second kind for
+     *   ∫_{−1}^{1} f(x) · √(1−x²) dx.
+     * Equivalent to {@link #jacobi(double, double) jacobi(0.5, 0.5)}.
+     * Zero-th moment: μ₀ = π/2.
+     */
+    static GaussRule chebyshev2() { return new JacobiRule(0.5, 0.5); }
+
+    /**
+     * Returns a Gauss-Gegenbauer (ultraspherical) rule for
+     *   ∫_{−1}^{1} (1−x²)^{λ−1/2} · f(x) dx,  λ > −1/2.
+     * Equivalent to {@link #jacobi(double, double) jacobi(λ−0.5, λ−0.5)}.
+     * Special cases: λ=0 → Chebyshev 1st kind; λ=1 → Chebyshev 2nd kind; λ=1/2 → Legendre.
+     */
+    static GaussRule gegenbauer(double lambda) { return new JacobiRule(lambda - 0.5, lambda - 0.5); }
+
+    // -----------------------------------------------------------------------
+    // Utility: log-Gamma function (Lanczos approximation)
+    // -----------------------------------------------------------------------
+
+    static final double LOG_TWO = Math.log(2.0);
+
+    static final double[] LANCZOS = {
+            676.5203681218851, -1259.1392167224028, 771.3234287776531,
+            -176.6150291621406, 12.507343278686905, -0.13857109526572012,
+            9.984369578019572e-6, 1.5056327351493116e-7
+    };
+
+    /**
+     * Computes ln Γ(x) via the Lanczos approximation.
+     *
+     * <p>Used internally by {@link JacobiRule}, {@link GeneralizedLaguerreRule},
+     * and {@link GeneralizedHermiteRule} to compute zero-th moments.</p>
+     */
+    public static double logGamma(double x) {
+        if (x < 0.5) return Math.log(Math.PI) - Math.log(Math.sin(Math.PI * x)) - logGamma(1.0 - x);
+        double s = x - 1.0, sum = 0.9999999999998099;
+        for (int i = 0; i < LANCZOS.length; i++) sum += LANCZOS[i] / (s + i + 1.0);
+        double t = s + LANCZOS.length - 0.5;
+        return 0.9189385332046727 + (s + 0.5) * Math.log(t) - t + Math.log(sum);
     }
 
-    /** @see #LEGENDRE */
-    static final class Legendre implements GaussRule {
-        public double zeroMoment() { return 2.0; }
-        public void fillJacobi(int points, double[] arena, int diag, int offDiag) {
-            for (int i = 0; i < points; i++) arena[diag + i] = 0.0;
-            for (int i = 1; i < points; i++)
-                arena[offDiag + i - 1] = i / Math.sqrt(4.0 * i * i - 1.0);
-        }
-    }
-
-    /** @see #HERMITE */
-    static final class Hermite implements GaussRule {
-        private static final double SQRT_PI = 1.7724538509055160272981674833411451;
-        public double zeroMoment() { return SQRT_PI; }
-        public void fillJacobi(int points, double[] arena, int diag, int offDiag) {
-            for (int i = 0; i < points; i++) arena[diag + i] = 0.0;
-            for (int i = 1; i < points; i++) arena[offDiag + i - 1] = Math.sqrt(0.5 * i);
-        }
-    }
 }

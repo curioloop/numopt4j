@@ -93,7 +93,7 @@ public class FilonIntegral implements Integral<Double, Void> {
         return this;
     }
 
-    /** Sets the kernel type (COSINE or SINE). */
+    /** Sets the kernel type (COS or SIN). */
     public FilonIntegral opts(FilonOpts opts) {
         if (opts == null) throw new IllegalArgumentException("opts must not be null");
         this.opts = opts;
@@ -140,7 +140,7 @@ public class FilonIntegral implements Integral<Double, Void> {
 
         // trig1 = sin (cosine kernel) or cos (sine kernel)
         // sign  = +1 (cosine) or -1 (sine)
-        final double sign = (opts == FilonOpts.COSINE) ? 1.0 : -1.0;
+        final double sign = (opts == FilonOpts.COS) ? 1.0 : -1.0;
         return h * (alpha * (v[2 * n] * trig1(t * x[2 * n]) - v[0] * trig1(t * x[0])) * sign
                   + beta  * c2n
                   + gamma * c2n1);
@@ -148,12 +148,12 @@ public class FilonIntegral implements Integral<Double, Void> {
 
     // trig1: sin for COSINE kernel, cos for SINE kernel
     private double trig1(double u) {
-        return opts == FilonOpts.COSINE ? Math.sin(u) : Math.cos(u);
+        return opts == FilonOpts.COS ? Math.sin(u) : Math.cos(u);
     }
 
     // trig2: cos for COSINE kernel, sin for SINE kernel
     private double trig2(double u) {
-        return opts == FilonOpts.COSINE ? Math.cos(u) : Math.sin(u);
+        return opts == FilonOpts.COS ? Math.cos(u) : Math.sin(u);
     }
 
     private void validate() {

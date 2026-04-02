@@ -1,7 +1,9 @@
 /*
  * Copyright (c) 2025 curioloop. All rights reserved.
  */
-package com.curioloop.numopt4j.quad.gauss;
+package com.curioloop.numopt4j.quad.gauss.rule;
+
+import com.curioloop.numopt4j.quad.gauss.GaussRule;
 
 /**
  * Gauss-Jacobi quadrature rule for
@@ -11,7 +13,7 @@ package com.curioloop.numopt4j.quad.gauss;
  * the Jacobi three-term recurrence.  The zero-th moment is:
  *   μ₀ = B(α+1, β+1) · 2^(α+β+1)
  *      = Γ(α+1)·Γ(β+1)/Γ(α+β+2) · 2^(α+β+1)
- * computed via the Lanczos logGamma approximation.</p>
+ * computed via {@link GaussRule#logGamma}.</p>
  *
  * <p>Jacobi matrix diagonal (αₖ) and off-diagonal (βₖ) entries:
  *   αₖ = (β²−α²) / ((2k+α+β)(2k+α+β+2))
@@ -19,6 +21,8 @@ package com.curioloop.numopt4j.quad.gauss;
  * with special handling when 2k+α+β ≈ 0 (near the symmetric case α=β=−1/2).</p>
  */
 public final class JacobiRule implements GaussRule {
+
+    private static final double LOG_TWO = Math.log(2.0);
 
     private final double alpha;
     private final double beta;
@@ -30,21 +34,12 @@ public final class JacobiRule implements GaussRule {
         this.beta = beta;
     }
 
-    // -----------------------------------------------------------------------
-    // Gauss-Jacobi node/weight generation
-    // -----------------------------------------------------------------------
-
-    /**
-     * Generates nodes and weights for a Gauss-Jacobi rule with the given parameters.
-     * The zero-th moment is {@code B(alpha+1, beta+1) * 2^(alpha+beta+1)}.
-     */
-
     @Override
     public double zeroMoment() {
         return Math.exp((alpha + beta + 1.0) * LOG_TWO
-                + logGamma(alpha + 1.0)
-                + logGamma(beta + 1.0)
-                - logGamma(alpha + beta + 2.0));
+                + GaussRule.logGamma(alpha + 1.0)
+                + GaussRule.logGamma(beta + 1.0)
+                - GaussRule.logGamma(alpha + beta + 2.0));
     }
 
     @Override
@@ -71,30 +66,6 @@ public final class JacobiRule implements GaussRule {
             }
         }
     }
-
-    // -----------------------------------------------------------------------
-    // logGamma (Lanczos approximation) — needed for the zero-th moment
-    // -----------------------------------------------------------------------
-
-    private static final double LOG_TWO = Math.log(2.0);
-
-    private static final double[] LANCZOS = {
-            676.5203681218851, -1259.1392167224028, 771.3234287776531,
-            -176.6150291621406, 12.507343278686905, -0.13857109526572012,
-            9.984369578019572e-6, 1.5056327351493116e-7
-    };
-
-    static double logGamma(double x) {
-        if (x < 0.5) return Math.log(Math.PI) - Math.log(Math.sin(Math.PI * x)) - logGamma(1.0 - x);
-        double s = x - 1.0, sum = 0.9999999999998099;
-        for (int i = 0; i < LANCZOS.length; i++) sum += LANCZOS[i] / (s + i + 1.0);
-        double t = s + LANCZOS.length - 0.5;
-        return 0.9189385332046727 + (s + 0.5) * Math.log(t) - t + Math.log(sum);
-    }
-
-    // -----------------------------------------------------------------------
-    // Validation
-    // -----------------------------------------------------------------------
 
     private static void validateExponent(String name, double value) {
         if (!Double.isFinite(value)) throw new IllegalArgumentException(name + " must be finite");

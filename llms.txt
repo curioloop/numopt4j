@@ -28,7 +28,8 @@ com.curioloop.numopt4j.optim.trf         # TRFProblem, TRFWorkspace
 com.curioloop.numopt4j.optim.root        # BrentqProblem, HYBRProblem, HYBRWorkspace, BroydenProblem, BroydenWorkspace
 com.curioloop.numopt4j.quad              # Integrator, Integral, Quadrature (result + Status)
 com.curioloop.numopt4j.quad.adapt        # AdaptiveIntegral, AdaptivePool
-com.curioloop.numopt4j.quad.gauss        # FixedIntegral, WeightedIntegral, GaussRule, JacobiRule, GaussPool
+com.curioloop.numopt4j.quad.gauss        # FixedIntegral, WeightedIntegral, GaussRule, GaussPool
+com.curioloop.numopt4j.quad.gauss.rule   # JacobiRule, LegendreRule, LaguerreRule, HermiteRule, GeneralizedLaguerreRule, GeneralizedHermiteRule
 com.curioloop.numopt4j.quad.special      # OscillatoryIntegral, OscillatoryOpts, EndpointSingularIntegral, EndpointOpts
                                          # PrincipalValueIntegral, ImproperIntegral, ImproperOpts
 com.curioloop.numopt4j.quad.sampled      # SampledIntegral, CumulativeIntegral, SampledRule, FilonIntegral, FilonOpts
@@ -585,7 +586,7 @@ Integrator.fixed()
 Integrator.weighted()
     .function(DoubleUnaryOperator)   // required
     .points(int n)                   // required
-    .rule(GaussRule)                 // required: GaussRule.LEGENDRE/Hermite/Laguerre or new JacobiRule(α,β)
+    .rule(GaussRule)                 // required: GaussRule.legendre()/laguerre()/hermite() or GaussRule.jacobi(α,β)/laguerre(s)/hermite(s)
     .integrate()                     // → Double
     .integrate(GaussPool)
     .alloc()                         // → GaussPool
@@ -703,7 +704,7 @@ Integrator.cumulative(SampledRule rule)  // TRAPEZOIDAL / SIMPSON (ROMBERG not s
 ### FilonIntegral — highly oscillatory ∫ f(x)·cos(t·x) dx or ∫ f(x)·sin(t·x) dx
 
 ```java
-Integrator.filon(FilonOpts opts)         // COSINE or SINE
+Integrator.filon(FilonOpts opts)         // COS or SIN
     .function(DoubleUnaryOperator f)     // required
     .bounds(double a, double b)          // required, finite
     .frequency(double t)                 // required, t > 0
@@ -732,10 +733,10 @@ r.getSummary()         // single-line summary string
 ### GaussRule constants
 
 ```java
-GaussRule.LEGENDRE   // ∫₋₁^1 f(x) dx
-GaussRule.HERMITE    // ∫₋∞^∞ e^{-x²} f(x) dx
-GaussRule.LAGUERRE   // ∫₀^∞ e^{-x} f(x) dx
-new JacobiRule(α, β) // ∫₋₁^1 (1-x)^α (1+x)^β f(x) dx,  α,β > -1
+GaussRule.legendre()   // ∫₋₁^1 f(x) dx
+GaussRule.hermite()    // ∫₋∞^∞ e^{-x²} f(x) dx
+GaussRule.laguerre()   // ∫₀^∞ e^{-x} f(x) dx
+GaussRule.jacobi(α, β) // ∫₋₁^1 (1-x)^α (1+x)^β f(x) dx,  α,β > -1
 ```
 
 ### AdaptiveRule
