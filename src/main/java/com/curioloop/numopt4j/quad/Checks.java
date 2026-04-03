@@ -2,6 +2,7 @@
  * Copyright (c) 2025 curioloop. All rights reserved.
  */
 package com.curioloop.numopt4j.quad;
+import java.util.Objects;
 
 import java.util.Arrays;
 import java.util.function.DoubleUnaryOperator;
@@ -30,9 +31,7 @@ public final class Checks {
 
     /** Throws if {@code f} is null. */
     public static void validateFunction(DoubleUnaryOperator f) {
-        if (f == null) {
-            throw new IllegalArgumentException("function must not be null");
-        }
+        Objects.requireNonNull(f, "function must not be null");
     }
 
     /** Throws if {@code points} is not positive. */

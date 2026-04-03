@@ -2,6 +2,7 @@
  * Copyright (c) 2025 curioloop. All rights reserved.
  */
 package com.curioloop.numopt4j.quad.special;
+import java.util.Objects;
 
 import com.curioloop.numopt4j.quad.Checks;
 import com.curioloop.numopt4j.quad.Integral;
@@ -42,7 +43,7 @@ public class EndpointSingularIntegral implements Integral<Quadrature, GaussPool>
 
     /** Creates a builder pre-configured with the given log opts. */
     public EndpointSingularIntegral(EndpointOpts opts) {
-        if (opts == null) throw new IllegalArgumentException("opts must not be null");
+        Objects.requireNonNull(opts, "opts must not be null");
         this.opts = opts;
     }
 
@@ -65,7 +66,7 @@ public class EndpointSingularIntegral implements Integral<Quadrature, GaussPool>
     }
 
     public EndpointSingularIntegral opts(EndpointOpts opts) {
-        if (opts == null) throw new IllegalArgumentException("opts must not be null");
+        Objects.requireNonNull(opts, "opts must not be null");
         this.opts = opts;
         return this;
     }
@@ -86,21 +87,17 @@ public class EndpointSingularIntegral implements Integral<Quadrature, GaussPool>
     }
 
     @Override
-    public GaussPool alloc() {
-        // Note: arena size is not pre-allocated here because the Jacobi refinement
-        // loop doubles the point count at each level; ensure() is called lazily inside.
-        if (workspace == null) workspace = new GaussPool();
-        return workspace;
-    }
-
-    @Override
     public Quadrature integrate(GaussPool workspace) {
         Checks.validateFunction(function);
         Checks.validateFiniteInterval(min, max);
         Checks.validateEndpointExponents(alpha, beta);
         Checks.validateTolerances(absTol, relTol);
         Checks.validateMaxRefinements(maxRefinements);
-        GaussPool pool = workspace != null ? workspace : alloc();
+        if (workspace == null) {
+            if (this.workspace == null) this.workspace = new GaussPool();
+            workspace = this.workspace;
+        }
+        GaussPool pool = workspace;
 
         if (opts == EndpointOpts.ALGEBRAIC) {
             return EndpointSingularCore.algebraic(function, min, max, alpha, beta, absTol, relTol, maxRefinements, pool);

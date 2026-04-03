@@ -2,6 +2,7 @@
  * Copyright (c) 2025 curioloop. All rights reserved.
  */
 package com.curioloop.numopt4j.optim.slsqp;
+import java.util.Objects;
 
 import com.curioloop.numopt4j.optim.Minimizer;
 import com.curioloop.numopt4j.optim.NumericalGradient;
@@ -156,21 +157,8 @@ public final class SLSQPProblem extends Minimizer<Univariate, SLSQPWorkspace, SL
     public SLSQPProblem() {}
 
     private void validate() {
-        if (objective == null) {
-            throw new IllegalStateException(
-                "objective is required. Call .objective(fn) before .solve().");
-        }
-        if (initialPoint == null || initialPoint.length == 0) {
-            throw new IllegalStateException(
-                "initialPoint is required. Call .initialPoint(x0) before .solve().");
-        }
-        for (int i = 0; i < initialPoint.length; i++) {
-            double v = initialPoint[i];
-            if (Double.isNaN(v) || Double.isInfinite(v)) {
-                throw new IllegalArgumentException(
-                    "initialPoint[" + i + "] is " + v + ". All initial values must be finite.");
-            }
-        }
+        requireObjective();
+        requireInitialPoint();
     }
 
     /**
@@ -184,7 +172,7 @@ public final class SLSQPProblem extends Minimizer<Univariate, SLSQPWorkspace, SL
     @Override
     public Optimization solve(SLSQPWorkspace workspace) {
         validate();
-        SLSQPWorkspace ws = workspace != null ? workspace : (this.workspace != null ? this.workspace : new SLSQPWorkspace());
+        SLSQPWorkspace ws = resolveWorkspace(workspace, SLSQPWorkspace::new);
         ws.ensure(dimension, numEqualityConstraints(), numInequalityConstraints());
 
         double[] x = initialPoint.clone();
@@ -290,9 +278,7 @@ public final class SLSQPProblem extends Minimizer<Univariate, SLSQPWorkspace, SL
      * @throws IllegalArgumentException if f is null
      */
     public SLSQPProblem objective(Univariate.Objective f) {
-        if (f == null) {
-            throw new IllegalArgumentException("objective function must not be null");
-        }
+        Objects.requireNonNull(f, "objective function must not be null");
         return objective(NumericalGradient.CENTRAL, f);
     }
 
@@ -315,9 +301,7 @@ public final class SLSQPProblem extends Minimizer<Univariate, SLSQPWorkspace, SL
      * @return this problem instance
      */
     public SLSQPProblem objective(Univariate f) {
-        if (f == null) {
-            throw new IllegalArgumentException("objective function must not be null");
-        }
+        Objects.requireNonNull(f, "objective function must not be null");
         this.objective = f;
         return this;
     }

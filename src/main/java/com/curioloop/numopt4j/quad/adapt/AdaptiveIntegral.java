@@ -2,6 +2,7 @@
  * Copyright (c) 2025 curioloop. All rights reserved.
  */
 package com.curioloop.numopt4j.quad.adapt;
+import java.util.Objects;
 
 import com.curioloop.numopt4j.quad.Checks;
 import com.curioloop.numopt4j.quad.Integral;
@@ -94,16 +95,9 @@ public class AdaptiveIntegral implements Integral<Quadrature, AdaptivePool> {
      * requiring only 2 new evaluations per subdivision instead of 15.</p>
      */
     public AdaptiveIntegral rule(AdaptiveRule rule) {
-        if (rule == null) throw new IllegalArgumentException("rule must not be null");
+        Objects.requireNonNull(rule, "rule must not be null");
         this.rule = rule;
         return this;
-    }
-
-    @Override
-    public AdaptivePool alloc() {
-        if (workspace == null) workspace = new AdaptivePool();
-        workspace.ensure(maxSubdivisions);
-        return workspace;
     }
 
     @Override
@@ -112,7 +106,11 @@ public class AdaptiveIntegral implements Integral<Quadrature, AdaptivePool> {
         Checks.validateFiniteInterval(min, max);
         Checks.validateTolerances(absTol, relTol);
         Checks.validateAdaptiveLimits(maxSubdivisions, maxEvaluations);
-        AdaptivePool pool = workspace != null ? workspace.ensure(maxSubdivisions) : alloc();
+        if (workspace == null) {
+            if (this.workspace == null) this.workspace = new AdaptivePool();
+            workspace = this.workspace;
+        }
+        AdaptivePool pool = workspace.ensure(maxSubdivisions);
         if (rule == AdaptiveRule.GAUSS_LOBATTO) {
             return GaussLobattoCore.integrate(function, min, max,
                     absTol, relTol, maxSubdivisions, maxEvaluations, pool);

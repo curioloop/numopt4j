@@ -2,6 +2,7 @@
  * Copyright (c) 2025 curioloop. All rights reserved.
  */
 package com.curioloop.numopt4j.optim.trf;
+import java.util.Objects;
 
 import com.curioloop.numopt4j.optim.Minimizer;
 import com.curioloop.numopt4j.optim.Multivariate;
@@ -108,17 +109,7 @@ public final class TRFProblem extends Minimizer<Multivariate, TRFWorkspace, TRFP
             throw new IllegalStateException(
                 "residuals/objective is required. Call .residuals(fn, m) before .solve().");
         }
-        if (initialPoint == null || initialPoint.length == 0) {
-            throw new IllegalStateException(
-                "initialPoint is required. Call .initialPoint(x0) before .solve().");
-        }
-        for (int i = 0; i < initialPoint.length; i++) {
-            double v = initialPoint[i];
-            if (Double.isNaN(v) || Double.isInfinite(v)) {
-                throw new IllegalArgumentException(
-                    "initialPoint[" + i + "] is " + v + ". All initial values must be finite.");
-            }
-        }
+        requireInitialPoint();
         if (numResiduals <= 0) {
             throw new IllegalStateException(
                 "number of residuals m must be set. Call .residuals(fn, m) before .solve().");
@@ -155,7 +146,7 @@ public final class TRFProblem extends Minimizer<Multivariate, TRFWorkspace, TRFP
     @Override
     public Optimization solve(TRFWorkspace workspace) {
         validate();
-        TRFWorkspace ws = workspace != null ? workspace : (this.workspace != null ? this.workspace : new TRFWorkspace());
+        TRFWorkspace ws = resolveWorkspace(workspace, TRFWorkspace::new);
         ws.ensure(numResiduals, dimension);
 
         double[] x = initialPoint.clone();
@@ -186,7 +177,7 @@ public final class TRFProblem extends Minimizer<Multivariate, TRFWorkspace, TRFP
      * @return this problem instance
      */
     public TRFProblem residuals(Multivariate.Objective fn, int m) {
-        if (fn == null) throw new IllegalArgumentException("fn must not be null");
+        Objects.requireNonNull(fn, "fn must not be null");
         if (m <= 0) {
             throw new IllegalArgumentException("number of residuals m must be positive, got " + m);
         }
@@ -202,7 +193,7 @@ public final class TRFProblem extends Minimizer<Multivariate, TRFWorkspace, TRFP
      * @return this problem instance
      */
     public TRFProblem residuals(NumericalJacobian jac, Multivariate.Objective fn, int m) {
-        if (fn == null) throw new IllegalArgumentException("fn must not be null");
+        Objects.requireNonNull(fn, "fn must not be null");
         if (m <= 0) {
             throw new IllegalArgumentException("number of residuals m must be positive, got " + m);
         }
@@ -313,7 +304,7 @@ public final class TRFProblem extends Minimizer<Multivariate, TRFWorkspace, TRFP
      * @see RobustLoss
      */
     public TRFProblem loss(RobustLoss loss) {
-        if (loss == null) throw new IllegalArgumentException("loss must not be null");
+        Objects.requireNonNull(loss, "loss must not be null");
         this.loss = loss;
         return this;
     }

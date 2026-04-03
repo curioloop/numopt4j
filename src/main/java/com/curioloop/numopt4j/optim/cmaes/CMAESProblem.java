@@ -2,6 +2,7 @@
  * Copyright (c) 2025 curioloop. All rights reserved.
  */
 package com.curioloop.numopt4j.optim.cmaes;
+import java.util.Objects;
 
 import com.curioloop.numopt4j.optim.Minimizer;
 import com.curioloop.numopt4j.optim.Optimization;
@@ -127,7 +128,7 @@ public final class CMAESProblem
 
     /** Sets the objective function to minimise (no gradient required). */
     public CMAESProblem objective(Univariate.Objective f) {
-        if (f == null) throw new IllegalArgumentException("objective must not be null");
+        Objects.requireNonNull(f, "objective must not be null");
         this.objective = f;
         return this;
     }
@@ -180,7 +181,7 @@ public final class CMAESProblem
      * Determines whether to use full or diagonal covariance and whether Active CMA is enabled.
      */
     public CMAESProblem updateMode(UpdateMode mode) {
-        if (mode == null) throw new IllegalArgumentException("updateMode must not be null");
+        Objects.requireNonNull(mode, "updateMode must not be null");
         this.updateMode = mode;
         return this;
     }
@@ -234,7 +235,7 @@ public final class CMAESProblem
 
     /** Sets the random number generator (default: {@code new Random()}). */
     public CMAESProblem random(Random r) {
-        if (r == null) throw new IllegalArgumentException("random must not be null");
+        Objects.requireNonNull(r, "random must not be null");
         this.rng = r;
         return this;
     }
@@ -243,16 +244,8 @@ public final class CMAESProblem
     // ── Validation ────────────────────────────────────────────────────────
 
     private void validate() {
-        if (objective == null)
-            throw new IllegalStateException("objective is required. Call .objective(fn) before .solve().");
-        if (initialPoint == null || initialPoint.length == 0)
-            throw new IllegalStateException("initialPoint is required. Call .initialPoint(x0) before .solve().");
-        for (int i = 0; i < initialPoint.length; i++) {
-            double v = initialPoint[i];
-            if (Double.isNaN(v) || Double.isInfinite(v))
-                throw new IllegalArgumentException(
-                    "initialPoint[" + i + "] is " + v + ". All initial values must be finite.");
-        }
+        requireObjective();
+        requireInitialPoint();
         if (sigma0 <= 0)
             throw new IllegalArgumentException("sigma must be positive, got " + sigma0);
     }
@@ -273,7 +266,7 @@ public final class CMAESProblem
         int lam = effectiveLambda();
         int resolvedMaxEval = effectiveMaxEvaluations();
 
-        CMAESWorkspace ws = workspace != null ? workspace : (this.workspace != null ? this.workspace : (this.workspace = new CMAESWorkspace()));
+        CMAESWorkspace ws = resolveWorkspace(workspace, CMAESWorkspace::new);
         ws.ensure(dimension, lam, updateMode.separable);
 
         // Build config snapshot with resolved maxEvaluations

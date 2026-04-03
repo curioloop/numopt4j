@@ -2,6 +2,7 @@
  * Copyright (c) 2025 curioloop. All rights reserved.
  */
 package com.curioloop.numopt4j.quad.gauss;
+import java.util.Objects;
 
 import com.curioloop.numopt4j.linalg.blas.BLAS;
 import com.curioloop.numopt4j.quad.gauss.rule.GeneralizedHermiteRule;
@@ -64,7 +65,7 @@ public interface GaussRule {
      */
     default void generate(int points, GaussPool workspace) {
         if (points <= 0) throw new IllegalArgumentException("points must be > 0");
-        if (workspace == null) throw new IllegalArgumentException("workspace must not be null");
+        Objects.requireNonNull(workspace, "workspace must not be null");
         workspace.ensure(points);
         double[] arena = workspace.arena();
         int mat = workspace.matrixOffset(), spec = workspace.spectrumOffset();

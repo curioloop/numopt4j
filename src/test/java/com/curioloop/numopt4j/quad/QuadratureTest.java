@@ -32,7 +32,7 @@ class QuadratureTest {
         FixedIntegral problem = Integrator.fixed().function(x -> x * x * x * x * x).bounds(0.0, 1.0)
                 .points(3);
 
-        GaussPool workspace = problem.alloc();
+        GaussPool workspace = new GaussPool();
         double integral = problem.integrate(workspace);
 
         assertThat(integral).isCloseTo(1.0 / 6.0, offset(EPS));
@@ -54,7 +54,7 @@ class QuadratureTest {
         AdaptiveIntegral problem = Integrator.adaptive().function(Math::sin).bounds(0.0, Math.PI)
                 .tolerances(1e-12, 1e-12);
 
-        AdaptivePool workspace = problem.alloc();
+        AdaptivePool workspace = new AdaptivePool();
         double[] arena = workspace.arena();
         Quadrature result = problem.integrate(workspace);
 

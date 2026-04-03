@@ -2,6 +2,7 @@
  * Copyright (c) 2025 curioloop. All rights reserved.
  */
 package com.curioloop.numopt4j.quad.special;
+import java.util.Objects;
 
 import com.curioloop.numopt4j.quad.Integral;
 import com.curioloop.numopt4j.quad.Integrator;
@@ -51,7 +52,7 @@ public abstract class ImproperIntegral<T extends ImproperIntegral<T>> {
     protected ImproperIntegral() {}
 
     protected ImproperIntegral(ImproperOpts opts) {
-        if (opts == null) throw new IllegalArgumentException("opts must not be null");
+        Objects.requireNonNull(opts, "opts must not be null");
         this.opts = opts;
     }
 
@@ -67,7 +68,7 @@ public abstract class ImproperIntegral<T extends ImproperIntegral<T>> {
 
     @SuppressWarnings("unchecked")
     public T opts(ImproperOpts opts) {
-        if (opts == null) throw new IllegalArgumentException("opts must not be null");
+        Objects.requireNonNull(opts, "opts must not be null");
         this.opts = opts;
         return (T) this;
     }
@@ -149,19 +150,16 @@ public abstract class ImproperIntegral<T extends ImproperIntegral<T>> {
         }
 
         @Override
-        public GaussPool alloc() {
-            if (workspace == null) workspace = new GaussPool();
-            workspace.ensure(points);
-            return workspace;
-        }
-
-        @Override
         public Quadrature integrate(GaussPool workspace) {
             validateCommon();
             validateBounds();
             if (points <= 0) throw new IllegalStateException(
                     "Missing required parameter: points. Call .points(n) before .integrate().");
-            GaussPool pool = workspace != null ? workspace.ensure(points) : alloc();
+            if (workspace == null) {
+                if (this.workspace == null) this.workspace = new GaussPool();
+                workspace = this.workspace;
+            }
+            GaussPool pool = workspace.ensure(points);
             GaussRule.legendre().generate(points, pool);
             double sum = 0.0;
             switch (opts) {
@@ -240,19 +238,16 @@ public abstract class ImproperIntegral<T extends ImproperIntegral<T>> {
         }
 
         @Override
-        public AdaptivePool alloc() {
-            if (workspace == null) workspace = new AdaptivePool();
-            workspace.ensure(maxSubdivisions);
-            return workspace;
-        }
-
-        @Override
         public Quadrature integrate(AdaptivePool workspace) {
             validateCommon();
             validateBounds();
             Checks.validateTolerances(absTol, relTol);
             Checks.validateAdaptiveLimits(maxSubdivisions, maxEvaluations);
-            AdaptivePool pool = workspace != null ? workspace.ensure(maxSubdivisions) : alloc();
+            if (workspace == null) {
+                if (this.workspace == null) this.workspace = new AdaptivePool();
+                workspace = this.workspace;
+            }
+            AdaptivePool pool = workspace.ensure(maxSubdivisions);
             switch (opts) {
                 case UPPER:
                     return Integrator.adaptive()

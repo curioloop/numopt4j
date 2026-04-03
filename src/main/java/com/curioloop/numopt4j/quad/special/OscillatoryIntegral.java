@@ -2,6 +2,7 @@
  * Copyright (c) 2025 curioloop. All rights reserved.
  */
 package com.curioloop.numopt4j.quad.special;
+import java.util.Objects;
 
 import com.curioloop.numopt4j.quad.Integrator;
 import com.curioloop.numopt4j.quad.Checks;
@@ -50,7 +51,7 @@ public class OscillatoryIntegral implements Integral<Quadrature, AdaptivePool> {
 
     /** Creates a builder pre-configured with the given opts. */
     public OscillatoryIntegral(OscillatoryOpts opts) {
-        if (opts == null) throw new IllegalArgumentException("opts must not be null");
+        Objects.requireNonNull(opts, "opts must not be null");
         this.opts = opts;
     }
 
@@ -78,7 +79,7 @@ public class OscillatoryIntegral implements Integral<Quadrature, AdaptivePool> {
     }
 
     public OscillatoryIntegral opts(OscillatoryOpts opts) {
-        if (opts == null) throw new IllegalArgumentException("opts must not be null");
+        Objects.requireNonNull(opts, "opts must not be null");
         this.opts = opts;
         return this;
     }
@@ -114,13 +115,6 @@ public class OscillatoryIntegral implements Integral<Quadrature, AdaptivePool> {
     }
 
     @Override
-    public AdaptivePool alloc() {
-        if (workspace == null) workspace = new AdaptivePool();
-        workspace.ensure(maxSubdivisions);
-        return workspace;
-    }
-
-    @Override
     public Quadrature integrate(AdaptivePool workspace) {
         Checks.validateFunction(function);
         if (opts == null) throw new IllegalStateException("Missing required parameter: opts. Call .opts(OscillatoryOpts) before .integrate().");
@@ -132,7 +126,11 @@ public class OscillatoryIntegral implements Integral<Quadrature, AdaptivePool> {
         } else {
             Checks.validateFiniteInterval(min, max);
         }
-        AdaptivePool pool = workspace != null ? workspace.ensure(maxSubdivisions) : alloc();
+        if (workspace == null) {
+            if (this.workspace == null) this.workspace = new AdaptivePool();
+            workspace = this.workspace;
+        }
+        AdaptivePool pool = workspace.ensure(maxSubdivisions);
         return opts.upper ? integrateUpper(pool) : integrateFinite(pool);
     }
 

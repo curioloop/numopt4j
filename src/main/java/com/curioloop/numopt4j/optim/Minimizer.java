@@ -126,6 +126,36 @@ public abstract class Minimizer<O, W, S extends Minimizer<O, W, S>> implements P
     /** Returns the variable bounds, or {@code null} if unconstrained. */
     public Bound[] bounds() { return bounds; }
 
+    // ── Common validation helpers ─────────────────────────────────────────────
+
+    /** Throws {@link IllegalStateException} if {@code objective} is null. */
+    protected void requireObjective() {
+        if (objective == null)
+            throw new IllegalStateException("objective is required. Call .objective(fn) before .solve().");
+    }
+
+    /** Throws if {@code initialPoint} is null/empty or contains non-finite values. */
+    protected void requireInitialPoint() {
+        if (initialPoint == null || initialPoint.length == 0)
+            throw new IllegalStateException("initialPoint is required. Call .initialPoint(x0) before .solve().");
+        for (int i = 0; i < initialPoint.length; i++) {
+            double v = initialPoint[i];
+            if (!Double.isFinite(v))
+                throw new IllegalArgumentException(
+                    "initialPoint[" + i + "] is " + v + ". All initial values must be finite.");
+        }
+    }
+
+    /**
+     * Returns {@code external} if non-null; otherwise returns (and caches) the internal workspace,
+     * creating it via {@code ctor} on first use.
+     */
+    protected W resolveWorkspace(W external, java.util.function.Supplier<W> ctor) {
+        if (external != null) return external;
+        if (workspace == null) workspace = ctor.get();
+        return workspace;
+    }
+
     // ── Static factory methods (facade) ──────────────────────────────────────
 
     /**

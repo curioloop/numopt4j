@@ -2,6 +2,7 @@
  * Copyright (c) 2025 curioloop. All rights reserved.
  */
 package com.curioloop.numopt4j.optim.subplex;
+import java.util.Objects;
 
 import com.curioloop.numopt4j.optim.Bound;
 import com.curioloop.numopt4j.optim.Minimizer;
@@ -47,21 +48,8 @@ public final class SubplexProblem
     public SubplexProblem() {}
 
     private void validate() {
-        if (objective == null) {
-            throw new IllegalStateException(
-                    "objective is required. Call .objective(fn) before .solve().");
-        }
-        if (initialPoint == null || initialPoint.length == 0) {
-            throw new IllegalStateException(
-                    "initialPoint is required. Call .initialPoint(x0) before .solve().");
-        }
-        for (int i = 0; i < initialPoint.length; i++) {
-            double v = initialPoint[i];
-            if (Double.isNaN(v) || Double.isInfinite(v)) {
-                throw new IllegalArgumentException(
-                        "initialPoint[" + i + "] is " + v + ". All initial values must be finite.");
-            }
-        }
+        requireObjective();
+        requireInitialPoint();
         if (initialStep != null && initialStep.length != dimension) {
             throw new IllegalArgumentException(
                     "initialStep must have " + dimension + " elements, got " + initialStep.length);
@@ -71,7 +59,7 @@ public final class SubplexProblem
     @Override
     public Optimization solve(SubplexWorkspace workspace) {
         validate();
-        SubplexWorkspace ws = workspace != null ? workspace : (this.workspace != null ? this.workspace : new SubplexWorkspace());
+        SubplexWorkspace ws = resolveWorkspace(workspace, SubplexWorkspace::new);
         ws.ensure(dimension);
 
         double[] x = initialPoint.clone();
@@ -111,7 +99,7 @@ public final class SubplexProblem
     // ── Fluent setters ────────────────────────────────────────────────────────
 
     public SubplexProblem objective(Univariate.Objective f) {
-        if (f == null) throw new IllegalArgumentException("objective function must not be null");
+        Objects.requireNonNull(f, "objective function must not be null");
         this.objective = f;
         return this;
     }

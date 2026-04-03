@@ -1,4 +1,5 @@
 package com.curioloop.numopt4j.optim;
+import java.util.Objects;
 
 import java.util.function.DoubleUnaryOperator;
 
@@ -60,7 +61,7 @@ public abstract class RootFinder<F, W, S extends RootFinder<F, W, S>> implements
      * @return configured {@link BrentqProblem} builder
      */
     public static BrentqProblem brentq(DoubleUnaryOperator f) {
-        if (f == null) throw new IllegalArgumentException("function must not be null");
+        Objects.requireNonNull(f, "function must not be null");
         return new BrentqProblem().function(f);
     }
 
@@ -112,4 +113,14 @@ public abstract class RootFinder<F, W, S extends RootFinder<F, W, S>> implements
 
     /** Returns the initial point. */
     public double[] initialPoint() { return initialPoint; }
+
+    /**
+     * Returns {@code external} if non-null; otherwise returns (and caches) the internal workspace,
+     * creating it via {@code ctor} on first use.
+     */
+    protected W resolveWorkspace(W external, java.util.function.Supplier<W> ctor) {
+        if (external != null) return external;
+        if (workspace == null) workspace = ctor.get();
+        return workspace;
+    }
 }

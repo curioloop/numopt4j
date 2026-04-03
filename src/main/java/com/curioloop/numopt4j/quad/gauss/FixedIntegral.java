@@ -2,6 +2,7 @@
  * Copyright (c) 2025 curioloop. All rights reserved.
  */
 package com.curioloop.numopt4j.quad.gauss;
+import java.util.Objects;
 
 import com.curioloop.numopt4j.quad.Checks;
 import com.curioloop.numopt4j.quad.Integral;
@@ -53,7 +54,7 @@ public class FixedIntegral implements Integral<Double, GaussPool> {
      * for interval-mapped fixed quadrature; any other rule will throw.
      */
     public FixedIntegral rule(GaussRule rule) {
-        if (rule == null) throw new IllegalArgumentException("rule must not be null");
+        Objects.requireNonNull(rule, "rule must not be null");
         if (!(rule instanceof com.curioloop.numopt4j.quad.gauss.rule.LegendreRule)) {
             throw new IllegalArgumentException(
                     "fixed quadrature requires a plain-measure rule on [-1, 1]; use GaussRule.legendre()");
@@ -62,19 +63,15 @@ public class FixedIntegral implements Integral<Double, GaussPool> {
     }
 
     @Override
-    public GaussPool alloc() {
-        requirePoints();
-        if (workspace == null) workspace = new GaussPool();
-        workspace.ensure(points);
-        return workspace;
-    }
-
-    @Override
     public Double integrate(GaussPool workspace) {
         Checks.validateFunction(function);
         Checks.validateFiniteInterval(min, max);
         requirePoints();
-        GaussPool pool = workspace != null ? workspace.ensure(points) : alloc();
+        if (workspace == null) {
+            if (this.workspace == null) this.workspace = new GaussPool();
+            workspace = this.workspace;
+        }
+        GaussPool pool = workspace.ensure(points);
         GaussRule.legendre().generate(points, pool);
 
         double center = 0.5 * (min + max);

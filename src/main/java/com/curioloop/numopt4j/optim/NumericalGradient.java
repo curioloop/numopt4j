@@ -2,6 +2,7 @@
  * Copyright (c) 2025 curioloop. All rights reserved.
  */
 package com.curioloop.numopt4j.optim;
+import java.util.Objects;
 
 /**
  * Numerical gradient computation methods for approximating ∇f(x) when analytical gradients
@@ -49,7 +50,7 @@ public enum NumericalGradient {
     FORWARD {
         @Override
         public Univariate wrap(Univariate.Objective func) {
-            if (func == null) throw new IllegalArgumentException("func must not be null");
+            Objects.requireNonNull(func, "func must not be null");
             return (x, n, g) -> {
                 double f = func.evaluate(x, n);
                 if (g != null) {
@@ -72,7 +73,7 @@ public enum NumericalGradient {
     BACKWARD {
         @Override
         public Univariate wrap(Univariate.Objective func) {
-            if (func == null) throw new IllegalArgumentException("func must not be null");
+            Objects.requireNonNull(func, "func must not be null");
             return (x, n, g) -> {
                 double f = func.evaluate(x, n);
                 if (g != null) {
@@ -96,7 +97,7 @@ public enum NumericalGradient {
     CENTRAL {
         @Override
         public Univariate wrap(Univariate.Objective func) {
-            if (func == null) throw new IllegalArgumentException("func must not be null");
+            Objects.requireNonNull(func, "func must not be null");
             return (x, n, g) -> {
                 double f = func.evaluate(x, n);
                 if (g != null) {
@@ -120,7 +121,7 @@ public enum NumericalGradient {
     FIVE_POINT {
         @Override
         public Univariate wrap(Univariate.Objective func) {
-            if (func == null) throw new IllegalArgumentException("func must not be null");
+            Objects.requireNonNull(func, "func must not be null");
             return (x, n, g) -> {
                 double f = func.evaluate(x, n);
                 if (g != null) {

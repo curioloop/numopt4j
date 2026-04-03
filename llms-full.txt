@@ -1871,8 +1871,7 @@ Matrix V = gs.toV();
 
 `com.curioloop.numopt4j.quad.Integrator`
 
-Unified entry point for one-dimensional numerical integration. All factory methods return a builder implementing `Integral<R, W>` with three lifecycle methods:
-- `alloc()` — pre-allocate and cache a reusable workspace
+Unified entry point for one-dimensional numerical integration. All factory methods return a builder implementing `Integral<R, W>` with two lifecycle methods:
 - `integrate()` — compute using an internally managed workspace
 - `integrate(W workspace)` — compute using a caller-provided workspace (avoids allocation)
 
@@ -1910,7 +1909,6 @@ Integrator.fixed()
     .rule(GaussRule)                     // optional, only GaussRule.legendre() accepted
     .integrate()                         // → Double
     .integrate(GaussPool workspace)      // with workspace reuse
-    .alloc()                             // → GaussPool
 ```
 
 ### Example
@@ -1937,7 +1935,6 @@ Integrator.weighted()
     .rule(GaussRule rule)                // required
     .integrate()                         // → Double
     .integrate(GaussPool workspace)
-    .alloc()                             // → GaussPool
 ```
 
 ### GaussRule Factory Methods
@@ -1999,7 +1996,6 @@ Integrator.adaptive()
     .rule(AdaptiveRule)                        // optional, default GK15
     .integrate()                               // → Quadrature
     .integrate(AdaptivePool workspace)
-    .alloc()                                   // → AdaptivePool
 ```
 
 ### Example
@@ -2048,7 +2044,6 @@ Integrator.oscillatory(OscillatoryOpts opts)
     .maxEvaluations(int)               // default 16384
     .integrate()                       // → Quadrature
     .integrate(AdaptivePool workspace)
-    .alloc()                           // → AdaptivePool
 ```
 
 ### Example
@@ -2088,7 +2083,6 @@ Integrator.principalValue()
     .maxEvaluations(int)               // default 16384
     .integrate()                       // → Quadrature
     .integrate(AdaptivePool workspace)
-    .alloc()                           // → AdaptivePool
 ```
 
 ### Example
@@ -2130,7 +2124,6 @@ Integrator.endpointSingular(EndpointOpts opts)
     .maxRefinements(int)                         // default 12
     .integrate()                                 // → Quadrature
     .integrate(GaussPool workspace)
-    .alloc()                                     // → GaussPool
 ```
 
 ### Example
@@ -2180,7 +2173,6 @@ Integrator.improper(ImproperOpts opts)
     .maxEvaluations(int)               // default 16384
     .integrate()                       // → Quadrature
     .integrate(AdaptivePool workspace)
-    .alloc()                           // → AdaptivePool
 ```
 
 ### ImproperIntegral.Fixed (fast, no error estimate)
@@ -2193,7 +2185,6 @@ Integrator.improperFixed(ImproperOpts opts)
     .points(int n)                     // required
     .integrate()                       // → Quadrature (estimatedError = 0)
     .integrate(GaussPool workspace)
-    .alloc()                           // → GaussPool
 ```
 
 ### Example
@@ -2355,8 +2346,6 @@ Used by: `AdaptiveIntegral`, `OscillatoryIntegral`, `PrincipalValueIntegral`, `I
 
 ```java
 AdaptivePool ws = new AdaptivePool();
-// or
-AdaptivePool ws = problem.alloc();
 
 // Reuse across calls with same or smaller maxSubdivisions
 Quadrature r1 = Integrator.adaptive().function(f1).bounds(0,1).tolerances(1e-10,1e-10).integrate(ws);
@@ -2369,8 +2358,6 @@ Used by: `FixedIntegral`, `WeightedIntegral`, `EndpointSingularIntegral`, `Impro
 
 ```java
 GaussPool ws = new GaussPool();
-// or
-GaussPool ws = problem.alloc();
 
 double v1 = Integrator.fixed().function(f1).bounds(0,1).points(8).integrate(ws);
 double v2 = Integrator.fixed().function(f2).bounds(0,1).points(8).integrate(ws);  // arena reused
@@ -2382,7 +2369,7 @@ double v3 = Integrator.fixed().function(f3).bounds(0,1).points(16).integrate(ws)
 ```java
 AdaptiveIntegral problem = Integrator.adaptive()
     .function(Math::sin).bounds(0.0, Math.PI).tolerances(1e-10, 1e-10);
-AdaptivePool ws = problem.alloc();
+AdaptivePool ws = new AdaptivePool();
 
 for (double[] interval : intervals) {
     Quadrature r = problem.bounds(interval[0], interval[1]).integrate(ws);

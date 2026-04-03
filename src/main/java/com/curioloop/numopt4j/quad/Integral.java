@@ -4,23 +4,21 @@
 package com.curioloop.numopt4j.quad;
 
 /**
- * Contract for a configured quadrature builder that can allocate a reusable
- * workspace and execute the integration.
+ * Contract for a configured quadrature builder that can execute the integration
+ * with an optional reusable workspace.
  *
- * <p>All builders returned by {@link Integrator} implement this interface.
- * The two-phase lifecycle separates configuration from execution and allows
- * workspace reuse across repeated calls:</p>
+ * <p>All builders returned by {@link Integrator} implement this interface.</p>
  *
  * <pre>{@code
- * // One-shot (workspace allocated and discarded internally)
+ * // One-shot (workspace allocated internally)
  * Quadrature r = Integrator.adaptive()
  *     .function(Math::sin).bounds(0, Math.PI).tolerances(1e-10, 1e-10)
  *     .integrate();
  *
- * // Workspace reuse (allocate once, integrate many times)
+ * // Workspace reuse (create once, integrate many times)
  * AdaptiveIntegral problem = Integrator.adaptive()
  *     .function(Math::sin).bounds(0, Math.PI).tolerances(1e-10, 1e-10);
- * AdaptivePool ws = problem.alloc();
+ * AdaptivePool ws = new AdaptivePool();
  * for (double[] interval : intervals) {
  *     Quadrature r = problem.bounds(interval[0], interval[1]).integrate(ws);
  * }
@@ -36,19 +34,9 @@ package com.curioloop.numopt4j.quad;
 public interface Integral<R, W> {
 
     /**
-     * Allocates and caches a reusable workspace sized for the current configuration.
-     * Subsequent calls return the same cached instance unless the configuration changes.
-     *
-     * @return workspace instance ready for use with {@link #integrate(Object)}
-     * @throws IllegalStateException if a required parameter has not been set
-     */
-    W alloc();
-
-    /**
      * Computes the integral using an internally managed workspace.
      *
-     * <p>Equivalent to {@code integrate(null)}: the implementation allocates
-     * (or reuses a cached) workspace automatically.</p>
+     * <p>Equivalent to {@code integrate(null)}.</p>
      *
      * @return integration result
      */
@@ -59,8 +47,8 @@ public interface Integral<R, W> {
     /**
      * Computes the integral using the caller-provided workspace.
      *
-     * <p>Pass the workspace returned by {@link #alloc()} to avoid repeated
-     * allocation when calling the same builder in a loop.</p>
+     * <p>Pass a pre-allocated workspace to avoid repeated allocation when calling
+     * the same builder in a loop. Pass {@code null} to allocate internally.</p>
      *
      * @param workspace pre-allocated workspace, or {@code null} to use an internal one
      * @return integration result

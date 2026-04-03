@@ -2,6 +2,7 @@
  * Copyright (c) 2025 curioloop. All rights reserved.
  */
 package com.curioloop.numopt4j.quad.sampled;
+import java.util.Objects;
 
 import com.curioloop.numopt4j.quad.Integral;
 
@@ -63,7 +64,7 @@ public class SampledIntegral implements Integral<Double, Void> {
 
     /** Sets the integration rule. */
     public SampledIntegral rule(SampledRule rule) {
-        if (rule == null) throw new IllegalArgumentException("rule must not be null");
+        Objects.requireNonNull(rule, "rule must not be null");
         this.rule = rule;
         return this;
     }
@@ -81,7 +82,7 @@ public class SampledIntegral implements Integral<Double, Void> {
      * @param b      upper bound
      */
     public SampledIntegral function(DoubleUnaryOperator f, int n, double a, double b) {
-        if (f == null) throw new IllegalArgumentException("function must not be null");
+        Objects.requireNonNull(f, "function must not be null");
         if (n < 2) throw new IllegalArgumentException("n must be >= 2");
         if (!Double.isFinite(a) || !Double.isFinite(b) || !(a < b))
             throw new IllegalArgumentException("bounds must be finite with a < b");
@@ -92,9 +93,6 @@ public class SampledIntegral implements Integral<Double, Void> {
         this.x = null; this.y = null; // clear sampled-data path
         return this;
     }
-
-    @Override
-    public Void alloc() { return null; }
 
     @Override
     public Double integrate(Void workspace) {

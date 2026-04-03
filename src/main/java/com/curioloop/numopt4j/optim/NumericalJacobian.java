@@ -2,6 +2,7 @@
  * Copyright (c) 2025 curioloop. All rights reserved.
  */
 package com.curioloop.numopt4j.optim;
+import java.util.Objects;
 
 import java.util.Arrays;
 
@@ -69,7 +70,7 @@ public enum NumericalJacobian {
     FORWARD {
         @Override
         public Multivariate wrap(Multivariate.Objective func, int m, int n, boolean transpose) {
-            if (func == null) throw new IllegalArgumentException("func must not be null");
+            Objects.requireNonNull(func, "func must not be null");
             return (x, xn, y, ym, jacobian) -> {
                 if (jacobian != null) {
                     forwardDifference(func, x, jacobian, y, m, n, transpose);
@@ -92,7 +93,7 @@ public enum NumericalJacobian {
     CENTRAL {
         @Override
         public Multivariate wrap(Multivariate.Objective func, int m, int n, boolean transpose) {
-            if (func == null) throw new IllegalArgumentException("func must not be null");
+            Objects.requireNonNull(func, "func must not be null");
             double[] work = new double[m];
             return (x, xn, y, ym, jacobian) -> {
                 if (jacobian != null) {

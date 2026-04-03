@@ -81,20 +81,17 @@ public class PrincipalValueIntegral implements Integral<Quadrature, AdaptivePool
     }
 
     @Override
-    public AdaptivePool alloc() {
-        if (workspace == null) workspace = new AdaptivePool();
-        workspace.ensure(maxSubdivisions);
-        return workspace;
-    }
-
-    @Override
     public Quadrature integrate(AdaptivePool workspace) {
         Checks.validateFunction(function);
         Checks.validateFiniteInterval(min, max);
         Checks.validatePole(pole, min, max);
         Checks.validateTolerances(absTol, relTol);
         Checks.validateAdaptiveLimits(maxSubdivisions, maxEvaluations);
-        AdaptivePool pool = workspace != null ? workspace.ensure(maxSubdivisions) : alloc();
+        if (workspace == null) {
+            if (this.workspace == null) this.workspace = new AdaptivePool();
+            workspace = this.workspace;
+        }
+        AdaptivePool pool = workspace.ensure(maxSubdivisions);
 
         if (pole < min || pole > max) {
             return AdaptiveIntegral.integrate(x -> function.applyAsDouble(x) / (x - pole),

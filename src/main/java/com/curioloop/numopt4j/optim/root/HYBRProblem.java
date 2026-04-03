@@ -1,4 +1,5 @@
 package com.curioloop.numopt4j.optim.root;
+import java.util.Objects;
 
 import com.curioloop.numopt4j.optim.Multivariate;
 import com.curioloop.numopt4j.optim.NumericalJacobian;
@@ -28,7 +29,7 @@ public final class HYBRProblem extends RootFinder<Multivariate.Objective, HYBRWo
 
     /** Sets the system of equations {@code F(x) = 0}. */
     public HYBRProblem equations(Multivariate.Objective fn, int n) {
-        if (fn == null) throw new IllegalArgumentException("fn must not be null");
+        Objects.requireNonNull(fn, "fn must not be null");
         if (n < 1) throw new IllegalArgumentException("n must be >= 1, got " + n);
         this.function = fn;
         this.dimension = n;
@@ -78,7 +79,7 @@ public final class HYBRProblem extends RootFinder<Multivariate.Objective, HYBRWo
         if (initialPoint == null)
             throw new IllegalStateException(
                 "Missing required parameter: initialPoint. Call .initialPoint(x0) before .solve().");
-        HYBRWorkspace ws0 = ws != null ? ws : workspace();
+        HYBRWorkspace ws0 = resolveWorkspace(ws, HYBRWorkspace::new);
         ws0.ensure(dimension);
         int maxfev = maxEvaluations > 0 ? maxEvaluations : HYBRSolver.DEFAULT_MAXFEV_FACTOR * (dimension + 1);
         return HYBRSolver.solve(jacobian.wrap(function, dimension, dimension, true), initialPoint, ftol, maxfev, ws0);

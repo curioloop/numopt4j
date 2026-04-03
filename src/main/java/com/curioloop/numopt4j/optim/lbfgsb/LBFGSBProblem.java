@@ -2,6 +2,7 @@
  * Copyright (c) 2025 curioloop. All rights reserved.
  */
 package com.curioloop.numopt4j.optim.lbfgsb;
+import java.util.Objects;
 
 import com.curioloop.numopt4j.optim.Minimizer;
 import com.curioloop.numopt4j.optim.NumericalGradient;
@@ -138,21 +139,8 @@ public final class LBFGSBProblem extends Minimizer<Univariate, LBFGSBWorkspace, 
     public LBFGSBProblem() {}
 
     private void validate() {
-        if (objective == null) {
-            throw new IllegalStateException(
-                "objective is required. Call .objective(fn) before .solve().");
-        }
-        if (initialPoint == null || initialPoint.length == 0) {
-            throw new IllegalStateException(
-                "initialPoint is required. Call .initialPoint(x0) before .solve().");
-        }
-        for (int i = 0; i < initialPoint.length; i++) {
-            double v = initialPoint[i];
-            if (Double.isNaN(v) || Double.isInfinite(v)) {
-                throw new IllegalArgumentException(
-                    "initialPoint[" + i + "] is " + v + ". All initial values must be finite.");
-            }
-        }
+        requireObjective();
+        requireInitialPoint();
     }
 
     /**
@@ -176,7 +164,7 @@ public final class LBFGSBProblem extends Minimizer<Univariate, LBFGSBWorkspace, 
     @Override
     public Optimization solve(LBFGSBWorkspace workspace) {
         validate();
-        LBFGSBWorkspace ws = workspace != null ? workspace : (this.workspace != null ? this.workspace : new LBFGSBWorkspace());
+        LBFGSBWorkspace ws = resolveWorkspace(workspace, LBFGSBWorkspace::new);
         ws.ensure(dimension, corrections);
         double[] x = initialPoint.clone();
 
@@ -297,9 +285,7 @@ public final class LBFGSBProblem extends Minimizer<Univariate, LBFGSBWorkspace, 
      * @throws IllegalArgumentException if f is null
      */
     public LBFGSBProblem objective(Univariate.Objective f) {
-        if (f == null) {
-            throw new IllegalArgumentException("objective function must not be null");
-        }
+        Objects.requireNonNull(f, "objective function must not be null");
         return objective(NumericalGradient.CENTRAL, f);
     }
 
@@ -325,9 +311,7 @@ public final class LBFGSBProblem extends Minimizer<Univariate, LBFGSBWorkspace, 
      * @return this problem instance
      */
     public LBFGSBProblem objective(Univariate f) {
-        if (f == null) {
-            throw new IllegalArgumentException("objective function must not be null");
-        }
+        Objects.requireNonNull(f, "objective function must not be null");
         this.objective = f;
         return this;
     }

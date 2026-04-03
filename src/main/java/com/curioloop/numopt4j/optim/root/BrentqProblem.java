@@ -1,4 +1,5 @@
 package com.curioloop.numopt4j.optim.root;
+import java.util.Objects;
 
 import com.curioloop.numopt4j.optim.Bound;
 import com.curioloop.numopt4j.optim.Optimization;
@@ -29,7 +30,7 @@ public final class BrentqProblem extends RootFinder<DoubleUnaryOperator, Void, B
 
     /** Sets the scalar function whose root is sought. */
     public BrentqProblem function(DoubleUnaryOperator f) {
-        if (f == null) throw new IllegalArgumentException("function must not be null");
+        Objects.requireNonNull(f, "function must not be null");
         this.function = f;
         return this;
     }

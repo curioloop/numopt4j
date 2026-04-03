@@ -1,4 +1,5 @@
 package com.curioloop.numopt4j.optim.root;
+import java.util.Objects;
 
 import com.curioloop.numopt4j.optim.Multivariate;
 import com.curioloop.numopt4j.optim.Optimization;
@@ -26,7 +27,7 @@ public final class BroydenProblem extends RootFinder<Multivariate.Objective, Bro
 
     /** Sets the system of equations {@code F(x) = 0}. */
     public BroydenProblem equations(Multivariate.Objective fn, int n) {
-        if (fn == null) throw new IllegalArgumentException("fn must not be null");
+        Objects.requireNonNull(fn, "fn must not be null");
         if (n < 1) throw new IllegalArgumentException("n must be >= 1, got " + n);
         this.function = fn;
         this.dimension = n;
@@ -67,7 +68,7 @@ public final class BroydenProblem extends RootFinder<Multivariate.Objective, Bro
         if (initialPoint == null)
             throw new IllegalStateException(
                 "Missing required parameter: initialPoint. Call .initialPoint(x0) before .solve().");
-        BroydenWorkspace ws0 = ws != null ? ws : workspace();
+        BroydenWorkspace ws0 = resolveWorkspace(ws, BroydenWorkspace::new);
         ws0.ensure(dimension);
         int maxIter = maxEvaluations > 0 ? maxEvaluations : 100 * (dimension + 1);
         return BroydenSolver.solve(function, initialPoint, ftol, maxIter, ws0);

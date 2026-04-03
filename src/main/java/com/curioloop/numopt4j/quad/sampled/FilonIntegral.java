@@ -2,6 +2,7 @@
  * Copyright (c) 2025 curioloop. All rights reserved.
  */
 package com.curioloop.numopt4j.quad.sampled;
+import java.util.Objects;
 
 import com.curioloop.numopt4j.quad.Integral;
 
@@ -54,7 +55,7 @@ public class FilonIntegral implements Integral<Double, Void> {
 
     /** Creates a builder pre-configured with the given kernel type. */
     public FilonIntegral(FilonOpts opts) {
-        if (opts == null) throw new IllegalArgumentException("opts must not be null");
+        Objects.requireNonNull(opts, "opts must not be null");
         this.opts = opts;
     }
 
@@ -95,13 +96,10 @@ public class FilonIntegral implements Integral<Double, Void> {
 
     /** Sets the kernel type (COS or SIN). */
     public FilonIntegral opts(FilonOpts opts) {
-        if (opts == null) throw new IllegalArgumentException("opts must not be null");
+        Objects.requireNonNull(opts, "opts must not be null");
         this.opts = opts;
         return this;
     }
-
-    @Override
-    public Void alloc() { return null; }
 
     @Override
     public Double integrate(Void workspace) {

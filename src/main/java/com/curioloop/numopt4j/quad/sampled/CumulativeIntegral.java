@@ -2,6 +2,7 @@
  * Copyright (c) 2025 curioloop. All rights reserved.
  */
 package com.curioloop.numopt4j.quad.sampled;
+import java.util.Objects;
 
 import com.curioloop.numopt4j.quad.Integral;
 
@@ -55,13 +56,10 @@ public class CumulativeIntegral implements Integral<double[], Void> {
 
     /** Sets the integration rule. */
     public CumulativeIntegral rule(SampledRule rule) {
-        if (rule == null) throw new IllegalArgumentException("rule must not be null");
+        Objects.requireNonNull(rule, "rule must not be null");
         this.rule = rule;
         return this;
     }
-
-    @Override
-    public Void alloc() { return null; }
 
     @Override
     public double[] integrate(Void workspace) {

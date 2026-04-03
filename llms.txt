@@ -661,7 +661,6 @@ Integrator.fixed()
     .points(int n)                   // required, exact for degree ≤ 2n-1
     .integrate()                     // → Double
     .integrate(GaussPool)            // with workspace reuse
-    .alloc()                         // → GaussPool
 ```
 
 ### WeightedIntegral — rule's natural domain
@@ -673,7 +672,6 @@ Integrator.weighted()
     .rule(GaussRule)                 // required: GaussRule.legendre()/laguerre()/hermite() or GaussRule.jacobi(α,β)/laguerre(s)/hermite(s)
     .integrate()                     // → Double
     .integrate(GaussPool)
-    .alloc()                         // → GaussPool
 ```
 
 ### AdaptiveIntegral — adaptive GK15 on [a, b]
@@ -689,7 +687,6 @@ Integrator.adaptive()
     .rule(AdaptiveRule)              // optional: GK15 (default) or GAUSS_LOBATTO
     .integrate()                     // → Quadrature
     .integrate(AdaptivePool)
-    .alloc()                         // → AdaptivePool
 ```
 
 ### OscillatoryIntegral — ∫ f(x)·w(ω·x) dx
@@ -706,7 +703,6 @@ Integrator.oscillatory(OscillatoryOpts opts)  // COS/SIN (finite) or COS_UPPER/S
     .maxEvaluations(int)             // default 16384
     .integrate()                     // → Quadrature
     .integrate(AdaptivePool)
-    .alloc()                         // → AdaptivePool
 ```
 
 ### PrincipalValueIntegral — Cauchy P.V. ∫ f(x)/(x-c) dx
@@ -721,7 +717,6 @@ Integrator.principalValue()
     .maxEvaluations(int)
     .integrate()                     // → Quadrature
     .integrate(AdaptivePool)
-    .alloc()                         // → AdaptivePool
 ```
 
 ### EndpointSingularIntegral — ∫ (x-a)^α (b-x)^β · log-factor · f(x) dx
@@ -735,7 +730,6 @@ Integrator.endpointSingular(EndpointOpts opts) // ALGEBRAIC/LOG_LEFT/LOG_RIGHT/L
     .maxRefinements(int)             // default 12
     .integrate()                     // → Quadrature
     .integrate(GaussPool)
-    .alloc()                         // → GaussPool
 ```
 
 ### ImproperIntegral — semi-infinite or infinite domain
@@ -751,7 +745,6 @@ Integrator.improper(ImproperOpts opts)   // UPPER/LOWER/WHOLE_LINE
     .maxEvaluations(int)
     .integrate()                     // → Quadrature
     .integrate(AdaptivePool)
-    .alloc()                         // → AdaptivePool
 
 // Fixed-point (fast, no error estimate)
 Integrator.improperFixed(ImproperOpts opts)
@@ -761,7 +754,6 @@ Integrator.improperFixed(ImproperOpts opts)
     .points(int n)                   // required
     .integrate()                     // → Quadrature (estimatedError = 0)
     .integrate(GaussPool)
-    .alloc()                         // → GaussPool
 ```
 
 ### SampledIntegral / CumulativeIntegral
@@ -836,7 +828,7 @@ AdaptiveRule.GAUSS_LOBATTO  // 4-point Gauss-Lobatto, exact degree 5, endpoint r
 // Reuse AdaptivePool across repeated adaptive calls
 AdaptiveIntegral problem = Integrator.adaptive()
     .function(Math::sin).bounds(0.0, Math.PI).tolerances(1e-10, 1e-10);
-AdaptivePool ws = problem.alloc();
+AdaptivePool ws = new AdaptivePool();
 Quadrature r1 = problem.integrate(ws);
 Quadrature r2 = problem.bounds(0.0, 2.0).integrate(ws);  // ws reused
 

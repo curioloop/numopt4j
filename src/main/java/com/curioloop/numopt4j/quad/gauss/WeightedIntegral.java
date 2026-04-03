@@ -2,6 +2,7 @@
  * Copyright (c) 2025 curioloop. All rights reserved.
  */
 package com.curioloop.numopt4j.quad.gauss;
+import java.util.Objects;
 
 import com.curioloop.numopt4j.quad.Checks;
 import com.curioloop.numopt4j.quad.Integral;
@@ -44,24 +45,20 @@ public class WeightedIntegral implements Integral<Double, GaussPool> {
     }
 
     public WeightedIntegral rule(GaussRule rule) {
-        if (rule == null) throw new IllegalArgumentException("rule must not be null");
+        Objects.requireNonNull(rule, "rule must not be null");
         this.rule = rule;
         return this;
-    }
-
-    @Override
-    public GaussPool alloc() {
-        requireReady();
-        if (workspace == null) workspace = new GaussPool();
-        workspace.ensure(points);
-        return workspace;
     }
 
     @Override
     public Double integrate(GaussPool workspace) {
         Checks.validateFunction(function);
         requireReady();
-        GaussPool pool = workspace != null ? workspace.ensure(points) : alloc();
+        if (workspace == null) {
+            if (this.workspace == null) this.workspace = new GaussPool();
+            workspace = this.workspace;
+        }
+        GaussPool pool = workspace.ensure(points);
         rule.generate(points, pool);
 
         double sum = 0.0;
