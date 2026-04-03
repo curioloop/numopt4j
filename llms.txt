@@ -239,12 +239,12 @@ Minimizer.cmaes()
     .restartMode(RestartMode)                // null=none / RestartMode.ipop(n,k) / RestartMode.bipop(n)
     .maxResample(int)                        // max resampling attempts for infeasible points, default 0
     .stopFitness(double)                     // stop when best < value, default -∞
-    .tolX(double)                            // step-size convergence threshold, default 1e-11
-    .tolFun(double)                          // fitness history range threshold, default 1e-12
-    .tolUpSigma(double)                      // σ divergence guard, default 1e3
+    .parameterTolerance(double)              // step-size convergence threshold, default 1e-11
+    .functionTolerance(double)               // fitness history range threshold, default 1e-12
+    .sigmaUpperBound(double)                 // σ divergence guard, default 1e3
     .random(Random)                          // RNG for reproducibility
     .solve()                                 // → Optimization
-    .alloc()                                 // → CMAESWorkspace (for reuse)
+    .workspace()                             // → CMAESWorkspace (for reuse)
 ```
 
 **UpdateMode** — covariance matrix update strategy:
@@ -284,15 +284,15 @@ Minimizer.subplex()
     .functionTolerance(double)               // default 1e-4
     .maxEvaluations(int)                     // default N * 200
     .solve()                                 // → Optimization
-    .alloc()                                 // → SubplexWorkspace (for reuse)
+    .workspace()                             // → SubplexWorkspace (for reuse)
 ```
 
 ### LBFGSBProblem (L-BFGS-B bound-constrained quasi-Newton)
 
 ```java
 Minimizer.lbfgsb()
-    .objective(Univariate.Objective)        // auto-uses NumericalGradient.CENTRAL
-    .objective(Univariate)                  // analytic gradient
+    .objective(Univariate.Objective)        // auto-uses NumericalGradient.CENTRAL; signature: (x, n) -> double
+    .objective(Univariate)                  // analytic gradient; signature: (x, n, g) -> double
     .initialPoint(double...)                // sets x₀ and infers dimension
     .bounds(Bound...)                       // optional, lb ≤ x ≤ ub
     .maxIterations(int)                     // default 15000
@@ -302,14 +302,14 @@ Minimizer.lbfgsb()
     .corrections(int)                       // L-BFGS memory parameter m, default 10
     .maxLineSearchSteps(int)                // default 20
     .solve()                                // → Optimization
-    .alloc()                                // → LBFGSBWorkspace (for reuse)
+    .workspace()                            // → LBFGSBWorkspace (for reuse)
 ```
 
 ### SLSQPProblem (SLSQP sequential least-squares programming)
 
 ```java
 Minimizer.slsqp()
-    .objective(Univariate.Objective / Univariate)
+    .objective(Univariate.Objective / Univariate)  // Objective: (x, n) -> double; Univariate: (x, n, g) -> double
     .equalityConstraints(Univariate.Objective...)   // c(x) = 0
     .inequalityConstraints(Univariate.Objective...) // c(x) >= 0
     .initialPoint(double...)
@@ -318,15 +318,15 @@ Minimizer.slsqp()
     .maxIterations(int)                     // default 100
     .maxEvaluations(int)                    // default 1000
     .solve()                                // → Optimization
-    .alloc()                                // → SLSQPWorkspace (for reuse)
+    .workspace()                            // → SLSQPWorkspace (for reuse)
 ```
 
 ### TRFProblem (TRF trust-region reflective least squares)
 
 ```java
 Minimizer.trf()
-    .residuals(Multivariate.Objective, int m)  // auto-uses NumericalJacobian.CENTRAL
-    .objective(Multivariate)                          // analytic Jacobian
+    .residuals(Multivariate.Objective, int m)  // auto-uses NumericalJacobian.CENTRAL; signature: (x, n, r, m) -> void
+    .objective(Multivariate)                          // analytic Jacobian; signature: (x, n, r, m, jac) -> void
     .initialPoint(double...)
     .bounds(Bound...)
     .functionTolerance(double)              // default 1e-8
@@ -336,7 +336,7 @@ Minimizer.trf()
     .loss(RobustLoss)                       // default LINEAR
     .lossScale(double)                      // soft margin C, default 1.0
     .solve()                                // → Optimization
-    .alloc()                                // → TRFWorkspace (for reuse)
+    .workspace()                            // → TRFWorkspace (for reuse)
 ```
 
 ### RootFinder (facade — static factory entry point)
@@ -367,7 +367,7 @@ RootFinder.hybr(Multivariate.Objective fn, int n)
     .maxEvaluations(int)                    // default 200*(n+1)
     .initialPoint(double...)        // required
     .solve()                        // → Optimization
-    .alloc()                        // → HYBRWorkspace (for reuse)
+    .workspace()                    // → HYBRWorkspace (for reuse)
 ```
 
 ### BroydenProblem (N-D Broyden's method, Jacobian-free)
@@ -378,7 +378,7 @@ RootFinder.broyden(Multivariate.Objective fn, int n)
     .maxEvaluations(int)                    // default 100*(n+1)
     .initialPoint(double...)        // required
     .solve()                        // → Optimization
-    .alloc()                        // → BroydenWorkspace (for reuse)
+    .workspace()                    // → BroydenWorkspace (for reuse)
 ```
 
 ### Optimization

@@ -19,7 +19,7 @@ import java.util.Random;
  * <pre>{@code
  * // Minimise sphere function in 5 dimensions
  * Optimization r = Minimizer.cmaes()
- *     .objective(x -> { double s = 0; for (double v : x) s += v*v; return s; })
+ *     .objective((x, n) -> { double s = 0; for (double v : x) s += v*v; return s; })
  *     .initialPoint(new double[5])
  *     .solve();
  * }</pre>
@@ -51,7 +51,7 @@ import java.util.Random;
  * CMAESProblem p = Minimizer.cmaes()
  *     .objective(fn)
  *     .initialPoint(x0);
- * CMAESWorkspace ws = p.alloc();   // allocate once
+ * CMAESWorkspace ws = CMAESProblem.workspace();
  * for (double[] pt : points) {
  *     Optimization r = p.initialPoint(pt).solve(ws);
  * }
@@ -68,9 +68,9 @@ import java.util.Random;
  *   <tr><td>restart</td><td>null</td><td>no restart</td></tr>
  *   <tr><td>maxResample</td><td>0</td><td>no resampling for infeasible points</td></tr>
  *   <tr><td>stopFitness</td><td>−∞</td><td>disabled</td></tr>
- *   <tr><td>tolX</td><td>1e-11</td><td>step-size convergence threshold</td></tr>
- *   <tr><td>tolFun</td><td>1e-12</td><td>fitness history range threshold</td></tr>
- *   <tr><td>tolUpSigma</td><td>1e3</td><td>σ divergence guard</td></tr>
+ *   <tr><td>parameterTolerance</td><td>1e-11</td><td>step-size convergence threshold</td></tr>
+ *   <tr><td>functionTolerance</td><td>1e-12</td><td>fitness history range threshold</td></tr>
+ *   <tr><td>sigmaUpperBound</td><td>1e3</td><td>σ divergence guard</td></tr>
  * </table>
  *
  * @see Minimizer#cmaes()
@@ -90,9 +90,9 @@ public final class CMAESProblem
     int maxResample = 0;
     private RestartMode restartMode = null;
     double stopFitness = Double.NEGATIVE_INFINITY;
-    double tolX = 1e-11;
-    double tolFun = 1e-12;
-    double tolUpSigma = 1e3;
+    double parameterTolerance = 1e-11;
+    double functionTolerance = 1e-12;
+    double sigmaUpperBound = 1e3;
     private Random rng = new Random();
 
     public CMAESProblem() {}
@@ -106,9 +106,9 @@ public final class CMAESProblem
     public int maxResample()             { return maxResample; }
     public RestartMode restartMode()     { return restartMode; }
     public double stopFitness()          { return stopFitness; }
-    public double tolX()                 { return tolX; }
-    public double tolFun()               { return tolFun; }
-    public double tolUpSigma()           { return tolUpSigma; }
+    public double parameterTolerance()   { return parameterTolerance; }
+    public double functionTolerance()    { return functionTolerance; }
+    public double sigmaUpperBound()      { return sigmaUpperBound; }
 
     /** Effective lambda (auto-computed if not set). */
     public int effectiveLambda() {
@@ -211,24 +211,24 @@ public final class CMAESProblem
         return this;
     }
 
-    /** Step-size convergence threshold: stop when σ·max(|p_c_i|, √C_ii) &lt; tolX·σ₀ (default 1e-11). */
-    public CMAESProblem tolX(double v) {
-        if (v <= 0) throw new IllegalArgumentException("tolX must be positive, got " + v);
-        this.tolX = v;
+    /** Step-size convergence threshold: stop when σ·max(|p_c_i|, √C_ii) &lt; parameterTolerance·σ₀ (default 1e-11). */
+    public CMAESProblem parameterTolerance(double v) {
+        if (v <= 0) throw new IllegalArgumentException("parameterTolerance must be positive, got " + v);
+        this.parameterTolerance = v;
         return this;
     }
 
-    /** Fitness history range threshold: stop when max(history) − min(history) &lt; tolFun (default 1e-12). */
-    public CMAESProblem tolFun(double v) {
-        if (v <= 0) throw new IllegalArgumentException("tolFun must be positive, got " + v);
-        this.tolFun = v;
+    /** Fitness history range threshold: stop when max(history) − min(history) &lt; functionTolerance (default 1e-12). */
+    public CMAESProblem functionTolerance(double v) {
+        if (v <= 0) throw new IllegalArgumentException("functionTolerance must be positive, got " + v);
+        this.functionTolerance = v;
         return this;
     }
 
-    /** σ divergence guard: stop when σ·D_i &gt; tolUpSigma·σ₀ for any i (default 1e3). */
-    public CMAESProblem tolUpSigma(double v) {
-        if (v <= 0) throw new IllegalArgumentException("tolUpSigma must be positive, got " + v);
-        this.tolUpSigma = v;
+    /** σ divergence guard: stop when σ·D_i &gt; sigmaUpperBound·σ₀ for any i (default 1e3). */
+    public CMAESProblem sigmaUpperBound(double v) {
+        if (v <= 0) throw new IllegalArgumentException("sigmaUpperBound must be positive, got " + v);
+        this.sigmaUpperBound = v;
         return this;
     }
 
@@ -259,13 +259,12 @@ public final class CMAESProblem
 
     // ── Problem interface ─────────────────────────────────────────────────
 
-    @Override
-    public CMAESWorkspace alloc() {
-        validate();
-        int lam = effectiveLambda();
-        if (workspace == null) workspace = new CMAESWorkspace();
-        workspace.ensure(dimension, lam, updateMode.separable);
-        return workspace;
+    /**
+     * Creates a new {@link CMAESWorkspace} for use with {@link #solve(CMAESWorkspace)}.
+     * Memory is allocated lazily on the first {@code solve()} call.
+     */
+    public static CMAESWorkspace workspace() {
+        return new CMAESWorkspace();
     }
 
     @Override
@@ -304,9 +303,9 @@ public final class CMAESProblem
         c.maxResample = this.maxResample;
         c.restartMode = this.restartMode;
         c.stopFitness = this.stopFitness;
-        c.tolX = this.tolX;
-        c.tolFun = this.tolFun;
-        c.tolUpSigma = this.tolUpSigma;
+        c.parameterTolerance = this.parameterTolerance;
+        c.functionTolerance = this.functionTolerance;
+        c.sigmaUpperBound = this.sigmaUpperBound;
         c.rng = this.rng;
         return c;
     }

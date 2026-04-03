@@ -270,7 +270,7 @@ class SubplexProblemTest {
                 .functionTolerance(1e-8)
                 .parameterTolerance(1e-8);
 
-        SubplexWorkspace ws = p.alloc();
+        SubplexWorkspace ws = SubplexProblem.workspace();
 
         Optimization r1 = p.solve(ws);
         assertThat(r1.isSuccessful()).isTrue();

@@ -18,7 +18,7 @@ import com.curioloop.numopt4j.optim.Univariate;
  * <h2>Basic Usage</h2>
  * <pre>{@code
  * Optimization result = Minimizer.subplex()
- *     .objective(x -> { double s = 0; for (double v : x) s += v*v; return s; })
+ *     .objective((x, n) -> { double s = 0; for (double v : x) s += v*v; return s; })
  *     .initialPoint(new double[20])
  *     .solve();
  * }</pre>
@@ -69,14 +69,6 @@ public final class SubplexProblem
     }
 
     @Override
-    public SubplexWorkspace alloc() {
-        validate();
-        if (workspace == null) workspace = new SubplexWorkspace();
-        workspace.ensure(dimension);
-        return workspace;
-    }
-
-    @Override
     public Optimization solve(SubplexWorkspace workspace) {
         validate();
         SubplexWorkspace ws = workspace != null ? workspace : (this.workspace != null ? this.workspace : new SubplexWorkspace());
@@ -102,6 +94,14 @@ public final class SubplexProblem
     }
 
     // ── Getters ──────────────────────────────────────────────────────────────
+
+    /**
+     * Creates a new {@link SubplexWorkspace} for use with {@link #solve(SubplexWorkspace)}.
+     * Memory is allocated lazily on the first {@code solve()} call.
+     */
+    public static SubplexWorkspace workspace() {
+        return new SubplexWorkspace();
+    }
 
     public double parameterTolerance() { return parameterTolerance; }
     public double functionTolerance() { return functionTolerance; }

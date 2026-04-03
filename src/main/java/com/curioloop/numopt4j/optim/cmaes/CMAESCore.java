@@ -657,7 +657,7 @@ public final class CMAESCore {
             return Optimization.Status.FUNCTION_TOLERANCE_REACHED;
         }
 
-        double tolUpSigma = cfg.tolUpSigma();
+        double tolUpSigma = cfg.sigmaUpperBound();
         if (diagonalOnly) {
             for (int i = 0; i < n; i++) {
                 if (ws.sigma * Math.sqrt(nVec[DIAGC + i]) > tolUpSigma * ws.sigma0) {
@@ -692,7 +692,7 @@ public final class CMAESCore {
             }
         }
 
-        double tolX = cfg.tolX();
+        double tolX = cfg.parameterTolerance();
         boolean tolXMet = true;
         for (int i = 0; i < n; i++) {
             double diagCi = diagonalOnly ? nVec[DIAGC + i] : mat[C_OFF + i * n + i];
@@ -704,7 +704,7 @@ public final class CMAESCore {
         }
         if (tolXMet) return Optimization.Status.COEFFICIENT_TOLERANCE_REACHED;
 
-        double tolFun = cfg.tolFun();
+        double tolFun = cfg.functionTolerance();
         if (ws.iterations > ws.histSize) {
             double histMin = ws.fitnessHistory[0], histMax = ws.fitnessHistory[0];
             for (int i = 1; i < ws.histSize; i++) {

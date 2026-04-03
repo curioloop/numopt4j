@@ -12,35 +12,23 @@ package com.curioloop.numopt4j.optim;
  *
  * <h2>Usage</h2>
  * <pre>{@code
- * // Create and solve
- * LMResult result = LMProblem.create()
- *     .residuals(residuals, 10)
- *     .initialCoefficients(1.0, 1.0)
+ * // Create and solve (workspace allocated internally)
+ * Optimization result = Minimizer.lbfgsb()
+ *     .objective((x, n) -> x[0]*x[0] + x[1]*x[1])
+ *     .initialPoint(1.0, 1.0)
  *     .solve();
  *
- * // With workspace reuse
- * LMProblem problem = LMProblem.create()
- *     .residuals(residuals, 10)
- *     .initialCoefficients(1.0, 1.0);
- * LMWorkspace ws = problem.alloc();
+ * // With workspace reuse (allocate once, reuse across calls)
+ * LBFGSBProblem problem = Minimizer.lbfgsb()
+ *     .objective(fn)
+ *     .initialPoint(1.0, 1.0);
+ * LBFGSBWorkspace ws = LBFGSBProblem.workspace();
  * problem.solve(ws);  // reuse workspace
  * }</pre>
  *
  * @param <W> the workspace type
  */
 public interface Problem<W> {
-
-    /**
-     * Allocates a workspace for this optimization problem.
-     * <p>
-     * The workspace can be reused across multiple optimization runs to reduce
-     * memory allocation overhead.
-     * </p>
-     *
-     * @return allocated workspace instance
-     * @throws IllegalStateException if required fields are missing
-     */
-    W alloc();
 
     /**
      * Solves the optimization problem using a temporary workspace.
@@ -54,7 +42,7 @@ public interface Problem<W> {
     /**
      * Solves the optimization problem with a pre-allocated workspace for reuse.
      *
-     * @param workspace pre-allocated workspace
+     * @param workspace pre-allocated workspace (pass {@code null} to allocate internally)
      * @return optimization result
      * @throws IllegalArgumentException if workspace is incompatible
      */

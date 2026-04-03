@@ -8,13 +8,13 @@ import com.curioloop.numopt4j.optim.RootFinder;
 /**
  * Multi-dimensional root finder using the Powell hybrid method (MINPACK {@code hybrd}).
  *
- * <p>Workspace type: {@link HYBRWorkspace}. Allocate once and reuse across calls.</p>
+ * <p>Workspace type: {@link HYBRWorkspace}. Create once with {@link #workspace()} and reuse across calls.</p>
  *
  * <h2>Usage</h2>
  * <pre>{@code
  * HYBRProblem finder = RootFinder.hybr((x, f) -> { f[0] = x[0] - 1; }, 1)
  *     .initialPoint(0.0);
- * HYBRWorkspace ws = finder.alloc();
+ * HYBRWorkspace ws = HYBRProblem.workspace();
  * Optimization r = finder.solve(ws);
  * }</pre>
  */
@@ -62,14 +62,12 @@ public final class HYBRProblem extends RootFinder<Multivariate.Objective, HYBRWo
 
     public int maxEvaluations() { return maxEvaluations; }
 
-    /** Allocates a {@link HYBRWorkspace} for dimension {@code n} and caches it. */
-    @Override
-    public HYBRWorkspace alloc() {
-        if (dimension < 1) throw new IllegalStateException(
-            "Problem dimension n is unknown; call equations(fn, n) or initialPoint(x0) first");
-        if (workspace == null) workspace = new HYBRWorkspace();
-        workspace.ensure(dimension);
-        return workspace;
+    /**
+     * Creates a new {@link HYBRWorkspace} for use with {@link #solve(HYBRWorkspace)}.
+     * Memory is allocated lazily on the first {@code solve()} call.
+     */
+    public static HYBRWorkspace workspace() {
+        return new HYBRWorkspace();
     }
 
     @Override
@@ -80,7 +78,7 @@ public final class HYBRProblem extends RootFinder<Multivariate.Objective, HYBRWo
         if (initialPoint == null)
             throw new IllegalStateException(
                 "Missing required parameter: initialPoint. Call .initialPoint(x0) before .solve().");
-        HYBRWorkspace ws0 = ws != null ? ws : alloc();
+        HYBRWorkspace ws0 = ws != null ? ws : workspace();
         ws0.ensure(dimension);
         int maxfev = maxEvaluations > 0 ? maxEvaluations : HYBRSolver.DEFAULT_MAXFEV_FACTOR * (dimension + 1);
         return HYBRSolver.solve(jacobian.wrap(function, dimension, dimension, true), initialPoint, ftol, maxfev, ws0);

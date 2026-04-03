@@ -83,7 +83,7 @@ public class LBFGSBBenchmark {
         }
 
         problem = p;
-        workspace = problem.alloc();
+        workspace = LBFGSBProblem.workspace();
     }
 
     @Setup(Level.Invocation)

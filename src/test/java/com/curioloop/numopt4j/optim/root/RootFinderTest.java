@@ -214,7 +214,7 @@ class RootFinderTest {
             .equations(fn, 2)
             .initialPoint(0.0, 0.0);
 
-        HYBRWorkspace ws = finder.alloc();
+        HYBRWorkspace ws = HYBRProblem.workspace();
 
         Optimization r1 = finder.solve(ws);
         Optimization r2 = finder.solve(ws);

@@ -108,7 +108,7 @@ public class SLSQPBenchmark {
         }
 
         problem = p;
-        workspace = problem.alloc();
+        workspace = new SLSQPWorkspace();
     }
 
     @Setup(Level.Invocation)

@@ -23,32 +23,32 @@ import com.curioloop.numopt4j.optim.trf.TRFProblem;
  * <pre>{@code
  * // Global derivative-free (CMA-ES)
  * Optimization r = Minimizer.cmaes()
- *     .objective(x -> x[0]*x[0] + x[1]*x[1])
+ *     .objective((x, n) -> x[0]*x[0] + x[1]*x[1])
  *     .initialPoint(1.0, 1.0)
  *     .solve();
  *
  * // Derivative-free (Nelder-Mead)
  * Optimization r = Minimizer.subplex()
- *     .objective(x -> x[0]*x[0] + x[1]*x[1])
+ *     .objective((x, n) -> x[0]*x[0] + x[1]*x[1])
  *     .initialPoint(1.0, 1.0)
  *     .solve();
  *
  * // Bound-constrained (L-BFGS-B)
  * Optimization r = Minimizer.lbfgsb()
- *     .objective(x -> x[0]*x[0] + x[1]*x[1])
+ *     .objective((x, n) -> x[0]*x[0] + x[1]*x[1])
  *     .initialPoint(1.0, 1.0)
  *     .solve();
  *
  * // Constrained (SLSQP)
  * Optimization r = Minimizer.slsqp()
- *     .objective(x -> x[0] + x[1])
- *     .equalityConstraints(x -> x[0]*x[0] + x[1]*x[1] - 1)
+ *     .objective((x, n) -> x[0] + x[1])
+ *     .equalityConstraints((x, n) -> x[0]*x[0] + x[1]*x[1] - 1)
  *     .initialPoint(0.5, 0.5)
  *     .solve();
  *
  * // Nonlinear least squares (TRF)
  * Optimization r = Minimizer.trf()
- *     .residuals((x, r) -> { r[0] = x[0] - 1; r[1] = x[1] - 2; }, 2)
+ *     .residuals((x, n, r, m) -> { r[0] = x[0] - 1; r[1] = x[1] - 2; }, 2)
  *     .initialPoint(0.0, 0.0)
  *     .solve();
  * }</pre>

@@ -359,7 +359,8 @@ public class CMAESCoreRewriteProperties {
             .maxEvaluations(lambda * 50)
             .random(new Random(42));
 
-        CMAESWorkspace ws = p.alloc();
+        CMAESWorkspace ws = new CMAESWorkspace();
+        ws.ensure(n, lambda, p.updateMode().separable);
         p.solve(ws);
 
         for (int i = 0; i < n; i++) {

@@ -51,14 +51,12 @@ public final class BroydenProblem extends RootFinder<Multivariate.Objective, Bro
 
     public int maxEvaluations() { return maxEvaluations; }
 
-    /** Allocates a {@link BroydenWorkspace} for dimension {@code n} and caches it. */
-    @Override
-    public BroydenWorkspace alloc() {
-        if (dimension < 1) throw new IllegalStateException(
-            "Problem dimension n is unknown; call equations(fn, n) or initialPoint(x0) first");
-        if (workspace == null) workspace = new BroydenWorkspace();
-        workspace.ensure(dimension);
-        return workspace;
+    /**
+     * Creates a new {@link BroydenWorkspace} for use with {@link #solve(BroydenWorkspace)}.
+     * Memory is allocated lazily on the first {@code solve()} call.
+     */
+    public static BroydenWorkspace workspace() {
+        return new BroydenWorkspace();
     }
 
     @Override
@@ -69,7 +67,7 @@ public final class BroydenProblem extends RootFinder<Multivariate.Objective, Bro
         if (initialPoint == null)
             throw new IllegalStateException(
                 "Missing required parameter: initialPoint. Call .initialPoint(x0) before .solve().");
-        BroydenWorkspace ws0 = ws != null ? ws : alloc();
+        BroydenWorkspace ws0 = ws != null ? ws : workspace();
         ws0.ensure(dimension);
         int maxIter = maxEvaluations > 0 ? maxEvaluations : 100 * (dimension + 1);
         return BroydenSolver.solve(function, initialPoint, ftol, maxIter, ws0);

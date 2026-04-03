@@ -9,7 +9,7 @@ import java.util.function.DoubleUnaryOperator;
 /**
  * One-dimensional root finder using Brent's method.
  *
- * <p>No workspace is required; {@link #alloc()} returns {@code null}.</p>
+ * <p>No workspace is required; pass {@code null} to {@link #solve(Void)}.</p>
  *
  * <h2>Usage</h2>
  * <pre>{@code
@@ -73,10 +73,6 @@ public final class BrentqProblem extends RootFinder<DoubleUnaryOperator, Void, B
     }
 
     public int maxIterations() { return maxIterations; }
-
-    /** No-op — Brentq requires no workspace. Returns {@code null}. */
-    @Override
-    public Void alloc() { return null; }
 
     @Override
     public Optimization solve(Void ws) {

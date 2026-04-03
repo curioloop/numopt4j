@@ -38,21 +38,23 @@ class TRFWorkspaceTest {
     }
 
     @Test
-    void allocViaOptimizerMatchesDirectAlloc() {
+    void workspaceInitializedAfterSolve() {
         final int m = 10, n = 3;
         Multivariate.Objective fn = (c, nn, r, mm) -> {};
         TRFProblem p = new TRFProblem().residuals(fn, m).initialPoint(0.0, 0.0, 0.0);
-        TRFWorkspace ws = p.alloc();
+        TRFWorkspace ws = TRFProblem.workspace();
+        p.solve(ws);
         assertThat(ws.fvec).hasSize(m);
         assertThat(ws.getN()).isEqualTo(n);
     }
 
     @Test
-    void allocViaProblemMatchesDirectAlloc() {
+    void workspaceReuseAcrossDimensions() {
         final int m = 5;
         Multivariate.Objective fn = (c, n, r, mm) -> {};
         TRFProblem p = new TRFProblem().residuals(fn, m).initialPoint(0.0, 0.0);
-        TRFWorkspace ws = p.alloc();
+        TRFWorkspace ws = TRFProblem.workspace();
+        p.solve(ws);
         assertThat(ws.fvec).hasSize(m);
         assertThat(ws.getN()).isEqualTo(2);
     }
@@ -69,7 +71,7 @@ class TRFWorkspaceTest {
         TRFProblem p = new TRFProblem()
             .residuals(fn, m).initialPoint(0.0, 1.0)
             .gradientTolerance(1e-10).parameterTolerance(1e-10);
-        TRFWorkspace ws = p.alloc();
+        TRFWorkspace ws = TRFProblem.workspace();
         double[] x0 = {0.0, 1.0};
 
         Optimization r1 = p.solve(ws);
@@ -92,7 +94,7 @@ class TRFWorkspaceTest {
             .gradientTolerance(1e-10).parameterTolerance(1e-10);
 
         Optimization r1 = p.solve();
-        Optimization r2 = p.solve(p.alloc());
+        Optimization r2 = p.solve(TRFProblem.workspace());
 
         assertThat(r1.getCost()).isCloseTo(r2.getCost(), within(1e-10));
         assertThat(r1.getStatus()).isEqualTo(r2.getStatus());
@@ -110,7 +112,7 @@ class TRFWorkspaceTest {
         TRFProblem p = new TRFProblem()
             .residuals(fn, m).initialPoint(0.0, 1.0)
             .gradientTolerance(1e-10).parameterTolerance(1e-10);
-        TRFWorkspace ws = p.alloc();
+        TRFWorkspace ws = TRFProblem.workspace();
 
         Optimization r1 = p.solve(ws);
         Optimization r2 = p.solve(ws);
@@ -148,7 +150,7 @@ class TRFWorkspaceTest {
             .maxEvaluations(10000);
 
         Optimization r1 = p.solve();
-        Optimization r2 = p.solve(p.alloc());
+        Optimization r2 = p.solve(TRFProblem.workspace());
 
         assertThat(r1.getCost()).isCloseTo(r2.getCost(), within(1e-10));
         assertThat(r1.getIterations()).isEqualTo(r2.getIterations());
@@ -167,7 +169,7 @@ class TRFWorkspaceTest {
             .residuals(fn, m).initialPoint(0.0, 1.0)
             .gradientTolerance(1e-15).parameterTolerance(1e-15).functionTolerance(1e-15)
             .maxEvaluations(10000);
-        TRFWorkspace ws = p.alloc();
+        TRFWorkspace ws = TRFProblem.workspace();
 
         Optimization r1 = p.solve(ws);
         Optimization r2 = p.solve(ws);

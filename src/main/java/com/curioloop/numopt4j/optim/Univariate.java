@@ -20,16 +20,16 @@ package com.curioloop.numopt4j.optim;
  * <h2>Using NumericalGradient when analytical gradient is unavailable</h2>
  * <pre>{@code
  * // Wrap a pure function (no gradient) using central difference approximation
- * Univariate objective = NumericalGradient.CENTRAL.wrap(x -> x[0]*x[0] + x[1]*x[1]);
+ * Univariate objective = NumericalGradient.CENTRAL.wrap((x, n) -> x[0]*x[0] + x[1]*x[1]);
  *
  * // Or use forward difference (faster, less accurate)
- * Univariate fast = NumericalGradient.FORWARD.wrap(x -> Math.sin(x[0]) + x[1]*x[1]);
+ * Univariate fast = NumericalGradient.FORWARD.wrap((x, n) -> Math.sin(x[0]) + x[1]*x[1]);
  * }</pre>
  *
  * <h2>Implementing with analytical gradient</h2>
  * <pre>{@code
  * // Analytical gradient is preferred for performance
- * Univariate rosenbrock = (x, g) -> {
+ * Univariate rosenbrock = (x, n, g) -> {
  *     double a = 1 - x[0], b = x[1] - x[0]*x[0];
  *     if (g != null) {
  *         g[0] = -2*a - 4*x[0]*b;

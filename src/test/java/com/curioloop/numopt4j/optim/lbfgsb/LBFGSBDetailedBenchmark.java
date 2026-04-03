@@ -55,7 +55,7 @@ public class LBFGSBDetailedBenchmark {
                 .maxIterations(MAX_ITERATIONS)
                 .initialPoint(initialPoint.clone());
 
-        workspace = problem.alloc();
+        workspace = LBFGSBProblem.workspace();
 
         Optimization result = problem.solve(workspace);
         System.out.printf("Dimension %d: iterations=%d%n", dimension, result.getIterations());

@@ -28,7 +28,7 @@ import java.time.Duration;
  * <pre>{@code
  * // Recommended entry point: ToDoubleFunction lambda (no gradient required)
  * Optimization result = new LBFGSBProblem()
- *     .objective(x -> x[0]*x[0] + x[1]*x[1])
+ *     .objective((x, n) -> x[0]*x[0] + x[1]*x[1])
  *     .initialPoint(1.0, 1.0)
  *     .solve();
  *
@@ -41,7 +41,7 @@ import java.time.Duration;
  * <pre>{@code
  * // Bound-constrained with analytical gradient for best performance
  * Optimization result = new LBFGSBProblem()
- *     .objective((x, g) -> {
+ *     .objective((x, n, g) -> {
  *         double f = x[0]*x[0] + x[1]*x[1];
  *         if (g != null) { g[0] = 2*x[0]; g[1] = 2*x[1]; }
  *         return f;
@@ -54,9 +54,9 @@ import java.time.Duration;
  *
  * // Workspace reuse for high-frequency optimization (e.g., in a loop)
  * LBFGSBProblem problem = new LBFGSBProblem()
- *     .objective(x -> x[0]*x[0])
+ *     .objective((x, n) -> x[0]*x[0])
  *     .initialPoint(1.0);
- * LBFGSBWorkspace ws = problem.alloc();  // allocate workspace once
+ * LBFGSBWorkspace ws = LBFGSBProblem.workspace();
  * for (Data data : dataList) {
  *     problem.objective(data::objective).solve(ws);  // reuse workspace
  * }
@@ -155,12 +155,12 @@ public final class LBFGSBProblem extends Minimizer<Univariate, LBFGSBWorkspace, 
         }
     }
 
-    @Override
-    public LBFGSBWorkspace alloc() {
-        validate();
-        if (workspace == null) workspace = new LBFGSBWorkspace();
-        workspace.ensure(dimension, corrections);
-        return workspace;
+    /**
+     * Creates a new {@link LBFGSBWorkspace} for use with {@link #solve(LBFGSBWorkspace)}.
+     * Memory is allocated lazily on the first {@code solve()} call.
+     */
+    public static LBFGSBWorkspace workspace() {
+        return new LBFGSBWorkspace();
     }
 
     /**

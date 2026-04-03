@@ -33,9 +33,9 @@ class CMAESProblemTest {
         assertEquals(1000, p.maxIterations());
         assertNull(p.restartMode());
         assertEquals(Double.NEGATIVE_INFINITY, p.stopFitness());
-        assertEquals(1e-11, p.tolX(), 1e-20);
-        assertEquals(1e-12, p.tolFun(), 1e-20);
-        assertEquals(1e3, p.tolUpSigma(), 1e-10);
+        assertEquals(1e-11, p.parameterTolerance(), 1e-20);
+        assertEquals(1e-12, p.functionTolerance(), 1e-20);
+        assertEquals(1e3, p.sigmaUpperBound(), 1e-10);
         assertEquals(UpdateMode.ACTIVE_CMA, p.updateMode());
     }
 
@@ -185,30 +185,32 @@ class CMAESProblemTest {
         assertDoesNotThrow(() -> p.solve(ws));
     }
 
-    // ── alloc() ───────────────────────────────────────────────────────────
+    // ── workspace() ──────────────────────────────────────────────────────────
 
     @Test
-    void allocReturnsWorkspaceWithCorrectDimensions() {
+    void workspaceReturnsCorrectDimensions() {
         int n = 5;
         CMAESProblem p = new CMAESProblem()
             .objective((x, dim) -> 0.0)
             .initialPoint(new double[n])
             .populationSize(12);
 
-        CMAESWorkspace ws = p.alloc();
+        CMAESWorkspace ws = new CMAESWorkspace();
+        ws.ensure(n, 12, p.updateMode().separable);
         assertNotNull(ws);
         assertEquals(n, ws.n);
         assertEquals(12, ws.lambda);
     }
 
     @Test
-    void allocWithAutoLambdaComputesCorrectly() {
+    void workspaceWithAutoLambdaComputesCorrectly() {
         int n = 10;
         CMAESProblem p = new CMAESProblem()
             .objective((x, dim) -> 0.0)
             .initialPoint(new double[n]);
 
-        CMAESWorkspace ws = p.alloc();
+        CMAESWorkspace ws = new CMAESWorkspace();
+        ws.ensure(n, p.effectiveLambda(), p.updateMode().separable);
         assertEquals(n, ws.n);
         assertEquals(p.effectiveLambda(), ws.lambda);
     }

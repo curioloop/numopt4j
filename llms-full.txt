@@ -27,7 +27,7 @@ numopt4j is a high-performance Java numerical library providing optimization, ro
 
 ```
 com.curioloop.numopt4j.optim          # Minimizer, RootFinder, Bound, Optimization, Optimization.Status
-com.curioloop.numopt4j.optim.cmaes    # CMAESProblem, CMAESWorkspace, CMAESCore, RestartStrategy
+com.curioloop.numopt4j.optim.cmaes    # CMAESProblem, CMAESWorkspace, CMAESCore, UpdateMode, RestartMode
 com.curioloop.numopt4j.optim.subplex  # SubplexProblem, SubplexWorkspace
 com.curioloop.numopt4j.optim.lbfgsb   # LBFGSBProblem, LBFGSBWorkspace
 com.curioloop.numopt4j.optim.slsqp    # SLSQPProblem, SLSQPWorkspace
@@ -121,8 +121,7 @@ Optimization r00b = Minimizer.cmaes()
     .objective(fn)
     .initialPoint(x0)
     .sigma(0.5)
-    .restartMode(RestartStrategy.IPOP)
-    .maxRestarts(9)
+    .restartMode(RestartMode.ipop(9, 2))
     .maxEvaluations(100000)
     .bounds(Bound.between(-5, 5), Bound.between(-5, 5))
     .solve();
@@ -175,7 +174,7 @@ Optimization r4 = Minimizer.slsqp()
 
 // Least squares (TRF)
 Optimization r5 = Minimizer.trf()
-    .residuals((x, res) -> {
+    .residuals((x, n, res, m) -> {
         res[0] = x[0] - 3.0;
         res[1] = x[1] - 4.0;
     }, 2)
@@ -202,31 +201,39 @@ new CMAESProblem()
 
 | Method | Description | Default | Constraint |
 |---|---|---|---|
-| `objective(Univariate.Objective f)` | Set objective function (no gradient needed) | — | f != null |
+| `objective(Univariate.Objective f)` | Set objective function (no gradient needed); signature: `(x, n) -> double` | — | f != null |
+| `initialPoint(double... x0)` | Set initial point, also infers dimension n | — | non-null, non-empty, all finite |
+| `bounds(Bound... bounds)` | Set variable bounds | null (unbounded) | length must match n |
+| `sigma(double s)` | Initial step size σ₀ | 0.3 | > 0, finite |
 | `populationSize(int lam)` | Population size λ; 0 = auto: 4 + floor(3·ln(n)) | 0 (auto) | > 0 |
-| `maxIterations(int v)` | Maximum generations | 1000 | > 0 |
+| `maxIterations(int v)` | Maximum generations per run | 1000 | > 0 |
 | `maxEvaluations(int v)` | Maximum function evaluations; 0 = auto: λ·1000 | 0 (auto) | > 0 |
-| `diagonalOnly(boolean v)` | Use sep-CMA-ES (diagonal covariance) | false | — |
-| `activeCMA(boolean v)` | Enable Active CMA negative update | true | — |
-| `checkFeasibleCount(int v)` | Resampling attempts for infeasible points | 0 | >= 0 |
-| `restartMode(RestartStrategy mode)` | `NONE` / `IPOP` / `BIPOP` | NONE | non-null |
-| `maxRestarts(int v)` | Maximum restart count (IPOP/BIPOP) | 9 | >= 0 |
-| `incPopSize(int v)` | IPOP/BIPOP lambda multiplier | 2 | >= 2 |
+| `maxGenerations(int n)` | Generation budget (resolved lazily as n×λ); last of maxEvaluations/maxGenerations wins | 0 (not set) | > 0 |
+| `updateMode(UpdateMode)` | `ACTIVE_CMA` / `CLASSIC_CMA` / `SEP_CMA` | ACTIVE_CMA | non-null |
+| `restartMode(RestartMode)` | `null`=none / `RestartMode.ipop(n,k)` / `RestartMode.bipop(n)` | null | — |
+| `maxResample(int v)` | Resampling attempts for infeasible points | 0 | >= 0 |
 | `stopFitness(double v)` | Stop when best fitness < v | -∞ | — |
-| `tolX(double v)` | Step-size convergence tolerance | 1e-11 | > 0 |
-| `tolFun(double v)` | Function value convergence tolerance | 1e-12 | > 0 |
-| `tolUpSigma(double v)` | Divergence guard (σ·D[i] > v·σ₀) | 1e3 | > 0 |
+| `parameterTolerance(double v)` | Step-size convergence tolerance | 1e-11 | > 0 |
+| `functionTolerance(double v)` | Fitness history range tolerance | 1e-12 | > 0 |
+| `sigmaUpperBound(double v)` | Divergence guard (σ·D[i] > v·σ₀) | 1e3 | > 0 |
 | `random(Random r)` | Custom random number generator | new Random() | non-null |
-| `solve(CMAESWorkspace... ws)` | Execute optimization, return result | — | — |
-| `alloc()` | Pre-allocate workspace (for reuse) | — | — |
+| `solve()` / `solve(CMAESWorkspace ws)` | Execute optimization, return result | — | — |
+| `workspace()` | Create new uninitialized workspace (for reuse) | — | — |
 
-### RestartStrategy Enum
+**UpdateMode** — covariance matrix update strategy:
 
 | Value | Description |
-|---|---|
-| `NONE` | Single run, no restart |
-| `IPOP` | Increasing population: λ multiplied by `incPopSize` each restart |
-| `BIPOP` | Bi-population: alternates large-population and small-population regimes |
+|-------|-------------|
+| `ACTIVE_CMA` | Full C with Active CMA negative-weight update (default; best on ill-conditioned problems) |
+| `CLASSIC_CMA` | Full C without Active CMA (classic CMA-ES) |
+| `SEP_CMA` | Diagonal C only — sep-CMA-ES, O(n) per iteration, skips O(n²) allocations |
+
+**RestartMode** — multi-start strategy (pass `null` for no restart):
+
+```java
+RestartMode.ipop(maxRestarts, popSizeMultiplier)  // IPOP: λ *= multiplier each restart
+RestartMode.bipop(maxRestarts)                     // BIPOP: alternate large/small populations
+```
 
 ### Complete Example
 
@@ -263,8 +270,7 @@ Optimization result3 = Minimizer.cmaes()
     })
     .initialPoint(new double[5])
     .sigma(2.0)
-    .restartMode(RestartStrategy.IPOP)
-    .maxRestarts(9)
+    .restartMode(RestartMode.ipop(9, 2))
     .maxEvaluations(200000)
     .bounds(Bound.between(-5.12, 5.12))
     .solve();
@@ -273,7 +279,7 @@ Optimization result3 = Minimizer.cmaes()
 CMAESProblem problem = Minimizer.cmaes()
     .objective(fn)
     .initialPoint(new double[n]);
-CMAESWorkspace ws = problem.alloc();
+CMAESWorkspace ws = CMAESProblem.workspace();
 for (double[] x0 : startingPoints) {
     Optimization r = problem.initialPoint(x0).solve(ws);
 }
@@ -305,8 +311,8 @@ new SubplexProblem()
 | `parameterTolerance(double value)` | Convergence tolerance on x | 1e-4 | > 0 |
 | `functionTolerance(double value)` | Convergence tolerance on f | 1e-4 | > 0 |
 | `maxEvaluations(int value)` | Maximum function evaluations | N * 200 | > 0 |
-| `solve(SubplexWorkspace... ws)` | Execute optimization, return result | — | — |
-| `alloc()` | Pre-allocate workspace (for reuse) | — | — |
+| `solve()` / `solve(SubplexWorkspace ws)` | Execute optimization, return result | — | — |
+| `workspace()` | Create new uninitialized workspace (for reuse) | — | — |
 
 ### Complete Example
 
@@ -336,7 +342,7 @@ Optimization result2 = Minimizer.subplex()
 SubplexProblem problem = Minimizer.subplex()
     .objective(fn)
     .initialPoint(new double[n]);
-SubplexWorkspace ws = problem.alloc();
+SubplexWorkspace ws = SubplexProblem.workspace();
 for (double[] x0 : startingPoints) {
     Optimization r = problem.initialPoint(x0).solve(ws);
 }
@@ -358,19 +364,20 @@ new LBFGSBProblem()
 
 | Method | Description | Default | Constraint |
 |---|---|---|---|
-| `objective(Univariate.Objective f)` | Set objective function, automatically uses CENTRAL numerical gradient (**recommended**) | — | f != null |
-| `objective(Univariate f)` | Set objective function with analytic gradient | — | f != null |
+| `objective(Univariate.Objective f)` | Set objective function, automatically uses CENTRAL numerical gradient (**recommended**); signature: `(x, n) -> double` | — | f != null |
+| `objective(Univariate f)` | Set objective function with analytic gradient; signature: `(x, n, g) -> double` | — | f != null |
 | `objective(NumericalGradient grad, Univariate.Objective f)` | Specify numerical gradient method | — | — |
 | `initialPoint(double... x0)` | Set initial point, also infers dimension n | — | non-null, non-empty |
 | `bounds(Bound... bounds)` | Set variable bounds | null (unbounded) | length must match n |
-| `maxIterations(int value)` | Maximum number of iterations | 100 | > 0 |
-| `maxEvaluations(int value)` | Maximum function evaluations | 1000 | > 0 |
-| `gradientTolerance(double value)` | Projected gradient convergence tolerance pgtol | √ε ≈ 1.5e-8 | > 0 |
-| `functionTolerance(double value)` | Function value change tolerance factor factr | 1e7 | >= 1 |
-| `corrections(int m)` | L-BFGS correction number (memory parameter) | 7 | > 0, typical range 3-20 |
+| `maxIterations(int value)` | Maximum number of iterations | 15000 | > 0 |
+| `maxEvaluations(int value)` | Maximum function evaluations | 15000 | > 0 |
+| `gradientTolerance(double value)` | Projected gradient convergence tolerance pgtol | 1e-5 | > 0 |
+| `functionTolerance(double value)` | Function value change tolerance ftol | 1e7·ε ≈ 2.22e-9 | > 0 |
+| `corrections(int m)` | L-BFGS correction number (memory parameter) | 10 | > 0, typical range 3-20 |
+| `maxLineSearchSteps(int value)` | Maximum line search steps per iteration | 20 | > 0 |
 | `maxComputations(Duration value)` | Maximum computation time | null (unlimited) | non-negative |
-| `solve(LBFGSBWorkspace... ws)` | Execute optimization, return result | — | — |
-| `alloc()` | Pre-allocate workspace (for reuse) | — | — |
+| `solve()` / `solve(LBFGSBWorkspace ws)` | Execute optimization, return result | — | — |
+| `workspace()` | Create new uninitialized workspace (for reuse) | — | — |
 
 ### Complete Example
 
@@ -387,7 +394,7 @@ if (result.isSuccessful()) {
 
 // Advanced usage: box constraints + analytic gradient
 Optimization result2 = new LBFGSBProblem()
-    .objective((x, g) -> {
+    .objective((x, n, g) -> {
         double f = x[0]*x[0] + x[1]*x[1];
         if (g != null) { g[0] = 2*x[0]; g[1] = 2*x[1]; }
         return f;
@@ -402,7 +409,7 @@ Optimization result2 = new LBFGSBProblem()
 LBFGSBProblem problem = new LBFGSBProblem()
     .objective((x, n) -> x[0]*x[0])
     .initialPoint(1.0);
-LBFGSBWorkspace ws = problem.alloc();
+LBFGSBWorkspace ws = LBFGSBProblem.workspace();
 for (double[] point : points) {
     Optimization r = problem.initialPoint(point).solve(ws);
 }
@@ -425,19 +432,19 @@ new SLSQPProblem()
 
 | Method | Description | Default | Constraint |
 |---|---|---|---|
-| `objective(Univariate.Objective f)` | Set objective function, automatically uses CENTRAL numerical gradient (**recommended**) | — | f != null |
-| `objective(Univariate f)` | Set objective function with analytic gradient | — | f != null |
-| `equalityConstraints(Univariate.Objective... c)` | Equality constraints c(x) = 0, automatic numerical gradient | — | — |
-| `equalityConstraints(Univariate... c)` | Equality constraints with analytic gradient | — | — |
-| `inequalityConstraints(Univariate.Objective... c)` | Inequality constraints c(x) >= 0, automatic numerical gradient | — | — |
-| `inequalityConstraints(Univariate... c)` | Inequality constraints with analytic gradient | — | — |
+| `objective(Univariate.Objective f)` | Set objective function, automatically uses CENTRAL numerical gradient (**recommended**); signature: `(x, n) -> double` | — | f != null |
+| `objective(Univariate f)` | Set objective function with analytic gradient; signature: `(x, n, g) -> double` | — | f != null |
+| `equalityConstraints(Univariate.Objective... c)` | Equality constraints c(x) = 0, automatic numerical gradient; signature: `(x, n) -> double` | — | — |
+| `equalityConstraints(Univariate... c)` | Equality constraints with analytic gradient; signature: `(x, n, g) -> double` | — | — |
+| `inequalityConstraints(Univariate.Objective... c)` | Inequality constraints c(x) >= 0, automatic numerical gradient; signature: `(x, n) -> double` | — | — |
+| `inequalityConstraints(Univariate... c)` | Inequality constraints with analytic gradient; signature: `(x, n, g) -> double` | — | — |
 | `initialPoint(double... x0)` | Set initial point | — | non-null, non-empty |
 | `bounds(Bound... bounds)` | Set variable bounds | null | length must match n |
 | `functionTolerance(double value)` | Primary convergence tolerance | 1e-6 | > 0 |
 | `maxIterations(int value)` | Maximum number of iterations | 100 | > 0 |
 | `maxEvaluations(int value)` | Maximum function evaluations | 1000 | > 0 |
-| `solve(SLSQPWorkspace... ws)` | Execute optimization, return result | — | — |
-| `alloc()` | Pre-allocate workspace (for reuse) | — | — |
+| `solve()` / `solve(SLSQPWorkspace ws)` | Execute optimization, return result | — | — |
+| `workspace()` | Create new uninitialized workspace (for reuse) | — | — |
 
 ### Complete Example
 
@@ -452,12 +459,12 @@ Optimization result = new SLSQPProblem()
 
 // Mixed constraints + analytic gradient
 Optimization result2 = new SLSQPProblem()
-    .objective((x, g) -> {
+    .objective((x, n, g) -> {
         double f = x[0]*x[0] + x[1]*x[1];
         if (g != null) { g[0] = 2*x[0]; g[1] = 2*x[1]; }
         return f;
     })
-    .equalityConstraints((x, g) -> {
+    .equalityConstraints((x, n, g) -> {
         if (g != null) { g[0] = 1; g[1] = 1; }
         return x[0] + x[1] - 1;
     })
@@ -487,16 +494,19 @@ new TRFProblem()
 
 | Method | Description | Default | Constraint |
 |---|---|---|---|
-| `residuals(Multivariate.Objective fn, int m)` | Set residual function, automatically uses CENTRAL numerical Jacobian (**recommended**) | — | m > 0 |
+| `residuals(Multivariate.Objective fn, int m)` | Set residual function, automatically uses CENTRAL numerical Jacobian (**recommended**); signature: `(x, n, r, m) -> void` | — | m > 0 |
 | `residuals(NumericalJacobian jac, Multivariate.Objective fn, int m)` | Specify numerical Jacobian method | — | m > 0 |
-| `objective(Multivariate f)` | Set multivariate function with analytic Jacobian | — | — |
+| `objective(Multivariate f)` | Set multivariate function with analytic Jacobian; signature: `(x, n, r, m, jac) -> void` | — | — |
 | `initialPoint(double... x0)` | Set initial point, infers n | — | non-null, non-empty |
 | `bounds(Bound... bounds)` | Set variable bounds | null | — |
 | `functionTolerance(double value)` | Function (chi-squared) convergence tolerance | 1e-8 | > 0 |
 | `parameterTolerance(double value)` | Coefficient (step size) convergence tolerance | 1e-8 | > 0 |
 | `gradientTolerance(double value)` | Gradient convergence tolerance | 1e-8 | > 0 |
 | `maxEvaluations(int value)` | Maximum function evaluations | 100*n | > 0 |
-| `solve(TRFWorkspace... ws)` | Execute optimization, return result | — | requires m >= n |
+| `loss(RobustLoss)` | Robust loss function | LINEAR | non-null |
+| `lossScale(double)` | Soft margin C for loss scaling | 1.0 | > 0 |
+| `solve()` / `solve(TRFWorkspace ws)` | Execute optimization, return result | — | requires m >= n |
+| `workspace()` | Create new uninitialized workspace (for reuse) | — | — |
 
 ### Complete Example
 
@@ -556,24 +566,24 @@ RootFinder.broyden(Multivariate.Objective fn, int n)            // → BroydenPr
 
 | Method | Description | Default |
 |---|---|---|
-| `equations(Multivariate.Objective, int n)` | System of equations F(x) = 0 | — (required) |
+| `equations(Multivariate.Objective, int n)` | System of equations F(x) = 0; signature: `(x, n, f, m) -> void` | — (required) |
 | `jacobian(NumericalJacobian)` | Numerical Jacobian method | FORWARD |
 | `functionTolerance(double)` | Convergence tolerance ‖F(x)‖₂ ≤ ftol | 1.49e-8 |
 | `maxEvaluations(int)` | Maximum function evaluations | 200*(n+1) |
 | `initialPoint(double...)` | Initial point | — (required) |
-| `solve(HYBRWorkspace...)` | Execute, return Optimization | — |
-| `alloc()` | Pre-allocate HYBRWorkspace (for reuse) | — |
+| `solve()` / `solve(HYBRWorkspace ws)` | Execute, return Optimization | — |
+| `workspace()` | Create new uninitialized HYBRWorkspace (for reuse) | — |
 
 ### BroydenProblem (N-D Broyden's method, Jacobian-free)
 
 | Method | Description | Default |
 |---|---|---|
-| `equations(Multivariate.Objective, int n)` | System of equations F(x) = 0 | — (required) |
+| `equations(Multivariate.Objective, int n)` | System of equations F(x) = 0; signature: `(x, n, f, m) -> void` | — (required) |
 | `functionTolerance(double)` | Convergence tolerance ‖F(x)‖₂ ≤ ftol | 1.49e-8 |
 | `maxEvaluations(int)` | Maximum iterations | 100*(n+1) |
 | `initialPoint(double...)` | Initial point | — (required) |
-| `solve(BroydenWorkspace...)` | Execute, return Optimization | — |
-| `alloc()` | Pre-allocate BroydenWorkspace (for reuse) | — |
+| `solve()` / `solve(BroydenWorkspace ws)` | Execute, return Optimization | — |
+| `workspace()` | Create new uninitialized BroydenWorkspace (for reuse) | — |
 
 ### Complete Example
 
@@ -606,7 +616,7 @@ Optimization r4 = RootFinder.broyden(fn, 2)
 
 // Workspace reuse (high-frequency root-finding)
 HYBRProblem finder = RootFinder.hybr(fn, n).initialPoint(x0);
-HYBRWorkspace ws = finder.alloc();
+HYBRWorkspace ws = HYBRProblem.workspace();
 for (double[] pt : points) {
     Optimization r = finder.initialPoint(pt).solve(ws);
 }
@@ -999,16 +1009,16 @@ if (r.getStatus().isError()) {
 ### Performance Tips
 
 1. **Use analytic gradients**: When the objective function gradient can be derived manually, using the `Univariate` interface is 2-4x faster than numerical gradients
-2. **Reuse workspaces**: When solving the same-dimension problem multiple times in a loop, use `alloc()` to pre-allocate workspace
+2. **Reuse workspaces**: When solving the same-dimension problem multiple times in a loop, use `XxxProblem.workspace()` to create a workspace and pass it to `solve(ws)`
 3. **Choose the right gradient method**: `CENTRAL` is the default; if function evaluation is expensive, consider `FORWARD`
 4. **Set reasonable tolerances**: Overly tight tolerances increase iteration count; `gradientTolerance(1e-6)` is usually sufficient
 
 ```java
 // High-performance mode: analytic gradient + workspace reuse
 LBFGSBProblem problem = new LBFGSBProblem()
-    .objective((x, g) -> {
+    .objective((x, n, g) -> {
         double f = 0;
-        for (int i = 0; i < x.length; i++) {
+        for (int i = 0; i < n; i++) {
             f += x[i] * x[i];
             if (g != null) g[i] = 2 * x[i];
         }
@@ -1016,7 +1026,7 @@ LBFGSBProblem problem = new LBFGSBProblem()
     })
     .initialPoint(new double[n]);
 
-LBFGSBWorkspace ws = problem.alloc();
+LBFGSBWorkspace ws = LBFGSBProblem.workspace();
 for (double[] startPoint : startPoints) {
     Optimization r = problem.initialPoint(startPoint).solve(ws);
     // process r

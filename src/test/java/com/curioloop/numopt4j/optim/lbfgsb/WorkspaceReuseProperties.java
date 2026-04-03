@@ -257,7 +257,7 @@ public class WorkspaceReuseProperties implements LBFGSBConstants {
                 .gradientTolerance(1e-5)
                 .initialPoint(1.0, 1.0);
 
-        LBFGSBWorkspace ws = problem.alloc();
+        LBFGSBWorkspace ws = LBFGSBProblem.workspace();
 
         // First run
         Optimization result1 = problem.solve(ws);

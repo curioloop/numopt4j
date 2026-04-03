@@ -504,7 +504,8 @@ class CMAESIntegrationTest {
             .stopFitness(1e-8)
             .random(new Random(42));
 
-        CMAESWorkspace ws = p.alloc();
+        CMAESWorkspace ws = new CMAESWorkspace();
+        ws.ensure(5, 10, p.updateMode().separable);
         Optimization r1 = p.solve(ws);
         Optimization r2 = p.solve(ws);
 
@@ -609,7 +610,8 @@ class CMAESIntegrationTest {
             .tolFun(1e-30)
             .updateMode(UpdateMode.ACTIVE_CMA)
             .random(new Random(42));
-        CMAESWorkspace ws = p.alloc();
+        CMAESWorkspace ws = new CMAESWorkspace();
+        ws.ensure(DIM, LAMBDA, p.updateMode().separable);
         p.solve(ws);
 
         // Check condition number of final covariance matrix

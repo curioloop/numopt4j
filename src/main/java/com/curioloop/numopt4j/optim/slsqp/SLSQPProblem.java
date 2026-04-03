@@ -30,8 +30,8 @@ import java.time.Duration;
  * // Recommended entry point: ToDoubleFunction lambda (no gradient required)
  * // Equality constraint: x[0] + x[1] = 1
  * Optimization result = new SLSQPProblem()
- *     .objective(x -> x[0]*x[0] + x[1]*x[1])
- *     .equalityConstraints(x -> x[0] + x[1] - 1)
+ *     .objective((x, n) -> x[0]*x[0] + x[1]*x[1])
+ *     .equalityConstraints((x, n) -> x[0] + x[1] - 1)
  *     .initialPoint(0.5, 0.5)
  *     .solve();
  *
@@ -44,21 +44,31 @@ import java.time.Duration;
  * <pre>{@code
  * // Mixed constraints with analytical gradients for best performance
  * Optimization result = new SLSQPProblem()
- *     .objective((x, g) -> {
+ *     .objective((x, n, g) -> {
  *         double f = x[0]*x[0] + x[1]*x[1];
  *         if (g != null) { g[0] = 2*x[0]; g[1] = 2*x[1]; }
  *         return f;
  *     })
- *     .equalityConstraints((x, g) -> {
+ *     .equalityConstraints((x, n, g) -> {
  *         if (g != null) { g[0] = 1; g[1] = 1; }
  *         return x[0] + x[1] - 1;
  *     })
- *     .inequalityConstraints(x -> x[0] - 0.1)  // x[0] >= 0.1
+ *     .inequalityConstraints((x, n) -> x[0] - 0.1)  // x[0] >= 0.1
  *     .bounds(Bound.atLeast(0), Bound.atLeast(0))
  *     .initialPoint(0.5, 0.5)
- * .functionTolerance(1e-8)
+ *     .functionTolerance(1e-8)
  *     .maxIterations(200)
  *     .solve();
+ *
+ * // Workspace reuse for high-frequency optimization
+ * SLSQPProblem problem = new SLSQPProblem()
+ *     .objective(fn)
+ *     .equalityConstraints(eq)
+ *     .initialPoint(x0);
+ * SLSQPWorkspace ws = SLSQPProblem.workspace();
+ * for (double[] pt : points) {
+ *     problem.initialPoint(pt).solve(ws);
+ * }
  * }</pre>
  *
  * @see com.curioloop.numopt4j.optim.Minimizer
@@ -163,24 +173,14 @@ public final class SLSQPProblem extends Minimizer<Univariate, SLSQPWorkspace, SL
         }
     }
 
-    @Override
-    public SLSQPWorkspace alloc() {
-        validate();
-        if (workspace == null) workspace = new SLSQPWorkspace();
-        workspace.ensure(dimension, numEqualityConstraints(), numInequalityConstraints());
-        return workspace;
+    /**
+     * Creates a new {@link SLSQPWorkspace} for use with {@link #solve(SLSQPWorkspace)}.
+     * Memory is allocated lazily on the first {@code solve()} call.
+     */
+    public static SLSQPWorkspace workspace() {
+        return new SLSQPWorkspace();
     }
 
-    /**
-     * Solves the optimization problem.
-     *
-     * <p>The initial point is cloned internally; {@code initialPoint} is not modified.
-     * The solution is stored in {@link Optimization#getSolution()} and returned
-     * as a direct reference (no defensive copy). The caller owns the returned array.</p>
-     *
-     * @param workspace optional pre-allocated workspace for reuse
-     * @return optimization result
-     */
     @Override
     public Optimization solve(SLSQPWorkspace workspace) {
         validate();

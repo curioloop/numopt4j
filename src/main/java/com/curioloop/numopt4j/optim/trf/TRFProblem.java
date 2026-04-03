@@ -28,7 +28,7 @@ import static com.curioloop.numopt4j.optim.trf.TRFConstants.*;
  * <pre>{@code
  * // Recommended entry point: BiConsumer lambda (no Jacobian required)
  * Optimization result = new TRFProblem()
- *     .residuals((x, r) -> { r[0] = x[0] - 1; r[1] = x[1] - 2; }, 2)
+ *     .residuals((x, n, r, m) -> { r[0] = x[0] - 1; r[1] = x[1] - 2; }, 2)
  *     .initialPoint(0.0, 0.0)
  *     .solve();
  *
@@ -44,7 +44,7 @@ import static com.curioloop.numopt4j.optim.trf.TRFConstants.*;
  * double[] yData = {2.0, 1.2, 0.7, 0.4};
  *
  * Optimization result = new TRFProblem()
- *     .residuals((x, r) -> {
+ *     .residuals((x, n, r, m) -> {
  *         for (int i = 0; i < tData.length; i++) {
  *             r[i] = yData[i] - x[0] * Math.exp(-x[1] * tData[i]);
  *         }
@@ -59,7 +59,7 @@ import static com.curioloop.numopt4j.optim.trf.TRFConstants.*;
  * TRFProblem problem = new TRFProblem()
  *     .residuals(fn, m)
  *     .initialPoint(x0);
- * TRFWorkspace ws = problem.alloc();
+ * TRFWorkspace ws = TRFProblem.workspace();
  * for (Data d : dataList) {
  *     problem.residuals(d::residuals, m).solve(ws);
  * }
@@ -130,18 +130,16 @@ public final class TRFProblem extends Minimizer<Multivariate, TRFWorkspace, TRFP
     }
 
     @Override
-    public TRFWorkspace alloc() {
-        validate();
-        if (workspace == null) {
-            workspace = new TRFWorkspace();
-        }
-        workspace.ensure(numResiduals, dimension);
-        return workspace;
-    }
-
-    @Override
     public Optimization solve() {
         return solve(null);
+    }
+
+    /**
+     * Creates a new {@link TRFWorkspace} for use with {@link #solve(TRFWorkspace)}.
+     * Memory is allocated lazily on the first {@code solve()} call.
+     */
+    public static TRFWorkspace workspace() {
+        return new TRFWorkspace();
     }
 
     /**

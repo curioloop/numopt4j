@@ -101,7 +101,7 @@ if (result.isSuccessful()) {
 
 ```java
 Optimization result = Minimizer.lbfgsb()
-    .objective((x, g) -> {
+    .objective((x, n, g) -> {
         double f = x[0]*x[0] + x[1]*x[1];
         if (g != null) { g[0] = 2*x[0]; g[1] = 2*x[1]; }
         return f;
@@ -234,7 +234,7 @@ LBFGSBProblem problem = Minimizer.lbfgsb()
     .objective((x, n) -> x[0]*x[0] + x[1]*x[1])
     .initialPoint(new double[n]);
 
-LBFGSBWorkspace workspace = problem.alloc();  // allocate once
+LBFGSBWorkspace workspace = LBFGSBProblem.workspace();
 for (double[] point : points) {
     Optimization result = problem.initialPoint(point).solve(workspace);
     // process result
@@ -242,7 +242,7 @@ for (double[] point : points) {
 
 // Root finding workspace reuse
 HYBRProblem finder = RootFinder.hybr(fn, 2).initialPoint(0.0, 0.0);
-HYBRWorkspace ws = finder.alloc();
+HYBRWorkspace ws = HYBRProblem.workspace();
 for (double[] x0 : initialPoints) {
     Optimization r = finder.initialPoint(x0).solve(ws);
 }
