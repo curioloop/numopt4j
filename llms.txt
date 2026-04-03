@@ -82,7 +82,7 @@ import com.curioloop.numopt4j.optim.cmaes.*;
 
 // Basic usage: derivative-free global optimization
 Optimization r = Minimizer.cmaes()
-    .objective(x -> { double s = 0; for (double v : x) s += v*v; return s; })
+    .objective((x, n) -> { double s = 0; for (int i = 0; i < n; i++) s += x[i]*x[i]; return s; })
     .initialPoint(1.0, 1.0, 1.0)
     .solve();
 
@@ -113,7 +113,7 @@ import com.curioloop.numopt4j.optim.subplex.*;
 
 // No gradient required — works for any dimension
 Optimization r = Minimizer.subplex()
-    .objective(x -> x[0]*x[0] + x[1]*x[1])
+    .objective((x, n) -> x[0]*x[0] + x[1]*x[1])
     .initialPoint(1.0, 1.0)
     .solve();
 
@@ -135,7 +135,7 @@ import com.curioloop.numopt4j.optim.*;
 import com.curioloop.numopt4j.optim.lbfgsb.*;
 
 Optimization r = Minimizer.lbfgsb()
-    .objective(x -> x[0]*x[0] + x[1]*x[1])
+    .objective((x, n) -> x[0]*x[0] + x[1]*x[1])
     .bounds(Bound.atLeast(0.5), Bound.atLeast(0.5))
     .initialPoint(1.0, 1.0)
     .solve();
@@ -155,8 +155,8 @@ import com.curioloop.numopt4j.optim.slsqp.*;
 
 // minimize x[0] + x[1], subject to x[0]^2 + x[1]^2 = 1
 Optimization r = Minimizer.slsqp()
-    .objective(x -> x[0] + x[1])
-    .equalityConstraints(x -> x[0]*x[0] + x[1]*x[1] - 1)
+    .objective((x, n) -> x[0] + x[1])
+    .equalityConstraints((x, n) -> x[0]*x[0] + x[1]*x[1] - 1)
     .initialPoint(0.5, 0.5)
     .solve();
 ```
@@ -168,7 +168,7 @@ import com.curioloop.numopt4j.optim.*;
 import com.curioloop.numopt4j.optim.trf.*;
 
 Optimization r = Minimizer.trf()
-    .residuals((x, res) -> {
+    .residuals((x, n, res, m) -> {
         res[0] = x[0] - 3.0;
         res[1] = x[1] - 4.0;
     }, 2)
@@ -196,7 +196,7 @@ import com.curioloop.numopt4j.optim.*;
 import com.curioloop.numopt4j.optim.root.*;
 
 // HYBR (Powell hybrid, requires Jacobian — numerical by default)
-Optimization r = RootFinder.hybr((x, f) -> {
+Optimization r = RootFinder.hybr((x, n, f, m) -> {
         f[0] = x[0]*x[0] - 2;
         f[1] = x[1] - x[0];
     }, 2)
@@ -227,7 +227,7 @@ Minimizer.trf()      // → TRFProblem
 
 ```java
 Minimizer.cmaes()
-    .objective(ToDoubleFunction<double[]>)   // no gradient needed
+    .objective(Univariate.Objective)         // no gradient needed
     .initialPoint(double...)                 // sets x₀ and infers dimension
     .bounds(Bound...)                        // optional, lb ≤ x ≤ ub
     .sigma(double)                           // initial step size σ₀, default 0.3
@@ -276,7 +276,7 @@ In SEP_CMA mode, `mat`, `ctmpBuf` and `eigenWork` are not allocated, reducing me
 
 ```java
 Minimizer.subplex()
-    .objective(ToDoubleFunction<double[]>)   // no gradient needed
+    .objective(Univariate.Objective)         // no gradient needed
     .initialPoint(double...)                 // sets x₀ and infers dimension
     .bounds(Bound...)                        // optional, lb ≤ x ≤ ub
     .initialStep(double...)                  // optional, per-dimension step sizes
@@ -291,7 +291,7 @@ Minimizer.subplex()
 
 ```java
 Minimizer.lbfgsb()
-    .objective(ToDoubleFunction<double[]>)  // auto-uses NumericalGradient.CENTRAL
+    .objective(Univariate.Objective)        // auto-uses NumericalGradient.CENTRAL
     .objective(Univariate)                  // analytic gradient
     .initialPoint(double...)                // sets x₀ and infers dimension
     .bounds(Bound...)                       // optional, lb ≤ x ≤ ub
@@ -309,9 +309,9 @@ Minimizer.lbfgsb()
 
 ```java
 Minimizer.slsqp()
-    .objective(ToDoubleFunction<double[]> / Univariate)
-    .equalityConstraints(ToDoubleFunction<double[]>...)   // c(x) = 0
-    .inequalityConstraints(ToDoubleFunction<double[]>...) // c(x) >= 0
+    .objective(Univariate.Objective / Univariate)
+    .equalityConstraints(Univariate.Objective...)   // c(x) = 0
+    .inequalityConstraints(Univariate.Objective...) // c(x) >= 0
     .initialPoint(double...)
     .bounds(Bound...)
     .functionTolerance(double)              // default 1e-6
@@ -325,7 +325,7 @@ Minimizer.slsqp()
 
 ```java
 Minimizer.trf()
-    .residuals(BiConsumer<double[],double[]>, int m)  // auto-uses NumericalJacobian.CENTRAL
+    .residuals(Multivariate.Objective, int m)  // auto-uses NumericalJacobian.CENTRAL
     .objective(Multivariate)                          // analytic Jacobian
     .initialPoint(double...)
     .bounds(Bound...)
@@ -342,9 +342,9 @@ Minimizer.trf()
 ### RootFinder (facade — static factory entry point)
 
 ```java
-RootFinder.brentq(DoubleUnaryOperator f)                    // → BrentqProblem
-RootFinder.hybr(BiConsumer<double[],double[]> fn, int n)    // → HYBRProblem
-RootFinder.broyden(BiConsumer<double[],double[]> fn, int n) // → BroydenProblem
+RootFinder.brentq(DoubleUnaryOperator f)                        // → BrentqProblem
+RootFinder.hybr(Multivariate.Objective fn, int n)               // → HYBRProblem
+RootFinder.broyden(Multivariate.Objective fn, int n)            // → BroydenProblem
 ```
 
 ### BrentqProblem (1-D Brent's method)
@@ -361,7 +361,7 @@ RootFinder.brentq(DoubleUnaryOperator f)
 ### HYBRProblem (N-D Powell hybrid, MINPACK hybrd)
 
 ```java
-RootFinder.hybr(BiConsumer<double[],double[]> fn, int n)
+RootFinder.hybr(Multivariate.Objective fn, int n)
     .jacobian(NumericalJacobian)    // default FORWARD
     .functionTolerance(double)      // default 1.49e-8
     .maxEvaluations(int)                    // default 200*(n+1)
@@ -373,7 +373,7 @@ RootFinder.hybr(BiConsumer<double[],double[]> fn, int n)
 ### BroydenProblem (N-D Broyden's method, Jacobian-free)
 
 ```java
-RootFinder.broyden(BiConsumer<double[],double[]> fn, int n)
+RootFinder.broyden(Multivariate.Objective fn, int n)
     .functionTolerance(double)      // default 1.49e-8
     .maxEvaluations(int)                    // default 100*(n+1)
     .initialPoint(double...)        // required

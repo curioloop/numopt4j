@@ -9,7 +9,7 @@ import net.jqwik.api.*;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
-import java.util.function.BiConsumer;
+import com.curioloop.numopt4j.optim.Multivariate;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -33,7 +33,7 @@ public class MultiDimensionalFittingTest {
             zData[idx] = trueCoeffs[0] + trueCoeffs[1]*x + trueCoeffs[2]*y + trueCoeffs[3]*x*y;
             zData[idx++] += 0.01*(Math.random()-0.5);
         }
-        BiConsumer<double[], double[]> residualFunc = (c, r) -> {
+        Multivariate.Objective residualFunc = (c, cn, r, rm) -> {
             for (int i = 0; i < m; i++)
                 r[i] = zData[i] - (c[0] + c[1]*xData[i] + c[2]*yData[i] + c[3]*xData[i]*yData[i]);
         };
@@ -61,7 +61,7 @@ public class MultiDimensionalFittingTest {
             zData[idx] = amplitude*Math.exp(-(dx*dx+dy*dy)/(2*width*width));
             zData[idx++] += 0.02*(Math.random()-0.5);
         }
-        BiConsumer<double[], double[]> residualFunc = (c, r) -> {
+        Multivariate.Objective residualFunc = (c, cn, r, rm) -> {
             for (int i = 0; i < m; i++) {
                 double dx = xData[i]-c[1], dy = yData[i]-c[2];
                 r[i] = zData[i] - c[0]*Math.exp(-(dx*dx+dy*dy)/(2*c[3]*c[3]));
@@ -91,7 +91,7 @@ public class MultiDimensionalFittingTest {
                        + trueCoeffs[3]*x*x + trueCoeffs[4]*y*y + trueCoeffs[5]*x*y;
             zData[idx++] += 0.01*(Math.random()-0.5);
         }
-        BiConsumer<double[], double[]> residualFunc = (c, r) -> {
+        Multivariate.Objective residualFunc = (c, cn, r, rm) -> {
             for (int i = 0; i < m; i++)
                 r[i] = zData[i] - (c[0] + c[1]*xData[i] + c[2]*yData[i]
                      + c[3]*xData[i]*xData[i] + c[4]*yData[i]*yData[i] + c[5]*xData[i]*yData[i]);
@@ -114,7 +114,7 @@ public class MultiDimensionalFittingTest {
     void multiDimensionalFittingShouldConverge(
             @ForAll("surfaceFittingProblems") SurfaceFittingProblem problem) {
         double[] ir = new double[problem.m];
-        problem.residualFunction.accept(problem.initialGuess, ir);
+        problem.residualFunction.evaluate(problem.initialGuess, problem.initialGuess.length, ir, ir.length);
         double initialChiSq = 0; for (double v : ir) initialChiSq += v*v;
 
         Optimization result = new TRFProblem()
@@ -142,7 +142,7 @@ public class MultiDimensionalFittingTest {
     static class SurfaceFittingProblem {
         final int m, n = 4;
         final double[] initialGuess;
-        final BiConsumer<double[], double[]> residualFunction;
+        final Multivariate.Objective residualFunction;
 
         SurfaceFittingProblem(int gridSize, double amplitude, double xOffset, double yOffset) {
             this.m = gridSize * gridSize;
@@ -156,7 +156,7 @@ public class MultiDimensionalFittingTest {
                 zData[idx++] += 0.01*(Math.random()-0.5);
             }
             this.initialGuess = new double[]{trueCoeffs[0]*0.8, trueCoeffs[1]*0.9, trueCoeffs[2]*1.1, trueCoeffs[3]*0.85};
-            this.residualFunction = (c, r) -> {
+            this.residualFunction = (c, cn, r, rm) -> {
                 for (int i = 0; i < m; i++)
                     r[i] = zData[i] - (c[0] + c[1]*xData[i] + c[2]*yData[i] + c[3]*xData[i]*yData[i]);
             };
@@ -174,7 +174,7 @@ public class MultiDimensionalFittingTest {
             gridData[idx][0] = x; gridData[idx][1] = y;
             gridData[idx++][2] = trueCoeffs[0] + trueCoeffs[1]*x + trueCoeffs[2]*y + trueCoeffs[3]*x*y;
         }
-        BiConsumer<double[], double[]> residualFunc = (c, r) -> {
+        Multivariate.Objective residualFunc = (c, cn, r, rm) -> {
             for (int i = 0; i < m; i++) {
                 double x = gridData[i][0], y = gridData[i][1], z = gridData[i][2];
                 r[i] = z - (c[0] + c[1]*x + c[2]*y + c[3]*x*y);

@@ -9,8 +9,6 @@ import net.jqwik.api.Property;
 import net.jqwik.api.constraints.IntRange;
 import net.jqwik.api.constraints.LongRange;
 
-import java.util.function.BiConsumer;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
@@ -71,7 +69,7 @@ public class JacobianMethodProperties {
         }
         
         // Create polynomial residual function
-        BiConsumer<double[], double[]> polyFunc = createPolynomialResidualFunction(tData, yData);
+        Multivariate.Objective polyFunc = createPolynomialResidualFunction(tData, yData);
         
         // Compute Jacobians using both methods
         int m = numPoints;
@@ -82,8 +80,8 @@ public class JacobianMethodProperties {
         
         Multivariate forwardEval = NumericalJacobian.FORWARD.wrap(polyFunc, m, n);
         Multivariate centralEval = NumericalJacobian.CENTRAL.wrap(polyFunc, m, n);
-        forwardEval.evaluate(coeffs, residuals, jacobianForward);
-        centralEval.evaluate(coeffs, residuals, jacobianCentral);
+        forwardEval.evaluate(coeffs, n, residuals, m, jacobianForward);
+        centralEval.evaluate(coeffs, n, residuals, m, jacobianCentral);
         
         // Verify both methods produce similar results
         for (int i = 0; i < m; i++) {
@@ -141,7 +139,7 @@ public class JacobianMethodProperties {
         }
         
         // Create exponential residual function
-        BiConsumer<double[], double[]> expFunc = createExponentialResidualFunction(tData, yData);
+        Multivariate.Objective expFunc = createExponentialResidualFunction(tData, yData);
         
         // Compute Jacobians using both methods
         int m = numPoints;
@@ -152,8 +150,8 @@ public class JacobianMethodProperties {
         
         Multivariate forwardEval = NumericalJacobian.FORWARD.wrap(expFunc, m, n);
         Multivariate centralEval = NumericalJacobian.CENTRAL.wrap(expFunc, m, n);
-        forwardEval.evaluate(coeffs, residuals, jacobianForward);
-        centralEval.evaluate(coeffs, residuals, jacobianCentral);
+        forwardEval.evaluate(coeffs, n, residuals, m, jacobianForward);
+        centralEval.evaluate(coeffs, n, residuals, m, jacobianCentral);
         
         // Verify both methods produce similar results
         for (int i = 0; i < m; i++) {
@@ -215,7 +213,7 @@ public class JacobianMethodProperties {
         }
         
         // Create polynomial residual function
-        BiConsumer<double[], double[]> polyFunc = createPolynomialResidualFunction(tData, yData);
+        Multivariate.Objective polyFunc = createPolynomialResidualFunction(tData, yData);
         
         // Compute analytical Jacobian
         int m = numPoints;
@@ -229,8 +227,8 @@ public class JacobianMethodProperties {
         
         Multivariate forwardEval = NumericalJacobian.FORWARD.wrap(polyFunc, m, n);
         Multivariate centralEval = NumericalJacobian.CENTRAL.wrap(polyFunc, m, n);
-        forwardEval.evaluate(coeffs, residuals, jacobianForward);
-        centralEval.evaluate(coeffs, residuals, jacobianCentral);
+        forwardEval.evaluate(coeffs, n, residuals, m, jacobianForward);
+        centralEval.evaluate(coeffs, n, residuals, m, jacobianCentral);
         
         // Compute errors
         double errorForward = computeMaxAbsoluteError(jacobianForward, analyticalJacobian);
@@ -281,7 +279,7 @@ public class JacobianMethodProperties {
         }
         
         // Create exponential residual function
-        BiConsumer<double[], double[]> expFunc = createExponentialResidualFunction(tData, yData);
+        Multivariate.Objective expFunc = createExponentialResidualFunction(tData, yData);
         
         // Compute analytical Jacobian
         int m = numPoints;
@@ -295,8 +293,8 @@ public class JacobianMethodProperties {
         
         Multivariate forwardEval = NumericalJacobian.FORWARD.wrap(expFunc, m, n);
         Multivariate centralEval = NumericalJacobian.CENTRAL.wrap(expFunc, m, n);
-        forwardEval.evaluate(coeffs, residuals, jacobianForward);
-        centralEval.evaluate(coeffs, residuals, jacobianCentral);
+        forwardEval.evaluate(coeffs, n, residuals, m, jacobianForward);
+        centralEval.evaluate(coeffs, n, residuals, m, jacobianCentral);
         
         // Compute errors
         double errorForward = computeMaxAbsoluteError(jacobianForward, analyticalJacobian);
@@ -332,9 +330,9 @@ public class JacobianMethodProperties {
      * Creates a residual function for polynomial model.
      * ŷ_i = a₀ + a₁t_i + a₂t_i² + ...
      */
-    private BiConsumer<double[], double[]> createPolynomialResidualFunction(double[] tData, double[] yData) {
-        return (coefficients, residuals) -> {
-            for (int i = 0; i < tData.length; i++) {
+    private Multivariate.Objective createPolynomialResidualFunction(double[] tData, double[] yData) {
+        return (coefficients, n, residuals, m) -> {
+            for (int i = 0; i < m; i++) {
                 double yPred = evaluatePolynomial(tData[i], coefficients);
                 residuals[i] = yData[i] - yPred;
             }
@@ -345,9 +343,9 @@ public class JacobianMethodProperties {
      * Creates a residual function for exponential model.
      * ŷ_i = a₀ * exp(-a₁ * t_i)
      */
-    private BiConsumer<double[], double[]> createExponentialResidualFunction(double[] tData, double[] yData) {
-        return (coefficients, residuals) -> {
-            for (int i = 0; i < tData.length; i++) {
+    private Multivariate.Objective createExponentialResidualFunction(double[] tData, double[] yData) {
+        return (coefficients, n, residuals, m) -> {
+            for (int i = 0; i < m; i++) {
                 double yPred = coefficients[0] * Math.exp(-coefficients[1] * tData[i]);
                 residuals[i] = yData[i] - yPred;
             }

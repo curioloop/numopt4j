@@ -41,7 +41,7 @@ class WorkspaceReuseProperties {
     /** Build a simple quadratic SLSQPProblem (no constraints). */
     private SLSQPProblem quadraticProblem(int n, double[] x0) {
         return new SLSQPProblem()
-                .objective((double[] x) -> {
+                .objective((x, _n) -> {
                     double f = 0;
                     for (double v : x) f += v * v;
                     return f;
@@ -64,7 +64,7 @@ class WorkspaceReuseProperties {
     ) {
         java.util.Random rand = new java.util.Random(seed);
         SLSQPProblem problem = quadraticProblem(n, new double[n]);
-        SLSQPWorkspace workspace = new SLSQPWorkspace(n, 0, 0);
+        SLSQPWorkspace workspace = new SLSQPWorkspace(); workspace.ensure(n, 0, 0);
 
         for (int i = 0; i < numOptimizations; i++) {
             double[] x = new double[n];
@@ -83,7 +83,7 @@ class WorkspaceReuseProperties {
     ) {
         java.util.Random rand = new java.util.Random(seed);
         SLSQPProblem problem = quadraticProblem(n, new double[n]);
-        SLSQPWorkspace workspace = new SLSQPWorkspace(n, 0, 0);
+        SLSQPWorkspace workspace = new SLSQPWorkspace(); workspace.ensure(n, 0, 0);
 
         for (int i = 0; i < 3; i++) {
             problem.initialPoint(generateInitialPoint(n, rand));
@@ -105,7 +105,7 @@ class WorkspaceReuseProperties {
             @ForAll @IntRange(min = 0, max = 5) int meq,
             @ForAll @IntRange(min = 0, max = 5) int mineq
     ) {
-        SLSQPWorkspace workspace = new SLSQPWorkspace(n, meq, mineq);
+        SLSQPWorkspace workspace = new SLSQPWorkspace(); workspace.ensure(n, meq, mineq);
         workspace.setIter(100);
         workspace.setMode(5);
         workspace.setAlpha(0.5);
@@ -127,7 +127,7 @@ class WorkspaceReuseProperties {
     void resetClearsFindWorkState(
             @ForAll @IntRange(min = 2, max = 10) int n
     ) {
-        SLSQPWorkspace workspace = new SLSQPWorkspace(n, 0, 0);
+        SLSQPWorkspace workspace = new SLSQPWorkspace(); workspace.ensure(n, 0, 0);
         SLSQPWorkspace.FindWork fw = workspace.getFindWork();
         fw.a = 1.0; fw.b = 2.0; fw.x = 1.5; fw.fx = 100.0;
 
@@ -145,7 +145,7 @@ class WorkspaceReuseProperties {
             @ForAll @IntRange(min = 0, max = 5) int meq,
             @ForAll @IntRange(min = 0, max = 5) int mineq
     ) {
-        SLSQPWorkspace workspace = new SLSQPWorkspace(n, meq, mineq);
+        SLSQPWorkspace workspace = new SLSQPWorkspace(); workspace.ensure(n, meq, mineq);
         double[] bufferBefore = workspace.getBuffer();
         int[] iBufferBefore = workspace.getIBuffer();
 
@@ -165,7 +165,7 @@ class WorkspaceReuseProperties {
             @ForAll @IntRange(min = 0, max = 10) int meq,
             @ForAll @IntRange(min = 0, max = 10) int mineq
     ) {
-        SLSQPWorkspace workspace = new SLSQPWorkspace(n, meq, mineq);
+        SLSQPWorkspace workspace = new SLSQPWorkspace(); workspace.ensure(n, meq, mineq);
         assertTrue(workspace.isCompatible(n, meq, mineq));
     }
 
@@ -176,7 +176,7 @@ class WorkspaceReuseProperties {
             @ForAll @IntRange(min = 0, max = 5) int mineq,
             @ForAll @IntRange(min = 1, max = 5) int delta
     ) {
-        SLSQPWorkspace workspace = new SLSQPWorkspace(n, meq, mineq);
+        SLSQPWorkspace workspace = new SLSQPWorkspace(); workspace.ensure(n, meq, mineq);
         assertFalse(workspace.isCompatible(n + delta, meq, mineq));
         assertFalse(workspace.isCompatible(n - 1, meq, mineq));
     }
@@ -187,7 +187,7 @@ class WorkspaceReuseProperties {
             @ForAll @IntRange(min = 1, max = 5) int meq,
             @ForAll @IntRange(min = 0, max = 5) int mineq
     ) {
-        SLSQPWorkspace workspace = new SLSQPWorkspace(n, meq, mineq);
+        SLSQPWorkspace workspace = new SLSQPWorkspace(); workspace.ensure(n, meq, mineq);
         assertFalse(workspace.isCompatible(n, meq + 1, mineq));
         assertFalse(workspace.isCompatible(n, meq - 1, mineq));
     }
@@ -198,21 +198,24 @@ class WorkspaceReuseProperties {
             @ForAll @IntRange(min = 0, max = 5) int meq,
             @ForAll @IntRange(min = 1, max = 5) int mineq
     ) {
-        SLSQPWorkspace workspace = new SLSQPWorkspace(n, meq, mineq);
+        SLSQPWorkspace workspace = new SLSQPWorkspace(); workspace.ensure(n, meq, mineq);
         assertFalse(workspace.isCompatible(n, meq, mineq + 1));
         assertFalse(workspace.isCompatible(n, meq, mineq - 1));
     }
 
     @Property(tries = 50)
-    void problemRejectsIncompatibleWorkspace(
+    void problemAutoResizesIncompatibleWorkspace(
             @ForAll @IntRange(min = 2, max = 5) int n,
             @ForAll @IntRange(min = 1, max = 3) int delta
     ) {
         SLSQPProblem problem = quadraticProblem(n, new double[n]);
-        SLSQPWorkspace workspace = new SLSQPWorkspace(n + delta, 0, 0);
+        SLSQPWorkspace workspace = new SLSQPWorkspace(); workspace.ensure(n + delta, 0, 0);
 
-        assertThrows(IllegalArgumentException.class, () -> problem.solve(workspace),
-                "Problem should reject incompatible workspace");
+        // Problem should auto-resize workspace and succeed
+        Optimization result = problem.solve(workspace);
+        assertNotNull(result, "Problem should auto-resize workspace and return a result");
+        // Workspace should have at least the problem's dimensions
+        assertNotNull(workspace.getBuffer(), "Workspace buffer should be allocated");
     }
 
     // ========================================================================
@@ -228,7 +231,7 @@ class WorkspaceReuseProperties {
         double[] initialPoint = generateInitialPoint(n, rand);
 
         SLSQPProblem problem = quadraticProblem(n, initialPoint.clone());
-        SLSQPWorkspace workspace = new SLSQPWorkspace(n, 0, 0);
+        SLSQPWorkspace workspace = new SLSQPWorkspace(); workspace.ensure(n, 0, 0);
 
         Optimization result1 = problem.solve(workspace);
         problem.initialPoint(initialPoint.clone());
@@ -247,10 +250,12 @@ class WorkspaceReuseProperties {
         double[] initialPoint = generateInitialPoint(n, rand);
 
         SLSQPProblem p1 = quadraticProblem(n, initialPoint.clone());
-        Optimization result1 = p1.solve(new SLSQPWorkspace(n, 0, 0));
+        SLSQPWorkspace ws1 = new SLSQPWorkspace(); ws1.ensure(n, 0, 0);
+        Optimization result1 = p1.solve(ws1);
 
         SLSQPProblem p2 = quadraticProblem(n, initialPoint.clone());
-        Optimization result2 = p2.solve(new SLSQPWorkspace(n, 0, 0));
+        SLSQPWorkspace ws2 = new SLSQPWorkspace(); ws2.ensure(n, 0, 0);
+        Optimization result2 = p2.solve(ws2);
 
         assertEquals(result1.getCost(), result2.getCost(), EPSILON);
         assertEquals(result1.getStatus(), result2.getStatus());
@@ -269,9 +274,10 @@ class WorkspaceReuseProperties {
         double[] initialPoint = generateInitialPoint(n, rand);
 
         SLSQPProblem problem = quadraticProblem(n, initialPoint.clone());
-        Optimization resultFresh = problem.solve(new SLSQPWorkspace(n, 0, 0));
+        SLSQPWorkspace freshWs = new SLSQPWorkspace(); freshWs.ensure(n, 0, 0);
+        Optimization resultFresh = problem.solve(freshWs);
 
-        SLSQPWorkspace reusedWs = new SLSQPWorkspace(n, 0, 0);
+        SLSQPWorkspace reusedWs = new SLSQPWorkspace(); reusedWs.ensure(n, 0, 0);
         // "dirty" the workspace
         problem.initialPoint(generateInitialPoint(n, new java.util.Random(seed + 1)));
         problem.solve(reusedWs);
@@ -290,7 +296,7 @@ class WorkspaceReuseProperties {
     ) {
         java.util.Random rand = new java.util.Random(seed);
         SLSQPProblem problem = quadraticProblem(n, new double[n]);
-        SLSQPWorkspace workspace = new SLSQPWorkspace(n, 0, 0);
+        SLSQPWorkspace workspace = new SLSQPWorkspace(); workspace.ensure(n, 0, 0);
 
         for (int i = 0; i < 10; i++) {
             problem.initialPoint(generateInitialPoint(n, rand));
@@ -308,10 +314,10 @@ class WorkspaceReuseProperties {
 
     @Property(tries = 50)
     void workspaceAllocationValidatesInputs() {
-        assertThrows(IllegalArgumentException.class, () -> new SLSQPWorkspace(0, 0, 0));
-        assertThrows(IllegalArgumentException.class, () -> new SLSQPWorkspace(-1, 0, 0));
-        assertThrows(IllegalArgumentException.class, () -> new SLSQPWorkspace(5, -1, 0));
-        assertThrows(IllegalArgumentException.class, () -> new SLSQPWorkspace(5, 0, -1));
+        assertThrows(IllegalArgumentException.class, () -> new SLSQPWorkspace().ensure(0, 0, 0));
+        assertThrows(IllegalArgumentException.class, () -> new SLSQPWorkspace().ensure(-1, 0, 0));
+        assertThrows(IllegalArgumentException.class, () -> new SLSQPWorkspace().ensure(5, -1, 0));
+        assertThrows(IllegalArgumentException.class, () -> new SLSQPWorkspace().ensure(5, 0, -1));
     }
 
     @Property(tries = 100)
@@ -320,7 +326,7 @@ class WorkspaceReuseProperties {
             @ForAll @IntRange(min = 0, max = 10) int meq,
             @ForAll @IntRange(min = 0, max = 10) int mineq
     ) {
-        SLSQPWorkspace workspace = new SLSQPWorkspace(n, meq, mineq);
+        SLSQPWorkspace workspace = new SLSQPWorkspace(); workspace.ensure(n, meq, mineq);
         assertEquals(n, workspace.getN());
         assertEquals(meq, workspace.getMeq());
         assertEquals(mineq, workspace.getMineq());
@@ -335,7 +341,7 @@ class WorkspaceReuseProperties {
             @ForAll @IntRange(min = 0, max = 5) int meq,
             @ForAll @IntRange(min = 0, max = 5) int mineq
     ) {
-        SLSQPWorkspace workspace = new SLSQPWorkspace(n, meq, mineq);
+        SLSQPWorkspace workspace = new SLSQPWorkspace(); workspace.ensure(n, meq, mineq);
         assertNotNull(workspace.getBuffer());
         assertNotNull(workspace.getIBuffer());
         assertTrue(workspace.getBuffer().length > 0);
@@ -355,14 +361,14 @@ class WorkspaceReuseProperties {
         Univariate eqConstraint = TestTemplates.sumConstraint(1.0);
 
         SLSQPProblem problem = new SLSQPProblem()
-                .objective((double[] x) -> { double f = 0; for (double v : x) f += v * v; return f; })
+                .objective((x, _n) -> { double f = 0; for (double v : x) f += v * v; return f; })
                 .equalityConstraints(eqConstraint)
                 .maxIterations(300)
                 .functionTolerance(1e-12)
                 .nnlsIterations(100)
                 .initialPoint(new double[n]);
 
-        SLSQPWorkspace workspace = new SLSQPWorkspace(n, 1, 0);
+        SLSQPWorkspace workspace = new SLSQPWorkspace(); workspace.ensure(n, 1, 0);
 
         for (int i = 0; i < 3; i++) {
             double[] x = new double[n];
@@ -383,14 +389,14 @@ class WorkspaceReuseProperties {
         Univariate ineqConstraint = TestTemplates.inequalityAtIndex(0, -0.5);
 
         SLSQPProblem problem = new SLSQPProblem()
-                .objective((double[] x) -> { double f = 0; for (double v : x) f += v * v; return f; })
+                .objective((x, _n) -> { double f = 0; for (double v : x) f += v * v; return f; })
                 .inequalityConstraints(ineqConstraint)
                 .maxIterations(300)
                 .functionTolerance(1e-12)
                 .nnlsIterations(100)
                 .initialPoint(new double[n]);
 
-        SLSQPWorkspace workspace = new SLSQPWorkspace(n, 0, 1);
+        SLSQPWorkspace workspace = new SLSQPWorkspace(); workspace.ensure(n, 0, 1);
 
         for (int i = 0; i < 3; i++) {
             double[] x = new double[n];

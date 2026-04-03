@@ -182,7 +182,7 @@ public class CauchyPointProperties implements LBFGSBConstants {
         int n = 5;
         int m = 3;
         
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
             int[] iBuffer = ws.getIntBuffer();
             int whereOffset = ws.getWhereOffset();
             int indexOffset = ws.getIndexOffset();
@@ -224,7 +224,7 @@ public class CauchyPointProperties implements LBFGSBConstants {
         int[] boundType = {BOUND_BOTH, BOUND_BOTH, BOUND_BOTH};
         double[] z = new double[n];
         
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
             // Initialize workspace state
             ws.setSbgNorm(1.0);  // Non-zero projected gradient norm
             ws.setTheta(1.0);
@@ -493,7 +493,7 @@ public class CauchyPointProperties implements LBFGSBConstants {
         java.util.Random random = new java.util.Random(seed);
         int m = 5;
         
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
             int[] iBuffer = ws.getIntBuffer();
             int whereOffset = ws.getWhereOffset();
             int indexOffset = ws.getIndexOffset();
@@ -558,7 +558,7 @@ public class CauchyPointProperties implements LBFGSBConstants {
         java.util.Random random = new java.util.Random(seed);
         int m = 5;
         
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
             int[] iBuffer = ws.getIntBuffer();
             int whereOffset = ws.getWhereOffset();
             int indexOffset = ws.getIndexOffset();
@@ -642,7 +642,7 @@ public class CauchyPointProperties implements LBFGSBConstants {
             g[i] = random.nextGaussian() * 2;
         }
         
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
             // Initialize workspace
             ws.setSbgNorm(1.0);  // Non-zero to trigger computation
             ws.setTheta(1.0);
@@ -708,7 +708,7 @@ public class CauchyPointProperties implements LBFGSBConstants {
             g[i] = random.nextGaussian();
         }
         
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
             // Set projected gradient norm to zero
             ws.setSbgNorm(0.0);
             ws.setTheta(1.0);
@@ -775,7 +775,7 @@ public class CauchyPointProperties implements LBFGSBConstants {
             g[i] = random.nextGaussian() * 2;
         }
         
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
             ws.setSbgNorm(1.0);
             ws.setTheta(1.0);
             ws.setCol(0);
@@ -856,7 +856,7 @@ public class CauchyPointProperties implements LBFGSBConstants {
             }
         }
         
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
             ws.setSbgNorm(1.0);
             ws.setTheta(1.0);
             ws.setCol(0);
@@ -922,7 +922,7 @@ public class CauchyPointProperties implements LBFGSBConstants {
         double[] z2 = new double[n];
         
         // First computation
-        LBFGSBWorkspace ws1 = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws1 = new LBFGSBWorkspace(); ws1.ensure(n, m);
             ws1.setSbgNorm(1.0);
             ws1.setTheta(1.0);
             ws1.setCol(0);
@@ -938,7 +938,7 @@ public class CauchyPointProperties implements LBFGSBConstants {
             System.arraycopy(ws1.getBuffer(), ws1.getZOffset(), z1, 0, n);
         
         // Second computation with fresh workspace
-        LBFGSBWorkspace ws2 = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws2 = new LBFGSBWorkspace(); ws2.ensure(n, m);
             ws2.setSbgNorm(1.0);
             ws2.setTheta(1.0);
             ws2.setCol(0);

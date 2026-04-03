@@ -61,7 +61,7 @@ public class LbfgsbIntegrationTest {
         
         // Define the log-likelihood objective function
         // f(x) = log(sum(exp(F*x))) - K'*x
-        Univariate logLikelihood = (x, g) -> {
+        Univariate logLikelihood = (x, n, g) -> {
             // Compute F*x
             double[] Fx = matrixVectorMultiply(F, F_ROWS, F_COLS, x);
             
@@ -209,7 +209,7 @@ public class LbfgsbIntegrationTest {
         
         // Define the 25-dimensional Rosenbrock function
         // f(x) = 0.25*(x[0]-1)^2 + sum_{i=1}^{n-1}[(x[i] - x[i-1]^2)^2] * 4
-        Univariate rosenbrock = (x, g) -> {
+        Univariate rosenbrock = (x, xn, g) -> {
             // Compute function value
             double f = 0.25 * Math.pow(x[0] - 1.0, 2);
             for (int i = 1; i < n; i++) {

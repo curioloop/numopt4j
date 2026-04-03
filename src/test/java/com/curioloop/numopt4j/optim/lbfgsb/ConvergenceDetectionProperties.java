@@ -36,7 +36,7 @@ public class ConvergenceDetectionProperties implements LBFGSBConstants {
     static final Univariate rosenbrock = TestTemplates.rosenbrock(); // REPLACED inline rosenbrock
 
     // Simple quadratic: f(x) = sum(x_i^2)
-    static final Univariate quadratic = (point, grad) -> {
+    static final Univariate quadratic = (point, _n, grad) -> {
         double f = 0.0;
         for (int i = 0; i < point.length; i++) {
             f += point[i] * point[i];
@@ -66,7 +66,7 @@ public class ConvergenceDetectionProperties implements LBFGSBConstants {
         int[] boundType = {BOUND_BOTH, BOUND_BOTH, BOUND_BOTH};
         com.curioloop.numopt4j.optim.Bound[] bounds = TestBounds.toBounds(n, lower, upper, boundType);
         
-        Univariate objective = (point, grad) -> {
+        Univariate objective = (point, _n, grad) -> {
             double f = 0.0;
             for (int i = 0; i < point.length; i++) {
                 f += point[i] * point[i];
@@ -77,7 +77,7 @@ public class ConvergenceDetectionProperties implements LBFGSBConstants {
             return f;
         };
         
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
             double pgtol = 1e-5;
             double factr = 1e7;
             int maxIter = 100;
@@ -114,7 +114,7 @@ public class ConvergenceDetectionProperties implements LBFGSBConstants {
         double[] upper = {10.0, 10.0, 10.0};
         int[] boundType = {BOUND_BOTH, BOUND_BOTH, BOUND_BOTH};
         
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
             double pgtol = 1e-15;  // Very tight tolerance
             double factr = 1e-15; // Very tight tolerance
             int maxIter = 3;      // Very low iteration limit
@@ -150,7 +150,7 @@ public class ConvergenceDetectionProperties implements LBFGSBConstants {
         double[] upper = {10.0, 10.0, 10.0};
         int[] boundType = {BOUND_BOTH, BOUND_BOTH, BOUND_BOTH};
         
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
             double pgtol = 1e-15;  // Very tight tolerance
             double factr = 1e-15; // Very tight tolerance
             int maxIter = 1000;
@@ -186,7 +186,7 @@ public class ConvergenceDetectionProperties implements LBFGSBConstants {
         double[] upper = {10.0, 10.0};
         int[] boundType = {BOUND_BOTH, BOUND_BOTH};
         
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
             double pgtol = 1e-15;  // Very tight gradient tolerance
             double factr = 1e12;   // Loose function value tolerance
             int maxIter = 100;
@@ -264,7 +264,7 @@ public class ConvergenceDetectionProperties implements LBFGSBConstants {
             boundType[i] = BOUND_BOTH;
         }
         
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
             double pgtol = 1e-5;
             double factr = 1e-15;  // Very tight function tolerance (won't trigger)
             int maxIter = 100;
@@ -321,7 +321,7 @@ public class ConvergenceDetectionProperties implements LBFGSBConstants {
             boundType[i] = BOUND_BOTH;
         }
         
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
             double pgtol = 1e-15;  // Very tight gradient tolerance
             double factr = 1e12;   // Loose function value tolerance
             int maxIter = 100;
@@ -372,7 +372,7 @@ public class ConvergenceDetectionProperties implements LBFGSBConstants {
             boundType[i] = BOUND_BOTH;
         }
         
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
             double pgtol = 1e-15;  // Very tight tolerance
             double factr = 1e-15; // Very tight tolerance
             int maxEval = 1000;
@@ -428,7 +428,7 @@ public class ConvergenceDetectionProperties implements LBFGSBConstants {
             boundType[i] = BOUND_BOTH;
         }
         
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
             double pgtol = 1e-15;  // Very tight tolerance
             double factr = 1e-15; // Very tight tolerance
             int maxIter = 1000;
@@ -622,7 +622,7 @@ public class ConvergenceDetectionProperties implements LBFGSBConstants {
         }
         
         // Simple quadratic
-        Univariate quadratic = (point, grad) -> {
+        Univariate quadratic = (point, _n, grad) -> {
             double f = 0.0;
             for (int i = 0; i < point.length; i++) {
                 f += point[i] * point[i];
@@ -633,7 +633,7 @@ public class ConvergenceDetectionProperties implements LBFGSBConstants {
             return f;
         };
         
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
             double pgtol = 1e-5;
             double factr = 1e7;
             int maxIter = 100;
@@ -699,7 +699,7 @@ public class ConvergenceDetectionProperties implements LBFGSBConstants {
             boundType[i] = i % 4;  // Cycle through NONE, LOWER, BOTH, UPPER
         }
         
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
             double pgtol = 1e-5;
             double factr = 1e7;
             int maxIter = 100;
@@ -753,7 +753,7 @@ public class ConvergenceDetectionProperties implements LBFGSBConstants {
         // Quadratic with minimum at origin (which is at lower bound)
         // f(x) = sum((x_i - (-1))^2) = sum((x_i + 1)^2)
         // Minimum at x = -1, but constrained to x >= 0, so minimum at x = 0
-        Univariate quadratic = (point, grad) -> {
+        Univariate quadratic = (point, _n, grad) -> {
             double f = 0.0;
             for (int i = 0; i < point.length; i++) {
                 double diff = point[i] + 1.0;  // Unconstrained min at -1
@@ -765,7 +765,7 @@ public class ConvergenceDetectionProperties implements LBFGSBConstants {
             return f;
         };
         
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
             double pgtol = 1e-5;
             double factr = 1e7;
             int maxIter = 100;

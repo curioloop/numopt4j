@@ -1,6 +1,5 @@
 package com.curioloop.numopt4j.optim;
 
-import java.util.function.BiConsumer;
 import java.util.function.DoubleUnaryOperator;
 
 import com.curioloop.numopt4j.optim.root.BrentqProblem;
@@ -75,7 +74,7 @@ public abstract class RootFinder<F, W, S extends RootFinder<F, W, S>> implements
      * @param n  number of equations / unknowns
      * @return configured {@link HYBRProblem} builder
      */
-    public static HYBRProblem hybr(BiConsumer<double[], double[]> fn, int n) {
+    public static HYBRProblem hybr(Multivariate.Objective fn, int n) {
         return new HYBRProblem().equations(fn, n);
     }
 
@@ -89,7 +88,7 @@ public abstract class RootFinder<F, W, S extends RootFinder<F, W, S>> implements
      * @param n  number of equations / unknowns
      * @return configured {@link BroydenProblem} builder
      */
-    public static BroydenProblem broyden(BiConsumer<double[], double[]> fn, int n) {
+    public static BroydenProblem broyden(Multivariate.Objective fn, int n) {
         return new BroydenProblem().equations(fn, n);
     }
 

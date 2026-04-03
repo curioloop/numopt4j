@@ -394,7 +394,7 @@ class LineSearchProperties {
         java.util.Random rand = new java.util.Random(seed);
 
         // Create workspace
-        SLSQPWorkspace ws = new SLSQPWorkspace(n, 0, 0);
+        SLSQPWorkspace ws = new SLSQPWorkspace(); ws.ensure(n, 0, 0);
 
         // Generate initial position and search direction
         double[] x0 = generateVector(n, rand);
@@ -598,7 +598,7 @@ class LineSearchProperties {
     ) {
         java.util.Random rand = new java.util.Random(seed);
 
-        SLSQPWorkspace ws = new SLSQPWorkspace(n, 0, 0);
+        SLSQPWorkspace ws = new SLSQPWorkspace(); ws.ensure(n, 0, 0);
 
         double[] x0 = generateVector(n, rand);
         double[] s = generateDescentDirection(n, rand);

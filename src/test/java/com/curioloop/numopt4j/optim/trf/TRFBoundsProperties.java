@@ -8,7 +8,7 @@ import com.curioloop.numopt4j.optim.Optimization;
 
 import net.jqwik.api.*;
 
-import java.util.function.BiConsumer;
+import com.curioloop.numopt4j.optim.Multivariate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -58,7 +58,7 @@ public class TRFBoundsProperties {
     static class QuadraticProblem {
         final int m;
         final double[] tData, yData, initialGuess;
-        final BiConsumer<double[], double[]> fn;
+        final Multivariate.Objective fn;
 
         QuadraticProblem(int m, double[] coeffs, double noise) {
             this.m = m;
@@ -72,8 +72,8 @@ public class TRFBoundsProperties {
             initialGuess = new double[3];
             for (int i = 0; i < 3; i++)
                 initialGuess[i] = coeffs[i] + 0.5 * (rng.nextDouble() - 0.5);
-            fn = (c, r) -> {
-                for (int i = 0; i < m; i++) {
+            fn = (c, n, r, mm) -> {
+                for (int i = 0; i < mm; i++) {
                     double t = tData[i];
                     r[i] = yData[i] - (c[0] + c[1]*t + c[2]*t*t);
                 }

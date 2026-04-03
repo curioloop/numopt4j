@@ -4,11 +4,10 @@
 package com.curioloop.numopt4j.optim.trf;
 
 import com.curioloop.numopt4j.optim.Bound;
+import com.curioloop.numopt4j.optim.Multivariate;
 import com.curioloop.numopt4j.optim.Optimization;
 
 import org.junit.jupiter.api.Test;
-
-import java.util.function.BiConsumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
@@ -18,7 +17,7 @@ import static org.assertj.core.api.Assertions.within;
  */
 class TRFCorrectnessTest {
 
-    private static TRFProblem trf(int m, int n, BiConsumer<double[], double[]> fn,
+    private static TRFProblem trf(int m, int n, Multivariate.Objective fn,
                                    Bound[] bounds, int maxfev) {
         TRFProblem p = new TRFProblem()
             .residuals(fn, m)
@@ -41,7 +40,7 @@ class TRFCorrectnessTest {
     @Test
     void linearLeastSquares_unbounded() {
         int m = 3, n = 2;
-        BiConsumer<double[], double[]> fn = (x, r) -> {
+        Multivariate.Objective fn = (x, xn, r, rm) -> {
             r[0] = 2*x[0] + x[1] - 5;
             r[1] = x[0] + 3*x[1] - 10;
             r[2] = x[1] - 3;
@@ -58,7 +57,7 @@ class TRFCorrectnessTest {
     @Test
     void rosenbrock_unbounded() {
         int m = 2, n = 2;
-        BiConsumer<double[], double[]> fn = (x, r) -> {
+        Multivariate.Objective fn = (x, xn, r, rm) -> {
             r[0] = 10 * (x[1] - x[0]*x[0]);
             r[1] = 1 - x[0];
         };
@@ -73,7 +72,7 @@ class TRFCorrectnessTest {
     @Test
     void rosenbrock_bounded_solutionInside() {
         int m = 2, n = 2;
-        BiConsumer<double[], double[]> fn = (x, r) -> {
+        Multivariate.Objective fn = (x, xn, r, rm) -> {
             r[0] = 10 * (x[1] - x[0]*x[0]);
             r[1] = 1 - x[0];
         };
@@ -90,7 +89,7 @@ class TRFCorrectnessTest {
     @Test
     void rosenbrock_bounded_solutionOnBoundary() {
         int m = 2, n = 2;
-        BiConsumer<double[], double[]> fn = (x, r) -> {
+        Multivariate.Objective fn = (x, xn, r, rm) -> {
             r[0] = 10 * (x[1] - x[0]*x[0]);
             r[1] = 1 - x[0];
         };
@@ -109,7 +108,7 @@ class TRFCorrectnessTest {
         int m = 20, n = 2;
         double[] t = new double[m], y = new double[m];
         for (int i = 0; i < m; i++) { t[i] = i * 0.2; y[i] = 2.0 * Math.exp(-0.5 * t[i]); }
-        BiConsumer<double[], double[]> fn = (x, r) -> {
+        Multivariate.Objective fn = (x, xn, r, rm) -> {
             for (int i = 0; i < m; i++) r[i] = y[i] - x[0] * Math.exp(-x[1] * t[i]);
         };
         Optimization r = trf(m, n, fn, null, 500).initialPoint(1.0, 1.0).solve();
@@ -125,7 +124,7 @@ class TRFCorrectnessTest {
         int m = 20, n = 2;
         double[] t = new double[m], y = new double[m];
         for (int i = 0; i < m; i++) { t[i] = i * 0.2; y[i] = 2.0 * Math.exp(-0.5 * t[i]); }
-        BiConsumer<double[], double[]> fn = (x, r) -> {
+        Multivariate.Objective fn = (x, xn, r, rm) -> {
             for (int i = 0; i < m; i++) r[i] = y[i] - x[0] * Math.exp(-x[1] * t[i]);
         };
         Bound[] bounds = {Bound.atLeast(0), Bound.atLeast(0)};
@@ -141,7 +140,7 @@ class TRFCorrectnessTest {
     @Test
     void nonNegativeLeastSquares() {
         int m = 3, n = 2;
-        BiConsumer<double[], double[]> fn = (x, r) -> {
+        Multivariate.Objective fn = (x, xn, r, rm) -> {
             r[0] = x[0] - (-1.0);
             r[1] = x[1] - (-1.0);
             r[2] = x[0] + x[1] - 0.0;
@@ -159,7 +158,7 @@ class TRFCorrectnessTest {
     @Test
     void boundedStepConsistency() {
         int m = 1, n = 1;
-        BiConsumer<double[], double[]> fn = (x, r) -> r[0] = x[0] - 5.0;
+        Multivariate.Objective fn = (x, xn, r, rm) -> r[0] = x[0] - 5.0;
         Bound[] bounds = {Bound.between(0, 3)};
         Optimization r = trf(m, n, fn, bounds, 200).initialPoint(1.0).solve();
         double[] sol = r.getSolution();

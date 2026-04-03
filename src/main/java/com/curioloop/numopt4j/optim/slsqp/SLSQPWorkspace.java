@@ -97,92 +97,92 @@ public final class SLSQPWorkspace {
     // ========================================================================
 
     /** Problem dimension (number of variables) */
-    private final int n;
+    private int n;
 
     /** Number of equality constraints */
-    private final int meq;
+    private int meq;
 
     /** Number of inequality constraints */
-    private final int mineq;
+    private int mineq;
 
     /** Total number of constraints (meq + mineq) */
-    private final int m;
+    private int m;
 
     /** n + 1 (used frequently in calculations) */
-    private final int n1;
+    private int n1;
 
     /** max(1, m) - leading dimension for constraint arrays */
-    private final int la;
+    private int la;
 
     // ========================================================================
     // Unified Buffers
     // ========================================================================
 
     /** Unified double buffer for all floating-point arrays */
-    private final double[] buffer;
+    private double[] buffer;
 
     /** Unified integer buffer for integer workspace */
-    private final int[] iBuffer;
+    private int[] iBuffer;
 
     // ========================================================================
     // Double Array Offsets
     // ========================================================================
 
     /** Offset for LDL^T factor array l[(n+1)*(n+2)/2] */
-    private final int lOffset;
+    private int lOffset;
 
     /** Offset for initial position array x0[n] */
-    private final int x0Offset;
+    private int x0Offset;
 
     /** Offset for gradient array g[n+1] */
-    private final int gOffset;
+    private int gOffset;
 
     /** Offset for constraint values array c[la] */
-    private final int cOffset;
+    private int cOffset;
 
     /** Offset for constraint Jacobian array a[la × (n+1)] (column-major) */
-    private final int aOffset;
+    private int aOffset;
 
     /** Offset for penalty multipliers array mu[la] */
-    private final int muOffset;
+    private int muOffset;
 
     /** Offset for search direction array s[n+1] */
-    private final int sOffset;
+    private int sOffset;
 
     /** Offset for lower bound difference array u[n+1] */
-    private final int uOffset;
+    private int uOffset;
 
     /** Offset for upper bound difference array v[n+1] */
-    private final int vOffset;
+    private int vOffset;
 
     /** Offset for multipliers array r[m + 2n + 2] */
-    private final int rOffset;
+    private int rOffset;
 
     /** Offset for general workspace array w[...] */
-    private final int wOffset;
+    private int wOffset;
 
     // ========================================================================
     // Integer Array Offsets
     // ========================================================================
 
     /** Offset for integer workspace array jw[...] */
-    private final int jwOffset;
+    private int jwOffset;
 
     // ========================================================================
     // Array Sizes (for documentation and validation)
     // ========================================================================
 
     /** Size of l array: (n+1)*(n+2)/2 */
-    private final int lSize;
+    private int lSize;
 
     /** Size of r array: m + 2n + 2 */
-    private final int rSize;
+    private int rSize;
 
     /** Size of w array (general workspace) */
-    private final int wSize;
+    private int wSize;
 
     /** Size of jw array (integer workspace) */
-    private final int jwSize;
+    private int jwSize;
 
     // ========================================================================
     // Iteration State Variables
@@ -220,21 +220,17 @@ public final class SLSQPWorkspace {
     private int lineMode;
 
     /** Exact line search workspace */
-    private final FindWork fw;
+    private final FindWork fw = new FindWork();
 
     // ========================================================================
-    // Constructor
+    // Constructors
     // ========================================================================
 
     /**
-     * Creates a new workspace for the given problem dimensions.
-     *
-     * @param n      problem dimension (number of variables), must be positive
-     * @param meq    number of equality constraints, must be non-negative
-     * @param mineq  number of inequality constraints, must be non-negative
-     * @throws IllegalArgumentException if n <= 0, meq < 0, or mineq < 0
+     * Initializes (or re-initializes) the workspace for the given dimensions.
+     * Computes all offsets and allocates buffers.
      */
-    public SLSQPWorkspace(int n, int meq, int mineq) {
+    private void init(int n, int meq, int mineq) {
         // Validate inputs
         if (n <= 0) {
             throw new IllegalArgumentException("Problem dimension n must be positive: " + n);
@@ -317,11 +313,29 @@ public final class SLSQPWorkspace {
 
         // Allocate integer buffer
         this.iBuffer = new int[jwSize];
+    }
 
-        // Initialize exact line search workspace
-        this.fw = new FindWork();
-
-        // Initialize state
+    /**
+     * Ensures this workspace has sufficient capacity for the given dimensions.
+     * Reallocates if needed (any dimension differs), then resets state.
+     *
+     * @param n      problem dimension (number of variables), must be positive
+     * @param meq    number of equality constraints, must be non-negative
+     * @param mineq  number of inequality constraints, must be non-negative
+     */
+    public void ensure(int n, int meq, int mineq) {
+        if (n <= 0) {
+            throw new IllegalArgumentException("Problem dimension n must be positive: " + n);
+        }
+        if (meq < 0) {
+            throw new IllegalArgumentException("Number of equality constraints meq must be non-negative: " + meq);
+        }
+        if (mineq < 0) {
+            throw new IllegalArgumentException("Number of inequality constraints mineq must be non-negative: " + mineq);
+        }
+        if (n > getN() || meq != getMeq() || mineq != getMineq()) {
+            init(n, meq, mineq);
+        }
         reset();
     }
 
@@ -349,15 +363,11 @@ public final class SLSQPWorkspace {
 
         // Reset line search state
         this.lineMode = SLSQPConstants.FIND_NOOP;
-        this.fw.reset();
+        if (this.fw != null) this.fw.reset();
 
         // Note: We do NOT zero the arrays here for performance.
         // The algorithm initializes the arrays as needed.
     }
-
-    // ========================================================================
-    // Compatibility Check
-    // ========================================================================
 
     /**
      * Checks if this workspace is compatible with the given problem dimensions.
@@ -373,23 +383,6 @@ public final class SLSQPWorkspace {
      * @return true if this workspace can be used for the given dimensions
      */
     public boolean isCompatible(int n, int meq, int mineq) {
-        return this.n == n && this.meq == meq && this.mineq == mineq;
-    }
-
-    /**
-     * Ensures this workspace has sufficient capacity for the given dimensions.
-     *
-     * <p>Since SLSQP workspace dimensions are fixed at construction time,
-     * this method returns {@code true} if the current workspace can be reused
-     * (dimensions match exactly), or {@code false} if a new workspace must be
-     * allocated by the caller.</p>
-     *
-     * @param n      required problem dimension
-     * @param meq    required number of equality constraints
-     * @param mineq  required number of inequality constraints
-     * @return true if this workspace is sufficient; false if reallocation is needed
-     */
-    public boolean ensureCapacity(int n, int meq, int mineq) {
         return this.n == n && this.meq == meq && this.mineq == mineq;
     }
 

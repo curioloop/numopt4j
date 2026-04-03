@@ -20,7 +20,8 @@ public class CMAESWorkspaceProperties {
             @ForAll @IntRange(min = 1, max = 30) int n,
             @ForAll @IntRange(min = 4, max = 50) int lambda) {
 
-        CMAESWorkspace ws = new CMAESWorkspace(n, lambda);
+        CMAESWorkspace ws = new CMAESWorkspace();
+        ws.ensure(n, lambda, false);
 
         // Arena sizes
         assertThat(ws.nVec.length).isEqualTo(8 * n);
@@ -65,7 +66,8 @@ public class CMAESWorkspaceProperties {
             @ForAll @IntRange(min = 2, max = 15) int n,
             @ForAll @IntRange(min = 4, max = 20) int lambda) {
 
-        CMAESWorkspace ws = new CMAESWorkspace(n, lambda);
+        CMAESWorkspace ws = new CMAESWorkspace();
+        ws.ensure(n, lambda, false);
 
         // Dirty the workspace
         for (int i = 0; i < n; i++) ws.nVec[ws.XMEAN + i] = i + 1.0;

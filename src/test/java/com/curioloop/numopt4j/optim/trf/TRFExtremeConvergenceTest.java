@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
-import java.util.function.BiConsumer;
+import com.curioloop.numopt4j.optim.Multivariate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
@@ -34,7 +34,7 @@ import static org.assertj.core.api.Assertions.within;
 class TRFExtremeConvergenceTest {
 
     /** Builds a standard TRF problem with tight tolerances. */
-    private static TRFProblem trf(int m, BiConsumer<double[], double[]> fn, Bound[] bounds) {
+    private static TRFProblem trf(int m, Multivariate.Objective fn, Bound[] bounds) {
         TRFProblem p = new TRFProblem()
             .residuals(fn, m)
             .functionTolerance(1e-10)
@@ -62,7 +62,7 @@ class TRFExtremeConvergenceTest {
     // scipy: solution=[2.0, 5.0], cost=0.5
     @Test
     void solutionExactlyOnBound() {
-        BiConsumer<double[], double[]> fn = (x, r) -> {
+        Multivariate.Objective fn = (x, n, r, m) -> {
             r[0] = x[0] - 3.0;
             r[1] = x[1] - 5.0;
         };
@@ -98,7 +98,7 @@ class TRFExtremeConvergenceTest {
             for (int j = 0; j < 4; j++)
                 b[i] += H[i][j] * xTrue[j];
 
-        BiConsumer<double[], double[]> fn = (x, r) -> {
+        Multivariate.Objective fn = (x, nn, r, mm) -> {
             for (int i = 0; i < 4; i++) {
                 r[i] = -b[i];
                 for (int j = 0; j < 4; j++) r[i] += H[i][j] * x[j];
@@ -128,7 +128,7 @@ class TRFExtremeConvergenceTest {
         for (int j = 0; j < n; j++) xTrue[j] = j + 1.0;
         for (int i = 0; i < m; i++) b[i] = (i % n + 1.0) * xTrue[i % n];
 
-        BiConsumer<double[], double[]> fn = (x, r) -> {
+        Multivariate.Objective fn = (x, nn, r, mm) -> {
             for (int i = 0; i < m; i++) r[i] = (i % n + 1.0) * x[i % n] - b[i];
         };
         double[] x0 = new double[n]; // all-zero initial point
@@ -147,7 +147,7 @@ class TRFExtremeConvergenceTest {
     // scipy: solution=[1,1], cost=1.0
     @Test
     void tightBoundsForcesCornerSolution() {
-        BiConsumer<double[], double[]> fn = (x, r) -> {
+        Multivariate.Objective fn = (x, n, r, m) -> {
             r[0] = x[0] - 2.0;
             r[1] = x[1] - 2.0;
         };
@@ -168,7 +168,7 @@ class TRFExtremeConvergenceTest {
     // scipy: solution=[1,2], cost=0
     @Test
     void veryFarInitialPoint() {
-        BiConsumer<double[], double[]> fn = (x, r) -> {
+        Multivariate.Objective fn = (x, n, r, m) -> {
             r[0] = x[0] - 1.0;
             r[1] = x[1] - 2.0;
         };
@@ -187,7 +187,7 @@ class TRFExtremeConvergenceTest {
     // scipy: solution=[1,1], cost=0
     @Test
     void flatValleyHighAspectRatio() {
-        BiConsumer<double[], double[]> fn = (x, r) -> {
+        Multivariate.Objective fn = (x, n, r, m) -> {
             r[0] = 100.0 * (x[1] - x[0] * x[0]);
             r[1] = 1.0 - x[0];
         };
@@ -209,7 +209,7 @@ class TRFExtremeConvergenceTest {
     // scipy: solution≈[1.857, 0.214], cost≈0.893
     @Test
     void overdeterminedSystemNoExactSolution() {
-        BiConsumer<double[], double[]> fn = (x, r) -> {
+        Multivariate.Objective fn = (x, n, r, m) -> {
             r[0] = x[0] + x[1] - 1.0;
             r[1] = x[0] - x[1] - 2.0;
             r[2] = x[0] + 2.0 * x[1] - 3.0;
@@ -232,7 +232,7 @@ class TRFExtremeConvergenceTest {
     // scipy: solution=[1,2,1.5], cost≈3.625
     @Test
     void multipleActiveConstraintsSimultaneously() {
-        BiConsumer<double[], double[]> fn = (x, r) -> {
+        Multivariate.Objective fn = (x, n, r, m) -> {
             r[0] = x[0] - 3.0;
             r[1] = x[1] - 3.0;
             r[2] = x[2] - 3.0;
@@ -259,7 +259,7 @@ class TRFExtremeConvergenceTest {
     // Verifies correctness of makeStrictlyFeasible + clScaling in the 1-D case.
     @Test
     void singleVariableBoundedConvergence() {
-        BiConsumer<double[], double[]> fn = (x, r) -> r[0] = x[0] - 5.0;
+        Multivariate.Objective fn = (x, n, r, m) -> r[0] = x[0] - 5.0;
         Bound[] bounds = { Bound.between(0.0, 3.0) };
         Optimization result = trf(1, fn, bounds).initialPoint(1.0).solve();
         double[] sol = result.getSolution();
@@ -283,7 +283,7 @@ class TRFExtremeConvergenceTest {
             t[i] = i * 0.3;
             y[i] = trueA * Math.exp(-trueB * t[i]);
         }
-        BiConsumer<double[], double[]> fn = (x, r) -> {
+        Multivariate.Objective fn = (x, nn, r, mm) -> {
             for (int i = 0; i < m; i++) r[i] = y[i] - x[0] * Math.exp(-x[1] * t[i]);
         };
         Bound[] bounds = { Bound.atLeast(0.0), Bound.atLeast(0.0) };
@@ -319,7 +319,7 @@ class TRFExtremeConvergenceTest {
         y[10] -= 8.0;
         y[15] += 12.0;
 
-        BiConsumer<double[], double[]> fn = (x, r) -> {
+        Multivariate.Objective fn = (x, nn, r, mm) -> {
             for (int i = 0; i < m; i++) r[i] = y[i] - x[0] * Math.exp(-x[1] * t[i]);
         };
         Bound[] bounds = { Bound.between(0.0, 5.0), Bound.between(0.0, 2.0) };

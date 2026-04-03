@@ -1,10 +1,9 @@
 package com.curioloop.numopt4j.optim.root;
 
+import com.curioloop.numopt4j.optim.Multivariate;
 import com.curioloop.numopt4j.optim.NumericalJacobian;
 import com.curioloop.numopt4j.optim.Optimization;
 import com.curioloop.numopt4j.optim.RootFinder;
-
-import java.util.function.BiConsumer;
 
 /**
  * Multi-dimensional root finder using the Powell hybrid method (MINPACK {@code hybrd}).
@@ -19,7 +18,7 @@ import java.util.function.BiConsumer;
  * Optimization r = finder.solve(ws);
  * }</pre>
  */
-public final class HYBRProblem extends RootFinder<BiConsumer<double[], double[]>, HYBRWorkspace, HYBRProblem> {
+public final class HYBRProblem extends RootFinder<Multivariate.Objective, HYBRWorkspace, HYBRProblem> {
 
     private NumericalJacobian jacobian = NumericalJacobian.FORWARD;
     private double ftol = HYBRSolver.DEFAULT_FTOL;
@@ -28,7 +27,8 @@ public final class HYBRProblem extends RootFinder<BiConsumer<double[], double[]>
     public HYBRProblem() {}
 
     /** Sets the system of equations {@code F(x) = 0}. */
-    public HYBRProblem equations(BiConsumer<double[], double[]> fn, int n) {
+    public HYBRProblem equations(Multivariate.Objective fn, int n) {
+        if (fn == null) throw new IllegalArgumentException("fn must not be null");
         if (n < 1) throw new IllegalArgumentException("n must be >= 1, got " + n);
         this.function = fn;
         this.dimension = n;
@@ -67,7 +67,8 @@ public final class HYBRProblem extends RootFinder<BiConsumer<double[], double[]>
     public HYBRWorkspace alloc() {
         if (dimension < 1) throw new IllegalStateException(
             "Problem dimension n is unknown; call equations(fn, n) or initialPoint(x0) first");
-        if (workspace == null) workspace = new HYBRWorkspace(dimension);
+        if (workspace == null) workspace = new HYBRWorkspace();
+        workspace.ensure(dimension);
         return workspace;
     }
 
@@ -80,7 +81,7 @@ public final class HYBRProblem extends RootFinder<BiConsumer<double[], double[]>
             throw new IllegalStateException(
                 "Missing required parameter: initialPoint. Call .initialPoint(x0) before .solve().");
         HYBRWorkspace ws0 = ws != null ? ws : alloc();
-        ws0.reset();
+        ws0.ensure(dimension);
         int maxfev = maxEvaluations > 0 ? maxEvaluations : HYBRSolver.DEFAULT_MAXFEV_FACTOR * (dimension + 1);
         return HYBRSolver.solve(jacobian.wrap(function, dimension, dimension, true), initialPoint, ftol, maxfev, ws0);
     }

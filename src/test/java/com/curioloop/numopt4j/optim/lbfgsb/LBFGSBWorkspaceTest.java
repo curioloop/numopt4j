@@ -28,7 +28,8 @@ class LBFGSBWorkspaceTest {
         int n = 10;
         int m = 5;
 
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace();
+        ws.ensure(n, m);
             assertEquals(n, ws.getDimension());
             assertEquals(m, ws.getCorrections());
     }
@@ -36,16 +37,17 @@ class LBFGSBWorkspaceTest {
     @Test
     @DisplayName("allocate() should throw for invalid dimensions")
     void testAllocateInvalidDimensions() {
-        assertThrows(IllegalArgumentException.class, () -> new LBFGSBWorkspace(0, 5));
-        assertThrows(IllegalArgumentException.class, () -> new LBFGSBWorkspace(-1, 5));
-        assertThrows(IllegalArgumentException.class, () -> new LBFGSBWorkspace(10, 0));
-        assertThrows(IllegalArgumentException.class, () -> new LBFGSBWorkspace(10, -1));
+        assertThrows(IllegalArgumentException.class, () -> { LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(0, 5); });
+        assertThrows(IllegalArgumentException.class, () -> { LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(-1, 5); });
+        assertThrows(IllegalArgumentException.class, () -> { LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(10, 0); });
+        assertThrows(IllegalArgumentException.class, () -> { LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(10, -1); });
     }
 
     @Test
     @DisplayName("isCompatible() should return true for matching dimensions")
     void testIsCompatible() {
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(10, 5);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace();
+        ws.ensure(10, 5);
             assertTrue(ws.isCompatible(10, 5));
             assertFalse(ws.isCompatible(10, 6));
             assertFalse(ws.isCompatible(11, 5));
@@ -55,7 +57,8 @@ class LBFGSBWorkspaceTest {
     @Test
     @DisplayName("reset() should reset state without reallocating memory")
     void testReset() {
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(10, 5);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace();
+        ws.ensure(10, 5);
             // Get buffer references before reset
             double[] bufferBefore = ws.getBuffer();
             int[] iBufferBefore = ws.getIntBuffer();
@@ -88,7 +91,8 @@ class LBFGSBWorkspaceTest {
         int n = 10;
         int m = 5;
 
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace();
+        ws.ensure(n, m);
             double[] buffer = ws.getBuffer();
             int[] iBuffer = ws.getIntBuffer();
 
@@ -106,7 +110,8 @@ class LBFGSBWorkspaceTest {
         int n = 10;
         int m = 5;
 
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace();
+        ws.ensure(n, m);
             // Verify offsets are non-negative and within buffer bounds
             double[] buffer = ws.getBuffer();
 
@@ -138,7 +143,8 @@ class LBFGSBWorkspaceTest {
     @Test
     @DisplayName("BFGS state should be properly initialized")
     void testBfgsStateInitialization() {
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(10, 5);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace();
+        ws.ensure(10, 5);
             assertEquals(0, ws.getCol());
             assertEquals(0, ws.getHead());
             assertEquals(0, ws.getTail());
@@ -150,7 +156,8 @@ class LBFGSBWorkspaceTest {
     @Test
     @DisplayName("resetBfgs() should reset only BFGS state")
     void testResetBfgs() {
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(10, 5);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace();
+        ws.ensure(10, 5);
             // Set some BFGS state
             ws.setCol(3);
             ws.setHead(2);
@@ -183,13 +190,15 @@ class LBFGSBWorkspaceTest {
     @DisplayName("close() should mark workspace as closed")
     void testClose() {
         // LBFGSBWorkspace does not implement Closeable; verify instantiation succeeds
-        assertDoesNotThrow(() -> new LBFGSBWorkspace(10, 5));
+        LBFGSBWorkspace ws = new LBFGSBWorkspace();
+        assertDoesNotThrow(() -> ws.ensure(10, 5));
     }
 
     @Test
     @DisplayName("Line search state should be properly initialized")
     void testLineSearchStateInitialization() {
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(10, 5);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace();
+        ws.ensure(10, 5);
         LBFGSBWorkspace.SearchCtx ctx = ws.getSearchCtx();
             assertEquals(0, ctx.numEval);
             assertEquals(0, ctx.numBack);
@@ -204,7 +213,8 @@ class LBFGSBWorkspaceTest {
     @Test
     @DisplayName("Iteration context should be properly initialized")
     void testIterationContextInitialization() {
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(10, 5);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace();
+        ws.ensure(10, 5);
             assertEquals(0, ws.getIter());
             assertEquals(0, ws.getTotalEval());
             assertEquals(0, ws.getSeg());
@@ -246,7 +256,8 @@ class LBFGSBWorkspaceTest {
     @Test
     @DisplayName("toString() should return meaningful representation")
     void testToString() {
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(10, 5);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace();
+        ws.ensure(10, 5);
             String str = ws.toString();
             assertTrue(str.contains("n=10"));
             assertTrue(str.contains("m=5"));
@@ -259,7 +270,8 @@ class LBFGSBWorkspaceTest {
         int n = 1000;
         int m = 20;
 
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace();
+        ws.ensure(n, m);
             assertEquals(n, ws.getDimension());
             assertEquals(m, ws.getCorrections());
 
@@ -293,7 +305,8 @@ class LBFGSBWorkspaceTest {
     @Test
     @DisplayName("incrementTotalEval() should increment counter")
     void testIncrementTotalEval() {
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(10, 5);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace();
+        ws.ensure(10, 5);
             assertEquals(0, ws.getTotalEval());
             ws.incrementTotalEval();
             assertEquals(1, ws.getTotalEval());
@@ -304,7 +317,8 @@ class LBFGSBWorkspaceTest {
     @Test
     @DisplayName("incrementResetCount() should increment counter")
     void testIncrementResetCount() {
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(10, 5);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace();
+        ws.ensure(10, 5);
             assertEquals(0, ws.getResetCount());
             ws.incrementResetCount();
             assertEquals(1, ws.getResetCount());

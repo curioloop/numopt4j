@@ -68,9 +68,7 @@ package com.curioloop.numopt4j.optim.subplex;
 
 import com.curioloop.numopt4j.optim.Bound;
 import com.curioloop.numopt4j.optim.Optimization;
-
-
-import java.util.function.ToDoubleFunction;
+import com.curioloop.numopt4j.optim.Univariate;
 final class NelderMead {
 
     private static final double NONZDELT = 0.05;
@@ -103,7 +101,7 @@ final class NelderMead {
     static Optimization.Status optimize(
             int n,
             double[] x,
-            ToDoubleFunction<double[]> func,
+            Univariate.Objective func,
             Bound[] bounds,
             int maxIter,
             int maxEval,
@@ -353,15 +351,15 @@ final class NelderMead {
     /**
      * Evaluates function, returning +Inf if result is NaN or Inf.
      */
-    private static double safeEval(ToDoubleFunction<double[]> func, double[] pt, int n) {
-        double f = func.applyAsDouble(pt);
+    private static double safeEval(Univariate.Objective func, double[] pt, int n) {
+        double f = func.evaluate(pt, n);
         return Double.isFinite(f) ? f : Double.MAX_VALUE;
     }
 
     /**
      * Evaluates function at sim[off..off+n), copying to tmp buffer first.
      */
-    private static double safeEval(ToDoubleFunction<double[]> func, double[] sim,
+    private static double safeEval(Univariate.Objective func, double[] sim,
                                    int off, int n, double[] tmp) {
         System.arraycopy(sim, off, tmp, 0, n);
         return safeEval(func, tmp, n);

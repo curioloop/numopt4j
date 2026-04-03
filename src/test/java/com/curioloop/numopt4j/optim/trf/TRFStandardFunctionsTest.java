@@ -3,11 +3,10 @@
  */
 package com.curioloop.numopt4j.optim.trf;
 
+import com.curioloop.numopt4j.optim.Multivariate;
 import com.curioloop.numopt4j.optim.Optimization;
 
 import org.junit.jupiter.api.Test;
-
-import java.util.function.BiConsumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
@@ -27,7 +26,7 @@ class TRFStandardFunctionsTest {
         final int m = 10;
         double[] xd = {0,1,2,3,4,5,6,7,8,9};
         double[] yd = {1,3,5,7,9,11,13,15,17,19};
-        BiConsumer<double[], double[]> fn = (c, r) -> {
+        Multivariate.Objective fn = (c, cn, r, rm) -> {
             for (int i = 0; i < m; i++) r[i] = yd[i] - (c[0] + c[1] * xd[i]);
         };
         Optimization r = new TRFProblem()
@@ -50,7 +49,7 @@ class TRFStandardFunctionsTest {
         double trueA = 3.0, trueK = 0.5;
         double[] td = new double[m], yd = new double[m];
         for (int i = 0; i < m; i++) { td[i] = i * 0.2; yd[i] = trueA * Math.exp(-trueK * td[i]); }
-        BiConsumer<double[], double[]> fn = (c, r) -> {
+        Multivariate.Objective fn = (c, cn, r, rm) -> {
             for (int i = 0; i < m; i++) r[i] = yd[i] - c[0] * Math.exp(-c[1] * td[i]);
         };
         Optimization r = new TRFProblem()
@@ -70,7 +69,7 @@ class TRFStandardFunctionsTest {
     @Test
     void rosenbrockConvergesFromClassicStart() {
         final int m = 2;
-        BiConsumer<double[], double[]> fn = (c, r) -> {
+        Multivariate.Objective fn = (c, cn, r, rm) -> {
             r[0] = 10.0 * (c[1] - c[0]*c[0]);
             r[1] = 1.0 - c[0];
         };
@@ -86,7 +85,7 @@ class TRFStandardFunctionsTest {
     @Test
     void rosenbrockConvergesFromMultipleStartingPoints() {
         final int m = 3; // padded with r[2]=0 to satisfy m >= n
-        BiConsumer<double[], double[]> fn = (c, r) -> {
+        Multivariate.Objective fn = (c, cn, r, rm) -> {
             r[0] = 10.0 * (c[1] - c[0]*c[0]);
             r[1] = 1.0 - c[0];
             r[2] = 0.0;
@@ -110,7 +109,7 @@ class TRFStandardFunctionsTest {
     @Test
     void bealeConvergesFromStandardStart() {
         final int m = 4;
-        BiConsumer<double[], double[]> fn = (c, r) -> {
+        Multivariate.Objective fn = (c, cn, r, rm) -> {
             r[0] = 1.5   - c[0] * (1.0 - c[1]);
             r[1] = 2.25  - c[0] * (1.0 - c[1]*c[1]);
             r[2] = 2.625 - c[0] * (1.0 - c[1]*c[1]*c[1]);
@@ -128,7 +127,7 @@ class TRFStandardFunctionsTest {
     @Test
     void bealeConvergesFromNearSolution() {
         final int m = 4;
-        BiConsumer<double[], double[]> fn = (c, r) -> {
+        Multivariate.Objective fn = (c, cn, r, rm) -> {
             r[0] = 1.5   - c[0] * (1.0 - c[1]);
             r[1] = 2.25  - c[0] * (1.0 - c[1]*c[1]);
             r[2] = 2.625 - c[0] * (1.0 - c[1]*c[1]*c[1]);
@@ -147,7 +146,7 @@ class TRFStandardFunctionsTest {
     @Test
     void powellSingularConvergesOrReachesLimit() {
         final int m = 5;
-        BiConsumer<double[], double[]> fn = (c, r) -> {
+        Multivariate.Objective fn = (c, cn, r, rm) -> {
             r[0] = c[0] + 10.0 * c[1];
             r[1] = Math.sqrt(5.0) * (c[2] - c[3]);
             r[2] = (c[1] - 2.0*c[2]) * (c[1] - 2.0*c[2]);
@@ -176,7 +175,7 @@ class TRFStandardFunctionsTest {
             yd[i] = tc[0]*Math.exp(-t/tc[1]) + tc[2]*t*Math.exp(-t/tc[3])
                   + 0.01 * (Math.random() - 0.5);
         }
-        BiConsumer<double[], double[]> fn = (c, r) -> {
+        Multivariate.Objective fn = (c, cn, r, rm) -> {
             for (int i = 0; i < m; i++) {
                 double t = td[i];
                 r[i] = yd[i] - (c[0]*Math.exp(-t/c[1]) + c[2]*t*Math.exp(-t/c[3]));
@@ -203,7 +202,7 @@ class TRFStandardFunctionsTest {
             yd[i] = tc[0]*x + tc[1]*x*x + tc[2]*x*x*x + tc[3]*x*x*x*x
                   + 0.01 * (Math.random() - 0.5);
         }
-        BiConsumer<double[], double[]> fn = (c, r) -> {
+        Multivariate.Objective fn = (c, cn, r, rm) -> {
             for (int i = 0; i < m; i++) {
                 double x = td[i] / mt;
                 r[i] = yd[i] - (c[0]*x + c[1]*x*x + c[2]*x*x*x + c[3]*x*x*x*x);

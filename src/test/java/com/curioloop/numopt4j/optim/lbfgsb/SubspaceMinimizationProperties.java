@@ -40,7 +40,7 @@ class SubspaceMinimizationProperties implements LBFGSBConstants {
             @ForAll @IntRange(min = 2, max = 20) int n,
             @ForAll @IntRange(min = 1, max = 5) int m
     ) {
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
 
         // Initialize workspace state
         ws.setTheta(1.0);
@@ -101,7 +101,7 @@ class SubspaceMinimizationProperties implements LBFGSBConstants {
             @ForAll @IntRange(min = 2, max = 20) int n,
             @ForAll @IntRange(min = 1, max = 5) int m
     ) {
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
 
         // Initialize workspace state
         ws.setTheta(1.0);
@@ -180,7 +180,7 @@ class SubspaceMinimizationProperties implements LBFGSBConstants {
     }
 
     private double[] runOptimalDirection(int n, int m) {
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
 
         ws.setTheta(1.0);
         ws.setCol(0);
@@ -239,7 +239,7 @@ class SubspaceMinimizationProperties implements LBFGSBConstants {
             @ForAll @IntRange(min = 2, max = 20) int n,
             @ForAll @IntRange(min = 1, max = 5) int m
     ) {
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
 
         // Set up unconstrained case with col > 0
         ws.setTheta(1.0);
@@ -295,7 +295,7 @@ class SubspaceMinimizationProperties implements LBFGSBConstants {
             @ForAll @IntRange(min = 2, max = 10) int n,
             @ForAll @IntRange(min = 1, max = 3) int m
     ) {
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
 
         ws.setTheta(1.0);
         ws.setCol(0);
@@ -356,7 +356,7 @@ class SubspaceMinimizationProperties implements LBFGSBConstants {
             @ForAll @IntRange(min = 2, max = 10) int n,
             @ForAll @IntRange(min = 1, max = 3) int m
     ) {
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
 
         ws.setTheta(1.0);
         ws.setCol(0);
@@ -412,7 +412,7 @@ class SubspaceMinimizationProperties implements LBFGSBConstants {
             @ForAll @IntRange(min = 2, max = 20) int n,
             @ForAll @IntRange(min = 1, max = 5) int m
     ) {
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
 
         double theta = 2.0;
         ws.setTheta(theta);
@@ -470,7 +470,7 @@ class SubspaceMinimizationProperties implements LBFGSBConstants {
             @ForAll @IntRange(min = 2, max = 10) int n,
             @ForAll @IntRange(min = 1, max = 3) int m
     ) {
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
 
         ws.setTheta(1.0);
         ws.setCol(0);

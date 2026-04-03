@@ -11,7 +11,6 @@ import net.jqwik.api.*;
 import net.jqwik.api.constraints.*;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Property-based tests for workspace reuse functionality.
@@ -48,7 +47,7 @@ public class WorkspaceReuseProperties {
         Optimization baselineResult = problem.initialPoint(createInitialPoint(n, 1.0)).solve();
 
         // Now test with workspace reuse
-        LBFGSBWorkspace workspace = new LBFGSBWorkspace(n, 10);
+        LBFGSBWorkspace workspace = new LBFGSBWorkspace();
             Optimization[] results = new Optimization[numOptimizations];
 
             // Run multiple optimizations with the same workspace
@@ -128,7 +127,7 @@ public class WorkspaceReuseProperties {
         Optimization baselineResult = problem.initialPoint(createInitialPoint(n, 1.0)).solve();
 
         // Now test with workspace reuse
-        SLSQPWorkspace workspace = new SLSQPWorkspace(n, 0, 0);
+        SLSQPWorkspace workspace = new SLSQPWorkspace();
             Optimization[] results = new Optimization[numOptimizations];
 
             // Run multiple optimizations with the same workspace
@@ -161,24 +160,21 @@ public class WorkspaceReuseProperties {
     }
 
     /**
-     * Property 2: Dimension Mismatch Error Handling
+     * Property 2: Workspace Auto-Resize on Dimension Mismatch
      * 
      * For any workspace dimension (n1, m1) and problem dimension (n2, m2),
-     * when n1 ≠ n2 or m1 ≠ m2, the optimize method should throw an
-     * IllegalArgumentException indicating dimension mismatch.
+     * when dimensions differ, the workspace should auto-resize and the
+     * optimization should still succeed.
      * 
      */
     @Property(tries = 100)
-    @Label("Feature: jni-optimization, Property 2: Dimension Mismatch Error Handling")
-    void dimensionMismatchThrowsException(
+    @Label("Feature: jni-optimization, Property 2: Workspace Auto-Resize on Dimension Mismatch")
+    void dimensionMismatchAutoResizes(
             @ForAll @IntRange(min = 2, max = 20) int workspaceN,
             @ForAll @IntRange(min = 3, max = 10) int workspaceM,
             @ForAll @IntRange(min = 2, max = 20) int problemN,
             @ForAll @IntRange(min = 3, max = 10) int problemM
     ) {
-        // Skip cases where dimensions match (no mismatch to test)
-        Assume.that(workspaceN != problemN || workspaceM != problemM);
-
         // Create a simple quadratic objective function
         Univariate quadratic = TestTemplates.quadratic();;
 
@@ -191,13 +187,18 @@ public class WorkspaceReuseProperties {
                 .maxEvaluations(500)
                 .gradientTolerance(1e-6);
 
-        // Create workspace with different dimensions (n1, m1)
-        LBFGSBWorkspace workspace = new LBFGSBWorkspace(workspaceN, workspaceM);
-            double[] initialPoint = createInitialPoint(problemN, 1.0);
+        // Create workspace with potentially different dimensions (n1, m1)
+        LBFGSBWorkspace workspace = new LBFGSBWorkspace();
+        // Pre-initialize with different dimensions to test auto-resize
+        workspace.ensure(workspaceN, workspaceM);
 
-            // Attempting to optimize with mismatched workspace should throw IllegalArgumentException
-            assertThatThrownBy(() -> problem.initialPoint(initialPoint).solve(workspace))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("do not match");
+        double[] initialPoint = createInitialPoint(problemN, 1.0);
+
+        // Workspace should auto-resize and optimization should not throw
+        Optimization result = problem.initialPoint(initialPoint).solve(workspace);
+        assertThat(result).isNotNull();
+        // After ensure, workspace should have at least the problem's dimensions
+        assertThat(workspace.getDimension()).isGreaterThanOrEqualTo(problemN);
+        assertThat(workspace.getCorrections()).isGreaterThanOrEqualTo(problemM);
     }
 }

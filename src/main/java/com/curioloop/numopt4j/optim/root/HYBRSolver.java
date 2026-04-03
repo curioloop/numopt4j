@@ -130,7 +130,7 @@ public final class HYBRSolver {
         final int      lr        = n * (n + 1) / 2;
 
         System.arraycopy(x0, 0, x, 0, n);
-        eval.evaluate(x, fvec, null);
+        eval.evaluate(x, n, fvec, n, null);
         int nfev = 1;
         for (double v : fvec) {
             if (Double.isNaN(v) || Double.isInfinite(v))
@@ -152,7 +152,7 @@ public final class HYBRSolver {
         while (true) {
 
             // ── Compute Jacobian (col-major) ──────────────────────────────────
-            eval.evaluate(x, fvec, fjac);
+            eval.evaluate(x, n, fvec, n, fjac);
             nfev++;
             for (double v : fjac) {
                 if (Double.isNaN(v) || Double.isInfinite(v)) { info = -1; break outer; }
@@ -229,7 +229,7 @@ public final class HYBRSolver {
                 pnorm = Math.sqrt(pnorm);
                 if (iter == 1) delta = Math.min(delta, pnorm);
 
-                eval.evaluate(wa2, wa4, null);
+                eval.evaluate(wa2, n, wa4, n, null);
                 nfev++;
                 for (double v : wa4) {
                     if (Double.isNaN(v) || Double.isInfinite(v)) { info = -1; break outer; }

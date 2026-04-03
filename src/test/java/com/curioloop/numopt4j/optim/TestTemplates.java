@@ -41,7 +41,7 @@ public final class TestTemplates {
      * Gradient: g_i = 2 * x_i
      */
     public static Univariate quadratic() {
-        return (x, g) -> {
+        return (x, n, g) -> {
             double f = 0.0;
             for (int i = 0; i < x.length; i++) {
                 f += x[i] * x[i];
@@ -59,7 +59,7 @@ public final class TestTemplates {
      * Gradient: g_i = 2 * (x_i - shift)
      */
     public static Univariate shiftedQuadratic(double shift) {
-        return (x, g) -> {
+        return (x, n, g) -> {
             double f = 0.0;
             for (int i = 0; i < x.length; i++) {
                 double d = x[i] - shift;
@@ -79,7 +79,7 @@ public final class TestTemplates {
      */
     public static Univariate quadraticWithTarget(double[] target) {
         final double[] t = target == null ? new double[0] : target.clone();
-        return (x, g) -> {
+        return (x, n, g) -> {
             double f = 0.0;
             for (int i = 0; i < x.length; i++) {
                 double ti = i < t.length ? t[i] : 0.0;
@@ -98,7 +98,7 @@ public final class TestTemplates {
      */
     public static Univariate scaledQuadratic(final double[] scale) {
         final double[] s = scale == null ? new double[0] : scale.clone();
-        return (x, g) -> {
+        return (x, n, g) -> {
             double f = 0.0;
             for (int i = 0; i < x.length; i++) {
                 double si = i < s.length ? s[i] : 1.0;
@@ -115,7 +115,7 @@ public final class TestTemplates {
      * Gradient: g_i = 2 * x_i
      */
     public static Univariate slowQuadratic(long sleep) {
-        return (x, g) -> {
+        return (x, n, g) -> {
             try {
                 Thread.sleep(sleep);  // Sleep 2ms per evaluation
             } catch (InterruptedException e) {
@@ -138,7 +138,7 @@ public final class TestTemplates {
      * Gradient computed analytically (standard expression).
      */
     public static Univariate rosenbrock() {
-        return (x, g) -> {
+        return (x, n, g) -> {
             double f = 0.0;
             for (int i = 0; i < x.length - 1; i++) {
                 double t1 = x[i + 1] - x[i] * x[i];
@@ -167,7 +167,7 @@ public final class TestTemplates {
      * Gradient: g_i = 1
      */
     public static Univariate sumConstraint(double target) {
-        return (x, g) -> {
+        return (x, n, g) -> {
             double sum = 0.0;
             for (int i = 0; i < x.length; i++) sum += x[i];
             if (g != null) {
@@ -184,7 +184,7 @@ public final class TestTemplates {
      */
     public static Univariate linearConstraint(final double[] coeffs, final double rhs) {
         final double[] a = coeffs == null ? new double[0] : coeffs.clone();
-        return (x, g) -> {
+        return (x, n, g) -> {
             double sum = 0.0;
             for (int i = 0; i < x.length; i++) {
                 double ai = i < a.length ? a[i] : 0.0;
@@ -201,7 +201,7 @@ public final class TestTemplates {
      * Gradient: g_j = 1 if j == idx else 0
      */
     public static Univariate inequalityAtIndex(final int idx, final double bound) {
-        return (x, g) -> {
+        return (x, n, g) -> {
             if (g != null) {
                 for (int j = 0; j < x.length; j++) g[j] = (j == idx) ? 1.0 : 0.0;
             }
@@ -220,7 +220,7 @@ public final class TestTemplates {
      */
     public static Univariate unitBallConstraint(final double radius) {
         final double r2 = radius * radius;
-        return (x, g) -> {
+        return (x, n, g) -> {
             double sum = 0.0;
             for (int i = 0; i < x.length; i++) sum += x[i] * x[i];
             if (g != null) {
@@ -239,7 +239,7 @@ public final class TestTemplates {
      *   f(x,y) = (1.5 - x + x*y)^2 + (2.25 - x + x*y^2)^2 + (2.625 - x + x*y^3)^2
      */
     public static Univariate beale2D() {
-        return (x, g) -> {
+        return (x, n, g) -> {
             double x1 = x[0], x2 = x[1];
             double t1 = 1.5 - x1 + x1 * x2;
             double t2 = 2.25 - x1 + x1 * x2 * x2;
@@ -258,7 +258,7 @@ public final class TestTemplates {
      *   f(x,y) = (x + 2y - 7)^2 + (2x + y - 5)^2
      */
     public static Univariate booth2D() {
-        return (x, g) -> {
+        return (x, n, g) -> {
             double x1 = x[0], x2 = x[1];
             double t1 = x1 + 2 * x2 - 7;
             double t2 = 2 * x1 + x2 - 5;
@@ -276,7 +276,7 @@ public final class TestTemplates {
      *   f(x,y) = 0.26*(x^2 + y^2) - 0.48*x*y
      */
     public static Univariate matyas2D() {
-        return (x, g) -> {
+        return (x, n, g) -> {
             double x1 = x[0], x2 = x[1];
             double f = 0.26 * (x1 * x1 + x2 * x2) - 0.48 * x1 * x2;
             if (g != null) {

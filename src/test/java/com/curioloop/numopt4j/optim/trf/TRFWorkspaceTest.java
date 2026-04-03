@@ -8,7 +8,7 @@ import net.jqwik.api.*;
 
 import org.junit.jupiter.api.Test;
 
-import java.util.function.BiConsumer;
+import com.curioloop.numopt4j.optim.Multivariate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
@@ -25,7 +25,8 @@ class TRFWorkspaceTest {
     @Test
     void allocatedWorkspaceHasCorrectDimensions() {
         final int m = 10, n = 3;
-        TRFWorkspace ws = new TRFWorkspace(m, n);
+        TRFWorkspace ws = new TRFWorkspace();
+        ws.ensure(m, n);
 
         assertThat(ws.fvec).hasSize(m);
         assertThat(ws.fjac).hasSize(m * n);
@@ -39,7 +40,7 @@ class TRFWorkspaceTest {
     @Test
     void allocViaOptimizerMatchesDirectAlloc() {
         final int m = 10, n = 3;
-        BiConsumer<double[], double[]> fn = (c, r) -> {};
+        Multivariate.Objective fn = (c, nn, r, mm) -> {};
         TRFProblem p = new TRFProblem().residuals(fn, m).initialPoint(0.0, 0.0, 0.0);
         TRFWorkspace ws = p.alloc();
         assertThat(ws.fvec).hasSize(m);
@@ -49,7 +50,7 @@ class TRFWorkspaceTest {
     @Test
     void allocViaProblemMatchesDirectAlloc() {
         final int m = 5;
-        BiConsumer<double[], double[]> fn = (c, r) -> {};
+        Multivariate.Objective fn = (c, n, r, mm) -> {};
         TRFProblem p = new TRFProblem().residuals(fn, m).initialPoint(0.0, 0.0);
         TRFWorkspace ws = p.alloc();
         assertThat(ws.fvec).hasSize(m);
@@ -62,8 +63,8 @@ class TRFWorkspaceTest {
     void workspaceReuseProducesIdenticalResults() {
         final int m = 5, n = 2;
         double[] xd = {0, 1, 2, 3, 4}, yd = {1, 3, 5, 7, 9};
-        BiConsumer<double[], double[]> fn = (c, r) -> {
-            for (int i = 0; i < m; i++) r[i] = yd[i] - (c[0] + c[1] * xd[i]);
+        Multivariate.Objective fn = (c, nn, r, mm) -> {
+            for (int i = 0; i < mm; i++) r[i] = yd[i] - (c[0] + c[1] * xd[i]);
         };
         TRFProblem p = new TRFProblem()
             .residuals(fn, m).initialPoint(0.0, 1.0)
@@ -83,8 +84,8 @@ class TRFWorkspaceTest {
     void withAndWithoutWorkspaceProduceSameResult() {
         final int m = 8, n = 2;
         double[] xd = {0,1,2,3,4,5,6,7}, yd = {2,4,6,8,10,12,14,16};
-        BiConsumer<double[], double[]> fn = (c, r) -> {
-            for (int i = 0; i < m; i++) r[i] = yd[i] - (c[0] + c[1] * xd[i]);
+        Multivariate.Objective fn = (c, nn, r, mm) -> {
+            for (int i = 0; i < mm; i++) r[i] = yd[i] - (c[0] + c[1] * xd[i]);
         };
         TRFProblem p = new TRFProblem()
             .residuals(fn, m).initialPoint(1.0, 1.5)
@@ -103,8 +104,8 @@ class TRFWorkspaceTest {
     void problemWorkspaceReuseProducesIdenticalResults() {
         final int m = 5;
         double[] xd = {0, 1, 2, 3, 4}, yd = {1, 3, 5, 7, 9};
-        BiConsumer<double[], double[]> fn = (c, r) -> {
-            for (int i = 0; i < m; i++) r[i] = yd[i] - (c[0] + c[1] * xd[i]);
+        Multivariate.Objective fn = (c, n, r, mm) -> {
+            for (int i = 0; i < mm; i++) r[i] = yd[i] - (c[0] + c[1] * xd[i]);
         };
         TRFProblem p = new TRFProblem()
             .residuals(fn, m).initialPoint(0.0, 1.0)
@@ -138,8 +139,8 @@ class TRFWorkspaceTest {
     void workspaceShouldProduceIdenticalResults(@ForAll("linearProblems") double[][] data) {
         double[] xd = data[0], yd = data[1];
         int m = xd.length;
-        BiConsumer<double[], double[]> fn = (c, r) -> {
-            for (int i = 0; i < m; i++) r[i] = yd[i] - (c[0] + c[1] * xd[i]);
+        Multivariate.Objective fn = (c, n, r, mm) -> {
+            for (int i = 0; i < mm; i++) r[i] = yd[i] - (c[0] + c[1] * xd[i]);
         };
         TRFProblem p = new TRFProblem()
             .residuals(fn, m).initialPoint(0.0, 1.0)
@@ -159,8 +160,8 @@ class TRFWorkspaceTest {
     void workspaceShouldBeReusable(@ForAll("linearProblems") double[][] data) {
         double[] xd = data[0], yd = data[1];
         int m = xd.length;
-        BiConsumer<double[], double[]> fn = (c, r) -> {
-            for (int i = 0; i < m; i++) r[i] = yd[i] - (c[0] + c[1] * xd[i]);
+        Multivariate.Objective fn = (c, n, r, mm) -> {
+            for (int i = 0; i < mm; i++) r[i] = yd[i] - (c[0] + c[1] * xd[i]);
         };
         TRFProblem p = new TRFProblem()
             .residuals(fn, m).initialPoint(0.0, 1.0)

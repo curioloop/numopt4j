@@ -19,7 +19,7 @@ public class ApiUsabilityTest {
     void testLbfgsbSimpleMinimize() {
         // Minimize x^2 + y^2, minimum at (0, 0) using NumericalGradient.wrap()
         Optimization result = new LBFGSBProblem()
-            .objective(NumericalGradient.CENTRAL.wrap(x -> x[0] * x[0] + x[1] * x[1]))
+            .objective(NumericalGradient.CENTRAL.wrap((x, n) -> x[0] * x[0] + x[1] * x[1]))
             .initialPoint(1.0, 1.0)
             .solve();
         
@@ -50,7 +50,7 @@ public class ApiUsabilityTest {
     void testLbfgsbBuilderWithFunctionOnly() {
         // Using LBFGSBProblem with NumericalGradient.wrap()
         Optimization result = new LBFGSBProblem()
-            .objective(NumericalGradient.CENTRAL.wrap(x -> x[0] * x[0] + x[1] * x[1]))
+            .objective(NumericalGradient.CENTRAL.wrap((x, n) -> x[0] * x[0] + x[1] * x[1]))
             .initialPoint(1.0, 1.0)
             .maxIterations(50)
             .gradientTolerance(1e-4)
@@ -65,7 +65,7 @@ public class ApiUsabilityTest {
     void testLbfgsbBuilderWithBounds() {
         // Minimize (x-5)^2 + (y-5)^2 with bounds [0, 3]
         Optimization result = new LBFGSBProblem()
-            .objective(NumericalGradient.CENTRAL.wrap(x -> Math.pow(x[0] - 5, 2) + Math.pow(x[1] - 5, 2)))
+            .objective(NumericalGradient.CENTRAL.wrap((x, n) -> Math.pow(x[0] - 5, 2) + Math.pow(x[1] - 5, 2)))
             .initialPoint(1.0, 1.0)
             .bounds(Bound.between(0.0, 3.0), Bound.between(0.0, 3.0))
             .solve();
@@ -80,7 +80,7 @@ public class ApiUsabilityTest {
     @DisplayName("L-BFGS-B: Builder with single bound for all variables")
     void testLbfgsbBuilderWithSingleBound() {
         Optimization result = new LBFGSBProblem()
-            .objective(NumericalGradient.CENTRAL.wrap(x -> x[0] * x[0] + x[1] * x[1] + x[2] * x[2]))
+            .objective(NumericalGradient.CENTRAL.wrap((x, n) -> x[0] * x[0] + x[1] * x[1] + x[2] * x[2]))
             .initialPoint(1.0, 1.0, 1.0)
             .bounds(Bound.atLeast(0), Bound.atLeast(0), Bound.atLeast(0))  // x >= 0 for all variables
             .solve();

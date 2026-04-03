@@ -903,7 +903,7 @@ final class TRFCore {
 
         applyBounds(x, bounds, n);
 
-        fcn.evaluate(x, fvec, null);
+        fcn.evaluate(x, n, fvec, m, null);
         int nfev = 1;
         double fnorm = enorm(m, fvec, 0);
 
@@ -918,7 +918,7 @@ final class TRFCore {
         outer:
         while (true) {
             // ── Evaluate residuals and Jacobian ───────────────────────────────
-            fcn.evaluate(x, fvec, fjac);
+            fcn.evaluate(x, n, fvec, m, fjac);
 
             // ── Compute robust cost BEFORE scaling (uses original residuals) ──
             // Must be computed here because scaleJF modifies fvec in-place.
@@ -1076,7 +1076,7 @@ final class TRFCore {
                 // (mirrors scipy's make_strictly_feasible with rstep=0).
                 // Prevents CL scaling from collapsing to zero on the next outer iteration.
                 makeStrictlyFeasible(wa2, bounds, n);
-                fcn.evaluate(wa2, wa4, null);
+                fcn.evaluate(wa2, n, wa4, m, null);
                 nfev++;
                 // For LINEAR: cost1 = 0.5*‖f_new‖², fnorm1 = ‖f_new‖ (same as enorm).
                 // For robust: cost1 = 0.5*C²*Σρ(f²/C²), fnorm1 = sqrt(2*cost1).

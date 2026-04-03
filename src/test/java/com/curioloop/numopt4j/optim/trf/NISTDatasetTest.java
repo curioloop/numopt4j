@@ -9,7 +9,7 @@ import net.jqwik.api.*;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
-import java.util.function.BiConsumer;
+import com.curioloop.numopt4j.optim.Multivariate;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -45,12 +45,12 @@ public class NISTDatasetTest {
 
     private void testMisra1a(double[] initialGuess, String label) {
         final int m = MISRA1A_X.length;
-        BiConsumer<double[], double[]> residualFunc = (c, r) -> {
-            for (int i = 0; i < m; i++)
+        Multivariate.Objective residualFunc = (c, n, r, mm) -> {
+            for (int i = 0; i < mm; i++)
                 r[i] = MISRA1A_Y[i] - c[0] * (1.0 - Math.exp(-c[1] * MISRA1A_X[i]));
         };
         double[] ir = new double[m];
-        residualFunc.accept(initialGuess, ir);
+        residualFunc.evaluate(initialGuess, initialGuess.length, ir, m);
         double initialRss = 0; for (double v : ir) initialRss += v * v;
 
         Optimization result = new TRFProblem()
@@ -87,8 +87,8 @@ public class NISTDatasetTest {
 
     private void testLanczos1(double[] initialGuess, String label) {
         final int m = LANCZOS1_X.length;
-        BiConsumer<double[], double[]> residualFunc = (c, r) -> {
-            for (int i = 0; i < m; i++) {
+        Multivariate.Objective residualFunc = (c, n, r, mm) -> {
+            for (int i = 0; i < mm; i++) {
                 double x = LANCZOS1_X[i];
                 r[i] = LANCZOS1_Y[i] - (c[0]*Math.exp(-c[1]*x) + c[2]*Math.exp(-c[3]*x) + c[4]*Math.exp(-c[5]*x));
             }
@@ -144,8 +144,8 @@ public class NISTDatasetTest {
     @Test @Tag("NIST Gauss1 - Starting Point 1")
     void testGauss1StartingPoint1() {
         final int m = GAUSS1_X.length;
-        BiConsumer<double[], double[]> residualFunc = (c, r) -> {
-            for (int i = 0; i < m; i++) {
+        Multivariate.Objective residualFunc = (c, n, r, mm) -> {
+            for (int i = 0; i < mm; i++) {
                 double x = GAUSS1_X[i];
                 double d2 = x - c[3], d3 = x - c[6];
                 r[i] = GAUSS1_Y[i] - (c[0]*Math.exp(-c[1]*x)
@@ -155,7 +155,7 @@ public class NISTDatasetTest {
         };
         double[] initialGuess = {98.0, 0.011, 100.0, 65.0, 20.0, 72.0, 195.0, 27.0};
         double[] ir = new double[m];
-        residualFunc.accept(initialGuess, ir);
+        residualFunc.evaluate(initialGuess, initialGuess.length, ir, m);
         double initialRss = 0; for (double v : ir) initialRss += v * v;
 
         Optimization result = new TRFProblem()
@@ -180,8 +180,8 @@ public class NISTDatasetTest {
     void allStartingPointsShouldConvergeToSameSolution(
             @ForAll("misra1aStartingPoints") double[] startingPoint) {
         final int m = MISRA1A_X.length;
-        BiConsumer<double[], double[]> residualFunc = (c, r) -> {
-            for (int i = 0; i < m; i++)
+        Multivariate.Objective residualFunc = (c, n, r, mm) -> {
+            for (int i = 0; i < mm; i++)
                 r[i] = MISRA1A_Y[i] - c[0] * (1.0 - Math.exp(-c[1] * MISRA1A_X[i]));
         };
         Optimization result = new TRFProblem()

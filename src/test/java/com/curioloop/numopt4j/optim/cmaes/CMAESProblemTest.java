@@ -61,7 +61,8 @@ class CMAESProblemTest {
     @Test
     void strategyParametersComputedCorrectly() {
         int n = 10;
-        CMAESWorkspace ws = new CMAESWorkspace(n, 10);
+        CMAESWorkspace ws = new CMAESWorkspace();
+        ws.ensure(n, 10, false);
         CMAESCore.initParams(ws, 1000);
 
         // mu = floor(lambda/2) = 5
@@ -107,14 +108,14 @@ class CMAESProblemTest {
 
     @Test
     void solveWithoutInitialPointThrowsIllegalState() {
-        CMAESProblem p = new CMAESProblem().objective(x -> 0.0);
+        CMAESProblem p = new CMAESProblem().objective((x, n) -> 0.0);
         assertThrows(IllegalStateException.class, p::solve);
     }
 
     @Test
     void solveWithNaNInitialPointThrowsIllegalArgument() {
         CMAESProblem p = new CMAESProblem()
-            .objective(x -> 0.0)
+            .objective((x, n) -> 0.0)
             .initialPoint(1.0, Double.NaN);
         assertThrows(IllegalArgumentException.class, p::solve);
     }
@@ -122,7 +123,7 @@ class CMAESProblemTest {
     @Test
     void solveWithInfInitialPointThrowsIllegalArgument() {
         CMAESProblem p = new CMAESProblem()
-            .objective(x -> 0.0)
+            .objective((x, n) -> 0.0)
             .initialPoint(1.0, Double.POSITIVE_INFINITY);
         assertThrows(IllegalArgumentException.class, p::solve);
     }
@@ -142,38 +143,45 @@ class CMAESProblemTest {
     // ── Workspace dimension mismatch ──────────────────────────────────────
 
     @Test
-    void workspaceDimensionMismatchThrowsIllegalArgument() {
+    void workspaceDimensionMismatchAutoResizes() {
         CMAESProblem p = new CMAESProblem()
-            .objective(x -> 0.0)
+            .objective((x, n) -> { double s = 0; for (double v : x) s += v*v; return s; })
             .initialPoint(new double[5])
-            .populationSize(10);
+            .populationSize(10)
+            .maxEvaluations(100);
 
-        // Workspace with wrong n
-        CMAESWorkspace wrongWs = new CMAESWorkspace(3, 10);
-        assertThrows(IllegalArgumentException.class, () -> p.solve(wrongWs));
+        // Workspace with wrong n — should auto-resize instead of throwing
+        CMAESWorkspace wrongWs = new CMAESWorkspace();
+        wrongWs.ensure(3, 10, false);
+        assertDoesNotThrow(() -> p.solve(wrongWs));
+        assertEquals(5, wrongWs.n);
     }
 
     @Test
-    void workspaceLambdaMismatchThrowsIllegalArgument() {
+    void workspaceLambdaMismatchAutoResizes() {
         CMAESProblem p = new CMAESProblem()
-            .objective(x -> 0.0)
+            .objective((x, n) -> { double s = 0; for (double v : x) s += v*v; return s; })
             .initialPoint(new double[5])
-            .populationSize(10);
+            .populationSize(10)
+            .maxEvaluations(100);
 
-        // Workspace with wrong lambda
-        CMAESWorkspace wrongWs = new CMAESWorkspace(5, 20);
-        assertThrows(IllegalArgumentException.class, () -> p.solve(wrongWs));
+        // Workspace with wrong lambda — should auto-resize instead of throwing
+        CMAESWorkspace wrongWs = new CMAESWorkspace();
+        wrongWs.ensure(5, 20, false);
+        assertDoesNotThrow(() -> p.solve(wrongWs));
+        assertEquals(10, wrongWs.lambda);
     }
 
     @Test
     void compatibleWorkspaceIsAccepted() {
         CMAESProblem p = new CMAESProblem()
-            .objective(x -> { double s = 0; for (double v : x) s += v*v; return s; })
+            .objective((x, n) -> { double s = 0; for (double v : x) s += v*v; return s; })
             .initialPoint(new double[]{1.0, 1.0, 1.0})
             .populationSize(10)
             .maxEvaluations(100);
 
-        CMAESWorkspace ws = new CMAESWorkspace(3, 10);
+        CMAESWorkspace ws = new CMAESWorkspace();
+        ws.ensure(3, 10, false);
         assertDoesNotThrow(() -> p.solve(ws));
     }
 
@@ -183,7 +191,7 @@ class CMAESProblemTest {
     void allocReturnsWorkspaceWithCorrectDimensions() {
         int n = 5;
         CMAESProblem p = new CMAESProblem()
-            .objective(x -> 0.0)
+            .objective((x, dim) -> 0.0)
             .initialPoint(new double[n])
             .populationSize(12);
 
@@ -197,7 +205,7 @@ class CMAESProblemTest {
     void allocWithAutoLambdaComputesCorrectly() {
         int n = 10;
         CMAESProblem p = new CMAESProblem()
-            .objective(x -> 0.0)
+            .objective((x, dim) -> 0.0)
             .initialPoint(new double[n]);
 
         CMAESWorkspace ws = p.alloc();
@@ -210,7 +218,7 @@ class CMAESProblemTest {
     @Test
     void sphereFunctionConverges() {
         Optimization result = Minimizer.cmaes()
-            .objective(x -> { double s = 0; for (double v : x) s += v*v; return s; })
+            .objective((x, n) -> { double s = 0; for (double v : x) s += v*v; return s; })
             .initialPoint(1.0, 1.0, 1.0)
             .maxEvaluations(5000)
             .solve();

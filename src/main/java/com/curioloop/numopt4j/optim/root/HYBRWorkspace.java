@@ -42,51 +42,60 @@ import java.util.Arrays;
 public final class HYBRWorkspace {
 
     // ── eval-facing: must remain standalone double[] from index 0 ────────────
-    final double[] x;      // xₖ — current iterate passed to eval
-    final double[] fx;     // F(xₖ) — equation residuals filled by eval
-    final double[] fjac;   // J(xₖ) — col-major Jacobian filled by eval  (fjac[i + n*j] = J[i,j])
-    final double[] wa2;    // x_trial = xₖ + p — trial point passed to eval
-    final double[] wa4;    // F(x_trial) — trial residuals filled by eval
+    double[] x;      // xₖ — current iterate passed to eval
+    double[] fx;     // F(xₖ) — equation residuals filled by eval
+    double[] fjac;   // J(xₖ) — col-major Jacobian filled by eval  (fjac[i + n*j] = J[i,j])
+    double[] wa2;    // x_trial = xₖ + p — trial point passed to eval
+    double[] wa4;    // F(x_trial) — trial residuals filled by eval
 
     // ── merged scratch buffer ─────────────────────────────────────────────────
-    final double[] work;   // [ wa1 | wa3 | rdiag | acnorm | diag | qtf | r ]
+    double[] work;   // [ wa1 | wa3 | rdiag | acnorm | diag | qtf | r ]
 
     // ── offsets into work[] ───────────────────────────────────────────────────
-    final int wa1Off;    // wa1    [n]   dogleg step p / qform scratch
-    final int wa3Off;    // wa3    [n]   D·p and predicted-reduction scratch
-    final int rdiagOff;  // rdiag  [n]   diagonal of R  (R[j,j] = rdiag[j])
-    final int acnormOff; // acnorm [n]   ‖J[:,j]‖₂ column norms before pivoting
-    final int diagOff;   // diag   [n]   scaling diagonal D
-    final int qtfOff;    // qtf    [n]   Qᵀ·F(xₖ)
-    final int rOff;      // r      [n*(n+1)/2]  packed upper-triangular R
+    int wa1Off;    // wa1    [n]   dogleg step p / qform scratch
+    int wa3Off;    // wa3    [n]   D·p and predicted-reduction scratch
+    int rdiagOff;  // rdiag  [n]   diagonal of R  (R[j,j] = rdiag[j])
+    int acnormOff; // acnorm [n]   ‖J[:,j]‖₂ column norms before pivoting
+    int diagOff;   // diag   [n]   scaling diagonal D
+    int qtfOff;    // qtf    [n]   Qᵀ·F(xₖ)
+    int rOff;      // r      [n*(n+1)/2]  packed upper-triangular R
 
-    public HYBRWorkspace(int n) {
-        if (n < 1) throw new IllegalArgumentException("Workspace dimension must be >= 1, got: " + n);
-        this.x    = new double[n];
-        this.fx   = new double[n];
-        this.fjac = new double[n * n];
-        this.wa2  = new double[n];
-        this.wa4  = new double[n];
+    /** Returns the current dimension, or 0 if not yet allocated. */
+    public int getN() { return x != null ? x.length : 0; }
 
-        this.wa1Off    = 0;
-        this.wa3Off    = n;
-        this.rdiagOff  = 2 * n;
-        this.acnormOff = 3 * n;
-        this.diagOff   = 4 * n;
-        this.qtfOff    = 5 * n;
-        this.rOff      = 6 * n;
-
-        this.work = new double[6 * n + n * (n + 1) / 2];
+    /**
+     * Ensures the workspace is allocated for dimension {@code n}.
+     * Reallocates if {@code n > getN()}, then always calls {@link #reset()}.
+     */
+    public void ensure(int n) {
+        if (n > getN()) {
+            this.x    = new double[n];
+            this.fx   = new double[n];
+            this.fjac = new double[n * n];
+            this.wa2  = new double[n];
+            this.wa4  = new double[n];
+            this.wa1Off    = 0;
+            this.wa3Off    = n;
+            this.rdiagOff  = 2 * n;
+            this.acnormOff = 3 * n;
+            this.diagOff   = 4 * n;
+            this.qtfOff    = 5 * n;
+            this.rOff      = 6 * n;
+            this.work = new double[6 * n + n * (n + 1) / 2];
+            reset();
+        } else {
+            reset();
+        }
     }
 
-    public boolean isCompatible(int n) { return x.length == n; }
+    public boolean isCompatible(int n) { return x != null && x.length == n; }
 
     public void reset() {
-        Arrays.fill(x,    0.0);
-        Arrays.fill(fx,   0.0);
-        Arrays.fill(fjac, 0.0);
-        Arrays.fill(wa2,  0.0);
-        Arrays.fill(wa4,  0.0);
-        Arrays.fill(work, 0.0);
+        if (x    != null) Arrays.fill(x,    0.0);
+        if (fx   != null) Arrays.fill(fx,   0.0);
+        if (fjac != null) Arrays.fill(fjac, 0.0);
+        if (wa2  != null) Arrays.fill(wa2,  0.0);
+        if (wa4  != null) Arrays.fill(wa4,  0.0);
+        if (work != null) Arrays.fill(work, 0.0);
     }
 }

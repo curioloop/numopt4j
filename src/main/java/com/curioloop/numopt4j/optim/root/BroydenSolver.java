@@ -1,11 +1,11 @@
 package com.curioloop.numopt4j.optim.root;
 
+import com.curioloop.numopt4j.optim.Multivariate;
 import com.curioloop.numopt4j.optim.Optimization;
 
 import com.curioloop.numopt4j.linalg.blas.BLAS;
 
 import java.util.Arrays;
-import java.util.function.BiConsumer;
 
 /**
  * Good Broyden (broyden1) solver — strict port of scipy's {@code nonlin_solve + BroydenFirst}.
@@ -37,7 +37,7 @@ public final class BroydenSolver {
     public static final double DEFAULT_FTOL = 6e-6;
 
     public static Optimization solve(
-            BiConsumer<double[], double[]> fn,
+            Multivariate.Objective fn,
             double[] x0,
             double ftol,
             int maxiter,
@@ -63,7 +63,7 @@ public final class BroydenSolver {
         final int dFOff  = ws.dFOff;
 
         System.arraycopy(x0, 0, x, 0, n);
-        fn.accept(x, fx);
+        fn.evaluate(x, n, fx, n);
         int nfev = 1;
 
         for (double v : fx) {
@@ -123,7 +123,7 @@ public final class BroydenSolver {
             // evaluate phi(alpha0=1)
             BLAS.dcopy(n, x, 0, 1, xNew, 0, 1);
             BLAS.daxpy(n, 1.0, work, dxOff, 1, xNew, 0, 1);
-            fn.accept(xNew, fNew);
+            fn.evaluate(xNew, n, fNew, n);
             nfev++;
             double phi_a0 = l2normSq(fNew, n);
 
@@ -138,7 +138,7 @@ public final class BroydenSolver {
                         / (2.0 * (phi_a0 - phi0 - derphi0 * alpha0));
                 BLAS.dcopy(n, x, 0, 1, xNew, 0, 1);
                 BLAS.daxpy(n, alpha1, work, dxOff, 1, xNew, 0, 1);
-                fn.accept(xNew, fNew);
+                fn.evaluate(xNew, n, fNew, n);
                 nfev++;
                 double phi_a1 = l2normSq(fNew, n);
 
@@ -159,7 +159,7 @@ public final class BroydenSolver {
                         step = 1.0;
                         BLAS.dcopy(n, x, 0, 1, xNew, 0, 1);
                         BLAS.daxpy(n, 1.0, work, dxOff, 1, xNew, 0, 1);
-                        fn.accept(xNew, fNew);
+                        fn.evaluate(xNew, n, fNew, n);
                         nfev++;
                     }
                     fnormNew = maxnorm(fNew, n);
@@ -227,7 +227,7 @@ public final class BroydenSolver {
      * {@code fev[0]} is incremented by the number of additional function evaluations.
      */
     private static double cubicSearchArmijo(
-            BiConsumer<double[], double[]> fn,
+            Multivariate.Objective fn,
             double[] x, double[] work, int dxOff, int n,
             double phi0, double derphi0, double c1, double amin,
             double alpha0, double phi_a0,
@@ -253,7 +253,7 @@ public final class BroydenSolver {
 
             BLAS.dcopy(n, x, 0, 1, xNew, 0, 1);
             BLAS.daxpy(n, alpha2, work, dxOff, 1, xNew, 0, 1);
-            fn.accept(xNew, fNew);
+            fn.evaluate(xNew, n, fNew, n);
             extraFev++;
             double phi_a2 = l2normSq(fNew, n);
 

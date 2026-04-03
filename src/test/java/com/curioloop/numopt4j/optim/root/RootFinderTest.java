@@ -1,6 +1,7 @@
 package com.curioloop.numopt4j.optim.root;
 
 import com.curioloop.numopt4j.optim.Bound;
+import com.curioloop.numopt4j.optim.Multivariate;
 import com.curioloop.numopt4j.optim.Optimization;
 
 import net.jqwik.api.*;
@@ -8,7 +9,6 @@ import net.jqwik.api.constraints.DoubleRange;
 import net.jqwik.api.constraints.IntRange;
 import org.junit.jupiter.api.Test;
 
-import java.util.function.BiConsumer;
 import java.util.function.DoubleUnaryOperator;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -77,7 +77,7 @@ class RootFinderTest {
             @ForAll @IntRange(min = 1, max = 4) int n) {
         IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
             new HYBRProblem()
-                .equations((x, f) -> { for (int i = 0; i < x.length; i++) f[i] = x[i]; }, n)
+                .equations((x, xn, f, fm) -> { for (int i = 0; i < x.length; i++) f[i] = x[i]; }, n)
                 .solve()
         );
         assertTrue(ex.getMessage().toLowerCase().contains("initialpoint"),
@@ -92,7 +92,7 @@ class RootFinderTest {
             @ForAll @IntRange(min = 1, max = 4) int n) {
         IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
             new BroydenProblem()
-                .equations((x, f) -> { for (int i = 0; i < x.length; i++) f[i] = x[i]; }, n)
+                .equations((x, xn, f, fm) -> { for (int i = 0; i < x.length; i++) f[i] = x[i]; }, n)
                 .solve()
         );
         assertTrue(ex.getMessage().toLowerCase().contains("initialpoint"),
@@ -132,7 +132,7 @@ class RootFinderTest {
     void property6b_vectorResultConsistency(
             @ForAll @DoubleRange(min = -3, max = 3) double r1,
             @ForAll @DoubleRange(min = -3, max = 3) double r2) {
-        BiConsumer<double[], double[]> fn = (x, f) -> {
+        Multivariate.Objective fn = (x, xn, f, fm) -> {
             f[0] = x[0] - r1;
             f[1] = x[1] - r2;
         };
@@ -146,7 +146,7 @@ class RootFinderTest {
 
         double[] sol = result.getSolution();
         double[] fSol = new double[2];
-        fn.accept(sol, fSol);
+        fn.evaluate(sol, 2, fSol, 2);
         double expectedResidual = Math.max(Math.abs(fSol[0]), Math.abs(fSol[1]));
         assertEquals(expectedResidual, result.getCost(), 1e-10,
             "getCost() should equal max|F(solution)| (max-norm)");
@@ -169,7 +169,7 @@ class RootFinderTest {
 
     @Test
     void integrationTest_hybrViaSolve() {
-        BiConsumer<double[], double[]> fn = (x, f) -> {
+        Multivariate.Objective fn = (x, xn, f, fm) -> {
             f[0] = 1.0 - x[0];
             f[1] = 10.0 * (x[1] - x[0] * x[0]);
         };
@@ -187,7 +187,7 @@ class RootFinderTest {
 
     @Test
     void integrationTest_broydenViaSolve() {
-        BiConsumer<double[], double[]> fn = (x, f) -> {
+        Multivariate.Objective fn = (x, xn, f, fm) -> {
             f[0] = 1.0 - x[0];
             f[1] = 10.0 * (x[1] - x[0] * x[0]);
         };
@@ -205,7 +205,7 @@ class RootFinderTest {
 
     @Test
     void integrationTest_workspaceReuse() {
-        BiConsumer<double[], double[]> fn = (x, f) -> {
+        Multivariate.Objective fn = (x, xn, f, fm) -> {
             f[0] = x[0] - 3.0;
             f[1] = x[1] - 7.0;
         };
@@ -231,7 +231,7 @@ class RootFinderTest {
     @Test
     void integrationTest_autoSelectHybrWhenEquationsSet() {
         Optimization result = new HYBRProblem()
-            .equations((x, f) -> { f[0] = x[0] - 5.0; }, 1)
+            .equations((x, xn, f, fm) -> { f[0] = x[0] - 5.0; }, 1)
             .initialPoint(0.0)
             .solve();
 

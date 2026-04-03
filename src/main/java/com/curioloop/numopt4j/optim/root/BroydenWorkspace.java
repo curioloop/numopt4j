@@ -28,44 +28,53 @@ import java.util.Arrays;
 public final class BroydenWorkspace {
 
     // ── eval-facing: must remain standalone double[] from index 0 ────────────
-    final double[] x;       // current iterate
-    final double[] fx;      // F(x)
-    final double[] xNew;    // candidate next iterate
-    final double[] fNew;    // F(xNew)
+    double[] x;       // current iterate
+    double[] fx;      // F(x)
+    double[] xNew;    // candidate next iterate
+    double[] fNew;    // F(xNew)
 
     // ── merged scratch buffer ─────────────────────────────────────────────────
-    final double[] work;    // H[n²] | dx[n] | Hdf[n] | dxH[n] | dF[n]
+    double[] work;    // H[n²] | dx[n] | Hdf[n] | dxH[n] | dF[n]
 
     // ── offsets into work[] ───────────────────────────────────────────────────
-    final int hOff;    // H      [n*n]
-    final int dxOff;   // dx     [n]
-    final int HdfOff;  // Hdf    [n]
-    final int dxHOff;  // dxH    [n]
-    final int dFOff;   // dF     [n]
+    int hOff;    // H      [n*n]
+    int dxOff;   // dx     [n]
+    int HdfOff;  // Hdf    [n]
+    int dxHOff;  // dxH    [n]
+    int dFOff;   // dF     [n]
 
-    public BroydenWorkspace(int n) {
-        if (n < 1) throw new IllegalArgumentException("Workspace dimension must be >= 1, got: " + n);
-        this.x    = new double[n];
-        this.fx   = new double[n];
-        this.xNew = new double[n];
-        this.fNew = new double[n];
+    /** Returns the current dimension, or 0 if not yet allocated. */
+    public int getN() { return x != null ? x.length : 0; }
 
-        this.hOff   = 0;
-        this.dxOff  = n * n;
-        this.HdfOff = n * n + n;
-        this.dxHOff = n * n + 2 * n;
-        this.dFOff  = n * n + 3 * n;
-
-        this.work = new double[n * n + 4 * n];
+    /**
+     * Ensures the workspace is allocated for dimension {@code n}.
+     * Reallocates if {@code n > getN()}, then always calls {@link #reset()}.
+     */
+    public void ensure(int n) {
+        if (n > getN()) {
+            this.x    = new double[n];
+            this.fx   = new double[n];
+            this.xNew = new double[n];
+            this.fNew = new double[n];
+            this.hOff   = 0;
+            this.dxOff  = n * n;
+            this.HdfOff = n * n + n;
+            this.dxHOff = n * n + 2 * n;
+            this.dFOff  = n * n + 3 * n;
+            this.work = new double[n * n + 4 * n];
+            reset();
+        } else {
+            reset();
+        }
     }
 
-    public boolean isCompatible(int n) { return x.length == n; }
+    public boolean isCompatible(int n) { return x != null && x.length == n; }
 
     public void reset() {
-        Arrays.fill(x,    0.0);
-        Arrays.fill(fx,   0.0);
-        Arrays.fill(xNew, 0.0);
-        Arrays.fill(fNew, 0.0);
-        Arrays.fill(work, 0.0);
+        if (x    != null) Arrays.fill(x,    0.0);
+        if (fx   != null) Arrays.fill(fx,   0.0);
+        if (xNew != null) Arrays.fill(xNew, 0.0);
+        if (fNew != null) Arrays.fill(fNew, 0.0);
+        if (work != null) Arrays.fill(work, 0.0);
     }
 }

@@ -58,7 +58,7 @@ public class LBFGSBBenchmark {
 
         Univariate objective = problemType.equals("rosenbrock")
                 ? TestTemplates.rosenbrock()
-                : (x, g) -> {
+                : (x, n, g) -> {
                     double f = 0.0;
                     for (int i = 0; i < x.length; i++) {
                         double coef = i + 1;

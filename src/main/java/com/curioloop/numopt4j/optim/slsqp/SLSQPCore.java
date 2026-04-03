@@ -405,7 +405,7 @@ final class SLSQPCore {
         BLAS.dset(m > 0 ? m : 1, 0, buffer, muOff, 1);
 
         // Evaluate initial function and gradient (use temporary array to avoid overwriting buffer)
-        double f = objEval.evaluate(x, g);
+        double f = objEval.evaluate(x, n, g);
         nfev++;
         // Copy gradient to workspace g array
         System.arraycopy(g, 0, buffer, gOff, n);
@@ -417,7 +417,7 @@ final class SLSQPCore {
         // Evaluate constraints and their gradients (if provided)
         if (meq > 0) {
             for (int i = 0; i < meq; i++) {
-                double val = eqCons[i].evaluate(x, g);
+                double val = eqCons[i].evaluate(x, n, g);
                 buffer[cOff + i] = val;
                 // Fill Jacobian column-major: a[aOff + i + la*j] = dc_i/dx_j
                 for (int j = 0; j < n; j++) {
@@ -427,7 +427,7 @@ final class SLSQPCore {
         }
         if (mineq > 0) {
             for (int i = 0; i < mineq; i++) {
-                double val = ineqCons[i].evaluate(x, g);
+                double val = ineqCons[i].evaluate(x, n, g);
                 buffer[cOff + meq + i] = val;
                 for (int j = 0; j < n; j++) {
                     buffer[aOff + meq + i + la * j] = g[j];
@@ -616,7 +616,7 @@ final class SLSQPCore {
             for (int lsIter = 0; lsIter < 20 && !lsDone; lsIter++) {
                 // Evaluate function value only (no gradient needed during line search)
                 // Matches Go: evalLoc(evalFunc) passes nil for gradient
-                f = objEval.evaluate(x, null);
+                f = objEval.evaluate(x, n, null);
                 nfev++;
 
                 if (Double.isNaN(f) || Double.isInfinite(f)) {
@@ -629,12 +629,12 @@ final class SLSQPCore {
                 // Evaluate constraint values only (no gradient)
                 if (meq > 0) {
                     for (int i = 0; i < meq; i++) {
-                        buffer[cOff + i] = eqCons[i].evaluate(x, null);
+                        buffer[cOff + i] = eqCons[i].evaluate(x, n, null);
                     }
                 }
                 if (mineq > 0) {
                     for (int i = 0; i < mineq; i++) {
-                        buffer[cOff + meq + i] = ineqCons[i].evaluate(x, null);
+                        buffer[cOff + meq + i] = ineqCons[i].evaluate(x, n, null);
                     }
                 }
 
@@ -791,17 +791,17 @@ final class SLSQPCore {
             double[] g, double[] buffer, int gOff, int cOff, int aOff) {
         if (meq > 0) {
             for (int i = 0; i < meq; i++) {
-                eqCons[i].evaluate(x, g);
+                eqCons[i].evaluate(x, n, g);
                 for (int j = 0; j < n; j++) buffer[aOff + i + la * j] = g[j];
             }
         }
         if (mineq > 0) {
             for (int i = 0; i < mineq; i++) {
-                ineqCons[i].evaluate(x, g);
+                ineqCons[i].evaluate(x, n, g);
                 for (int j = 0; j < n; j++) buffer[aOff + meq + i + la * j] = g[j];
             }
         }
-        objEval.evaluate(x, g);
+        objEval.evaluate(x, n, g);
         System.arraycopy(g, 0, buffer, gOff, n);
     }
 

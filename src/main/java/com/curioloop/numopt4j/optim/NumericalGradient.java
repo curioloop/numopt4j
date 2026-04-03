@@ -3,14 +3,12 @@
  */
 package com.curioloop.numopt4j.optim;
 
-import java.util.function.ToDoubleFunction;
-
 /**
  * Numerical gradient computation methods for approximating ∇f(x) when analytical gradients
  * are unavailable.
  *
  * <p>Provides four finite-difference methods with different accuracy/cost trade-offs.
- * Use {@link #wrap(ToDoubleFunction)} to create a {@link Univariate} that computes both
+ * Use {@link #wrap(Univariate.Objective)} to create a {@link Univariate} that computes both
  * the function value and its numerical gradient.</p>
  *
  * <h2>Method Comparison</h2>
@@ -25,13 +23,13 @@ import java.util.function.ToDoubleFunction;
  * <h2>Usage</h2>
  * <pre>{@code
  * // Default choice: central difference (O(h²) accuracy, 2 evaluations per dimension)
- * Univariate balanced = NumericalGradient.CENTRAL.wrap(x -> x[0]*x[0] + x[1]*x[1]);
+ * Univariate balanced = NumericalGradient.CENTRAL.wrap((x, n) -> x[0]*x[0] + x[1]*x[1]);
  *
  * // Fastest: forward difference (O(h) accuracy, 1 evaluation per dimension)
- * Univariate fast = NumericalGradient.FORWARD.wrap(x -> x[0]*x[0] + x[1]*x[1]);
+ * Univariate fast = NumericalGradient.FORWARD.wrap((x, n) -> x[0]*x[0] + x[1]*x[1]);
  *
  * // Most accurate: five-point stencil (O(h⁴) accuracy, 4 evaluations per dimension)
- * Univariate accurate = NumericalGradient.FIVE_POINT.wrap(x -> x[0]*x[0] + x[1]*x[1]);
+ * Univariate accurate = NumericalGradient.FIVE_POINT.wrap((x, n) -> x[0]*x[0] + x[1]*x[1]);
  * }</pre>
  *
  * @see Univariate
@@ -50,11 +48,12 @@ public enum NumericalGradient {
      */
     FORWARD {
         @Override
-        public Univariate wrap(ToDoubleFunction<double[]> func) {
-            return (x, g) -> {
-                double f = func.applyAsDouble(x);
+        public Univariate wrap(Univariate.Objective func) {
+            if (func == null) throw new IllegalArgumentException("func must not be null");
+            return (x, n, g) -> {
+                double f = func.evaluate(x, n);
                 if (g != null) {
-                    forwardDifference(func, x, f, g);
+                    forwardDifference(func, x, n, f, g);
                 }
                 return f;
             };
@@ -72,11 +71,12 @@ public enum NumericalGradient {
      */
     BACKWARD {
         @Override
-        public Univariate wrap(ToDoubleFunction<double[]> func) {
-            return (x, g) -> {
-                double f = func.applyAsDouble(x);
+        public Univariate wrap(Univariate.Objective func) {
+            if (func == null) throw new IllegalArgumentException("func must not be null");
+            return (x, n, g) -> {
+                double f = func.evaluate(x, n);
                 if (g != null) {
-                    backwardDifference(func, x, f, g);
+                    backwardDifference(func, x, n, f, g);
                 }
                 return f;
             };
@@ -91,15 +91,16 @@ public enum NumericalGradient {
      * (cube root of machine epsilon, optimal for O(h²) methods)</p>
      * <p>Typical error: O(h²) ≈ 1e-11 — significantly more accurate than forward/backward
      * difference at the cost of 2 evaluations per dimension (no base evaluation needed).
-     * This is the default method used by {@code Problem.objective(ToDoubleFunction)}.</p>
+     * This is the default method used by {@code Problem.objective(Univariate.Objective)}.</p>
      */
     CENTRAL {
         @Override
-        public Univariate wrap(ToDoubleFunction<double[]> func) {
-            return (x, g) -> {
-                double f = func.applyAsDouble(x);
+        public Univariate wrap(Univariate.Objective func) {
+            if (func == null) throw new IllegalArgumentException("func must not be null");
+            return (x, n, g) -> {
+                double f = func.evaluate(x, n);
                 if (g != null) {
-                    centralDifference(func, x, g);
+                    centralDifference(func, x, n, g);
                 }
                 return f;
             };
@@ -118,11 +119,12 @@ public enum NumericalGradient {
      */
     FIVE_POINT {
         @Override
-        public Univariate wrap(ToDoubleFunction<double[]> func) {
-            return (x, g) -> {
-                double f = func.applyAsDouble(x);
+        public Univariate wrap(Univariate.Objective func) {
+            if (func == null) throw new IllegalArgumentException("func must not be null");
+            return (x, n, g) -> {
+                double f = func.evaluate(x, n);
                 if (g != null) {
-                    fivePointDifference(func, x, g);
+                    fivePointDifference(func, x, n, g);
                 }
                 return f;
             };
@@ -146,14 +148,12 @@ public enum NumericalGradient {
      * @param func Function that computes only the objective value
      * @return Univariate that computes both value and gradient
      */
-    public abstract Univariate wrap(ToDoubleFunction<double[]> func);
+    public abstract Univariate wrap(Univariate.Objective func);
 
     /**
      * Computes gradient using forward difference.
      */
-    private static void forwardDifference(ToDoubleFunction<double[]> func, double[] x, double f0, double[] g) {
-        int n = x.length;
-
+    private static void forwardDifference(Univariate.Objective func, double[] x, int n, double f0, double[] g) {
         for (int i = 0; i < n; i++) {
             double xi = x[i];
             double h = SQRT_EPSILON * Math.max(1.0, Math.abs(xi));
@@ -164,7 +164,7 @@ public enum NumericalGradient {
             h = temp - xi;
 
             x[i] = xi + h;
-            double f1 = func.applyAsDouble(x);
+            double f1 = func.evaluate(x, n);
             x[i] = xi;
 
             g[i] = (f1 - f0) / h;
@@ -174,9 +174,7 @@ public enum NumericalGradient {
     /**
      * Computes gradient using backward difference.
      */
-    private static void backwardDifference(ToDoubleFunction<double[]> func, double[] x, double f0, double[] g) {
-        int n = x.length;
-
+    private static void backwardDifference(Univariate.Objective func, double[] x, int n, double f0, double[] g) {
         for (int i = 0; i < n; i++) {
             double xi = x[i];
             double h = SQRT_EPSILON * Math.max(1.0, Math.abs(xi));
@@ -187,7 +185,7 @@ public enum NumericalGradient {
             h = xi - temp;
 
             x[i] = xi - h;
-            double f1 = func.applyAsDouble(x);
+            double f1 = func.evaluate(x, n);
             x[i] = xi;
 
             g[i] = (f0 - f1) / h;
@@ -197,18 +195,16 @@ public enum NumericalGradient {
     /**
      * Computes gradient using central difference.
      */
-    private static void centralDifference(ToDoubleFunction<double[]> func, double[] x, double[] g) {
-        int n = x.length;
-
+    private static void centralDifference(Univariate.Objective func, double[] x, int n, double[] g) {
         for (int i = 0; i < n; i++) {
             double xi = x[i];
             double h = CBRT_EPSILON * Math.max(1.0, Math.abs(xi));
 
             x[i] = xi + h;
-            double f1 = func.applyAsDouble(x);
+            double f1 = func.evaluate(x, n);
 
             x[i] = xi - h;
-            double f2 = func.applyAsDouble(x);
+            double f2 = func.evaluate(x, n);
 
             x[i] = xi;
 
@@ -219,24 +215,22 @@ public enum NumericalGradient {
     /**
      * Computes gradient using five-point stencil.
      */
-    private static void fivePointDifference(ToDoubleFunction<double[]> func, double[] x, double[] g) {
-        int n = x.length;
-
+    private static void fivePointDifference(Univariate.Objective func, double[] x, int n, double[] g) {
         for (int i = 0; i < n; i++) {
             double xi = x[i];
             double h = FOURTH_ROOT_EPSILON * Math.max(1.0, Math.abs(xi));
 
             x[i] = xi + 2*h;
-            double f1 = func.applyAsDouble(x);
+            double f1 = func.evaluate(x, n);
 
             x[i] = xi + h;
-            double f2 = func.applyAsDouble(x);
+            double f2 = func.evaluate(x, n);
 
             x[i] = xi - h;
-            double f3 = func.applyAsDouble(x);
+            double f3 = func.evaluate(x, n);
 
             x[i] = xi - 2*h;
-            double f4 = func.applyAsDouble(x);
+            double f4 = func.evaluate(x, n);
 
             x[i] = xi;
 

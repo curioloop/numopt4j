@@ -33,7 +33,7 @@ public class CMAESCoreRewriteProperties {
             @ForAll @IntRange(min = 1, max = 20) int n,
             @ForAll @IntRange(min = 4, max = 50) int lambda) {
 
-        CMAESWorkspace ws = new CMAESWorkspace(n, lambda);
+        CMAESWorkspace ws = new CMAESWorkspace(); ws.ensure(n, lambda, false);
         CMAESCore.initParams(ws, 1000);
 
         double sumPos = 0;
@@ -65,8 +65,8 @@ public class CMAESCoreRewriteProperties {
             @ForAll @IntRange(min = 1, max = 20) int n,
             @ForAll @IntRange(min = 4, max = 50) int lambda) {
 
-        CMAESWorkspace ws1 = new CMAESWorkspace(n, lambda);
-        CMAESWorkspace ws2 = new CMAESWorkspace(n, lambda);
+        CMAESWorkspace ws1 = new CMAESWorkspace(); ws1.ensure(n, lambda, false);
+        CMAESWorkspace ws2 = new CMAESWorkspace(); ws2.ensure(n, lambda, false);
         CMAESCore.initParams(ws1, 100);
         CMAESCore.initParams(ws2, 100000);
 
@@ -86,7 +86,7 @@ public class CMAESCoreRewriteProperties {
             @ForAll @IntRange(min = 5, max = 20) int n) {
 
         int lambda = 4 + (int) Math.floor(3.0 * Math.log(n));
-        CMAESWorkspace ws = new CMAESWorkspace(n, lambda);
+        CMAESWorkspace ws = new CMAESWorkspace(); ws.ensure(n, lambda, false);
         CMAESCore.initParams(ws, 1000);
 
         double sumW = 0;
@@ -109,7 +109,7 @@ public class CMAESCoreRewriteProperties {
             @ForAll @IntRange(min = 2, max = 8) int n) {
 
         int lambda = 4 + (int) Math.floor(3.0 * Math.log(n));
-        CMAESWorkspace ws = new CMAESWorkspace(n, lambda);
+        CMAESWorkspace ws = new CMAESWorkspace(); ws.ensure(n, lambda, false);
         CMAESCore.initParams(ws, 1000);
 
         // Initialize state via arena offsets
@@ -177,7 +177,7 @@ public class CMAESCoreRewriteProperties {
             @ForAll @IntRange(min = 2, max = 5) int n) {
 
         int lambda = 10000;
-        CMAESWorkspace ws = new CMAESWorkspace(n, lambda);
+        CMAESWorkspace ws = new CMAESWorkspace(); ws.ensure(n, lambda, false);
         CMAESCore.initParams(ws, 1000);
 
         for (int i = 0; i < n; i++) ws.nVec[ws.XMEAN + i] = i * 0.5;
@@ -247,7 +247,7 @@ public class CMAESCoreRewriteProperties {
 
         int lambda = 4 + (int) Math.floor(3.0 * Math.log(n));
         Optimization r = Minimizer.cmaes()
-            .objective(x -> { double s = 0; for (double v : x) s += v*v; return s; })
+            .objective((x, _n) -> { double s = 0; for (double v : x) s += v*v; return s; })
             .initialPoint(new double[n])
             .populationSize(lambda)
             .maxEvaluations(lambda)
@@ -271,7 +271,7 @@ public class CMAESCoreRewriteProperties {
             @ForAll @IntRange(min = 2, max = 10) int n) {
 
         int lambda = 4 + (int) Math.floor(3.0 * Math.log(n));
-        CMAESWorkspace ws = new CMAESWorkspace(n, lambda);
+        CMAESWorkspace ws = new CMAESWorkspace(); ws.ensure(n, lambda, false);
         CMAESCore.initParams(ws, 1000);
 
         for (int i = 0; i < n; i++) {
@@ -324,7 +324,7 @@ public class CMAESCoreRewriteProperties {
             @ForAll @DoubleRange(min = 0.01, max = 1.0) double cs,
             @ForAll @DoubleRange(min = 0.1, max = 5.0) double damps) {
 
-        CMAESWorkspace ws = new CMAESWorkspace(2, 4);
+        CMAESWorkspace ws = new CMAESWorkspace(); ws.ensure(2, 4, false);
         ws.normps = normps;
         ws.chiN = chiN;
         ws.cs = cs;
@@ -353,7 +353,7 @@ public class CMAESCoreRewriteProperties {
 
         int lambda = 4 + (int) Math.floor(3.0 * Math.log(n));
         CMAESProblem p = Minimizer.cmaes()
-            .objective(x -> { double s = 0; for (double v : x) s += v*v; return s; })
+            .objective((x, _n) -> { double s = 0; for (double v : x) s += v*v; return s; })
             .initialPoint(new double[n])
             .populationSize(lambda)
             .maxEvaluations(lambda * 50)
@@ -400,7 +400,7 @@ public class CMAESCoreRewriteProperties {
             @ForAll @IntRange(min = 1, max = 20) int n,
             @ForAll @IntRange(min = 4, max = 50) int lambda) {
 
-        CMAESWorkspace ws = new CMAESWorkspace(n, lambda);
+        CMAESWorkspace ws = new CMAESWorkspace(); ws.ensure(n, lambda, false);
 
         assertThat(ws.nVec.length)
             .as("nVec.length should be 8*n=%d, got %d", 8*n, ws.nVec.length)
@@ -427,7 +427,7 @@ public class CMAESCoreRewriteProperties {
             @ForAll @IntRange(min = 1, max = 20) int n,
             @ForAll @IntRange(min = 4, max = 50) int lambda) {
 
-        CMAESWorkspace ws = new CMAESWorkspace(n, lambda);
+        CMAESWorkspace ws = new CMAESWorkspace(); ws.ensure(n, lambda, false);
 
         // Verify nVec offset constants
         assertThat(ws.XMEAN).as("XMEAN").isEqualTo(0);
@@ -474,7 +474,7 @@ public class CMAESCoreRewriteProperties {
             @ForAll @IntRange(min = 1, max = 20) int n,
             @ForAll @IntRange(min = 4, max = 50) int lambda) {
 
-        CMAESWorkspace ws = new CMAESWorkspace(n, lambda);
+        CMAESWorkspace ws = new CMAESWorkspace(); ws.ensure(n, lambda, false);
 
         assertThat(ws.arz.length)
             .as("arz.length should be n*lambda=%d, got %d", n*lambda, ws.arz.length)
@@ -501,7 +501,7 @@ public class CMAESCoreRewriteProperties {
             @ForAll @IntRange(min = 1, max = 20) int n,
             @ForAll @IntRange(min = 4, max = 50) int lambda) {
 
-        CMAESWorkspace ws = new CMAESWorkspace(n, lambda);
+        CMAESWorkspace ws = new CMAESWorkspace(); ws.ensure(n, lambda, false);
 
         // Verify initial state after construction (which calls reset())
         assertResetState(ws, n, lambda);
@@ -534,7 +534,7 @@ public class CMAESCoreRewriteProperties {
 
         // Run with diagonalOnly=false
         Optimization rFull = Minimizer.cmaes()
-            .objective(x -> { double s = 0; for (double v : x) s += v * v; return s; })
+            .objective((x, _n) -> { double s = 0; for (double v : x) s += v * v; return s; })
             .initialPoint(x0.clone())
             .populationSize(lambda)
             .sigma(0.5)
@@ -551,7 +551,7 @@ public class CMAESCoreRewriteProperties {
 
         // Run with diagonalOnly=true
         Optimization rDiag = Minimizer.cmaes()
-            .objective(x -> { double s = 0; for (double v : x) s += v * v; return s; })
+            .objective((x, _n) -> { double s = 0; for (double v : x) s += v * v; return s; })
             .initialPoint(x0.clone())
             .populationSize(lambda)
             .sigma(0.5)

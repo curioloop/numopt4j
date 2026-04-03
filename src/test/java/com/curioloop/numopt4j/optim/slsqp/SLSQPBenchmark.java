@@ -48,7 +48,7 @@ public class SLSQPBenchmark {
             initialPoint[i] = rand.nextDouble() * 2 - 1;
         }
 
-        Univariate objective = (x, g) -> {
+        Univariate objective = (x, n, g) -> {
             double f = 0.0;
             for (int i = 0; i < x.length; i++) {
                 double coef = i + 1;
@@ -68,7 +68,7 @@ public class SLSQPBenchmark {
         switch (problemType) {
             case "equality":
             case "mixed":
-                p.equalityConstraints((Univariate) (x, g) -> {
+                p.equalityConstraints((Univariate) (x, n, g) -> {
                     double sum = 0.0;
                     for (int i = 0; i < x.length; i++) {
                         sum += x[i];
@@ -81,7 +81,7 @@ public class SLSQPBenchmark {
 
         switch (problemType) {
             case "inequality": {
-                p.inequalityConstraints((Univariate) (x, g) -> {
+                p.inequalityConstraints((Univariate) (x, n, g) -> {
                     if (g != null) { Arrays.fill(g, 0.0); g[0] = 1.0; }
                     return x[0] - 0.5;
                 });
@@ -91,7 +91,7 @@ public class SLSQPBenchmark {
                 Univariate[] ineq = new Univariate[dimension];
                 for (int j = 0; j < dimension; j++) {
                     final int idx = j;
-                    ineq[j] = (x, g) -> {
+                    ineq[j] = (x, n, g) -> {
                         if (g != null) { Arrays.fill(g, 0.0); g[idx] = 1.0; }
                         return x[idx] + 1.0;
                     };

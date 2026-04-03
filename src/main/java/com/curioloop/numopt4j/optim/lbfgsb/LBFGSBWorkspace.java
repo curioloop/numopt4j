@@ -47,36 +47,36 @@ public final class LBFGSBWorkspace {
     // ========================================================================
 
     /** Problem dimension (number of variables) */
-    private final int n;
+    private int n;
 
     /** Number of L-BFGS corrections (limited memory parameter) */
-    private final int m;
+    private int m;
 
     // ========================================================================
     // Unified buffers
     // ========================================================================
 
     /** Unified buffer for all floating-point arrays */
-    private final double[] buffer;
+    private double[] buffer;
 
     /** Unified buffer for all integer arrays */
-    private final int[] iBuffer;
+    private int[] iBuffer;
 
     // ========================================================================
     // Floating-point array offsets
     // ========================================================================
 
     /** Offset for S matrix (n × m): stores sₖ = xₖ₊₁ - xₖ */
-    private final int wsOffset;
+    private int wsOffset;
 
     /** Offset for Y matrix (n × m): stores yₖ = gₖ₊₁ - gₖ */
-    private final int wyOffset;
+    private int wyOffset;
 
     /** Offset for S'Y matrix (m × m): inner products (sᵀy)ᵢⱼ */
-    private final int syOffset;
+    private int syOffset;
 
     /** Offset for S'S matrix (m × m): inner products (sᵀs)ᵢⱼ */
-    private final int ssOffset;
+    private int ssOffset;
 
     /**
      * Offset for Cholesky factor T (m × m).
@@ -84,7 +84,7 @@ public final class LBFGSBWorkspace {
      * with Jᵀ stored in the upper triangle.
      * Used in bmv to compute the middle matrix M product.
      */
-    private final int wtOffset;
+    private int wtOffset;
 
     /**
      * Offset for K matrix (2m × 2m = 4m²).
@@ -97,7 +97,7 @@ public final class LBFGSBWorkspace {
      * 2×col × 2×col indefinite matrix.
      * Used in optimalDirection (subsm) to compute K⁻¹v.
      */
-    private final int wnOffset;
+    private int wnOffset;
 
     /**
      * Offset for inner product storage (2m × 2m = 4m²).
@@ -110,44 +110,44 @@ public final class LBFGSBWorkspace {
      * and Rz is the upper triangular part of SᵀZZᵀY.
      * Updated incrementally in formK to avoid recomputing from scratch.
      */
-    private final int sndOffset;
+    private int sndOffset;
 
     /** Offset for Cauchy point z (n): GCP / Newton point */
-    private final int zOffset;
+    private int zOffset;
 
     /** Offset for reduced gradient r (n) */
-    private final int rOffset;
+    private int rOffset;
 
     /** Offset for search direction d (n) */
-    private final int dOffset;
+    private int dOffset;
 
     /** Offset for breakpoint times t (n) */
-    private final int tOffset;
+    private int tOffset;
 
     /** Offset for safeguard point xp (n): projected Newton direction backup */
-    private final int xpOffset;
+    private int xpOffset;
 
     /** Offset for work array wa (8m): shared temporary workspace */
-    private final int waOffset;
+    private int waOffset;
 
     /** Offset for gradient g (n) */
-    private final int gOffset;
+    private int gOffset;
 
     /** Offset for diagInv array (m): 1/Dᵢᵢ for bmv */
-    private final int diagInvOffset;
+    private int diagInvOffset;
 
     /** Offset for sqrtDiagInv array (m): 1/√Dᵢᵢ for bmv */
-    private final int sqrtDiagInvOffset;
+    private int sqrtDiagInvOffset;
 
     // ========================================================================
     // Integer array offsets
     // ========================================================================
 
     /** Offset for index array (2n): free/active variable indices */
-    private final int indexOffset;
+    private int indexOffset;
 
     /** Offset for where array (n): variable status flags */
-    private final int whereOffset;
+    private int whereOffset;
 
     // ========================================================================
     // BFGS state (matches Go iterBFGS in base.go)
@@ -235,24 +235,14 @@ public final class LBFGSBWorkspace {
     private int resetCount;
 
     // ========================================================================
-    // Constructor
+    // Constructors
     // ========================================================================
 
     /**
-     * Creates a new workspace for L-BFGS-B optimization.
-     *
-     * @param n Problem dimension (must be positive)
-     * @param m Number of L-BFGS corrections (must be positive, typically 3-20)
-     * @throws IllegalArgumentException if n or m is not positive
+     * Initializes (or re-initializes) the workspace for the given dimensions.
+     * Computes all offsets and allocates buffers.
      */
-    public LBFGSBWorkspace(int n, int m) {
-        if (n <= 0) {
-            throw new IllegalArgumentException("Dimension must be positive: " + n);
-        }
-        if (m <= 0) {
-            throw new IllegalArgumentException("Corrections must be positive: " + m);
-        }
-
+    private void init(int n, int m) {
         this.n = n;
         this.m = m;
 
@@ -326,8 +316,25 @@ public final class LBFGSBWorkspace {
 
         // Allocate unified integer buffer
         this.iBuffer = new int[3 * n];
+    }
 
-        // Initialize state
+    /**
+     * Ensures this workspace has sufficient capacity for the given dimensions.
+     * Reallocates if needed, then resets state.
+     *
+     * @param n Problem dimension (must be positive)
+     * @param m Number of L-BFGS corrections (must be positive, typically 3-20)
+     */
+    public void ensure(int n, int m) {
+        if (n <= 0) {
+            throw new IllegalArgumentException("Dimension must be positive: " + n);
+        }
+        if (m <= 0) {
+            throw new IllegalArgumentException("Corrections must be positive: " + m);
+        }
+        if (n > getDimension() || m > getCorrections()) {
+            init(n, m);
+        }
         reset();
     }
 
@@ -359,22 +366,6 @@ public final class LBFGSBWorkspace {
      * @return true if compatible (same n and m)
      */
     public boolean isCompatible(int dimension, int corrections) {
-        return this.n == dimension && this.m == corrections;
-    }
-
-    /**
-     * Ensures this workspace has sufficient capacity for the given dimensions.
-     *
-     * <p>Since L-BFGS-B workspace dimensions are fixed at construction time,
-     * this method returns {@code true} if the current workspace can be reused
-     * (i.e., dimensions match exactly), or {@code false} if a new workspace
-     * must be allocated by the caller.</p>
-     *
-     * @param dimension   required problem dimension
-     * @param corrections required number of L-BFGS corrections
-     * @return true if this workspace is sufficient; false if reallocation is needed
-     */
-    public boolean ensureCapacity(int dimension, int corrections) {
         return this.n == dimension && this.m == corrections;
     }
 
@@ -427,8 +418,8 @@ public final class LBFGSBWorkspace {
         this.resetCount = 0;
 
         // Zero out work arrays
-        java.util.Arrays.fill(buffer, 0.0);
-        java.util.Arrays.fill(iBuffer, 0);
+        if (buffer != null) java.util.Arrays.fill(buffer, 0.0);
+        if (iBuffer != null) java.util.Arrays.fill(iBuffer, 0);
     }
 
     // ========================================================================

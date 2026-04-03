@@ -114,7 +114,7 @@ public class ProjectionProperties implements LBFGSBConstants {
         double[] upper = {1.0, 1.0, 1.0, 1.0, 0.5};
         int[] boundType = {BOUND_BOTH, BOUND_BOTH, BOUND_BOTH, BOUND_NONE, BOUND_BOTH};
 
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, 1);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, 1);
         boolean projected = LBFGSBCore.projInitActive(n, x, TestBounds.toBounds(n, lower, upper, boundType), ws);
         
         // x[0] should be projected to 0.0 (lower bound)
@@ -444,7 +444,7 @@ public class ProjectionProperties implements LBFGSBConstants {
             x[i] = l + (u - l) * (random.nextDouble() * 3 - 1);
         }
         
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, 1);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, 1);
         boolean projected = LBFGSBCore.projInitActive(n, x, TestBounds.toBounds(n, lower, upper, boundType), ws);
         
         // Verify projection
@@ -722,7 +722,7 @@ public class ProjectionProperties implements LBFGSBConstants {
             x[i] = random.nextGaussian() * 100;
         }
         
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
             LBFGSBCore.projInitActive(n, x, TestBounds.toBounds(n, lower, upper, boundType), ws);
             
             // Verify workspace state

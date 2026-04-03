@@ -42,7 +42,7 @@ If you are using an AI coding assistant (e.g. GitHub Copilot, Cursor, Claude), y
 ```java
 // Non-convex / multimodal — no gradient required
 Optimization result = Minimizer.cmaes()
-    .objective(x -> { double s = 0; for (double v : x) s += v*v; return s; })
+    .objective((x, n) -> { double s = 0; for (int i = 0; i < n; i++) s += x[i]*x[i]; return s; })
     .initialPoint(1.0, 1.0, 1.0)
     .solve();
 
@@ -70,13 +70,13 @@ Optimization result3 = Minimizer.cmaes()
 ```java
 // No gradient required — works for any dimension
 Optimization result = Minimizer.subplex()
-    .objective(x -> x[0]*x[0] + x[1]*x[1])
+    .objective((x, n) -> x[0]*x[0] + x[1]*x[1])
     .initialPoint(1.0, 1.0)
     .solve();
 
 // High-dimensional with bounds
 Optimization result = Minimizer.subplex()
-    .objective(x -> { double s = 0; for (double v : x) s += v*v; return s; })
+    .objective((x, n) -> { double s = 0; for (int i = 0; i < n; i++) s += x[i]*x[i]; return s; })
     .initialPoint(new double[20])
     .bounds(...)
     .functionTolerance(1e-8)
@@ -88,7 +88,7 @@ Optimization result = Minimizer.subplex()
 
 ```java
 Optimization result = Minimizer.lbfgsb()
-    .objective(x -> x[0]*x[0] + x[1]*x[1])
+    .objective((x, n) -> x[0]*x[0] + x[1]*x[1])
     .initialPoint(1.0, 1.0)
     .solve();
 
@@ -114,7 +114,7 @@ Optimization result = Minimizer.lbfgsb()
 
 ```java
 Optimization result = Minimizer.lbfgsb()
-    .objective(x -> x[0]*x[0] + x[1]*x[1])
+    .objective((x, n) -> x[0]*x[0] + x[1]*x[1])
     .bounds(Bound.between(0, 10), Bound.between(0, 10))
     .initialPoint(1.0, 1.0)
     .solve();
@@ -126,9 +126,9 @@ Optimization result = Minimizer.lbfgsb()
 // Equality constraint: x[0] + x[1] = 1
 // Inequality constraint: x[0] >= 0.5
 Optimization result = Minimizer.slsqp()
-    .objective(x -> x[0]*x[0] + x[1]*x[1])
-    .equalityConstraints(x -> x[0] + x[1] - 1)
-    .inequalityConstraints(x -> x[0] - 0.5)
+    .objective((x, n) -> x[0]*x[0] + x[1]*x[1])
+    .equalityConstraints((x, n) -> x[0] + x[1] - 1)
+    .inequalityConstraints((x, n) -> x[0] - 0.5)
     .initialPoint(0.5, 0.5)
     .solve();
 ```
@@ -141,7 +141,7 @@ double[] tData = {0.0, 1.0, 2.0, 3.0};
 double[] yData = {2.0, 1.2, 0.7, 0.4};
 
 Optimization result = Minimizer.trf()
-    .residuals((x, r) -> {
+    .residuals((x, n, r, m) -> {
         for (int i = 0; i < tData.length; i++) {
             r[i] = yData[i] - x[0] * Math.exp(-x[1] * tData[i]);
         }
@@ -201,7 +201,7 @@ double root = result.getRoot(); // ≈ π
 
 ```java
 // Powell hybrid method (HYBR)
-Optimization result = RootFinder.hybr((x, f) -> {
+Optimization result = RootFinder.hybr((x, n, f, m) -> {
         f[0] = x[0]*x[0] - 2;
         f[1] = x[1] - x[0];
     }, 2)
@@ -211,7 +211,7 @@ Optimization result = RootFinder.hybr((x, f) -> {
 double[] solution = result.getSolution(); // [√2, √2]
 
 // Broyden (Jacobian-free)
-result = RootFinder.broyden((x, f) -> {
+result = RootFinder.broyden((x, n, f, m) -> {
         f[0] = x[0]*x[0] - 2;
         f[1] = x[1] - x[0];
     }, 2)
@@ -231,7 +231,7 @@ For high-frequency optimization, reuse workspace to reduce allocation overhead:
 
 ```java
 LBFGSBProblem problem = Minimizer.lbfgsb()
-    .objective(x -> x[0]*x[0] + x[1]*x[1])
+    .objective((x, n) -> x[0]*x[0] + x[1]*x[1])
     .initialPoint(new double[n]);
 
 LBFGSBWorkspace workspace = problem.alloc();  // allocate once
@@ -320,9 +320,9 @@ Minimizer.trf()      // → TRFProblem
 ### RootFinder (facade — static factory entry point)
 
 ```java
-RootFinder.brentq(DoubleUnaryOperator f)                    // → BrentqProblem
-RootFinder.hybr(BiConsumer<double[],double[]> fn, int n)    // → HYBRProblem
-RootFinder.broyden(BiConsumer<double[],double[]> fn, int n) // → BroydenProblem
+RootFinder.brentq(DoubleUnaryOperator f)                        // → BrentqProblem
+RootFinder.hybr(Multivariate.Objective fn, int n)               // → HYBRProblem
+RootFinder.broyden(Multivariate.Objective fn, int n)            // → BroydenProblem
 ```
 
 ### Regressor (facade — linear regression)

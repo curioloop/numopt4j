@@ -8,8 +8,6 @@ import com.curioloop.numopt4j.optim.Multivariate;
 import com.curioloop.numopt4j.optim.NumericalJacobian;
 import com.curioloop.numopt4j.optim.Optimization;
 
-import java.util.function.BiConsumer;
-
 import static com.curioloop.numopt4j.optim.trf.TRFConstants.*;
 
 /**
@@ -135,10 +133,9 @@ public final class TRFProblem extends Minimizer<Multivariate, TRFWorkspace, TRFP
     public TRFWorkspace alloc() {
         validate();
         if (workspace == null) {
-            workspace = new TRFWorkspace(numResiduals, dimension);
-        } else {
-            workspace.ensureCapacity(numResiduals, dimension);
+            workspace = new TRFWorkspace();
         }
+        workspace.ensure(numResiduals, dimension);
         return workspace;
     }
 
@@ -160,14 +157,8 @@ public final class TRFProblem extends Minimizer<Multivariate, TRFWorkspace, TRFP
     @Override
     public Optimization solve(TRFWorkspace workspace) {
         validate();
-        TRFWorkspace ws = workspace;
-        if (ws == null) {
-            ws = this.workspace;
-            if (ws == null) {
-                ws = new TRFWorkspace(numResiduals, dimension);
-            }
-        }
-        ws.ensureCapacity(numResiduals, dimension);
+        TRFWorkspace ws = workspace != null ? workspace : (this.workspace != null ? this.workspace : new TRFWorkspace());
+        ws.ensure(numResiduals, dimension);
 
         double[] x = initialPoint.clone();
         int maxfev = (maxEvaluations > 0) ? maxEvaluations : 100 * dimension;
@@ -192,11 +183,12 @@ public final class TRFProblem extends Minimizer<Multivariate, TRFWorkspace, TRFP
     /**
      * Sets the residual function using a numerical Jacobian (central differences).
      *
-     * @param fn residual function: (x, r) -> void
+     * @param fn residual function: (x, n, r, m) -> void
      * @param m  number of residuals
      * @return this problem instance
      */
-    public TRFProblem residuals(BiConsumer<double[], double[]> fn, int m) {
+    public TRFProblem residuals(Multivariate.Objective fn, int m) {
+        if (fn == null) throw new IllegalArgumentException("fn must not be null");
         if (m <= 0) {
             throw new IllegalArgumentException("number of residuals m must be positive, got " + m);
         }
@@ -207,11 +199,12 @@ public final class TRFProblem extends Minimizer<Multivariate, TRFWorkspace, TRFP
      * Sets the residual function with a specified numerical Jacobian method.
      *
      * @param jac numerical Jacobian method
-     * @param fn  residual function: (x, r) -> void
+     * @param fn  residual function: (x, n, r, m) -> void
      * @param m   number of residuals
      * @return this problem instance
      */
-    public TRFProblem residuals(NumericalJacobian jac, BiConsumer<double[], double[]> fn, int m) {
+    public TRFProblem residuals(NumericalJacobian jac, Multivariate.Objective fn, int m) {
+        if (fn == null) throw new IllegalArgumentException("fn must not be null");
         if (m <= 0) {
             throw new IllegalArgumentException("number of residuals m must be positive, got " + m);
         }
@@ -358,5 +351,5 @@ public final class TRFProblem extends Minimizer<Multivariate, TRFWorkspace, TRFP
     // ── Internal state for lazy Jacobian wrapping ─────────────────────────────
 
     private transient NumericalJacobian pendingJac;
-    private transient BiConsumer<double[], double[]> pendingFn;
+    private transient Multivariate.Objective pendingFn;
 }

@@ -41,7 +41,7 @@ class LineSearchProperties implements LBFGSBConstants {
             @ForAll @IntRange(min = 2, max = 20) int n,
             @ForAll @IntRange(min = 1, max = 5) int m
     ) {
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
 
         // Initialize workspace state
         ws.setIter(0);
@@ -76,7 +76,7 @@ class LineSearchProperties implements LBFGSBConstants {
             @ForAll @IntRange(min = 2, max = 20) int n,
             @ForAll @IntRange(min = 1, max = 5) int m
     ) {
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
 
         // Set up constrained problem
         ws.setIter(1);  // Not first iteration
@@ -136,7 +136,7 @@ class LineSearchProperties implements LBFGSBConstants {
             @ForAll @IntRange(min = 2, max = 20) int n,
             @ForAll @IntRange(min = 1, max = 5) int m
     ) {
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
 
         // Initialize workspace
         ws.setIter(0);
@@ -191,7 +191,7 @@ class LineSearchProperties implements LBFGSBConstants {
     }
 
     private double[] runPerform(int n, int m) {
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
 
         ws.setIter(0);
         ws.setBoxed(false);
@@ -236,7 +236,7 @@ class LineSearchProperties implements LBFGSBConstants {
             @ForAll @IntRange(min = 2, max = 10) int n,
             @ForAll @IntRange(min = 1, max = 3) int m
     ) {
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
 
         ws.setIter(1);
         ws.setBoxed(false);
@@ -328,7 +328,7 @@ class LineSearchProperties implements LBFGSBConstants {
             @ForAll @IntRange(min = 2, max = 20) int n,
             @ForAll @IntRange(min = 1, max = 5) int m
     ) {
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
 
         ws.setIter(1);
         ws.setBoxed(true);
@@ -381,7 +381,7 @@ class LineSearchProperties implements LBFGSBConstants {
             @ForAll @IntRange(min = 2, max = 20) int n,
             @ForAll @IntRange(min = 1, max = 5) int m
     ) {
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
 
         ws.setIter(0);  // First iteration
         ws.setBoxed(false);
@@ -418,7 +418,7 @@ class LineSearchProperties implements LBFGSBConstants {
             @ForAll @IntRange(min = 2, max = 20) int n,
             @ForAll @IntRange(min = 1, max = 5) int m
     ) {
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
 
         ws.setIter(5);  // Not first iteration
         ws.setBoxed(false);
@@ -450,7 +450,7 @@ class LineSearchProperties implements LBFGSBConstants {
             @ForAll @IntRange(min = 2, max = 20) int n,
             @ForAll @IntRange(min = 1, max = 5) int m
     ) {
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
 
         ws.setIter(0);
         ws.setBoxed(false);
@@ -486,7 +486,7 @@ class LineSearchProperties implements LBFGSBConstants {
             @ForAll @IntRange(min = 2, max = 20) int n,
             @ForAll @IntRange(min = 1, max = 5) int m
     ) {
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
 
         ws.setIter(0);
         ws.setBoxed(false);

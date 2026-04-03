@@ -32,7 +32,7 @@ public class WorkspaceReuseProperties implements LBFGSBConstants {
     private static final double TOLERANCE = 1e-10;
 
     // Simple quadratic: f(x) = sum(x_i^2)
-    static final Univariate quadratic = (point, grad) -> {
+    static final Univariate quadratic = (point, _n, grad) -> {
         double f = 0.0;
         for (int i = 0; i < point.length; i++) {
             f += point[i] * point[i];
@@ -44,7 +44,7 @@ public class WorkspaceReuseProperties implements LBFGSBConstants {
     };
 
     // Objective 2: Shifted quadratic f(x) = sum((x_i - 1)^2)
-    static final Univariate shiftedQuadratic = (point, grad) -> {
+    static final Univariate shiftedQuadratic = (point, _n, grad) -> {
         double f = 0.0;
         for (int i = 0; i < point.length; i++) {
             double diff = point[i] - 1.0;
@@ -57,7 +57,7 @@ public class WorkspaceReuseProperties implements LBFGSBConstants {
     };
 
     // Objective 3: Scaled quadratic f(x) = sum(i * x_i^2)
-    static final Univariate scaledQuadratic = (point, grad) -> {
+    static final Univariate scaledQuadratic = (point, _n, grad) -> {
         double f = 0.0;
         for (int i = 0; i < point.length; i++) {
             double scale = i + 1.0;
@@ -70,7 +70,7 @@ public class WorkspaceReuseProperties implements LBFGSBConstants {
     };
 
     // Use Rosenbrock function which requires multiple iterations
-    static final Univariate rosenbrock = (point, grad) -> {
+    static final Univariate rosenbrock = (point, _n, grad) -> {
         double f = 0.0;
         int dim = point.length;
         for (int i = 0; i < dim - 1; i++) {
@@ -113,7 +113,7 @@ public class WorkspaceReuseProperties implements LBFGSBConstants {
         }
         com.curioloop.numopt4j.optim.Bound[] bounds = TestBounds.toBounds(n, lower, upper, boundType);
         
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
             // First optimization run
             double[] x1 = {1.0, 2.0, 3.0};
             LBFGSBCore.OptimizeResult result1 = LBFGSBCore.optimize(
@@ -163,7 +163,7 @@ public class WorkspaceReuseProperties implements LBFGSBConstants {
         int n = 10;
         int m = 5;
         
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
             // Get buffer references before any operations
             double[] bufferBefore = ws.getBuffer();
             int[] iBufferBefore = ws.getIntBuffer();
@@ -214,7 +214,7 @@ public class WorkspaceReuseProperties implements LBFGSBConstants {
         }
         com.curioloop.numopt4j.optim.Bound[] bounds = TestBounds.toBounds(n, lower, upper, boundType);
         
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
             // Get buffer references before optimization
             double[] bufferBefore = ws.getBuffer();
             int[] iBufferBefore = ws.getIntBuffer();
@@ -312,7 +312,7 @@ public class WorkspaceReuseProperties implements LBFGSBConstants {
         }
         com.curioloop.numopt4j.optim.Bound[] bounds = TestBounds.toBounds(n, lower, upper, boundType);
         
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
             for (int run = 0; run < numRuns; run++) {
                 // Generate random starting point
                 double[] x = new double[n];
@@ -362,7 +362,7 @@ public class WorkspaceReuseProperties implements LBFGSBConstants {
             @ForAll @IntRange(min = 2, max = 50) int n,
             @ForAll @IntRange(min = 3, max = 10) int m
     ) {
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
             // Get buffer references before any operations
             double[] bufferBefore = ws.getBuffer();
             int[] iBufferBefore = ws.getIntBuffer();
@@ -445,7 +445,7 @@ public class WorkspaceReuseProperties implements LBFGSBConstants {
         }
         com.curioloop.numopt4j.optim.Bound[] bounds = TestBounds.toBounds(n, lower, upper, boundType);
         
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
             // Get buffer references before any optimization
             double[] bufferRef = ws.getBuffer();
             int[] iBufferRef = ws.getIntBuffer();
@@ -506,7 +506,7 @@ public class WorkspaceReuseProperties implements LBFGSBConstants {
         }
         com.curioloop.numopt4j.optim.Bound[] bounds = TestBounds.toBounds(n, lower, upper, boundType);
         
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
             // First run
             double[] x1 = startPoint.clone();
             LBFGSBCore.OptimizeResult result1 = LBFGSBCore.optimize(
@@ -566,7 +566,7 @@ public class WorkspaceReuseProperties implements LBFGSBConstants {
         }
         com.curioloop.numopt4j.optim.Bound[] bounds = TestBounds.toBounds(n, lower, upper, boundType);
         
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
             // Run with first objective (minimum at origin)
             double[] x1 = new double[n];
             for (int i = 0; i < n; i++) {
@@ -665,7 +665,7 @@ public class WorkspaceReuseProperties implements LBFGSBConstants {
         }
         com.curioloop.numopt4j.optim.Bound[] bounds = TestBounds.toBounds(n, lower, upper, boundType);
         
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
             // Get buffer references before optimization
             double[] bufferRef = ws.getBuffer();
             int[] iBufferRef = ws.getIntBuffer();
@@ -711,7 +711,7 @@ public class WorkspaceReuseProperties implements LBFGSBConstants {
             @ForAll @IntRange(min = 2, max = 50) int n,
             @ForAll @IntRange(min = 3, max = 10) int m
     ) {
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
             // Should be compatible with same dimensions
             assertThat(ws.isCompatible(n, m))
                     .as("Workspace should be compatible with same dimensions")
@@ -752,7 +752,7 @@ public class WorkspaceReuseProperties implements LBFGSBConstants {
             @ForAll @IntRange(min = 2, max = 100) int n,
             @ForAll @IntRange(min = 3, max = 20) int m
     ) {
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
             // Verify buffer sizes match calculated sizes
             int expectedDoubleSize = LBFGSBWorkspace.calculateBufferSize(n, m);
             int expectedIntSize = LBFGSBWorkspace.calculateIntBufferSize(n);

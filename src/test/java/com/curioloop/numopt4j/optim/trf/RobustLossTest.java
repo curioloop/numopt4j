@@ -6,7 +6,7 @@ package com.curioloop.numopt4j.optim.trf;
 import com.curioloop.numopt4j.optim.Optimization;
 import org.junit.jupiter.api.Test;
 
-import java.util.function.BiConsumer;
+import com.curioloop.numopt4j.optim.Multivariate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
@@ -48,8 +48,8 @@ class RobustLossTest {
     }
 
     /** Residual function for linear model y = a*x + b on the contaminated dataset. */
-    static BiConsumer<double[], double[]> residualFn() {
-        return (c, r) -> {
+    static Multivariate.Objective residualFn() {
+        return (c, n, r, m) -> {
             for (int i = 0; i < M_OUTLIER; i++) {
                 r[i] = Y_OUTLIER[i] - (c[0] * X_OUTLIER[i] + c[1]);
             }
@@ -75,7 +75,7 @@ class RobustLossTest {
 
     @Test
     void linear_cleanData_recoversExactParameters() {
-        BiConsumer<double[], double[]> fn = (c, r) -> {
+        Multivariate.Objective fn = (c, n, r, m) -> {
             for (int i = 0; i < M_CLEAN; i++) {
                 r[i] = Y_CLEAN[i] - (c[0] * X_DATA[i] + c[1]);
             }

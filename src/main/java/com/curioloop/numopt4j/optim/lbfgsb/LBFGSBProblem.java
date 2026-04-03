@@ -10,7 +10,6 @@ import com.curioloop.numopt4j.optim.Optimization;
 import com.curioloop.numopt4j.optim.Univariate;
 
 import java.time.Duration;
-import java.util.function.ToDoubleFunction;
 
 /**
  * Fluent API for defining and solving L-BFGS-B bound-constrained optimization problems.
@@ -159,9 +158,8 @@ public final class LBFGSBProblem extends Minimizer<Univariate, LBFGSBWorkspace, 
     @Override
     public LBFGSBWorkspace alloc() {
         validate();
-        if (workspace == null || !workspace.ensureCapacity(dimension, corrections)) {
-            workspace = new LBFGSBWorkspace(dimension, corrections);
-        }
+        if (workspace == null) workspace = new LBFGSBWorkspace();
+        workspace.ensure(dimension, corrections);
         return workspace;
     }
 
@@ -178,19 +176,8 @@ public final class LBFGSBProblem extends Minimizer<Univariate, LBFGSBWorkspace, 
     @Override
     public Optimization solve(LBFGSBWorkspace workspace) {
         validate();
-        LBFGSBWorkspace ws = workspace;
-        if (ws != null && !ws.ensureCapacity(dimension, corrections)) {
-            throw new IllegalArgumentException(
-                    "Workspace dimensions (" + ws.getDimension() + ", " + ws.getCorrections() +
-                            ") do not match problem dimensions (" + dimension + ", " + corrections + ")");
-        }
-        if (ws == null) {
-            ws = this.workspace;
-            if (ws == null || !ws.ensureCapacity(dimension, corrections)) {
-                ws = new LBFGSBWorkspace(dimension, corrections);
-            }
-        }
-        ws.reset();
+        LBFGSBWorkspace ws = workspace != null ? workspace : (this.workspace != null ? this.workspace : new LBFGSBWorkspace());
+        ws.ensure(dimension, corrections);
         double[] x = initialPoint.clone();
 
         LBFGSBCore.OptimizeResult coreResult = LBFGSBCore.optimize(
@@ -309,7 +296,7 @@ public final class LBFGSBProblem extends Minimizer<Univariate, LBFGSBWorkspace, 
      * @return this problem instance
      * @throws IllegalArgumentException if f is null
      */
-    public LBFGSBProblem objective(ToDoubleFunction<double[]> f) {
+    public LBFGSBProblem objective(Univariate.Objective f) {
         if (f == null) {
             throw new IllegalArgumentException("objective function must not be null");
         }
@@ -323,7 +310,7 @@ public final class LBFGSBProblem extends Minimizer<Univariate, LBFGSBWorkspace, 
      * @param f function that computes only the objective value
      * @return this problem instance
      */
-    public LBFGSBProblem objective(NumericalGradient grad, ToDoubleFunction<double[]> f) {
+    public LBFGSBProblem objective(NumericalGradient grad, Univariate.Objective f) {
         this.objective = grad.wrap(f);
         return this;
     }

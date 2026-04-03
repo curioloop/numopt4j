@@ -8,9 +8,9 @@ import com.curioloop.numopt4j.linalg.blas.BLAS;
 import com.curioloop.numopt4j.optim.Bound;
 import com.curioloop.numopt4j.optim.Optimization;
 
+import com.curioloop.numopt4j.optim.Univariate;
 import java.util.Arrays;
 import java.util.Random;
-import java.util.function.ToDoubleFunction;
 
 /**
  * Stateless CMA-ES core algorithm.
@@ -765,7 +765,7 @@ public final class CMAESCore {
      *
      * <p>For each candidate k:</p>
      * <ol>
-     *   <li>Copy x_k into {@code ws.xbuf} and call {@code fn.applyAsDouble(xbuf)}.</li>
+     *   <li>Copy x_k into {@code ws.xbuf} and call {@code fn.evaluate(xbuf, ws.n)}.</li>
      *   <li>Store raw fitness in {@code lVec[FITNESS+k]}.</li>
      *   <li>Compute boundary penalty into {@code lVec[PENALTY+k]} (no allocation).</li>
      * </ol>
@@ -780,7 +780,7 @@ public final class CMAESCore {
      *
      * @return {@code true} if at least one finite fitness value was observed
      */
-    static boolean evaluateFitness(CMAESWorkspace ws, ToDoubleFunction<double[]> fn,
+    static boolean evaluateFitness(CMAESWorkspace ws, Univariate.Objective fn,
                                     Bound[] bounds) {
         final int n = ws.n;
         final int lambda = ws.lambda;
@@ -790,7 +790,7 @@ public final class CMAESCore {
 
         for (int k = 0; k < lambda; k++) {
             for (int i = 0; i < n; i++) xbuf[i] = ws.arx[i * lambda + k];
-            double f = fn.applyAsDouble(xbuf);
+            double f = fn.evaluate(xbuf, ws.n);
             lVec[FITNESS + k] = f;
             lVec[PENALTY + k] = (bounds != null) ? computeRawPenalty(ws.arx, k, lambda, n, bounds) : 0.0;
         }
@@ -854,7 +854,7 @@ public final class CMAESCore {
      * @param rng  random number generator
      * @return optimisation result containing best solution, cost, status and counters
      */
-    public static Optimization optimize(double[] x0, ToDoubleFunction<double[]> fn,
+    public static Optimization optimize(double[] x0, Univariate.Objective fn,
                                          Bound[] bounds, CMAESWorkspace ws,
                                          CMAESProblem cfg, Random rng) {
         final int n = ws.n;

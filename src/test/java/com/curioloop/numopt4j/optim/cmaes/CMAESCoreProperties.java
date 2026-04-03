@@ -26,7 +26,7 @@ public class CMAESCoreProperties {
     @Label("Feature: cmaes-optimizer, Property 1: 重组权重归一化")
     void weightsNormalizeToOne(@ForAll @IntRange(min = 2, max = 50) int n) {
         int lambda = 4 + (int) Math.floor(3.0 * Math.log(n));
-        CMAESWorkspace ws = new CMAESWorkspace(n, lambda);
+        CMAESWorkspace ws = new CMAESWorkspace(); ws.ensure(n, lambda, false);
         CMAESCore.initParams(ws, 1000);
 
         // sum(weights) == 1.0
@@ -54,7 +54,7 @@ public class CMAESCoreProperties {
             @ForAll @IntRange(min = 2, max = 10) int n,
             @ForAll @IntRange(min = 4, max = 20) int lambda) {
 
-        CMAESWorkspace ws = new CMAESWorkspace(n, lambda);
+        CMAESWorkspace ws = new CMAESWorkspace(); ws.ensure(n, lambda, false);
         CMAESCore.initParams(ws, 1000);
 
         // Fill arx with known values
@@ -106,7 +106,7 @@ public class CMAESCoreProperties {
             C[i * n + i] += n;
         }
 
-        CMAESWorkspace ws = new CMAESWorkspace(n, 4);
+        CMAESWorkspace ws = new CMAESWorkspace(); ws.ensure(n, 4, false);
         System.arraycopy(C, 0, ws.mat, ws.C_OFF, n * n);
 
         ws.iterations = 1;
@@ -145,7 +145,7 @@ public class CMAESCoreProperties {
     @Label("Feature: cmaes-optimizer, Property 4: 特征值钳制保证正定性")
     void eigenvaluesClamped(@ForAll @IntRange(min = 2, max = 10) int n) {
         Random rng = new Random(42);
-        CMAESWorkspace ws = new CMAESWorkspace(n, 4);
+        CMAESWorkspace ws = new CMAESWorkspace(); ws.ensure(n, 4, false);
 
         double[] v = new double[n];
         for (int i = 0; i < n; i++) v[i] = rng.nextGaussian();
@@ -178,7 +178,7 @@ public class CMAESCoreProperties {
             @ForAll @DoubleRange(min = 0.01, max = 1.0) double cs,
             @ForAll @DoubleRange(min = 0.1, max = 5.0) double damps) {
 
-        CMAESWorkspace ws = new CMAESWorkspace(2, 4);
+        CMAESWorkspace ws = new CMAESWorkspace(); ws.ensure(2, 4, false);
         ws.normps = normps;
         ws.chiN = chiN;
         ws.cs = cs;
@@ -200,7 +200,7 @@ public class CMAESCoreProperties {
     @Label("Feature: cmaes-optimizer, Property 6: 对角线模式不变量（diagD² = diagC）")
     void diagDSquaredEqualsDiagC(@ForAll @IntRange(min = 2, max = 10) int n) {
         int lambda = 4 + (int) Math.floor(3.0 * Math.log(n));
-        CMAESWorkspace ws = new CMAESWorkspace(n, lambda);
+        CMAESWorkspace ws = new CMAESWorkspace(); ws.ensure(n, lambda, false);
         CMAESCore.initParams(ws, 1000);
 
         Random rng = new Random(42);
@@ -290,7 +290,7 @@ public class CMAESCoreProperties {
             @ForAll @IntRange(min = 10, max = 200) int maxEval) {
 
         Optimization result = Minimizer.cmaes()
-            .objective(x -> { double s = 0; for (double v : x) s += v*v; return s; })
+            .objective((x, n) -> { double s = 0; for (double v : x) s += v*v; return s; })
             .initialPoint(new double[]{1.0, 1.0, 1.0})
             .maxIterations(maxIter)
             .maxEvaluations(maxEval)
@@ -308,7 +308,7 @@ public class CMAESCoreProperties {
     @Label("Feature: cmaes-optimizer, Property 10: TolX 停止条件正确性")
     void tolXStopConditionCorrect(@ForAll @IntRange(min = 2, max = 10) int n) {
         int lambda = 4 + (int) Math.floor(3.0 * Math.log(n));
-        CMAESWorkspace ws = new CMAESWorkspace(n, lambda);
+        CMAESWorkspace ws = new CMAESWorkspace(); ws.ensure(n, lambda, false);
         CMAESCore.initParams(ws, 1000);
         ws.sigma = 1e-15;
         ws.sigma0 = 1.0;
@@ -320,7 +320,7 @@ public class CMAESCoreProperties {
         }
 
         CMAESProblem cfg = new CMAESProblem()
-            .objective(x -> 0.0)
+            .objective((x, _n) -> 0.0)
             .initialPoint(new double[n])
             .populationSize(lambda)
             .tolX(1e-11)
@@ -337,7 +337,7 @@ public class CMAESCoreProperties {
     @Label("Feature: cmaes-optimizer, Property 11: TolUpSigma 发散检测")
     void tolUpSigmaDivergenceDetection(@ForAll @IntRange(min = 2, max = 10) int n) {
         int lambda = 4 + (int) Math.floor(3.0 * Math.log(n));
-        CMAESWorkspace ws = new CMAESWorkspace(n, lambda);
+        CMAESWorkspace ws = new CMAESWorkspace(); ws.ensure(n, lambda, false);
         CMAESCore.initParams(ws, 1000);
         ws.sigma = 1e6;
         ws.sigma0 = 1.0;
@@ -348,7 +348,7 @@ public class CMAESCoreProperties {
         }
 
         CMAESProblem cfg = new CMAESProblem()
-            .objective(x -> 0.0)
+            .objective((x, _n) -> 0.0)
             .initialPoint(new double[n])
             .populationSize(lambda)
             .tolUpSigma(1e3)
@@ -365,7 +365,7 @@ public class CMAESCoreProperties {
     @Label("Feature: cmaes-optimizer, Property 12: 条件数停止条件")
     void conditionNumberStopCondition(@ForAll @IntRange(min = 2, max = 10) int n) {
         int lambda = 4 + (int) Math.floor(3.0 * Math.log(n));
-        CMAESWorkspace ws = new CMAESWorkspace(n, lambda);
+        CMAESWorkspace ws = new CMAESWorkspace(); ws.ensure(n, lambda, false);
         CMAESCore.initParams(ws, 1000);
         ws.sigma = 0.3;
         ws.sigma0 = 0.3;
@@ -375,7 +375,7 @@ public class CMAESCoreProperties {
         for (int i = 1; i < n; i++) ws.nVec[ws.D_OFF + i] = 1.0;
 
         CMAESProblem cfg = new CMAESProblem()
-            .objective(x -> 0.0)
+            .objective((x, _n) -> 0.0)
             .initialPoint(new double[n])
             .populationSize(lambda)
             .maxEvaluations(1000);
@@ -442,7 +442,7 @@ public class CMAESCoreProperties {
     @Property(tries = 200)
     @Label("Feature: cmaes-optimizer, Property 18: NaN/Infinity fitness 替换")
     void nanFitnessIsReplaced(@ForAll @IntRange(min = 2, max = 10) int lambda) {
-        CMAESWorkspace ws = new CMAESWorkspace(3, lambda);
+        CMAESWorkspace ws = new CMAESWorkspace(); ws.ensure(3, lambda, false);
 
         for (int k = 0; k < lambda; k++) {
             ws.lVec[ws.FITNESS + k] = (k == 0) ? Double.NaN : (k * 10.0);
@@ -473,7 +473,7 @@ public class CMAESCoreProperties {
     @Label("Feature: cmaes-optimizer, Property 13: 重启后全局最优单调性")
     void restartBestIsGlobalBest(@ForAll @IntRange(min = 1, max = 3) int maxRestarts) {
         Optimization result = Minimizer.cmaes()
-            .objective(x -> { double s = 0; for (double v : x) s += v*v; return s; })
+            .objective((x, n) -> { double s = 0; for (double v : x) s += v*v; return s; })
             .initialPoint(new double[]{1.0, 1.0, 1.0})
             .maxEvaluations(5000)
             .restartMode(RestartMode.ipop(maxRestarts, 2))

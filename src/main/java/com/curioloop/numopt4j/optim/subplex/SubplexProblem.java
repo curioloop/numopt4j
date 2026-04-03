@@ -6,8 +6,7 @@ package com.curioloop.numopt4j.optim.subplex;
 import com.curioloop.numopt4j.optim.Bound;
 import com.curioloop.numopt4j.optim.Minimizer;
 import com.curioloop.numopt4j.optim.Optimization;
-
-import java.util.function.ToDoubleFunction;
+import com.curioloop.numopt4j.optim.Univariate;
 
 /**
  * Fluent API for the Subplex algorithm (Rowan 1990).
@@ -38,7 +37,7 @@ import java.util.function.ToDoubleFunction;
  * @see Minimizer#subplex()
  */
 public final class SubplexProblem
-        extends Minimizer<ToDoubleFunction<double[]>, SubplexWorkspace, SubplexProblem> {
+        extends Minimizer<Univariate.Objective, SubplexWorkspace, SubplexProblem> {
 
     private double parameterTolerance = 1e-4;
     private double functionTolerance = 1e-4;
@@ -72,25 +71,16 @@ public final class SubplexProblem
     @Override
     public SubplexWorkspace alloc() {
         validate();
-        if (workspace == null) {
-            workspace = new SubplexWorkspace(dimension);
-        } else {
-            workspace.ensureFullCapacity(dimension);
-            workspace.ensureNmCapacity(Math.min(5, dimension));
-        }
+        if (workspace == null) workspace = new SubplexWorkspace();
+        workspace.ensure(dimension);
         return workspace;
     }
 
     @Override
     public Optimization solve(SubplexWorkspace workspace) {
         validate();
-        SubplexWorkspace ws = workspace;
-        if (ws == null) {
-            ws = this.workspace;
-            if (ws == null) {
-                ws = new SubplexWorkspace(dimension);
-            }
-        }
+        SubplexWorkspace ws = workspace != null ? workspace : (this.workspace != null ? this.workspace : new SubplexWorkspace());
+        ws.ensure(dimension);
 
         double[] x = initialPoint.clone();
         int maxEval = (maxEvaluations > 0) ? maxEvaluations : dimension * 200;
@@ -120,7 +110,7 @@ public final class SubplexProblem
 
     // ── Fluent setters ────────────────────────────────────────────────────────
 
-    public SubplexProblem objective(ToDoubleFunction<double[]> f) {
+    public SubplexProblem objective(Univariate.Objective f) {
         if (f == null) throw new IllegalArgumentException("objective function must not be null");
         this.objective = f;
         return this;

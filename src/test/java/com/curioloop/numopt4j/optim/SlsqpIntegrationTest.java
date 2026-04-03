@@ -146,7 +146,7 @@ public class SlsqpIntegrationTest {
     void testBasicConstrainedOptimizationInexactLineSearch() {
         // Define the objective function: f(x) = x[0]^2 + x[1]^2 + x[2]
         // Note: x[2] is linear, not quadratic
-        Univariate objective = (x, g) -> {
+        Univariate objective = (x, n, g) -> {
             double f = x[0] * x[0] + x[1] * x[1] + x[2];
             
             if (g != null) {
@@ -159,7 +159,7 @@ public class SlsqpIntegrationTest {
         };
         
         // Define the equality constraint: x[0]*x[1] - x[2] = 0
-        Univariate equalityConstraint = (x, g) -> {
+        Univariate equalityConstraint = (x, n, g) -> {
             if (g != null) {
                 g[0] = x[1];
                 g[1] = x[0];
@@ -256,7 +256,7 @@ public class SlsqpIntegrationTest {
     void testBasicConstrainedOptimizationExactLineSearch() {
         // Define the objective function: f(x) = x[0]^2 + x[1]^2 + x[2]
         // Note: x[2] is linear, not quadratic
-        Univariate objective = (x, g) -> {
+        Univariate objective = (x, n, g) -> {
             double f = x[0] * x[0] + x[1] * x[1] + x[2];
             
             if (g != null) {
@@ -269,7 +269,7 @@ public class SlsqpIntegrationTest {
         };
         
         // Define the equality constraint: x[0]*x[1] - x[2] = 0
-        Univariate equalityConstraint = (x, g) -> {
+        Univariate equalityConstraint = (x, n, g) -> {
             if (g != null) {
                 g[0] = x[1];
                 g[1] = x[0];
@@ -380,7 +380,7 @@ public class SlsqpIntegrationTest {
     void testProblem71() {
         // Define the 5-dimensional objective function
         // f(x) = x[0]*x[3]*(x[0] + x[1] + x[2]) + x[2]
-        Univariate objective = (x, g) -> {
+        Univariate objective = (x, n, g) -> {
             double f = x[0] * x[3] * (x[0] + x[1] + x[2]) + x[2];
             
             if (g != null) {
@@ -400,7 +400,7 @@ public class SlsqpIntegrationTest {
         };
         
         // Define equality constraint 1: x[0]*x[1]*x[2]*x[3] - x[4] - 25 = 0
-        Univariate cons1 = (x, g) -> {
+        Univariate cons1 = (x, n, g) -> {
             if (g != null) {
                 g[0] = x[1] * x[2] * x[3];
                 g[1] = x[0] * x[2] * x[3];
@@ -412,7 +412,7 @@ public class SlsqpIntegrationTest {
         };
         
         // Define equality constraint 2: x[0]^2 + x[1]^2 + x[2]^2 + x[3]^2 - 40 = 0
-        Univariate cons2 = (x, g) -> {
+        Univariate cons2 = (x, n, g) -> {
             if (g != null) {
                 g[0] = 2.0 * x[0];
                 g[1] = 2.0 * x[1];
@@ -595,7 +595,7 @@ public class SlsqpIntegrationTest {
      */
     static Stream<Arguments> infeasibleInitialPointTestCases() {
         // Constraint: x <= 0 (expressed as -x >= 0)
-        Univariate upperBoundConstraint = (x, g) -> {
+        Univariate upperBoundConstraint = (x, n, g) -> {
             if (g != null) {
                 g[0] = -1.0;
             }
@@ -609,7 +609,7 @@ public class SlsqpIntegrationTest {
         // Expressed as: x + 1 >= 0 AND -x >= 0
         Univariate doubleBoundLower = TestTemplates.inequalityAtIndex(0, 1.0);;
         
-        Univariate doubleBoundUpper = (x, g) -> {
+        Univariate doubleBoundUpper = (x, n, g) -> {
             if (g != null) {
                 g[0] = -1.0;
             }
@@ -695,7 +695,7 @@ public class SlsqpIntegrationTest {
         
         // Verify all constraints are satisfied at the solution
         for (int i = 0; i < constraints.length; i++) {
-            double constraintValue = constraints[i].evaluate(x0, null);
+            double constraintValue = constraints[i].evaluate(x0, x0.length, null);
             assertThat(constraintValue)
                     .as("Solution should satisfy constraint %d for case: %s", i, description)
                     .isGreaterThanOrEqualTo(-1e-8);
@@ -733,7 +733,7 @@ public class SlsqpIntegrationTest {
         Univariate lowerBoundConstraint = TestTemplates.inequalityAtIndex(0, -2.0);;
         
         // Constraint 2: x <= 0 (expressed as -x >= 0)
-        Univariate upperBoundConstraint = (x, g) -> {
+        Univariate upperBoundConstraint = (x, n, g) -> {
             if (g != null) {
                 g[0] = -1.0;
             }
@@ -789,15 +789,15 @@ public class SlsqpIntegrationTest {
     @Test
     @DisplayName("Inconsistent linearization with fixed-bound variable should return non-converged status")
     void testBadCaseFixedBound() {
-        Univariate objective = (x, g) -> {
+        Univariate objective = (x, n, g) -> {
             if (g != null) { g[0] = 2 * x[0]; g[1] = 2 * x[1]; }
             return x[0] * x[0] + x[1] * x[1];
         };
-        Univariate equality = (x, g) -> {
+        Univariate equality = (x, n, g) -> {
             if (g != null) { g[0] = 1; g[1] = 1; }
             return x[0] + x[1] - 2;
         };
-        Univariate inequality = (x, g) -> {
+        Univariate inequality = (x, n, g) -> {
             if (g != null) { g[0] = 2 * x[0]; g[1] = 0; }
             return x[0] * x[0] - 1;
         };
@@ -838,15 +838,15 @@ public class SlsqpIntegrationTest {
     @Test
     @DisplayName("Inconsistent inequality constraints should return non-converged status")
     void testInconsistentInequalityConstraints() {
-        Univariate objective = (x, g) -> {
+        Univariate objective = (x, n, g) -> {
             if (g != null) { g[0] = -1; g[1] = 4; }
             return -x[0] + 4 * x[1];
         };
-        Univariate cons1 = (x, g) -> {
+        Univariate cons1 = (x, n, g) -> {
             if (g != null) { g[0] = -1; g[1] = 1; }
             return x[1] - x[0] - 1;
         };
-        Univariate cons2 = (x, g) -> {
+        Univariate cons2 = (x, n, g) -> {
             if (g != null) { g[0] = 1; g[1] = -1; }
             return x[0] - x[1];
         };
@@ -893,10 +893,10 @@ public class SlsqpIntegrationTest {
         // We use FORWARD difference to match the Go reference numdiff behavior.
         com.curioloop.numopt4j.optim.slsqp.SLSQPProblem problem =
                 new com.curioloop.numopt4j.optim.slsqp.SLSQPProblem()
-                .objective(NumericalGradient.FORWARD, x -> Math.sqrt(Math.max(x[1], 0)))
+                .objective(NumericalGradient.FORWARD, (x, n) -> Math.sqrt(Math.max(x[1], 0)))
                 .equalityConstraints(NumericalGradient.FORWARD,
-                    x -> x[1] - Math.pow(2 * x[0], 3),
-                    x -> x[1] - Math.pow(-x[0] + 1, 3)
+                    (x, n) -> x[1] - Math.pow(2 * x[0], 3),
+                    (x, n) -> x[1] - Math.pow(-x[0] + 1, 3)
                 )
                 .bounds(Bound.between(-0.5, 1.0), Bound.between(0.0, 8.0))
                 .initialPoint(1.0, 0.25)  // equivalent to Go's [8, 0.25] after bound clipping

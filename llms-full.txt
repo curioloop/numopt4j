@@ -112,7 +112,7 @@ import java.util.Arrays;
 
 // Global derivative-free optimization (CMA-ES)
 Optimization r00 = Minimizer.cmaes()
-    .objective(x -> x[0]*x[0] + x[1]*x[1])
+    .objective((x, n) -> x[0]*x[0] + x[1]*x[1])
     .initialPoint(1.0, 1.0)
     .solve();
 
@@ -129,7 +129,7 @@ Optimization r00b = Minimizer.cmaes()
 
 // Derivative-free optimization (Subplex)
 Optimization r0 = Minimizer.subplex()
-    .objective(x -> x[0]*x[0] + x[1]*x[1])
+    .objective((x, n) -> x[0]*x[0] + x[1]*x[1])
     .initialPoint(1.0, 1.0)
     .solve();
 
@@ -145,14 +145,14 @@ Optimization r0b = Minimizer.subplex()
 
 // Unconstrained optimization (L-BFGS-B)
 Optimization r1 = Minimizer.lbfgsb()
-    .objective(x -> x[0]*x[0] + x[1]*x[1])
+    .objective((x, n) -> x[0]*x[0] + x[1]*x[1])
     .initialPoint(1.0, 1.0)
     .solve();
 System.out.println(Arrays.toString(r1.getSolution())); // [0.0, 0.0]
 
 // Box-constrained optimization (L-BFGS-B)
 Optimization r2 = Minimizer.lbfgsb()
-    .objective(x -> x[0]*x[0] + x[1]*x[1])
+    .objective((x, n) -> x[0]*x[0] + x[1]*x[1])
     .bounds(Bound.atLeast(0.5), Bound.atLeast(0.5))
     .initialPoint(1.0, 1.0)
     .solve();
@@ -160,16 +160,16 @@ Optimization r2 = Minimizer.lbfgsb()
 // Inequality-constrained optimization (SLSQP)
 // minimize x[0] + x[1], subject to x[0]^2 + x[1]^2 >= 1
 Optimization r3 = Minimizer.slsqp()
-    .objective(x -> x[0] + x[1])
-    .inequalityConstraints(x -> x[0]*x[0] + x[1]*x[1] - 1)
+    .objective((x, n) -> x[0] + x[1])
+    .inequalityConstraints((x, n) -> x[0]*x[0] + x[1]*x[1] - 1)
     .initialPoint(1.0, 1.0)
     .solve();
 
 // Equality-constrained optimization (SLSQP)
 // minimize x[0]^2 + x[1]^2, subject to x[0] + x[1] = 1
 Optimization r4 = Minimizer.slsqp()
-    .objective(x -> x[0]*x[0] + x[1]*x[1])
-    .equalityConstraints(x -> x[0] + x[1] - 1)
+    .objective((x, n) -> x[0]*x[0] + x[1]*x[1])
+    .equalityConstraints((x, n) -> x[0] + x[1] - 1)
     .initialPoint(0.5, 0.5)
     .solve();
 
@@ -202,10 +202,7 @@ new CMAESProblem()
 
 | Method | Description | Default | Constraint |
 |---|---|---|---|
-| `objective(ToDoubleFunction<double[]> f)` | Set objective function (no gradient needed) | — | f != null |
-| `initialPoint(double... x0)` | Set initial point, also infers dimension n | — | non-null, non-empty, all finite |
-| `bounds(Bound... bounds)` | Set variable bounds | null (unbounded) | length must match n |
-| `sigma(double s)` | Initial step size σ₀ | 0.3 | > 0, finite |
+| `objective(Univariate.Objective f)` | Set objective function (no gradient needed) | — | f != null |
 | `populationSize(int lam)` | Population size λ; 0 = auto: 4 + floor(3·ln(n)) | 0 (auto) | > 0 |
 | `maxIterations(int v)` | Maximum generations | 1000 | > 0 |
 | `maxEvaluations(int v)` | Maximum function evaluations; 0 = auto: λ·1000 | 0 (auto) | > 0 |
@@ -239,15 +236,15 @@ import com.curioloop.numopt4j.optim.cmaes.*;
 
 // Basic usage: sphere function
 Optimization result = Minimizer.cmaes()
-    .objective(x -> { double s = 0; for (double v : x) s += v*v; return s; })
+    .objective((x, n) -> { double s = 0; for (int i = 0; i < n; i++) s += x[i]*x[i]; return s; })
     .initialPoint(new double[10])
     .solve();
 
 // Rosenbrock with tighter tolerances
 Optimization result2 = Minimizer.cmaes()
-    .objective(x -> {
+    .objective((x, n) -> {
         double s = 0;
-        for (int i = 0; i < x.length - 1; i++)
+        for (int i = 0; i < n - 1; i++)
             s += 100 * Math.pow(x[i+1] - x[i]*x[i], 2) + Math.pow(1 - x[i], 2);
         return s;
     })
@@ -259,9 +256,9 @@ Optimization result2 = Minimizer.cmaes()
 
 // Rastrigin (multimodal) with IPOP restart
 Optimization result3 = Minimizer.cmaes()
-    .objective(x -> {
-        double s = 10 * x.length;
-        for (double v : x) s += v*v - 10 * Math.cos(2 * Math.PI * v);
+    .objective((x, n) -> {
+        double s = 10 * n;
+        for (int i = 0; i < n; i++) s += x[i]*x[i] - 10 * Math.cos(2 * Math.PI * x[i]);
         return s;
     })
     .initialPoint(new double[5])
@@ -301,7 +298,7 @@ new SubplexProblem()
 
 | Method | Description | Default | Constraint |
 |---|---|---|---|
-| `objective(ToDoubleFunction<double[]> f)` | Set objective function (no gradient needed) | — | f != null |
+| `objective(Univariate.Objective f)` | Set objective function (no gradient needed) | — | f != null |
 | `initialPoint(double... x0)` | Set initial point, also infers dimension n | — | non-null, non-empty, all finite |
 | `bounds(Bound... bounds)` | Set variable bounds | null (unbounded) | length must match n |
 | `initialStep(double... step)` | Per-dimension initial step sizes | auto-computed from bounds/x0 | length must match n |
@@ -316,15 +313,15 @@ new SubplexProblem()
 ```java
 // Basic usage: derivative-free optimization
 Optimization result = new SubplexProblem()
-    .objective(x -> x[0]*x[0] + x[1]*x[1])
+    .objective((x, n) -> x[0]*x[0] + x[1]*x[1])
     .initialPoint(1.0, 1.0)
     .solve();
 
 // High-dimensional with bounds and custom step sizes
 Optimization result2 = Minimizer.subplex()
-    .objective(x -> {
+    .objective((x, n) -> {
         double sum = 0;
-        for (int i = 0; i < x.length - 1; i++)
+        for (int i = 0; i < n - 1; i++)
             sum += 100 * Math.pow(x[i+1] - x[i]*x[i], 2) + Math.pow(1 - x[i], 2);
         return sum;
     })
@@ -361,9 +358,9 @@ new LBFGSBProblem()
 
 | Method | Description | Default | Constraint |
 |---|---|---|---|
-| `objective(ToDoubleFunction<double[]> f)` | Set objective function, automatically uses CENTRAL numerical gradient (**recommended**) | — | f != null |
+| `objective(Univariate.Objective f)` | Set objective function, automatically uses CENTRAL numerical gradient (**recommended**) | — | f != null |
 | `objective(Univariate f)` | Set objective function with analytic gradient | — | f != null |
-| `objective(NumericalGradient grad, ToDoubleFunction<double[]> f)` | Specify numerical gradient method | — | — |
+| `objective(NumericalGradient grad, Univariate.Objective f)` | Specify numerical gradient method | — | — |
 | `initialPoint(double... x0)` | Set initial point, also infers dimension n | — | non-null, non-empty |
 | `bounds(Bound... bounds)` | Set variable bounds | null (unbounded) | length must match n |
 | `maxIterations(int value)` | Maximum number of iterations | 100 | > 0 |
@@ -380,7 +377,7 @@ new LBFGSBProblem()
 ```java
 // Basic usage: unconstrained optimization
 Optimization result = new LBFGSBProblem()
-    .objective(x -> x[0]*x[0] + x[1]*x[1])
+    .objective((x, n) -> x[0]*x[0] + x[1]*x[1])
     .initialPoint(1.0, 1.0)
     .solve();
 
@@ -403,7 +400,7 @@ Optimization result2 = new LBFGSBProblem()
 
 // Workspace reuse (high-frequency optimization scenarios)
 LBFGSBProblem problem = new LBFGSBProblem()
-    .objective(x -> x[0]*x[0])
+    .objective((x, n) -> x[0]*x[0])
     .initialPoint(1.0);
 LBFGSBWorkspace ws = problem.alloc();
 for (double[] point : points) {
@@ -428,11 +425,11 @@ new SLSQPProblem()
 
 | Method | Description | Default | Constraint |
 |---|---|---|---|
-| `objective(ToDoubleFunction<double[]> f)` | Set objective function, automatically uses CENTRAL numerical gradient (**recommended**) | — | f != null |
+| `objective(Univariate.Objective f)` | Set objective function, automatically uses CENTRAL numerical gradient (**recommended**) | — | f != null |
 | `objective(Univariate f)` | Set objective function with analytic gradient | — | f != null |
-| `equalityConstraints(ToDoubleFunction<double[]>... c)` | Equality constraints c(x) = 0, automatic numerical gradient | — | — |
+| `equalityConstraints(Univariate.Objective... c)` | Equality constraints c(x) = 0, automatic numerical gradient | — | — |
 | `equalityConstraints(Univariate... c)` | Equality constraints with analytic gradient | — | — |
-| `inequalityConstraints(ToDoubleFunction<double[]>... c)` | Inequality constraints c(x) >= 0, automatic numerical gradient | — | — |
+| `inequalityConstraints(Univariate.Objective... c)` | Inequality constraints c(x) >= 0, automatic numerical gradient | — | — |
 | `inequalityConstraints(Univariate... c)` | Inequality constraints with analytic gradient | — | — |
 | `initialPoint(double... x0)` | Set initial point | — | non-null, non-empty |
 | `bounds(Bound... bounds)` | Set variable bounds | null | length must match n |
@@ -447,8 +444,8 @@ new SLSQPProblem()
 ```java
 // Equality constraint: minimize x[0]^2 + x[1]^2, subject to x[0] + x[1] = 1
 Optimization result = new SLSQPProblem()
-    .objective(x -> x[0]*x[0] + x[1]*x[1])
-    .equalityConstraints(x -> x[0] + x[1] - 1)
+    .objective((x, n) -> x[0]*x[0] + x[1]*x[1])
+    .equalityConstraints((x, n) -> x[0] + x[1] - 1)
     .initialPoint(0.5, 0.5)
     .solve();
 // solution: [0.5, 0.5]
@@ -464,7 +461,7 @@ Optimization result2 = new SLSQPProblem()
         if (g != null) { g[0] = 1; g[1] = 1; }
         return x[0] + x[1] - 1;
     })
-    .inequalityConstraints(x -> x[0] - 0.1)  // x[0] >= 0.1
+    .inequalityConstraints((x, n) -> x[0] - 0.1)  // x[0] >= 0.1
     .bounds(Bound.atLeast(0), Bound.atLeast(0))
     .initialPoint(0.5, 0.5)
     .functionTolerance(1e-8)
@@ -490,8 +487,8 @@ new TRFProblem()
 
 | Method | Description | Default | Constraint |
 |---|---|---|---|
-| `residuals(BiConsumer<double[],double[]> fn, int m)` | Set residual function, automatically uses CENTRAL numerical Jacobian (**recommended**) | — | m > 0 |
-| `residuals(NumericalJacobian jac, BiConsumer<double[],double[]> fn, int m)` | Specify numerical Jacobian method | — | m > 0 |
+| `residuals(Multivariate.Objective fn, int m)` | Set residual function, automatically uses CENTRAL numerical Jacobian (**recommended**) | — | m > 0 |
+| `residuals(NumericalJacobian jac, Multivariate.Objective fn, int m)` | Specify numerical Jacobian method | — | m > 0 |
 | `objective(Multivariate f)` | Set multivariate function with analytic Jacobian | — | — |
 | `initialPoint(double... x0)` | Set initial point, infers n | — | non-null, non-empty |
 | `bounds(Bound... bounds)` | Set variable bounds | null | — |
@@ -509,7 +506,7 @@ double[] tData = {0.0, 1.0, 2.0, 3.0};
 double[] yData = {2.0, 1.2, 0.7, 0.4};
 
 Optimization result = new TRFProblem()
-    .residuals((x, r) -> {
+    .residuals((x, n, r, m) -> {
         for (int i = 0; i < tData.length; i++) {
             r[i] = yData[i] - x[0] * Math.exp(-x[1] * tData[i]);
         }
@@ -524,7 +521,7 @@ double b = result.getSolution()[1];
 
 // Simple example: find the point where residuals are zero
 Optimization r2 = new TRFProblem()
-    .residuals((x, r) -> { r[0] = x[0] - 1; r[1] = x[1] - 2; }, 2)
+    .residuals((x, n, r, m) -> { r[0] = x[0] - 1; r[1] = x[1] - 2; }, 2)
     .initialPoint(0.0, 0.0)
     .solve();
 // solution: [1.0, 2.0]
@@ -540,9 +537,9 @@ Provides static factory methods for 1-D and N-D root finding.
 ### Static Factory Methods
 
 ```java
-RootFinder.brentq(DoubleUnaryOperator f)                    // → BrentqProblem
-RootFinder.hybr(BiConsumer<double[],double[]> fn, int n)    // → HYBRProblem
-RootFinder.broyden(BiConsumer<double[],double[]> fn, int n) // → BroydenProblem
+RootFinder.brentq(DoubleUnaryOperator f)                        // → BrentqProblem
+RootFinder.hybr(Multivariate.Objective fn, int n)               // → HYBRProblem
+RootFinder.broyden(Multivariate.Objective fn, int n)            // → BroydenProblem
 ```
 
 ### BrentqProblem (1-D Brent's method)
@@ -559,7 +556,7 @@ RootFinder.broyden(BiConsumer<double[],double[]> fn, int n) // → BroydenProble
 
 | Method | Description | Default |
 |---|---|---|
-| `equations(BiConsumer, int n)` | System of equations F(x) = 0 | — (required) |
+| `equations(Multivariate.Objective, int n)` | System of equations F(x) = 0 | — (required) |
 | `jacobian(NumericalJacobian)` | Numerical Jacobian method | FORWARD |
 | `functionTolerance(double)` | Convergence tolerance ‖F(x)‖₂ ≤ ftol | 1.49e-8 |
 | `maxEvaluations(int)` | Maximum function evaluations | 200*(n+1) |
@@ -571,7 +568,7 @@ RootFinder.broyden(BiConsumer<double[],double[]> fn, int n) // → BroydenProble
 
 | Method | Description | Default |
 |---|---|---|
-| `equations(BiConsumer, int n)` | System of equations F(x) = 0 | — (required) |
+| `equations(Multivariate.Objective, int n)` | System of equations F(x) = 0 | — (required) |
 | `functionTolerance(double)` | Convergence tolerance ‖F(x)‖₂ ≤ ftol | 1.49e-8 |
 | `maxEvaluations(int)` | Maximum iterations | 100*(n+1) |
 | `initialPoint(double...)` | Initial point | — (required) |
@@ -588,7 +585,7 @@ Optimization r1 = RootFinder.brentq(Math::sin)
 double root = r1.getRoot(); // ≈ 3.14159...
 
 // N-D: HYBR, forward-difference Jacobian (default)
-Optimization r2 = RootFinder.hybr((x, f) -> {
+Optimization r2 = RootFinder.hybr((x, n, f, m) -> {
         f[0] = x[0]*x[0] - 2;
         f[1] = x[1] - x[0];
     }, 2)
@@ -644,7 +641,7 @@ String   toString()        // Multi-line structured diagnostic output
 
 ```java
 Optimization r = Minimizer.lbfgsb()
-    .objective(x -> x[0]*x[0] + x[1]*x[1])
+    .objective((x, n) -> x[0]*x[0] + x[1]*x[1])
     .initialPoint(1.0, 1.0)
     .solve();
 
@@ -728,7 +725,7 @@ Problem builders throw standard Java exceptions when required parameters are mis
 ```java
 try {
     Optimization r = new SubplexProblem()
-        .objective(x -> x[0]*x[0])
+        .objective((x, n) -> x[0]*x[0])
         // forgot to set initialPoint
         .solve();
 } catch (IllegalStateException e) {
@@ -762,7 +759,7 @@ new Bound(lower, upper)        // public constructor; use Double.NaN for no boun
 ```java
 // Set bounds for each variable individually
 new LBFGSBProblem()
-    .objective(x -> x[0]*x[0] + x[1]*x[1] + x[2]*x[2])
+    .objective((x, n) -> x[0]*x[0] + x[1]*x[1] + x[2]*x[2])
     .bounds(
         Bound.between(0, 10),   // 0 <= x[0] <= 10
         Bound.atLeast(1),       // x[1] >= 1
@@ -804,17 +801,17 @@ Provides numerical gradient computation for scalar functions ℝⁿ → ℝ.
 
 ```java
 // Wrap as Univariate (for use with Problem.objective(Univariate))
-Univariate f = NumericalGradient.CENTRAL.wrap(x -> x[0]*x[0] + x[1]*x[1]);
+Univariate f = NumericalGradient.CENTRAL.wrap((x, n) -> x[0]*x[0] + x[1]*x[1]);
 
 // Use directly in Problem (equivalent to above)
 new LBFGSBProblem()
-    .objective(x -> x[0]*x[0] + x[1]*x[1])  // automatically uses CENTRAL
+    .objective((x, n) -> x[0]*x[0] + x[1]*x[1])  // automatically uses CENTRAL
     .initialPoint(1.0, 1.0)
     .solve();
 
 // Specify gradient method explicitly
 new LBFGSBProblem()
-    .objective(NumericalGradient.FIVE_POINT, x -> x[0]*x[0] + x[1]*x[1])
+    .objective(NumericalGradient.FIVE_POINT, (x, n) -> x[0]*x[0] + x[1]*x[1])
     .initialPoint(1.0, 1.0)
     .solve();
 ```
@@ -847,18 +844,18 @@ where:
 ### wrap() Method Parameters
 
 ```java
-Multivariate wrap(BiConsumer<double[], double[]> func, int m, int n)
+Multivariate wrap(Multivariate.Objective func, int m, int n)
 ```
 
-- `func`: residual function `(x, r) -> void`, x has length n, r has length m
-- `m`: number of residuals (output dimension), corresponds to number of data points, must satisfy m >= n
-- `n`: number of parameters (input dimension), corresponds to number of model coefficients
+- `func`: residual function `(x, n, r, m) -> void`; only `x[0..n-1]` are read, only `r[0..m-1]` are written
+- `m`: number of residuals (output dimension), must satisfy m >= n
+- `n`: number of parameters (input dimension)
 
 ### Usage Example
 
 ```java
 // Direct usage (TRFProblem calls this internally)
-BiConsumer<double[], double[]> residuals = (x, r) -> {
+Multivariate.Objective residuals = (x, n, r, m) -> {
     r[0] = x[0] - 1;
     r[1] = x[1] - 2;
 };
@@ -882,7 +879,7 @@ Multivariate eval = NumericalJacobian.CENTRAL.wrap(residuals, 2, 2);
 // Wrong: initialPoint not set — LBFGSBProblem throws IllegalStateException
 try {
     new LBFGSBProblem()
-        .objective(x -> x[0]*x[0])
+        .objective((x, n) -> x[0]*x[0])
         .solve();
 } catch (IllegalStateException e) {
     // initialPoint is required. Call .initialPoint(x0) before .solve().
@@ -891,7 +888,7 @@ try {
 // SubplexProblem / TRFProblem also throw IllegalStateException
 try {
     new SubplexProblem()
-        .objective(x -> x[0]*x[0])
+        .objective((x, n) -> x[0]*x[0])
         .solve();
 } catch (IllegalStateException e) {
     // initialPoint is required. Call .initialPoint(x0) before .solve().
@@ -899,7 +896,7 @@ try {
 
 // Correct
 new LBFGSBProblem()
-    .objective(x -> x[0]*x[0])
+    .objective((x, n) -> x[0]*x[0])
     .initialPoint(1.0)
     .solve();
 ```
@@ -910,7 +907,7 @@ new LBFGSBProblem()
 // LBFGSBProblem throws IllegalArgumentException
 try {
     new LBFGSBProblem()
-        .objective(x -> x[0]*x[0])
+        .objective((x, n) -> x[0]*x[0])
         .initialPoint(Double.NaN)
         .solve();
 } catch (IllegalArgumentException e) {
@@ -920,7 +917,7 @@ try {
 // SubplexProblem / TRFProblem also throw IllegalArgumentException
 try {
     new SubplexProblem()
-        .objective(x -> x[0]*x[0])
+        .objective((x, n) -> x[0]*x[0])
         .initialPoint(Double.NaN)
         .solve();
 } catch (IllegalArgumentException e) {
@@ -951,7 +948,7 @@ problem.bounds(Bound.atLeast(0)); // "bounds.length=1 but dimension=2"
 // solve() throws IllegalStateException when m < n
 try {
     new TRFProblem()
-        .residuals((x, r) -> { r[0] = x[0] - 1; }, 1)  // m=1
+        .residuals((x, n, r, m) -> { r[0] = x[0] - 1; }, 1)  // m=1
         .initialPoint(0.0, 0.0)                          // n=2
         .solve();
 } catch (IllegalStateException e) {
@@ -963,7 +960,7 @@ try {
 
 ```java
 Optimization r = new LBFGSBProblem()
-    .objective(x -> x[0]*x[0])
+    .objective((x, n) -> x[0]*x[0])
     .initialPoint(1.0)
     .maxIterations(1)  // intentionally small
     .solve();
@@ -987,9 +984,9 @@ if (!r.isSuccessful()) {
 ```java
 // SLSQP returns CONSTRAINT_INCOMPATIBLE when constraints conflict
 Optimization r = new SLSQPProblem()
-    .objective(x -> x[0])
-    .equalityConstraints(x -> x[0] - 1)   // x[0] = 1
-    .equalityConstraints(x -> x[0] - 2)   // x[0] = 2 (contradiction)
+    .objective((x, n) -> x[0])
+    .equalityConstraints((x, n) -> x[0] - 1)   // x[0] = 1
+    .equalityConstraints((x, n) -> x[0] - 2)   // x[0] = 2 (contradiction)
     .initialPoint(0.0)
     .solve();
 

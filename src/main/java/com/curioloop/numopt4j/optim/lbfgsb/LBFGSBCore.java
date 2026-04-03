@@ -552,7 +552,7 @@ final class LBFGSBCore implements LBFGSBConstants {
         // Calculate f₀ and g₀ (first function evaluation)
         double f;
         try {
-            f = objective.evaluate(x, g);
+            f = objective.evaluate(x, n, g);
             ws.incrementTotalEval();
         } catch (Exception e) {
             return new OptimizeResult(Double.NaN, 0, ws.getTotalEval(), HALT_EVAL_PANIC);
@@ -691,7 +691,7 @@ final class LBFGSBCore implements LBFGSBConstants {
                     if (!done) {
                         // Need function evaluation at new point
                         try {
-                            f = objective.evaluate(x, g);
+                            f = objective.evaluate(x, n, g);
                             ws.incrementTotalEval();
                             ctx.numEval++;
                             ctx.numBack = ctx.numEval - 1;

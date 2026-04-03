@@ -7,7 +7,7 @@ import com.curioloop.numopt4j.optim.Optimization;
 
 import net.jqwik.api.*;
 
-import java.util.function.BiConsumer;
+import com.curioloop.numopt4j.optim.Multivariate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -130,7 +130,7 @@ public class TRFConvergenceProperties {
     static class QuadraticProblem {
         final int m;
         final double[] tData, yData, initialGuess;
-        final BiConsumer<double[], double[]> fn;
+        final Multivariate.Objective fn;
 
         QuadraticProblem(int m, double[] coeffs, double noise) {
             this.m = m;
@@ -144,8 +144,8 @@ public class TRFConvergenceProperties {
             initialGuess = new double[3];
             for (int i = 0; i < 3; i++)
                 initialGuess[i] = coeffs[i] + 0.5 * (rng.nextDouble() - 0.5);
-            fn = (c, r) -> {
-                for (int i = 0; i < m; i++) {
+            fn = (c, n, r, mm) -> {
+                for (int i = 0; i < mm; i++) {
                     double t = tData[i];
                     r[i] = yData[i] - (c[0] + c[1]*t + c[2]*t*t);
                 }
@@ -154,7 +154,7 @@ public class TRFConvergenceProperties {
 
         double initialChi2() {
             double[] r = new double[m];
-            fn.accept(initialGuess, r);
+            fn.evaluate(initialGuess, initialGuess.length, r, m);
             double s = 0; for (double v : r) s += v*v;
             return s;
         }
@@ -170,7 +170,7 @@ public class TRFConvergenceProperties {
     static class ExponentialProblem {
         final int m;
         final double[] tData, yData, initialGuess;
-        final BiConsumer<double[], double[]> fn;
+        final Multivariate.Objective fn;
 
         ExponentialProblem(int m, double a0, double a1, double noise) {
             this.m = m;
@@ -181,15 +181,15 @@ public class TRFConvergenceProperties {
                 yData[i] = a0 * Math.exp(-a1 * tData[i]) + noise * rng.nextGaussian();
             }
             initialGuess = new double[]{a0 * 1.2, a1 * 0.8};
-            fn = (c, r) -> {
-                for (int i = 0; i < m; i++)
+            fn = (c, n, r, mm) -> {
+                for (int i = 0; i < mm; i++)
                     r[i] = yData[i] - c[0] * Math.exp(-c[1] * tData[i]);
             };
         }
 
         double initialChi2() {
             double[] r = new double[m];
-            fn.accept(initialGuess, r);
+            fn.evaluate(initialGuess, initialGuess.length, r, m);
             double s = 0; for (double v : r) s += v*v;
             return s;
         }

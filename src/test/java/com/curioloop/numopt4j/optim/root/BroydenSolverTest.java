@@ -3,12 +3,11 @@
  */
 package com.curioloop.numopt4j.optim.root;
 
+import com.curioloop.numopt4j.optim.Multivariate;
 import com.curioloop.numopt4j.optim.Optimization;
 
 import net.jqwik.api.*;
 import net.jqwik.api.constraints.IntRange;
-
-import java.util.function.BiConsumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -71,7 +70,7 @@ public class BroydenSolverTest {
 
         // F(x) = A*x - b
         final double[][] Afinal = A;
-        BiConsumer<double[], double[]> fn = (x, fx) -> {
+        Multivariate.Objective fn = (x, xn, fx, fm) -> {
             for (int i = 0; i < n; i++) {
                 fx[i] = -b[i];
                 for (int j = 0; j < n; j++) fx[i] += Afinal[i][j] * x[j];
@@ -86,7 +85,7 @@ public class BroydenSolverTest {
 
         double ftol = BroydenSolver.DEFAULT_FTOL;
         int maxiter = Math.max(50 * n, 200);
-        BroydenWorkspace ws = new BroydenWorkspace(n);
+        BroydenWorkspace ws = new BroydenWorkspace(); ws.ensure(n);
 
         Optimization result = BroydenSolver.solve(fn, x0, ftol, maxiter, ws);
 
@@ -125,7 +124,7 @@ public class BroydenSolverTest {
      */
     @Example
     void rosenbrockSystemConverges() {
-        BiConsumer<double[], double[]> fn = (x, fx) -> {
+        Multivariate.Objective fn = (x, xn, fx, fm) -> {
             fx[0] = 1.0 - x[0];
             fx[1] = 10.0 * (x[1] - x[0] * x[0]);
         };
@@ -133,7 +132,7 @@ public class BroydenSolverTest {
         double[] x0 = {0.5, 0.5};
         int n = 2;
         int maxiter = 500;
-        BroydenWorkspace ws = new BroydenWorkspace(n);
+        BroydenWorkspace ws = new BroydenWorkspace(); ws.ensure(n);
 
         Optimization result = BroydenSolver.solve(fn, x0, BroydenSolver.DEFAULT_FTOL, maxiter, ws);
 
@@ -154,7 +153,7 @@ public class BroydenSolverTest {
      */
     @Example
     void maxIterationsExceededReturnsMaxIterationsReached() {
-        BiConsumer<double[], double[]> fn = (x, fx) -> {
+        Multivariate.Objective fn = (x, xn, fx, fm) -> {
             fx[0] = x[0] * x[0] - 2.0;
             fx[1] = x[1] * x[1] - 3.0;
         };
@@ -162,7 +161,7 @@ public class BroydenSolverTest {
         // Start far from any solution; with maxiter=2 Broyden cannot converge
         double[] x0 = {10.0, 10.0};
         int n = 2;
-        BroydenWorkspace ws = new BroydenWorkspace(n);
+        BroydenWorkspace ws = new BroydenWorkspace(); ws.ensure(n);
 
         Optimization result = BroydenSolver.solve(fn, x0, BroydenSolver.DEFAULT_FTOL, 2, ws);
 

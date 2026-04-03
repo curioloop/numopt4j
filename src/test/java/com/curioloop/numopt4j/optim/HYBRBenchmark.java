@@ -9,7 +9,6 @@ import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 import java.util.concurrent.TimeUnit;
-import java.util.function.BiConsumer;
 
 /**
  * JMH benchmark: HYBRSolver (col-major) numerical vs analytical Jacobian.
@@ -71,8 +70,8 @@ public class HYBRBenchmark {
     /** HYBRSolver — col-major fjac, numerical Jacobian */
     @Benchmark
     public int hybrd_colMajor() {
-        HYBRWorkspace ws = new HYBRWorkspace(n);
-        BiConsumer<double[], double[]> fn = (x, f) -> fcn(n, x, f);
+        HYBRWorkspace ws = new HYBRWorkspace(); ws.ensure(n);
+        Multivariate.Objective fn = (x, nn, f, mm) -> fcn(n, x, f);
         Multivariate eval = NumericalJacobian.FORWARD.wrap(fn, n, n, true);
         return HYBRSolver.solve(eval, x0(n), 1e-10, 200 * (n + 1), ws)
                           .getStatus().ordinal();
@@ -85,8 +84,8 @@ public class HYBRBenchmark {
     /** HYBRSolver — col-major fjac, analytical Jacobian */
     @Benchmark
     public int hybrj_colMajor() {
-        HYBRWorkspace ws = new HYBRWorkspace(n);
-        Multivariate eval = (x, f, jac) -> {
+        HYBRWorkspace ws = new HYBRWorkspace(); ws.ensure(n);
+        Multivariate eval = (x, nn, f, mm, jac) -> {
             fcn(n, x, f);
             if (jac != null) jacCol(n, x, jac, n);
         };

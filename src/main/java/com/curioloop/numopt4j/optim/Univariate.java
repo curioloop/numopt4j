@@ -44,18 +44,45 @@ package com.curioloop.numopt4j.optim;
  */
 @FunctionalInterface
 public interface Univariate {
-    
+
+    /**
+     * Functional interface for a pure scalar-valued function ℝⁿ → ℝ without gradient.
+     *
+     * <p>Used as the input to {@link NumericalGradient#wrap(Objective)} to produce a
+     * full {@link Univariate} with numerically approximated gradient, and accepted
+     * directly by derivative-free optimizers (CMA-ES, Subplex, SLSQP, L-BFGS-B).</p>
+     *
+     * <p>Only the first {@code n} elements of {@code x} are considered effective;
+     * {@code x.length} may be greater than {@code n}.</p>
+     *
+     * @see NumericalGradient
+     */
+    @FunctionalInterface
+    interface Objective {
+        /**
+         * Evaluates the scalar function at point {@code x}.
+         *
+         * @param x Current point (read-only); only {@code x[0..n-1]} are read
+         * @param n Number of effective dimensions
+         * @return Function value at x
+         */
+        double evaluate(double[] x, int n);
+    }
+
     /**
      * Evaluates the function and optionally its gradient.
      * <p>
      * When gradient is not null, the implementation should compute and store
-     * the partial derivatives in the gradient array. When gradient is null,
+     * the partial derivatives in gradient[0..n-1]. When gradient is null,
      * only the function value needs to be computed.
      * </p>
      *
-     * @param x Current point (read-only)
-     * @param gradient Output array for gradient (may be null)
+     * @param x Current point (read-only); x.length may be >= n
+     * @param n Number of effective dimensions; only x[0..n-1] are read
+     * @param gradient Output array for gradient (may be null); only gradient[0..n-1] are written
      * @return Function value at x
      */
-    double evaluate(double[] x, double[] gradient);
+    double evaluate(double[] x, int n, double[] gradient);
+
+
 }

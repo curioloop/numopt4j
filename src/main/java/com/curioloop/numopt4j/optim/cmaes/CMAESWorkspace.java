@@ -59,10 +59,10 @@ public final class CMAESWorkspace {
     // ── Problem dimension ─────────────────────────────────────────────────
 
     /** Problem dimension n. */
-    public final int n;
+    public int n;
 
     /** Population size λ (offspring count per generation). */
-    public final int lambda;
+    public int lambda;
 
     // ── Arena fields ──────────────────────────────────────────────────────
 
@@ -71,66 +71,66 @@ public final class CMAESWorkspace {
      * Slots (each of size n): XMEAN · XOLD · PS · PC · D_OFF · DIAGC · DIAGD · EVALS.
      * See class-level javadoc for the slot map and scratch-reuse rules.
      */
-    public final double[] nVec;
+    public double[] nVec;
 
     /**
      * λ-dimensional vector arena of length 3λ.
      * Slots (each of size λ): FITNESS · WEIGHTS · PENALTY.
      */
-    public final double[] lVec;
+    public double[] lVec;
 
     /**
      * n×n matrix arena of length 2n².
      * Slots (each of size n²): C_OFF · B_OFF.
      * {@code null} in sep-CMA-ES mode ({@code diagonalOnly=true}).
      */
-    public final double[] mat;
+    public double[] mat;
 
     // ── Arena offset constants (nVec) ─────────────────────────────────────
 
     /** nVec offset for mean vector m.  Slot 0, offset = 0. */
-    public final int XMEAN;
+    public int XMEAN;
     /** nVec offset for previous mean m_old.  Slot 1, offset = n. */
-    public final int XOLD;
+    public int XOLD;
     /** nVec offset for step-size evolution path p_σ.  Slot 2, offset = 2n. */
-    public final int PS;
+    public int PS;
     /** nVec offset for covariance evolution path p_c.  Slot 3, offset = 3n. */
-    public final int PC;
+    public int PC;
     /** nVec offset for eigenvalue square-roots D_i = √λ_i.  Slot 4, offset = 4n. */
-    public final int D_OFF;
+    public int D_OFF;
     /**
      * nVec offset for diagonal covariance diag(C) in sep mode.  Slot 5, offset = 5n.
      * In full-matrix mode this slot is repurposed as a scratch buffer for δ_k
      * = (x_k − m_old) / σ during the rank-μ covariance update (diagC is unused
      * when diagonalOnly=false, so the slot is free).
      */
-    public final int DIAGC;
+    public int DIAGC;
     /** nVec offset for √diagC_i (sep mode).  Slot 6, offset = 6n. */
-    public final int DIAGD;
+    public int DIAGD;
     /**
      * nVec offset for LAPACK dsyev eigenvalue output.  Slot 7, offset = 7n.
      * Also used as scratch for the intermediate vector y = D⊙z during offspring
      * sampling and for C^{−½}·(m−m_old) during evolution-path update.
      * Timing analysis guarantees these uses never overlap within one iteration.
      */
-    public final int EVALS;
+    public int EVALS;
 
     // ── Arena offset constants (lVec) ─────────────────────────────────────
 
     /** lVec offset for fitness values f(x_k).  Slot 0, offset = 0. */
-    public final int FITNESS;
+    public int FITNESS;
     /**
      * lVec offset for recombination weights w_i.
      * Positive weights (i = 0…μ−1) sum to 1; negative weights (i = μ…λ−1)
      * are used by Active CMA for the rank-μ update.  Slot 1, offset = λ.
      */
-    public final int WEIGHTS;
+    public int WEIGHTS;
     /**
      * lVec offset for boundary-penalty scratch.  Slot 2, offset = 2λ.
      * Replaces the per-iteration {@code new double[lambda]} that the original
      * implementation allocated inside {@code evaluateFitness}.
      */
-    public final int PENALTY;
+    public int PENALTY;
 
     // ── Arena offset constants (mat) ──────────────────────────────────────
 
@@ -139,13 +139,13 @@ public final class CMAESWorkspace {
      * C is symmetric positive-definite; only the lower triangle is written,
      * but both triangles are kept consistent.
      */
-    public final int C_OFF;
+    public int C_OFF;
     /**
      * mat offset for eigenvector matrix B (n×n, row-major).  Slot 1, offset = n².
      * Columns of B are the eigenvectors of C: C = B · diag(D²) · Bᵀ.
      * Updated by {@code eigenDecompose} via LAPACK dsyev.
      */
-    public final int B_OFF;
+    public int B_OFF;
 
     // ── Distribution state (updated each generation) ──────────────────────
 
@@ -259,7 +259,7 @@ public final class CMAESWorkspace {
      *       The two uses are non-overlapping within a single iteration.</li>
      * </ol>
      */
-    public final double[] xbuf;
+    public double[] xbuf;
 
     // ── LAPACK workspace (full mode only, null in sep mode) ───────────────
 
@@ -275,7 +275,7 @@ public final class CMAESWorkspace {
      * u = Bᵀ·(m − m_old) inside {@code updateEvolutionPaths}.
      * {@code null} in sep mode.
      */
-    public final double[] ctmpBuf;
+    public double[] ctmpBuf;
 
     // ── Fitness history (stop conditions) ─────────────────────────────────
 
@@ -304,33 +304,32 @@ public final class CMAESWorkspace {
     public double sigma0;
 
     /** Optimal lwork for dsyev; 0 in sep mode. */
-    final int lwork;
+    int lwork;
 
     // ── Constructors ──────────────────────────────────────────────────────
 
     /**
-     * Allocates a full-matrix workspace for dimension {@code n} and population size {@code lambda}.
-     * Equivalent to {@code new CMAESWorkspace(n, lambda, false)}.
-     *
-     * @param n      problem dimension (must be &gt; 0)
-     * @param lambda population size λ (must be &gt; 0)
-     */
-    public CMAESWorkspace(int n, int lambda) {
-        this(n, lambda, false);
-    }
-
-    /**
-     * Allocates a workspace for dimension {@code n} and population size {@code lambda}.
-     *
-     * <p>When {@code diagonalOnly=true} (sep-CMA-ES), the O(n²) allocations
-     * ({@code mat}, {@code ctmpBuf}, {@code eigenWork}) are skipped, reducing memory
-     * from O(n²) to O(nλ).  The {@code mat} field will be {@code null}.</p>
+     * Ensures the workspace is allocated for the given dimensions and mode.
+     * Reallocates if {@code n}, {@code lambda}, or {@code diagonalOnly} changed.
+     * Always calls {@link #reset()} at the end.
      *
      * @param n            problem dimension (must be &gt; 0)
      * @param lambda       population size λ (must be &gt; 0)
      * @param diagonalOnly {@code true} for sep-CMA-ES (diagonal covariance only)
      */
-    public CMAESWorkspace(int n, int lambda, boolean diagonalOnly) {
+    public void ensure(int n, int lambda, boolean diagonalOnly) {
+        boolean currentDiagonalOnly = (mat == null && this.n > 0);
+        if (n != this.n || lambda != this.lambda || diagonalOnly != currentDiagonalOnly) {
+            init(n, lambda, diagonalOnly);
+        }
+        reset();
+    }
+
+    /**
+     * Performs full allocation for the given dimensions and mode.
+     * Contains the same logic as the original parameterized constructor.
+     */
+    private void init(int n, int lambda, boolean diagonalOnly) {
         if (n <= 0) throw new IllegalArgumentException("n must be positive, got " + n);
         if (lambda <= 0) throw new IllegalArgumentException("lambda must be positive, got " + lambda);
 
@@ -373,8 +372,6 @@ public final class CMAESWorkspace {
         // History size: 10 + ⌊30n/λ⌋  (pycma default)
         histSize = 10 + (int)(3.0 * 10 * n / lambda);
         fitnessHistory = new double[histSize];
-
-        reset();
     }
 
     // ── Reset ─────────────────────────────────────────────────────────────
@@ -394,6 +391,8 @@ public final class CMAESWorkspace {
      * </ul>
      */
     public void reset() {
+        if (nVec == null) return;
+
         Arrays.fill(nVec, 0.0);
         Arrays.fill(lVec, 0.0);
 

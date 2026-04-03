@@ -4,7 +4,6 @@
 package com.curioloop.numopt4j.optim;
 
 import java.util.Arrays;
-import java.util.function.BiConsumer;
 
 import static com.curioloop.numopt4j.optim.NumericalGradient.CBRT_EPSILON;
 import static com.curioloop.numopt4j.optim.NumericalGradient.SQRT_EPSILON;
@@ -69,12 +68,13 @@ public enum NumericalJacobian {
      */
     FORWARD {
         @Override
-        public Multivariate wrap(BiConsumer<double[], double[]> func, int m, int n, boolean transpose) {
-            return (x, y, jacobian) -> {
+        public Multivariate wrap(Multivariate.Objective func, int m, int n, boolean transpose) {
+            if (func == null) throw new IllegalArgumentException("func must not be null");
+            return (x, xn, y, ym, jacobian) -> {
                 if (jacobian != null) {
                     forwardDifference(func, x, jacobian, y, m, n, transpose);
                 }
-                func.accept(x, y);
+                func.evaluate(x, n, y, m);
             };
         }
     },
@@ -91,13 +91,14 @@ public enum NumericalJacobian {
      */
     CENTRAL {
         @Override
-        public Multivariate wrap(BiConsumer<double[], double[]> func, int m, int n, boolean transpose) {
+        public Multivariate wrap(Multivariate.Objective func, int m, int n, boolean transpose) {
+            if (func == null) throw new IllegalArgumentException("func must not be null");
             double[] work = new double[m];
-            return (x, y, jacobian) -> {
+            return (x, xn, y, ym, jacobian) -> {
                 if (jacobian != null) {
                     centralDifference(func, x, jacobian, work, m, n, transpose);
                 }
-                func.accept(x, y);
+                func.evaluate(x, n, y, m);
             };
         }
     };
@@ -106,12 +107,12 @@ public enum NumericalJacobian {
      * Wraps a residual function to create a {@link Multivariate} that computes both
      * residuals and numerical Jacobian, with row-major output.
      *
-     * @param func Residual function: {@code (x, r) -> void}
+     * @param func Residual function: {@code (x, n, r, m) -> void}
      * @param m    Number of residuals (outputs)
      * @param n    Number of parameters (inputs)
      * @return {@link Multivariate} with row-major Jacobian: {@code jacobian[i*n + j]}
      */
-    public Multivariate wrap(BiConsumer<double[], double[]> func, int m, int n) {
+    public Multivariate wrap(Multivariate.Objective func, int m, int n) {
         return wrap(func, m, n, false);
     }
 
@@ -125,21 +126,21 @@ public enum NumericalJacobian {
      * {@code jacobian[i + m*j] = ∂r[i]/∂x[j]}. The difference computation writes
      * directly in col-major order — no post-hoc transposition is performed.</p>
      *
-     * @param func      Residual function: {@code (x, r) -> void}
+     * @param func      Residual function: {@code (x, n, r, m) -> void}
      * @param m         Number of residuals (outputs)
      * @param n         Number of parameters (inputs)
      * @param transpose {@code true} for col-major output, {@code false} for row-major
      * @return {@link Multivariate} with the requested Jacobian layout
      */
-    public abstract Multivariate wrap(BiConsumer<double[], double[]> func, int m, int n, boolean transpose);
+    public abstract Multivariate wrap(Multivariate.Objective func, int m, int n, boolean transpose);
 
     // ── Private difference kernels ────────────────────────────────────────────
 
-    private static void forwardDifference(BiConsumer<double[], double[]> func, double[] x,
+    private static void forwardDifference(Multivariate.Objective func, double[] x,
                                           double[] jacobian, double[] work,
                                           int m, int n, boolean transpose) {
         // jacobian temporarily stores base f(x), work holds f(x+h)
-        func.accept(x, work);
+        func.evaluate(x, n, work, m);
         if (transpose) {
             for (int j = 0; j < n; j++)
                 System.arraycopy(work, 0, jacobian, m * j, m);
@@ -151,7 +152,7 @@ public enum NumericalJacobian {
             double aj = x[j];
             double h = SQRT_EPSILON * (1.0 + Math.abs(aj));
             x[j] = aj + h;
-            func.accept(x, work);
+            func.evaluate(x, n, work, m);
             x[j] = aj;
             double invH = 1.0 / h;
             if (transpose) {
@@ -164,7 +165,7 @@ public enum NumericalJacobian {
         }
     }
 
-    private static void centralDifference(BiConsumer<double[], double[]> func, double[] x,
+    private static void centralDifference(Multivariate.Objective func, double[] x,
                                           double[] jacobian, double[] work,
                                           int m, int n, boolean transpose) {
         if (transpose) {
@@ -173,10 +174,10 @@ public enum NumericalJacobian {
                 double h = CBRT_EPSILON * (1.0 + Math.abs(aj));
                 int base = m * j;
                 x[j] = aj + h;
-                func.accept(x, work);
+                func.evaluate(x, n, work, m);
                 for (int i = 0; i < m; i++) jacobian[base + i] = work[i];
                 x[j] = aj - h;
-                func.accept(x, work);
+                func.evaluate(x, n, work, m);
                 x[j] = aj;
                 double invTwoH = 1.0 / (2.0 * h);
                 for (int i = 0; i < m; i++)
@@ -187,10 +188,10 @@ public enum NumericalJacobian {
                 double aj = x[j];
                 double h = CBRT_EPSILON * (1.0 + Math.abs(aj));
                 x[j] = aj + h;
-                func.accept(x, work);
+                func.evaluate(x, n, work, m);
                 for (int i = 0; i < m; i++) jacobian[i * n + j] = work[i];
                 x[j] = aj - h;
-                func.accept(x, work);
+                func.evaluate(x, n, work, m);
                 x[j] = aj;
                 double invTwoH = 1.0 / (2.0 * h);
                 for (int i = 0; i < m; i++)

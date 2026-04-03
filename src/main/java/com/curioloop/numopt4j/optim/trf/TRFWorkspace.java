@@ -86,15 +86,8 @@ public final class TRFWorkspace {
     double xnorm;
 
     /**
-     * Allocates a TRF workspace for a problem with {@code m} residuals and {@code n} parameters.
-     *
-     * @param m number of residuals (m &ge; n &gt; 0)
-     * @param n number of parameters
+     * Creates an uninitialized TRF workspace. Call {@link #ensure(int, int)} before use.
      */
-    public TRFWorkspace(int m, int n) {
-        init(m, n);
-    }
-
     private void init(int m, int n) {
         fvec = new double[m];
         fjac = new double[m * n];
@@ -121,23 +114,23 @@ public final class TRFWorkspace {
         xnorm = 0.0;
     }
 
-    /** Returns the number of residuals this workspace was allocated for. */
-    public int getM() { return fvec.length; }
+    /** Returns the number of residuals this workspace was allocated for (0 before first {@link #ensure}). */
+    public int getM() { return fvec != null ? fvec.length : 0; }
 
-    /** Returns the number of parameters this workspace was allocated for. */
-    public int getN() { return ipvt.length; }
+    /** Returns the number of parameters this workspace was allocated for (0 before first {@link #ensure}). */
+    public int getN() { return ipvt != null ? ipvt.length : 0; }
 
     /** Returns true if this workspace is compatible with the given problem dimensions. */
     public boolean isCompatible(int m, int n) {
-        return fvec.length == m && ipvt.length == n;
+        return getM() == m && getN() == n;
     }
 
     /**
      * Ensures this workspace can handle dimensions {@code m} × {@code n}.
      * Reallocates all arrays only when capacity is exceeded; always resets to zero.
      */
-    public void ensureCapacity(int m, int n) {
-        if (m > fvec.length || n > ipvt.length) {
+    public void ensure(int m, int n) {
+        if (m > getM() || n > getN()) {
             init(m, n);  // reallocate
         } else {
             reset();     // reuse existing buffers
@@ -146,12 +139,12 @@ public final class TRFWorkspace {
 
     /** Resets all buffers to zero and clears mutable state. */
     public void reset() {
-        Arrays.fill(fvec, 0.0);
-        Arrays.fill(fjac, 0.0);
-        Arrays.fill(wa2,  0.0);
-        Arrays.fill(wa4,  0.0);
-        Arrays.fill(ipvt, 0);
-        Arrays.fill(work, 0.0);
+        if (fvec != null) Arrays.fill(fvec, 0.0);
+        if (fjac != null) Arrays.fill(fjac, 0.0);
+        if (wa2  != null) Arrays.fill(wa2,  0.0);
+        if (wa4  != null) Arrays.fill(wa4,  0.0);
+        if (ipvt != null) Arrays.fill(ipvt, 0);
+        if (work != null) Arrays.fill(work, 0.0);
         delta = 0.0;
         xnorm = 0.0;
     }

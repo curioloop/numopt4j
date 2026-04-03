@@ -5,8 +5,8 @@ package com.curioloop.numopt4j.optim.cmaes;
 
 import com.curioloop.numopt4j.optim.Minimizer;
 import com.curioloop.numopt4j.optim.Optimization;
+import com.curioloop.numopt4j.optim.Univariate;
 import java.util.Random;
-import java.util.function.ToDoubleFunction;
 
 /**
  * Fluent configuration builder for the CMA-ES (Covariance Matrix Adaptation Evolution Strategy) optimizer.
@@ -79,7 +79,7 @@ import java.util.function.ToDoubleFunction;
  * @see CMAESWorkspace
  */
 public final class CMAESProblem
-        extends Minimizer<ToDoubleFunction<double[]>, CMAESWorkspace, CMAESProblem> {
+        extends Minimizer<Univariate.Objective, CMAESWorkspace, CMAESProblem> {
 
     double sigma0 = 0.3;
     private int lambda = 0;                // 0 = auto: 4 + floor(3*ln(n))
@@ -126,7 +126,7 @@ public final class CMAESProblem
     // ── Fluent setters ────────────────────────────────────────────────────
 
     /** Sets the objective function to minimise (no gradient required). */
-    public CMAESProblem objective(ToDoubleFunction<double[]> f) {
+    public CMAESProblem objective(Univariate.Objective f) {
         if (f == null) throw new IllegalArgumentException("objective must not be null");
         this.objective = f;
         return this;
@@ -263,10 +263,8 @@ public final class CMAESProblem
     public CMAESWorkspace alloc() {
         validate();
         int lam = effectiveLambda();
-        if (workspace == null || workspace.n != dimension || workspace.lambda != lam
-                || (updateMode.separable && workspace.mat != null) || (!updateMode.separable && workspace.mat == null)) {
-            workspace = new CMAESWorkspace(dimension, lam, updateMode.separable);
-        }
+        if (workspace == null) workspace = new CMAESWorkspace();
+        workspace.ensure(dimension, lam, updateMode.separable);
         return workspace;
     }
 
@@ -276,27 +274,8 @@ public final class CMAESProblem
         int lam = effectiveLambda();
         int resolvedMaxEval = effectiveMaxEvaluations();
 
-        // Resolve workspace
-        CMAESWorkspace ws = workspace;
-        if (ws == null) {
-            ws = this.workspace;
-            if (ws == null || ws.n != dimension || ws.lambda != lam
-                    || (updateMode.separable && ws.mat != null) || (!updateMode.separable && ws.mat == null)) {
-                ws = new CMAESWorkspace(dimension, lam, updateMode.separable);
-                this.workspace = ws;
-            }
-        } else {
-            if (ws.n != dimension || ws.lambda != lam) {
-                throw new IllegalArgumentException(
-                    "workspace dimension mismatch: workspace(n=" + ws.n + ", lambda=" + ws.lambda
-                    + ") vs problem(n=" + dimension + ", lambda=" + lam + ")");
-            }
-            if ((updateMode.separable && ws.mat != null) || (!updateMode.separable && ws.mat == null)) {
-                throw new IllegalArgumentException(
-                    "workspace mode mismatch: separable=" + updateMode.separable
-                    + " but workspace was allocated with separable=" + (ws.mat == null));
-            }
-        }
+        CMAESWorkspace ws = workspace != null ? workspace : (this.workspace != null ? this.workspace : (this.workspace = new CMAESWorkspace()));
+        ws.ensure(dimension, lam, updateMode.separable);
 
         // Build config snapshot with resolved maxEvaluations
         CMAESProblem cfg = snapshot(resolvedMaxEval);
@@ -334,7 +313,6 @@ public final class CMAESProblem
 
     /** Single run (NONE mode). */
     private Optimization solveOnce(double[] x0, CMAESWorkspace ws, CMAESProblem cfg) {
-        ws.reset();
         return CMAESCore.optimize(x0, objective, bounds, ws, cfg, rng);
     }
 
@@ -351,13 +329,12 @@ public final class CMAESProblem
             int remainingEval = cfg.maxEvaluations - totalEvals;
             if (remainingEval <= 0) break;
 
-            CMAESWorkspace runWs = (ws.lambda == currentLambda && ws.n == dimension)
-                ? ws : new CMAESWorkspace(dimension, currentLambda, cfg.updateMode.separable);
+            ws.ensure(dimension, currentLambda, cfg.updateMode.separable);
 
             CMAESProblem runCfg = cfg.snapshot(remainingEval);
             runCfg.lambda = currentLambda;
 
-            Optimization result = CMAESCore.optimize(initialPoint, objective, bounds, runWs, runCfg, rng);
+            Optimization result = CMAESCore.optimize(initialPoint, objective, bounds, ws, runCfg, rng);
             totalEvals += result.getEvaluations();
             totalIters += result.getIterations();
             lastStatus = result.getStatus();
@@ -410,15 +387,14 @@ public final class CMAESProblem
                 currentSigma = sigma0 * Math.pow(10.0, -2.0 * rng.nextDouble());
             }
 
-            CMAESWorkspace runWs = (ws.lambda == currentLambda && ws.n == dimension)
-                ? ws : new CMAESWorkspace(dimension, currentLambda, cfg.updateMode.separable);
+            ws.ensure(dimension, currentLambda, cfg.updateMode.separable);
 
             int remainingEval = cfg.maxEvaluations - totalEvals;
             CMAESProblem runCfg = cfg.snapshot(remainingEval);
             runCfg.lambda = currentLambda;
             runCfg.sigma0 = currentSigma;
 
-            Optimization result = CMAESCore.optimize(initialPoint, objective, bounds, runWs, runCfg, rng);
+            Optimization result = CMAESCore.optimize(initialPoint, objective, bounds, ws, runCfg, rng);
             int runEvals = result.getEvaluations();
             totalEvals += runEvals;
             totalIters += result.getIterations();

@@ -6,6 +6,7 @@ package com.curioloop.numopt4j.optim.cmaes;
 import com.curioloop.numopt4j.optim.Bound;
 import com.curioloop.numopt4j.optim.Minimizer;
 import com.curioloop.numopt4j.optim.Optimization;
+import com.curioloop.numopt4j.optim.Univariate;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -32,57 +33,57 @@ class CMAESIntegrationTest {
     // ── Standard test functions ───────────────────────────────────────────
 
     /** f(x) = Σ xᵢ²,  optimum 0 at origin */
-    static double sphere(double[] x) {
-        double f = 0; for (double v : x) f += v * v; return f;
+    static double sphere(double[] x, int n) {
+        double f = 0; for (int i = 0; i < n; i++) f += x[i] * x[i]; return f;
     }
 
     /** f(x) = x₀² + 1e6·Σᵢ₌₁ xᵢ²,  optimum 0 (ill-conditioned) */
-    static double cigar(double[] x) {
+    static double cigar(double[] x, int n) {
         double f = x[0] * x[0];
-        for (int i = 1; i < x.length; i++) f += 1e6 * x[i] * x[i];
+        for (int i = 1; i < n; i++) f += 1e6 * x[i] * x[i];
         return f;
     }
 
     /** f(x) = 1e6·x₀² + Σᵢ₌₁ xᵢ²,  optimum 0 */
-    static double tablet(double[] x) {
+    static double tablet(double[] x, int n) {
         double f = 1e6 * x[0] * x[0];
-        for (int i = 1; i < x.length; i++) f += x[i] * x[i];
+        for (int i = 1; i < n; i++) f += x[i] * x[i];
         return f;
     }
 
     /** f(x) = x₀²/1e4 + 1e4·x_{n-1}² + Σ middle xᵢ²,  optimum 0 */
-    static double cigTab(double[] x) {
-        int end = x.length - 1;
+    static double cigTab(double[] x, int n) {
+        int end = n - 1;
         double f = x[0] * x[0] / 1e4 + 1e4 * x[end] * x[end];
         for (int i = 1; i < end; i++) f += x[i] * x[i];
         return f;
     }
 
     /** f(x) = 1e6·Σᵢ<n/2 xᵢ² + Σᵢ≥n/2 xᵢ²,  optimum 0 */
-    static double twoAxes(double[] x) {
+    static double twoAxes(double[] x, int n) {
         double f = 0;
-        for (int i = 0; i < x.length; i++)
-            f += (i < x.length / 2 ? 1e6 : 1.0) * x[i] * x[i];
+        for (int i = 0; i < n; i++)
+            f += (i < n / 2 ? 1e6 : 1.0) * x[i] * x[i];
         return f;
     }
 
     /** f(x) = Σ (1e3)^(i/(n-1)) · xᵢ²,  optimum 0 (ellipsoid) */
-    static double elli(double[] x) {
+    static double elli(double[] x, int n) {
         double f = 0;
-        for (int i = 0; i < x.length; i++)
-            f += Math.pow(1e3, (double) i / (x.length - 1)) * x[i] * x[i];
+        for (int i = 0; i < n; i++)
+            f += Math.pow(1e3, (double) i / (n - 1)) * x[i] * x[i];
         return f;
     }
 
     /** Rotated ellipsoid using a fixed orthogonal basis */
-    static double elliRotated(double[] x) {
-        return elli(ROTATION.rotate(x));
+    static double elliRotated(double[] x, int n) {
+        return elli(ROTATION.rotate(x), n);
     }
 
     /** Rosenbrock: f(x) = Σ [100(xᵢ²-xᵢ₊₁)² + (xᵢ-1)²],  optimum 0 at ones */
-    static double rosen(double[] x) {
+    static double rosen(double[] x, int n) {
         double f = 0;
-        for (int i = 0; i < x.length - 1; i++) {
+        for (int i = 0; i < n - 1; i++) {
             double a = x[i] * x[i] - x[i + 1];
             double b = x[i] - 1.0;
             f += 100.0 * a * a + b * b;
@@ -91,31 +92,31 @@ class CMAESIntegrationTest {
     }
 
     /** Rastrigin: f(x) = 10n + Σ [xᵢ² - 10·cos(2π·xᵢ)],  optimum 0 at origin */
-    static double rastrigin(double[] x) {
-        double f = 10.0 * x.length;
-        for (double v : x) f += v * v - 10.0 * Math.cos(2.0 * Math.PI * v);
+    static double rastrigin(double[] x, int n) {
+        double f = 10.0 * n;
+        for (int i = 0; i < n; i++) f += x[i] * x[i] - 10.0 * Math.cos(2.0 * Math.PI * x[i]);
         return f;
     }
 
     /** Ackley: optimum 0 at origin */
-    static double ackley(double[] x) {
+    static double ackley(double[] x, int n) {
         double sumSq = 0, sumCos = 0;
-        for (double v : x) { sumSq += v * v; sumCos += Math.cos(2.0 * Math.PI * v); }
-        return 20.0 - 20.0 * Math.exp(-0.2 * Math.sqrt(sumSq / x.length))
-             + Math.E - Math.exp(sumCos / x.length);
+        for (int i = 0; i < n; i++) { sumSq += x[i] * x[i]; sumCos += Math.cos(2.0 * Math.PI * x[i]); }
+        return 20.0 - 20.0 * Math.exp(-0.2 * Math.sqrt(sumSq / n))
+             + Math.E - Math.exp(sumCos / n);
     }
 
     /** DiffPow: f(x) = Σ |xᵢ|^(2+10i/(n-1)),  optimum 0 */
-    static double diffPow(double[] x) {
+    static double diffPow(double[] x, int n) {
         double f = 0;
-        for (int i = 0; i < x.length; i++)
-            f += Math.pow(Math.abs(x[i]), 2.0 + 10.0 * i / (x.length - 1));
+        for (int i = 0; i < n; i++)
+            f += Math.pow(Math.abs(x[i]), 2.0 + 10.0 * i / (n - 1));
         return f;
     }
 
     /** SsDiffPow: f(x) = diffPow(x)^0.25 */
-    static double ssDiffPow(double[] x) {
-        return Math.pow(diffPow(x), 0.25);
+    static double ssDiffPow(double[] x, int n) {
+        return Math.pow(diffPow(x, n), 0.25);
     }
 
     // ── Fixed orthogonal rotation matrix (seed=2, same as hipparchus) ─────
@@ -172,7 +173,7 @@ class CMAESIntegrationTest {
      * <p>TolX and TolFun are set to very small values to prevent early stopping
      * before stopFitness is reached.</p>
      */
-    void doTest(java.util.function.ToDoubleFunction<double[]> fn,
+    void doTest(Univariate.Objective fn,
                 double[] x0, double sigma, int lambda, boolean diag,
                 Bound[] bds, int maxEval,
                 double fTol, double xTol,
@@ -358,7 +359,7 @@ class CMAESIntegrationTest {
     @Test void testOneDimWithUpperBound() {
         // minimize (1 - x)², x ∈ [-1e6, 1.5], optimum at x=1
         Optimization r = Minimizer.cmaes()
-            .objective(x -> { double e = 1.0 - x[0]; return e * e; })
+            .objective((x, n) -> { double e = 1.0 - x[0]; return e * e; })
             .initialPoint(0.0)
             .sigma(0.1)
             .populationSize(5)
@@ -377,8 +378,8 @@ class CMAESIntegrationTest {
     @Test void testFitAccuracyNearBoundary() {
         // minimize (11.1 - x)², verify that proximity to bounds doesn't degrade accuracy
         // Cf. hipparchus testFitAccuracyDependsOnBoundary (MATH-867)
-        java.util.function.ToDoubleFunction<double[]> fn =
-            x -> { double e = 11.1 - x[0]; return e * e; };
+        Univariate.Objective fn =
+            (x, n) -> { double e = 11.1 - x[0]; return e * e; };
 
         // No bounds — baseline
         Optimization noBound = Minimizer.cmaes()
@@ -466,7 +467,7 @@ class CMAESIntegrationTest {
 
     @Test void testAllNaNObjectiveReturnsCallbackError() {
         Optimization r = Minimizer.cmaes()
-            .objective(x -> Double.NaN)
+            .objective((x, n) -> Double.NaN)
             .initialPoint(1.0, 1.0)
             .maxEvaluations(1000)
             .random(new Random(42))
@@ -478,9 +479,9 @@ class CMAESIntegrationTest {
         // Some NaN, some finite — should continue and converge
         int[] callCount = {0};
         Optimization r = Minimizer.cmaes()
-            .objective(x -> {
+            .objective((x, n) -> {
                 callCount[0]++;
-                return (callCount[0] % 5 == 0) ? Double.NaN : sphere(x);
+                return (callCount[0] % 5 == 0) ? Double.NaN : sphere(x, n);
             })
             .initialPoint(1.0, 1.0, 1.0)
             .maxEvaluations(10_000)
@@ -515,13 +516,17 @@ class CMAESIntegrationTest {
 
     @Test void testWorkspaceDimensionMismatch() {
         CMAESProblem p = Minimizer.cmaes()
-            .objective(x -> 0.0)
+            .objective((x, n) -> { double s = 0; for (double v : x) s += v*v; return s; })
             .initialPoint(new double[5])
-            .populationSize(10);
-        assertThrows(IllegalArgumentException.class,
-            () -> p.solve(new CMAESWorkspace(3, 10)));
-        assertThrows(IllegalArgumentException.class,
-            () -> p.solve(new CMAESWorkspace(5, 20)));
+            .populationSize(10)
+            .maxEvaluations(100);
+        // Workspace with wrong dimensions — should auto-resize instead of throwing
+        CMAESWorkspace ws1 = new CMAESWorkspace(); ws1.ensure(3, 10, false);
+        assertDoesNotThrow(() -> p.solve(ws1));
+        assertEquals(5, ws1.n);
+        CMAESWorkspace ws2 = new CMAESWorkspace(); ws2.ensure(5, 20, false);
+        assertDoesNotThrow(() -> p.solve(ws2));
+        assertEquals(10, ws2.lambda);
     }
 
     // ── Stop condition tests ──────────────────────────────────────────────
@@ -563,7 +568,7 @@ class CMAESIntegrationTest {
     /** All NaN objective: verify CALLBACK_ERROR */
     @Test void testAllNaNObjective() {
         Optimization r = Minimizer.cmaes()
-            .objective(x -> Double.NaN)
+            .objective((x, n) -> Double.NaN)
             .initialPoint(point(DIM, 1.0))
             .maxEvaluations(1000)
             .random(new Random(42))

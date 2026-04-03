@@ -67,9 +67,7 @@ package com.curioloop.numopt4j.optim.subplex;
 
 import com.curioloop.numopt4j.optim.Bound;
 import com.curioloop.numopt4j.optim.Optimization;
-
-
-import java.util.function.ToDoubleFunction;
+import com.curioloop.numopt4j.optim.Univariate;
 final class SubplexCore {
 
     private static final double PSI = 0.25;    // simplex diameter reduction factor
@@ -96,7 +94,7 @@ final class SubplexCore {
     static Optimization optimize(
             int n,
             double[] x,
-            ToDoubleFunction<double[]> func,
+            Univariate.Objective func,
             Bound[] bounds,
             double[] xstep,
             int maxEval,
@@ -105,8 +103,7 @@ final class SubplexCore {
             SubplexWorkspace nmWs) {
 
         // Use workspace arrays (no per-call allocation)
-        nmWs.ensureFullCapacity(n);
-        nmWs.resetFull();
+        // Note: ensure(n) is called by SubplexProblem before invoking this method
         double[] xprev = nmWs.xprev;
         double[] dx = nmWs.dx;
         int[] perm = nmWs.perm;
@@ -116,7 +113,7 @@ final class SubplexCore {
         int[] evalCounter = {0};
 
         // Initial evaluation
-        double minf = func.applyAsDouble(x);
+        double minf = func.evaluate(x, n);
         if (!Double.isFinite(minf)) minf = Double.MAX_VALUE;
         evalCounter[0] = 1;
 
@@ -170,15 +167,14 @@ final class SubplexCore {
                 final int subStart = i;
                 final int subDim = ns;
                 final int[] permRef = perm;
-                ToDoubleFunction<double[]> subFunc = xsub -> {
+                Univariate.Objective subFunc = (xsub, ns_) -> {
                     for (int k = 0; k < subDim; k++) {
                         x[permRef[subStart + k]] = xsub[k];
                     }
-                    return func.applyAsDouble(x);
+                    return func.evaluate(x, n);
                 };
 
                 // Run NM on this subspace with psi-convergence
-                nmWs.ensureNmCapacity(ns);
                 nmWs.resetNm();
                 Optimization.Status subStatus = NelderMead.optimize(
                         ns, xs, subFunc,

@@ -8,7 +8,7 @@ import com.curioloop.numopt4j.optim.Optimization;
 
 import org.junit.jupiter.api.Test;
 
-import java.util.function.BiConsumer;
+import com.curioloop.numopt4j.optim.Multivariate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
@@ -23,7 +23,7 @@ class TRFResultTest {
     private static final double[] Y_DATA = {1, 3, 5, 7, 9};
 
     private Optimization runLinearFit() {
-        BiConsumer<double[], double[]> fn = (c, r) -> {
+        Multivariate.Objective fn = (c, n, r, m) -> {
             for (int i = 0; i < M; i++) r[i] = Y_DATA[i] - (c[0] + c[1] * X_DATA[i]);
         };
         return new TRFProblem()
@@ -73,7 +73,7 @@ class TRFResultTest {
         final int m = 10;
         double[] xd = {0,1,2,3,4,5,6,7,8,9};
         double[] yd = {1,3,5,7,9,11,13,15,17,19};
-        BiConsumer<double[], double[]> fn = (c, r) -> {
+        Multivariate.Objective fn = (c, n, r, mm) -> {
             for (int i = 0; i < m; i++) r[i] = yd[i] - (c[0] + c[1] * xd[i]);
         };
         Optimization r = new TRFProblem()

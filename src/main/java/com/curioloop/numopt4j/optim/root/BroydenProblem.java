@@ -1,9 +1,8 @@
 package com.curioloop.numopt4j.optim.root;
 
+import com.curioloop.numopt4j.optim.Multivariate;
 import com.curioloop.numopt4j.optim.Optimization;
 import com.curioloop.numopt4j.optim.RootFinder;
-
-import java.util.function.BiConsumer;
 
 /**
  * Multi-dimensional root finder using Broyden's method ({@code broyden1}).
@@ -18,7 +17,7 @@ import java.util.function.BiConsumer;
  *     .solve();
  * }</pre>
  */
-public final class BroydenProblem extends RootFinder<BiConsumer<double[], double[]>, BroydenWorkspace, BroydenProblem> {
+public final class BroydenProblem extends RootFinder<Multivariate.Objective, BroydenWorkspace, BroydenProblem> {
 
     private double ftol = HYBRSolver.DEFAULT_FTOL;
     private int maxEvaluations = 0;
@@ -26,7 +25,8 @@ public final class BroydenProblem extends RootFinder<BiConsumer<double[], double
     public BroydenProblem() {}
 
     /** Sets the system of equations {@code F(x) = 0}. */
-    public BroydenProblem equations(BiConsumer<double[], double[]> fn, int n) {
+    public BroydenProblem equations(Multivariate.Objective fn, int n) {
+        if (fn == null) throw new IllegalArgumentException("fn must not be null");
         if (n < 1) throw new IllegalArgumentException("n must be >= 1, got " + n);
         this.function = fn;
         this.dimension = n;
@@ -56,7 +56,8 @@ public final class BroydenProblem extends RootFinder<BiConsumer<double[], double
     public BroydenWorkspace alloc() {
         if (dimension < 1) throw new IllegalStateException(
             "Problem dimension n is unknown; call equations(fn, n) or initialPoint(x0) first");
-        if (workspace == null) workspace = new BroydenWorkspace(dimension);
+        if (workspace == null) workspace = new BroydenWorkspace();
+        workspace.ensure(dimension);
         return workspace;
     }
 
@@ -69,7 +70,7 @@ public final class BroydenProblem extends RootFinder<BiConsumer<double[], double
             throw new IllegalStateException(
                 "Missing required parameter: initialPoint. Call .initialPoint(x0) before .solve().");
         BroydenWorkspace ws0 = ws != null ? ws : alloc();
-        ws0.reset();
+        ws0.ensure(dimension);
         int maxIter = maxEvaluations > 0 ? maxEvaluations : 100 * (dimension + 1);
         return BroydenSolver.solve(function, initialPoint, ftol, maxIter, ws0);
     }

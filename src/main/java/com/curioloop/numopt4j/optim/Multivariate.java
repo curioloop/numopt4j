@@ -67,7 +67,32 @@ package com.curioloop.numopt4j.optim;
  */
 @FunctionalInterface
 public interface Multivariate {
-    
+
+    /**
+     * Functional interface for a pure vector-valued function ℝⁿ → ℝᵐ without Jacobian.
+     *
+     * <p>Used as the input to {@link NumericalJacobian#wrap(Objective, int, int)} to produce a
+     * full {@link Multivariate} with numerically approximated Jacobian, and accepted
+     * directly by residual-based solvers (TRF, HYBR, Broyden).</p>
+     *
+     * <p>Only the first {@code n} elements of {@code x} and first {@code m} elements of
+     * {@code y} are considered effective; array lengths may exceed {@code n} and {@code m}.</p>
+     *
+     * @see NumericalJacobian
+     */
+    @FunctionalInterface
+    interface Objective {
+        /**
+         * Evaluates the vector function at point {@code x}, writing results into {@code y}.
+         *
+         * @param x Current point (read-only); only {@code x[0..n-1]} are read
+         * @param n Number of effective input dimensions
+         * @param y Output array; only {@code y[0..m-1]} are written
+         * @param m Number of effective output dimensions
+         */
+        void evaluate(double[] x, int n, double[] y, int m);
+    }
+
     /**
      * Evaluates the function outputs and optionally the Jacobian matrix.
      * <p>
@@ -76,9 +101,13 @@ public interface Multivariate {
      * When {@code jacobian} is null, only the function outputs need to be computed.
      * </p>
      *
-     * @param x Current point (length n, read-only)
-     * @param y Output array for function values (length m, must be filled by implementation)
-     * @param jacobian Output array for Jacobian matrix (length m×n, row-major; may be null)
+     * @param x Current point (length &ge; n, only x[0..n-1] are read)
+     * @param n Number of effective input dimensions
+     * @param y Output array for function values (length &ge; m, only y[0..m-1] are written)
+     * @param m Number of effective output dimensions
+     * @param jacobian Output array for Jacobian matrix (length m&times;n, row-major; may be null)
      */
-    void evaluate(double[] x, double[] y, double[] jacobian);
+    void evaluate(double[] x, int n, double[] y, int m, double[] jacobian);
+
+
 }

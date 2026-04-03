@@ -9,7 +9,6 @@ import com.curioloop.numopt4j.optim.Optimization;
 import com.curioloop.numopt4j.optim.Univariate;
 
 import java.time.Duration;
-import java.util.function.ToDoubleFunction;
 
 /**
  * Fluent API for defining and solving SLSQP constrained optimization problems.
@@ -167,9 +166,8 @@ public final class SLSQPProblem extends Minimizer<Univariate, SLSQPWorkspace, SL
     @Override
     public SLSQPWorkspace alloc() {
         validate();
-        if (workspace == null || !workspace.ensureCapacity(dimension, numEqualityConstraints(), numInequalityConstraints())) {
-            workspace = new SLSQPWorkspace(dimension, numEqualityConstraints(), numInequalityConstraints());
-        }
+        if (workspace == null) workspace = new SLSQPWorkspace();
+        workspace.ensure(dimension, numEqualityConstraints(), numInequalityConstraints());
         return workspace;
     }
 
@@ -186,19 +184,9 @@ public final class SLSQPProblem extends Minimizer<Univariate, SLSQPWorkspace, SL
     @Override
     public Optimization solve(SLSQPWorkspace workspace) {
         validate();
-        SLSQPWorkspace ws = workspace;
-        if (ws != null) {
-            if (!ws.ensureCapacity(dimension, numEqualityConstraints(), numInequalityConstraints())) {
-                throw new IllegalArgumentException("Workspace is incompatible with problem dimensions");
-            }
-        } else {
-            ws = this.workspace;
-            if (ws == null || !ws.ensureCapacity(dimension, numEqualityConstraints(), numInequalityConstraints())) {
-                ws = new SLSQPWorkspace(dimension, numEqualityConstraints(), numInequalityConstraints());
-            }
-        }
+        SLSQPWorkspace ws = workspace != null ? workspace : (this.workspace != null ? this.workspace : new SLSQPWorkspace());
+        ws.ensure(dimension, numEqualityConstraints(), numInequalityConstraints());
 
-        ws.reset();
         double[] x = initialPoint.clone();
 
         Optimization r = SLSQPCore.optimize(
@@ -301,7 +289,7 @@ public final class SLSQPProblem extends Minimizer<Univariate, SLSQPWorkspace, SL
      * @return this problem instance
      * @throws IllegalArgumentException if f is null
      */
-    public SLSQPProblem objective(ToDoubleFunction<double[]> f) {
+    public SLSQPProblem objective(Univariate.Objective f) {
         if (f == null) {
             throw new IllegalArgumentException("objective function must not be null");
         }
@@ -315,7 +303,7 @@ public final class SLSQPProblem extends Minimizer<Univariate, SLSQPWorkspace, SL
      * @param f function that computes only the objective value
      * @return this problem instance
      */
-    public SLSQPProblem objective(NumericalGradient grad, ToDoubleFunction<double[]> f) {
+    public SLSQPProblem objective(NumericalGradient grad, Univariate.Objective f) {
         this.objective = grad.wrap(f);
         return this;
     }
@@ -341,7 +329,7 @@ public final class SLSQPProblem extends Minimizer<Univariate, SLSQPWorkspace, SL
      * @return this problem instance
      */
     @SafeVarargs
-    public final SLSQPProblem equalityConstraints(ToDoubleFunction<double[]>... constraints) {
+    public final SLSQPProblem equalityConstraints(Univariate.Objective... constraints) {
         return equalityConstraints(NumericalGradient.CENTRAL, constraints);
     }
 
@@ -353,7 +341,7 @@ public final class SLSQPProblem extends Minimizer<Univariate, SLSQPWorkspace, SL
      * @return this problem instance
      */
     @SafeVarargs
-    public final SLSQPProblem equalityConstraints(NumericalGradient grad, ToDoubleFunction<double[]>... constraints) {
+    public final SLSQPProblem equalityConstraints(NumericalGradient grad, Univariate.Objective... constraints) {
         this.equalityConstraints = wrapConstraints(grad, constraints);
         return this;
     }
@@ -376,7 +364,7 @@ public final class SLSQPProblem extends Minimizer<Univariate, SLSQPWorkspace, SL
      * @return this problem instance
      */
     @SafeVarargs
-    public final SLSQPProblem inequalityConstraints(ToDoubleFunction<double[]>... constraints) {
+    public final SLSQPProblem inequalityConstraints(Univariate.Objective... constraints) {
         return inequalityConstraints(NumericalGradient.CENTRAL, constraints);
     }
 
@@ -388,7 +376,7 @@ public final class SLSQPProblem extends Minimizer<Univariate, SLSQPWorkspace, SL
      * @return this problem instance
      */
     @SafeVarargs
-    public final SLSQPProblem inequalityConstraints(NumericalGradient grad, ToDoubleFunction<double[]>... constraints) {
+    public final SLSQPProblem inequalityConstraints(NumericalGradient grad, Univariate.Objective... constraints) {
         this.inequalityConstraints = wrapConstraints(grad, constraints);
         return this;
     }
@@ -508,7 +496,7 @@ public final class SLSQPProblem extends Minimizer<Univariate, SLSQPWorkspace, SL
     }
 
     @SafeVarargs
-    private static Univariate[] wrapConstraints(NumericalGradient grad, ToDoubleFunction<double[]>... constraints) {
+    private static Univariate[] wrapConstraints(NumericalGradient grad, Univariate.Objective... constraints) {
         if (constraints == null || constraints.length == 0) {
             return null;
         }

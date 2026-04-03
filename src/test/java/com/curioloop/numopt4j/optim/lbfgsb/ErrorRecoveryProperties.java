@@ -40,7 +40,7 @@ public class ErrorRecoveryProperties implements LBFGSBConstants {
         int n = 3;
         int m = 5;
         
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
             // Reset counter should start at 0
             assertThat(ws.getResetCount())
                     .as("Reset counter should start at 0")
@@ -63,7 +63,7 @@ public class ErrorRecoveryProperties implements LBFGSBConstants {
         int n = 3;
         int m = 5;
         
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
             // Simulate some BFGS updates
             ws.setCol(3);
             ws.setHead(2);
@@ -97,7 +97,7 @@ public class ErrorRecoveryProperties implements LBFGSBConstants {
         int n = 3;
         int m = 5;
         
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
             // Verify MAX_BFGS_RESETS constant
             assertThat(MAX_BFGS_RESETS)
                     .as("MAX_BFGS_RESETS should be 5")
@@ -126,7 +126,7 @@ public class ErrorRecoveryProperties implements LBFGSBConstants {
         int n = 3;
         int m = 5;
         
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
             // Increment reset counter
             ws.incrementResetCount();
             ws.incrementResetCount();
@@ -182,7 +182,7 @@ public class ErrorRecoveryProperties implements LBFGSBConstants {
         
         // Create a pathological objective function that may cause numerical issues
         // This function has a very ill-conditioned Hessian
-        Univariate illConditioned = (point, grad) -> {
+        Univariate illConditioned = (point, _n, grad) -> {
             double f = 0.0;
             for (int i = 0; i < point.length; i++) {
                 // Highly varying scales cause ill-conditioning
@@ -195,7 +195,7 @@ public class ErrorRecoveryProperties implements LBFGSBConstants {
             return f;
         };
         
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
             double pgtol = 1e-10;
             double factr = 1e7;
             int maxIter = 100;
@@ -243,7 +243,7 @@ public class ErrorRecoveryProperties implements LBFGSBConstants {
     ) {
         int m = 5;
         
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
             // Simulate some BFGS updates
             ws.setCol(3);
             ws.setHead(2);
@@ -286,7 +286,7 @@ public class ErrorRecoveryProperties implements LBFGSBConstants {
         int n = 3;
         int m = 5;
         
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
             // Perform multiple resets
             for (int i = 0; i < numResets; i++) {
                 // Simulate some BFGS updates
@@ -347,7 +347,7 @@ public class ErrorRecoveryProperties implements LBFGSBConstants {
         }
         
         // Create a simple quadratic that should converge normally
-        Univariate quadratic = (point, grad) -> {
+        Univariate quadratic = (point, _n, grad) -> {
             double f = 0.0;
             for (int i = 0; i < point.length; i++) {
                 f += point[i] * point[i];
@@ -358,7 +358,7 @@ public class ErrorRecoveryProperties implements LBFGSBConstants {
             return f;
         };
         
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
             double pgtol = 1e-8;
             double factr = 1e7;
             int maxIter = 200;
@@ -420,7 +420,7 @@ public class ErrorRecoveryProperties implements LBFGSBConstants {
         }
         
         // Simple quadratic
-        Univariate quadratic = (point, grad) -> {
+        Univariate quadratic = (point, _n, grad) -> {
             double f = 0.0;
             for (int i = 0; i < point.length; i++) {
                 f += point[i] * point[i];
@@ -431,7 +431,7 @@ public class ErrorRecoveryProperties implements LBFGSBConstants {
             return f;
         };
         
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
             for (int run = 0; run < numRuns; run++) {
                 // Generate new starting point for each run
                 double[] x = new double[n];
@@ -468,7 +468,7 @@ public class ErrorRecoveryProperties implements LBFGSBConstants {
             @ForAll @IntRange(min = 2, max = 20) int n,
             @ForAll @IntRange(min = 3, max = 10) int m
     ) {
-        LBFGSBWorkspace ws = new LBFGSBWorkspace(n, m);
+        LBFGSBWorkspace ws = new LBFGSBWorkspace(); ws.ensure(n, m);
             // Verify initial compatibility
             assertThat(ws.isCompatible(n, m))
                     .as("Workspace should be compatible with original dimensions")

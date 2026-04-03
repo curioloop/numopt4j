@@ -10,8 +10,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
-import java.util.function.ToDoubleFunction;
-
 import static org.assertj.core.api.Assertions.*;
 
 /**
@@ -21,7 +19,7 @@ public class NumericalGradientTest {
 
     // Test function: f(x) = x[0]^2 + 2*x[1]^2 + 3*x[2]^2
     // Analytical gradient: g = [2*x[0], 4*x[1], 6*x[2]]
-    private static final ToDoubleFunction<double[]> QUADRATIC = x -> 
+    private static final Univariate.Objective QUADRATIC = (x, n) ->
         x[0] * x[0] + 2 * x[1] * x[1] + 3 * x[2] * x[2];
     
     private static double[] analyticalGradient(double[] x) {
@@ -36,7 +34,7 @@ public class NumericalGradientTest {
         double[] g = new double[3];
         
         Univariate wrapped = method.wrap(QUADRATIC);
-        double f = wrapped.evaluate(x, g);
+        double f = wrapped.evaluate(x, x.length, g);
         
         double[] expected = analyticalGradient(x);
         
@@ -57,7 +55,7 @@ public class NumericalGradientTest {
         double[] g = new double[3];
         
         Univariate wrapped = NumericalGradient.FORWARD.wrap(QUADRATIC);
-        wrapped.evaluate(x, g);
+        wrapped.evaluate(x, x.length, g);
         
         double[] expected = analyticalGradient(x);
         for (int i = 0; i < 3; i++) {
@@ -72,7 +70,7 @@ public class NumericalGradientTest {
         double[] g = new double[3];
         
         Univariate wrapped = NumericalGradient.BACKWARD.wrap(QUADRATIC);
-        wrapped.evaluate(x, g);
+        wrapped.evaluate(x, x.length, g);
         
         double[] expected = analyticalGradient(x);
         for (int i = 0; i < 3; i++) {
@@ -87,7 +85,7 @@ public class NumericalGradientTest {
         double[] g = new double[3];
         
         Univariate wrapped = NumericalGradient.CENTRAL.wrap(QUADRATIC);
-        wrapped.evaluate(x, g);
+        wrapped.evaluate(x, x.length, g);
         
         double[] expected = analyticalGradient(x);
         for (int i = 0; i < 3; i++) {
@@ -102,7 +100,7 @@ public class NumericalGradientTest {
         double[] g = new double[3];
         
         Univariate wrapped = NumericalGradient.FIVE_POINT.wrap(QUADRATIC);
-        wrapped.evaluate(x, g);
+        wrapped.evaluate(x, x.length, g);
         
         double[] expected = analyticalGradient(x);
         for (int i = 0; i < 3; i++) {
@@ -115,14 +113,14 @@ public class NumericalGradientTest {
     void testFivePointMoreAccurateThanCentral() {
         // Use a more complex function: f(x) = sin(x[0]) + cos(x[1])
         // Analytical gradient: g = [cos(x[0]), -sin(x[1])]
-        ToDoubleFunction<double[]> sinCos = x -> Math.sin(x[0]) + Math.cos(x[1]);
+        Univariate.Objective sinCos = (x, n) -> Math.sin(x[0]) + Math.cos(x[1]);
         
         double[] x = {1.0, 2.0};
         double[] gCentral = new double[2];
         double[] gFivePoint = new double[2];
         
-        NumericalGradient.CENTRAL.wrap(sinCos).evaluate(x, gCentral);
-        NumericalGradient.FIVE_POINT.wrap(sinCos).evaluate(x, gFivePoint);
+        NumericalGradient.CENTRAL.wrap(sinCos).evaluate(x, x.length, gCentral);
+        NumericalGradient.FIVE_POINT.wrap(sinCos).evaluate(x, x.length, gFivePoint);
         
         double[] expected = {Math.cos(x[0]), -Math.sin(x[1])};
         
@@ -136,7 +134,7 @@ public class NumericalGradientTest {
     @DisplayName("Accuracy comparison: FORWARD < CENTRAL < FIVE_POINT")
     void testAccuracyOrdering() {
         // f(x) = exp(x[0]) + x[1]^3, gradient = [exp(x[0]), 3*x[1]^2]
-        ToDoubleFunction<double[]> func = x -> Math.exp(x[0]) + Math.pow(x[1], 3);
+        Univariate.Objective func = (x, n) -> Math.exp(x[0]) + Math.pow(x[1], 3);
         
         double[] x = {0.5, 1.5};
         double[] expected = {Math.exp(x[0]), 3 * x[1] * x[1]};
@@ -146,10 +144,10 @@ public class NumericalGradientTest {
         double[] gCentral = new double[2];
         double[] gFivePoint = new double[2];
         
-        NumericalGradient.FORWARD.wrap(func).evaluate(x, gForward);
-        NumericalGradient.BACKWARD.wrap(func).evaluate(x, gBackward);
-        NumericalGradient.CENTRAL.wrap(func).evaluate(x, gCentral);
-        NumericalGradient.FIVE_POINT.wrap(func).evaluate(x, gFivePoint);
+        NumericalGradient.FORWARD.wrap(func).evaluate(x, x.length, gForward);
+        NumericalGradient.BACKWARD.wrap(func).evaluate(x, x.length, gBackward);
+        NumericalGradient.CENTRAL.wrap(func).evaluate(x, x.length, gCentral);
+        NumericalGradient.FIVE_POINT.wrap(func).evaluate(x, x.length, gFivePoint);
         
         double errorForward = maxError(gForward, expected);
         double errorBackward = maxError(gBackward, expected);
@@ -188,7 +186,7 @@ public class NumericalGradientTest {
         
         for (NumericalGradient method : NumericalGradient.values()) {
             Univariate wrapped = method.wrap(QUADRATIC);
-            double f = wrapped.evaluate(x, null);
+            double f = wrapped.evaluate(x, x.length, null);
             
             // Function value should still be computed
             assertThat(f).isCloseTo(1 + 8 + 27, within(1e-10));
@@ -200,7 +198,7 @@ public class NumericalGradientTest {
     void testWithLbfgsbOptimizer() {
         for (NumericalGradient method : NumericalGradient.values()) {
             Optimization result = new LBFGSBProblem()
-                .objective(method.wrap(p -> p[0] * p[0] + p[1] * p[1]))
+                .objective(method.wrap((p, n) -> p[0] * p[0] + p[1] * p[1]))
                 .initialPoint(5.0, 5.0)
                 .solve();
             double[] x = result.getSolution();
@@ -217,7 +215,7 @@ public class NumericalGradientTest {
     void testWithSlsqpOptimizer() {
         for (NumericalGradient method : NumericalGradient.values()) {
             Optimization result = new SLSQPProblem()
-                .objective(method.wrap(p -> p[0] * p[0] + p[1] * p[1]))
+                .objective(method.wrap((p, n) -> p[0] * p[0] + p[1] * p[1]))
                 .initialPoint(5.0, 5.0)
                 .solve();
             double[] x = result.getSolution();
@@ -234,7 +232,7 @@ public class NumericalGradientTest {
     void testRosenbrockWithFivePoint() {
         // Rosenbrock: f(x,y) = (1-x)^2 + 100*(y-x^2)^2
         // Minimum at (1, 1)
-        ToDoubleFunction<double[]> rosenbrock = x -> 
+        Univariate.Objective rosenbrock = (x, n) ->
             Math.pow(1 - x[0], 2) + 100 * Math.pow(x[1] - x[0] * x[0], 2);
         
         Optimization result = new LBFGSBProblem()
