@@ -4,7 +4,7 @@ High-performance numerical optimization library for Java.
 
 ## Features
 
-- **CMA-ES**: Covariance Matrix Adaptation Evolution Strategy — derivative-free global optimizer for non-convex, noisy, and multimodal functions; supports sep-CMA-ES and IPOP/BIPOP restarts; arena-based workspace (zero per-iteration allocation), BLAS-accelerated matrix operations
+- **CMA-ES**: Covariance Matrix Adaptation Evolution Strategy — derivative-free global optimizer for non-convex, noisy, and multimodal functions; supports sep-CMA-ES and IPOP/BIPOP restarts
 - **Subplex**: Derivative-free optimization (Nelder-Mead + subspace decomposition, no gradient required)
 - **L-BFGS-B**: Limited-memory BFGS with bound constraints
 - **SLSQP**: Sequential Least Squares Programming with equality/inequality constraints
@@ -46,13 +46,20 @@ Optimization result = Minimizer.cmaes()
     .initialPoint(1.0, 1.0, 1.0)
     .solve();
 
-// With IPOP restart and bounds
+// sep-CMA-ES (diagonal mode, O(n) per iteration — good for high-dimensional problems)
 Optimization result2 = Minimizer.cmaes()
     .objective(fn)
     .initialPoint(x0)
+    .updateMode(UpdateMode.SEP_CMA)
+    .maxGenerations(500)
+    .solve();
+
+// With IPOP restart and bounds
+Optimization result3 = Minimizer.cmaes()
+    .objective(fn)
+    .initialPoint(x0)
     .sigma(0.5)
-    .restartMode(RestartStrategy.IPOP)
-    .maxRestarts(9)
+    .restartMode(RestartMode.ipop(9, 2))
     .maxEvaluations(100000)
     .bounds(Bound.between(-5, 5), Bound.between(-5, 5))
     .solve();

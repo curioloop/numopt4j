@@ -5,24 +5,78 @@ package com.curioloop.numopt4j.optim.cmaes;
 
 import com.curioloop.numopt4j.optim.Minimizer;
 import com.curioloop.numopt4j.optim.Optimization;
-
 import java.util.Random;
 import java.util.function.ToDoubleFunction;
 
 /**
- * Fluent API for the CMA-ES optimizer.
+ * Fluent configuration builder for the CMA-ES (Covariance Matrix Adaptation Evolution Strategy) optimizer.
  *
- * <p>Supports standard CMA-ES, sep-CMA-ES (diagonal mode), and IPOP/BIPOP restart strategies.</p>
+ * <p>CMA-ES is a derivative-free, stochastic global optimizer for non-convex, noisy, and
+ * multimodal continuous optimization problems.  It adapts a full (or diagonal) covariance
+ * matrix each generation to learn the local problem geometry.</p>
  *
- * <h2>Basic Usage</h2>
+ * <h2>Quick Start</h2>
  * <pre>{@code
- * Optimization result = Minimizer.cmaes()
+ * // Minimise sphere function in 5 dimensions
+ * Optimization r = Minimizer.cmaes()
  *     .objective(x -> { double s = 0; for (double v : x) s += v*v; return s; })
- *     .initialPoint(1.0, 1.0, 1.0)
+ *     .initialPoint(new double[5])
  *     .solve();
  * }</pre>
  *
+ * <h2>Update Modes</h2>
+ * <ul>
+ *   <li>{@link UpdateMode#ACTIVE_CMA}  — full C with Active CMA (default; best on ill-conditioned problems)</li>
+ *   <li>{@link UpdateMode#CLASSIC_CMA} — full C without Active CMA (classic CMA-ES)</li>
+ *   <li>{@link UpdateMode#SEP_CMA}     — diagonal C only; O(n) per iteration, skips O(n²) allocations</li>
+ * </ul>
+ *
+ * <h2>Restart Strategies</h2>
+ * <ul>
+ *   <li>{@code null} (default) — single run, no restart</li>
+ *   <li>{@link RestartMode#ipop(int, int)} — IPOP: multiply λ by {@code popSizeMultiplier} each restart</li>
+ *   <li>{@link RestartMode#bipop(int)}     — BIPOP: alternate large/small population regimes</li>
+ * </ul>
+ *
+ * <h2>Evaluation Budget</h2>
+ * <p>Exactly one of the following should be set (last one wins):</p>
+ * <ul>
+ *   <li>{@link #maxEvaluations(int)} — absolute limit on objective function calls</li>
+ *   <li>{@link #maxGenerations(int)} — limit in generations; resolved lazily as {@code n × λ}</li>
+ * </ul>
+ * <p>Default: {@code λ × 1000} evaluations.</p>
+ *
+ * <h2>Workspace Reuse</h2>
+ * <pre>{@code
+ * CMAESProblem p = Minimizer.cmaes()
+ *     .objective(fn)
+ *     .initialPoint(x0);
+ * CMAESWorkspace ws = p.alloc();   // allocate once
+ * for (double[] pt : points) {
+ *     Optimization r = p.initialPoint(pt).solve(ws);
+ * }
+ * }</pre>
+ *
+ * <h2>Default Parameter Values</h2>
+ * <table border="1">
+ *   <tr><th>Parameter</th><th>Default</th><th>Notes</th></tr>
+ *   <tr><td>sigma</td><td>0.3</td><td>initial step size σ₀</td></tr>
+ *   <tr><td>populationSize</td><td>4 + ⌊3·ln(n)⌋</td><td>λ, auto-computed from dimension</td></tr>
+ *   <tr><td>maxIterations</td><td>1000</td><td>per-run generation limit</td></tr>
+ *   <tr><td>maxEvaluations</td><td>λ × 1000</td><td>total function evaluation budget</td></tr>
+ *   <tr><td>covarianceMode</td><td>ACTIVE_CMA</td><td>full C with Active CMA</td></tr>
+ *   <tr><td>restart</td><td>null</td><td>no restart</td></tr>
+ *   <tr><td>maxResample</td><td>0</td><td>no resampling for infeasible points</td></tr>
+ *   <tr><td>stopFitness</td><td>−∞</td><td>disabled</td></tr>
+ *   <tr><td>tolX</td><td>1e-11</td><td>step-size convergence threshold</td></tr>
+ *   <tr><td>tolFun</td><td>1e-12</td><td>fitness history range threshold</td></tr>
+ *   <tr><td>tolUpSigma</td><td>1e3</td><td>σ divergence guard</td></tr>
+ * </table>
+ *
  * @see Minimizer#cmaes()
+ * @see UpdateMode
+ * @see RestartMode
+ * @see CMAESWorkspace
  */
 public final class CMAESProblem
         extends Minimizer<ToDoubleFunction<double[]>, CMAESWorkspace, CMAESProblem> {
@@ -31,12 +85,10 @@ public final class CMAESProblem
     private int lambda = 0;                // 0 = auto: 4 + floor(3*ln(n))
     int maxIterations = 1000;
     int maxEvaluations = 0;               // 0 = auto: lambda * 1000
-    boolean diagonalOnly = false;
-    boolean isActiveCMA = true;  // Active CMA enabled by default (pycma default)
-    int checkFeasibleCount = 0;
-    private RestartStrategy restartMode = RestartStrategy.NONE;
-    private int maxRestarts = 9;
-    private int incPopSize = 2;
+    int maxGenerations = 0;               // 0 = not set; if set: maxEvaluations = maxGenerations * lambda
+    UpdateMode updateMode = UpdateMode.ACTIVE_CMA;
+    int maxResample = 0;
+    private RestartMode restartMode = null;
     double stopFitness = Double.NEGATIVE_INFINITY;
     double tolX = 1e-11;
     double tolFun = 1e-12;
@@ -50,12 +102,9 @@ public final class CMAESProblem
     public double sigma0()               { return sigma0; }
     public int lambdaConfig()            { return lambda; }
     public int maxIterations()           { return maxIterations; }
-    public boolean diagonalOnly()        { return diagonalOnly; }
-    public boolean isActiveCMA()         { return isActiveCMA; }
-    public int checkFeasibleCount()      { return checkFeasibleCount; }
-    public RestartStrategy restartMode() { return restartMode; }
-    public int maxRestarts()             { return maxRestarts; }
-    public int incPopSize()              { return incPopSize; }
+    public UpdateMode updateMode() { return updateMode; }
+    public int maxResample()             { return maxResample; }
+    public RestartMode restartMode()     { return restartMode; }
     public double stopFitness()          { return stopFitness; }
     public double tolX()                 { return tolX; }
     public double tolFun()               { return tolFun; }
@@ -68,18 +117,22 @@ public final class CMAESProblem
 
     /** Effective maxEvaluations (auto-computed if not set). */
     public int effectiveMaxEvaluations() {
-        return (maxEvaluations > 0) ? maxEvaluations : effectiveLambda() * 1000;
+        if (maxEvaluations > 0) return maxEvaluations;
+        if (maxGenerations > 0) return maxGenerations * effectiveLambda();
+        return effectiveLambda() * 1000;
     }
 
 
     // ── Fluent setters ────────────────────────────────────────────────────
 
+    /** Sets the objective function to minimise (no gradient required). */
     public CMAESProblem objective(ToDoubleFunction<double[]> f) {
         if (f == null) throw new IllegalArgumentException("objective must not be null");
         this.objective = f;
         return this;
     }
 
+    /** Sets the initial step size σ₀ (must be positive and finite; default 0.3). */
     public CMAESProblem sigma(double s) {
         if (s <= 0 || !Double.isFinite(s))
             throw new IllegalArgumentException("sigma must be positive and finite, got " + s);
@@ -87,81 +140,99 @@ public final class CMAESProblem
         return this;
     }
 
+    /** Sets the population size λ (default: 4 + ⌊3·ln(n)⌋). */
     public CMAESProblem populationSize(int lam) {
         if (lam <= 0) throw new IllegalArgumentException("populationSize must be positive, got " + lam);
         this.lambda = lam;
         return this;
     }
 
+    /** Sets the per-run generation limit (default 1000). */
     public CMAESProblem maxIterations(int v) {
         if (v <= 0) throw new IllegalArgumentException("maxIterations must be positive, got " + v);
         this.maxIterations = v;
         return this;
     }
 
+    /** Sets the absolute limit on objective function calls (default: λ × 1000). */
     public CMAESProblem maxEvaluations(int v) {
         if (v <= 0) throw new IllegalArgumentException("maxEvaluations must be positive, got " + v);
         this.maxEvaluations = v;
         return this;
     }
 
-    public CMAESProblem diagonalOnly(boolean v) {
-        this.diagonalOnly = v;
+    /**
+     * Sets the maximum number of generations (iterations).
+     * Equivalent to {@code maxEvaluations(n * effectiveLambda())}, but evaluated lazily
+     * so it correctly accounts for the population size regardless of call order.
+     * Mutually exclusive with {@link #maxEvaluations(int)}: the last one set wins.
+     *
+     * @param n maximum number of generations (must be &gt; 0)
+     */
+    public CMAESProblem maxGenerations(int n) {
+        if (n <= 0) throw new IllegalArgumentException("maxGenerations must be positive, got " + n);
+        this.maxGenerations = n;
         return this;
     }
 
-    public CMAESProblem activeCMA(boolean v) {
-        this.isActiveCMA = v;
+    /**
+     * Sets the covariance matrix update mode (default: {@link UpdateMode#ACTIVE_CMA}).
+     * Determines whether to use full or diagonal covariance and whether Active CMA is enabled.
+     */
+    public CMAESProblem updateMode(UpdateMode mode) {
+        if (mode == null) throw new IllegalArgumentException("updateMode must not be null");
+        this.updateMode = mode;
         return this;
     }
 
-    public CMAESProblem checkFeasibleCount(int v) {
-        if (v < 0) throw new IllegalArgumentException("checkFeasibleCount must be >= 0, got " + v);
-        this.checkFeasibleCount = v;
+    /**
+     * Sets the maximum number of resampling attempts for infeasible candidates (default 0).
+     * Only effective when {@link #bounds(com.curioloop.numopt4j.optim.Bound...)} is set.
+     * When 0, infeasible candidates are kept and penalised by {@code evaluateFitness}.
+     */
+    public CMAESProblem maxResample(int v) {
+        if (v < 0) throw new IllegalArgumentException("maxResample must be >= 0, got " + v);
+        this.maxResample = v;
         return this;
     }
 
-    public CMAESProblem restartMode(RestartStrategy mode) {
-        if (mode == null) throw new IllegalArgumentException("restartMode must not be null");
-        this.restartMode = mode;
+    /**
+     * Sets the restart mode (default: {@code null} = no restart).
+     * Use {@link RestartMode#ipop(int, int)} or {@link RestartMode#bipop(int)}.
+     */
+    public CMAESProblem restartMode(RestartMode mode) {
+        this.restartMode = mode;  // null = no restart
         return this;
     }
 
-    public CMAESProblem maxRestarts(int v) {
-        if (v < 0) throw new IllegalArgumentException("maxRestarts must be >= 0, got " + v);
-        this.maxRestarts = v;
-        return this;
-    }
-
-    public CMAESProblem incPopSize(int v) {
-        if (v < 2) throw new IllegalArgumentException("incPopSize must be >= 2, got " + v);
-        this.incPopSize = v;
-        return this;
-    }
-
+    /** Stop when best fitness &lt; {@code v} (default: −∞, disabled). */
     public CMAESProblem stopFitness(double v) {
         this.stopFitness = v;
         return this;
     }
 
+    /** Step-size convergence threshold: stop when σ·max(|p_c_i|, √C_ii) &lt; tolX·σ₀ (default 1e-11). */
     public CMAESProblem tolX(double v) {
         if (v <= 0) throw new IllegalArgumentException("tolX must be positive, got " + v);
         this.tolX = v;
         return this;
     }
 
+    /** Fitness history range threshold: stop when max(history) − min(history) &lt; tolFun (default 1e-12). */
     public CMAESProblem tolFun(double v) {
         if (v <= 0) throw new IllegalArgumentException("tolFun must be positive, got " + v);
         this.tolFun = v;
         return this;
     }
 
+    /** σ divergence guard: stop when σ·D_i &gt; tolUpSigma·σ₀ for any i (default 1e3). */
     public CMAESProblem tolUpSigma(double v) {
         if (v <= 0) throw new IllegalArgumentException("tolUpSigma must be positive, got " + v);
         this.tolUpSigma = v;
         return this;
     }
 
+    /** Sets the random number generator (default: {@code new Random()}). */
     public CMAESProblem random(Random r) {
         if (r == null) throw new IllegalArgumentException("random must not be null");
         this.rng = r;
@@ -192,8 +263,9 @@ public final class CMAESProblem
     public CMAESWorkspace alloc() {
         validate();
         int lam = effectiveLambda();
-        if (workspace == null || workspace.n != dimension || workspace.lambda != lam) {
-            workspace = new CMAESWorkspace(dimension, lam, diagonalOnly);
+        if (workspace == null || workspace.n != dimension || workspace.lambda != lam
+                || (updateMode.separable && workspace.mat != null) || (!updateMode.separable && workspace.mat == null)) {
+            workspace = new CMAESWorkspace(dimension, lam, updateMode.separable);
         }
         return workspace;
     }
@@ -208,8 +280,9 @@ public final class CMAESProblem
         CMAESWorkspace ws = workspace;
         if (ws == null) {
             ws = this.workspace;
-            if (ws == null || ws.n != dimension || ws.lambda != lam) {
-                ws = new CMAESWorkspace(dimension, lam, diagonalOnly);
+            if (ws == null || ws.n != dimension || ws.lambda != lam
+                    || (updateMode.separable && ws.mat != null) || (!updateMode.separable && ws.mat == null)) {
+                ws = new CMAESWorkspace(dimension, lam, updateMode.separable);
                 this.workspace = ws;
             }
         } else {
@@ -218,12 +291,18 @@ public final class CMAESProblem
                     "workspace dimension mismatch: workspace(n=" + ws.n + ", lambda=" + ws.lambda
                     + ") vs problem(n=" + dimension + ", lambda=" + lam + ")");
             }
+            if ((updateMode.separable && ws.mat != null) || (!updateMode.separable && ws.mat == null)) {
+                throw new IllegalArgumentException(
+                    "workspace mode mismatch: separable=" + updateMode.separable
+                    + " but workspace was allocated with separable=" + (ws.mat == null));
+            }
         }
 
         // Build config snapshot with resolved maxEvaluations
         CMAESProblem cfg = snapshot(resolvedMaxEval);
 
-        switch (restartMode) {
+        if (restartMode == null) return solveOnce(initialPoint, ws, cfg);
+        switch (restartMode.type) {
             case IPOP:  return solveIPOP(ws, cfg);
             case BIPOP: return solveBIPOP(ws, cfg);
             default:    return solveOnce(initialPoint, ws, cfg);
@@ -241,12 +320,10 @@ public final class CMAESProblem
         c.lambda = this.lambda;
         c.maxIterations = this.maxIterations;
         c.maxEvaluations = fixedMaxEval;
-        c.diagonalOnly = this.diagonalOnly;
-        c.isActiveCMA = this.isActiveCMA;
-        c.checkFeasibleCount = this.checkFeasibleCount;
+        c.maxGenerations = 0; // already resolved into fixedMaxEval
+        c.updateMode = this.updateMode;
+        c.maxResample = this.maxResample;
         c.restartMode = this.restartMode;
-        c.maxRestarts = this.maxRestarts;
-        c.incPopSize = this.incPopSize;
         c.stopFitness = this.stopFitness;
         c.tolX = this.tolX;
         c.tolFun = this.tolFun;
@@ -270,12 +347,12 @@ public final class CMAESProblem
         int totalIters = 0;
         Optimization.Status lastStatus = Optimization.Status.MAX_ITERATIONS_REACHED;
 
-        for (int restart = 0; restart <= maxRestarts; restart++) {
+        for (int restart = 0; restart <= restartMode.maxRestarts; restart++) {
             int remainingEval = cfg.maxEvaluations - totalEvals;
             if (remainingEval <= 0) break;
 
             CMAESWorkspace runWs = (ws.lambda == currentLambda && ws.n == dimension)
-                ? ws : new CMAESWorkspace(dimension, currentLambda, cfg.diagonalOnly);
+                ? ws : new CMAESWorkspace(dimension, currentLambda, cfg.updateMode.separable);
 
             CMAESProblem runCfg = cfg.snapshot(remainingEval);
             runCfg.lambda = currentLambda;
@@ -292,8 +369,7 @@ public final class CMAESProblem
 
             if (totalEvals >= cfg.maxEvaluations) break;
 
-            // Increase lambda for next restart
-            currentLambda *= incPopSize;
+            currentLambda *= restartMode.popSizeMultiplier;
         }
 
         return new Optimization(Double.NaN, bestX, bestFitness, lastStatus, totalIters, totalEvals);
@@ -314,7 +390,7 @@ public final class CMAESProblem
         int smallEvals = 0;
         boolean firstRun = true;
 
-        for (int restart = 0; restart <= maxRestarts; restart++) {
+        for (int restart = 0; restart <= restartMode.maxRestarts; restart++) {
             if (totalEvals >= cfg.maxEvaluations) break;
 
             int currentLambda;
@@ -335,7 +411,7 @@ public final class CMAESProblem
             }
 
             CMAESWorkspace runWs = (ws.lambda == currentLambda && ws.n == dimension)
-                ? ws : new CMAESWorkspace(dimension, currentLambda, cfg.diagonalOnly);
+                ? ws : new CMAESWorkspace(dimension, currentLambda, cfg.updateMode.separable);
 
             int remainingEval = cfg.maxEvaluations - totalEvals;
             CMAESProblem runCfg = cfg.snapshot(remainingEval);

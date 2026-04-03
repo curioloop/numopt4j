@@ -31,15 +31,12 @@ class CMAESProblemTest {
         assertEquals(0.3, p.sigma0(), 1e-15);
         assertEquals(0, p.lambdaConfig());
         assertEquals(1000, p.maxIterations());
-        assertEquals(RestartStrategy.NONE, p.restartMode());
-        assertEquals(9, p.maxRestarts());
-        assertEquals(2, p.incPopSize());
+        assertNull(p.restartMode());
         assertEquals(Double.NEGATIVE_INFINITY, p.stopFitness());
         assertEquals(1e-11, p.tolX(), 1e-20);
         assertEquals(1e-12, p.tolFun(), 1e-20);
         assertEquals(1e3, p.tolUpSigma(), 1e-10);
-        assertFalse(p.diagonalOnly());
-        assertTrue(p.isActiveCMA());
+        assertEquals(UpdateMode.ACTIVE_CMA, p.updateMode());
     }
 
     @Test

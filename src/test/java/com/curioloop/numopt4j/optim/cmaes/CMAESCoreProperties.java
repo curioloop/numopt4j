@@ -476,8 +476,7 @@ public class CMAESCoreProperties {
             .objective(x -> { double s = 0; for (double v : x) s += v*v; return s; })
             .initialPoint(new double[]{1.0, 1.0, 1.0})
             .maxEvaluations(5000)
-            .maxRestarts(maxRestarts)
-            .restartMode(RestartStrategy.IPOP)
+            .restartMode(RestartMode.ipop(maxRestarts, 2))
             .random(new Random(42))
             .solve();
 

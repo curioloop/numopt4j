@@ -192,14 +192,14 @@ public final class CMAESCore {
      *   x_k  = m + σ · (diagD ⊙ z_k)
      * </pre>
      *
-     * <p>If {@code checkFeasible > 0} and bounds are provided, infeasible samples
-     * are redrawn up to {@code checkFeasible} times; the last sample is kept even
+     * <p>If {@code resampleThreshold > 0} and bounds are provided, infeasible samples
+     * are redrawn up to {@code resampleThreshold} times; the last sample is kept even
      * if still infeasible (boundary penalty handles it in {@code evaluateFitness}).</p>
      *
-     * @param ws            workspace
-     * @param diagonalOnly  {@code true} for sep-CMA-ES
-     * @param rng           random number generator
-     * @param bounds        variable bounds, or {@code null} for unconstrained
+     * @param ws                workspace
+     * @param diagonalOnly      {@code true} for sep-CMA-ES
+     * @param rng               random number generator
+     * @param bounds            variable bounds, or {@code null} for unconstrained
      * @param checkFeasible number of resampling attempts per infeasible individual
      */
     static void sampleOffspring(CMAESWorkspace ws, boolean diagonalOnly,
@@ -859,8 +859,8 @@ public final class CMAESCore {
                                          CMAESProblem cfg, Random rng) {
         final int n = ws.n;
         final int lambda = ws.lambda;
-        final boolean diagonalOnly = cfg.diagonalOnly();
-        final boolean isActiveCMA  = cfg.isActiveCMA();
+        final boolean diagonalOnly = cfg.updateMode().separable;
+        final boolean isActiveCMA  = cfg.updateMode().activeCMA;
         final int maxIterations    = cfg.maxIterations();
         final double[] nVec = ws.nVec;
         final double[] lVec = ws.lVec;
@@ -911,7 +911,7 @@ public final class CMAESCore {
         for (int iter = 1; iter <= maxIterations; iter++) {
             ws.iterations = iter;
 
-            sampleOffspring(ws, diagonalOnly, rng, bounds, cfg.checkFeasibleCount());
+            sampleOffspring(ws, diagonalOnly, rng, bounds, cfg.maxResample());
 
             boolean valid = evaluateFitness(ws, fn, bounds);
             if (!valid) {

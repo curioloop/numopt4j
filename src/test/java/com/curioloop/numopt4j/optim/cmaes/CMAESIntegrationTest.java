@@ -182,7 +182,7 @@ class CMAESIntegrationTest {
             .objective(fn)
             .initialPoint(x0)
             .sigma(sigma)
-            .diagonalOnly(diag)
+            .updateMode(diag ? UpdateMode.SEP_CMA : UpdateMode.ACTIVE_CMA)
             .maxIterations(maxEval)   // prevent maxIterations from stopping early
             .maxEvaluations(maxEval)
             .stopFitness(expectedF + fTol)   // drive convergence to target precision
@@ -430,8 +430,7 @@ class CMAESIntegrationTest {
             .initialPoint(point(5, 2.0))
             .sigma(2.0)
             .maxEvaluations(200_000)
-            .maxRestarts(9)
-            .restartMode(RestartStrategy.IPOP)
+            .restartMode(RestartMode.ipop(9, 2))
             .stopFitness(1e-6)
             .random(new Random(42))
             .solve();
@@ -447,8 +446,7 @@ class CMAESIntegrationTest {
             .initialPoint(point(5, 1.0))
             .sigma(0.5)
             .maxEvaluations(50_000)
-            .maxRestarts(5)
-            .restartMode(RestartStrategy.BIPOP)
+            .restartMode(RestartMode.bipop(5))
             .stopFitness(1e-8)
             .random(new Random(42))
             .solve();
@@ -586,7 +584,7 @@ class CMAESIntegrationTest {
             .stopFitness(1e-10)
             .tolX(1e-30)
             .tolFun(1e-30)
-            .activeCMA(true)
+            .updateMode(UpdateMode.ACTIVE_CMA)
             .random(new Random(42))
             .solve();
 
@@ -604,7 +602,7 @@ class CMAESIntegrationTest {
             .stopFitness(1e-10)
             .tolX(1e-30)
             .tolFun(1e-30)
-            .activeCMA(true)
+            .updateMode(UpdateMode.ACTIVE_CMA)
             .random(new Random(42));
         CMAESWorkspace ws = p.alloc();
         p.solve(ws);
