@@ -323,7 +323,7 @@ public class CMAESCoreProperties {
             .objective((x, _n) -> 0.0)
             .initialPoint(new double[n])
             .populationSize(lambda)
-            .tolX(1e-11)
+            .parameterTolerance(1e-11)
             .maxEvaluations(1000);
 
         Optimization.Status status = CMAESCore.checkStopConditions(ws, cfg, 0.0, false);
@@ -351,7 +351,7 @@ public class CMAESCoreProperties {
             .objective((x, _n) -> 0.0)
             .initialPoint(new double[n])
             .populationSize(lambda)
-            .tolUpSigma(1e3)
+            .maxSigmaRatio(1e3)
             .maxEvaluations(1000);
 
         Optimization.Status status = CMAESCore.checkStopConditions(ws, cfg, 0.0, false);

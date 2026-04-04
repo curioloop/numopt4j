@@ -20,6 +20,8 @@
  */
 package com.curioloop.numopt4j.optim.lbfgsb;
 
+import java.util.Arrays;
+
 /**
  * Workspace for the pure Java L-BFGS-B optimizer.
  *
@@ -418,8 +420,8 @@ public final class LBFGSBWorkspace {
         this.resetCount = 0;
 
         // Zero out work arrays
-        if (buffer != null) java.util.Arrays.fill(buffer, 0.0);
-        if (iBuffer != null) java.util.Arrays.fill(iBuffer, 0);
+        if (buffer != null) Arrays.fill(buffer, 0.0);
+        if (iBuffer != null) Arrays.fill(iBuffer, 0);
     }
 
     // ========================================================================

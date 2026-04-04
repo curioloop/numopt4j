@@ -657,7 +657,7 @@ public final class CMAESCore {
             return Optimization.Status.FUNCTION_TOLERANCE_REACHED;
         }
 
-        double tolUpSigma = cfg.sigmaUpperBound();
+        double tolUpSigma = cfg.maxSigmaRatio();
         if (diagonalOnly) {
             for (int i = 0; i < n; i++) {
                 if (ws.sigma * Math.sqrt(nVec[DIAGC + i]) > tolUpSigma * ws.sigma0) {
@@ -879,8 +879,8 @@ public final class CMAESCore {
 
         // Initialize state
         System.arraycopy(x0, 0, nVec, XMEAN, n);
-        ws.sigma  = cfg.sigma0();
-        ws.sigma0 = cfg.sigma0();
+        ws.sigma  = cfg.initialSigma();
+        ws.sigma0 = cfg.initialSigma();
 
         // C = I, B = I, D = 1 (full-matrix mode only)
         if (mat != null) {

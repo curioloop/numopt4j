@@ -182,13 +182,13 @@ class CMAESIntegrationTest {
         CMAESProblem p = Minimizer.cmaes()
             .objective(fn)
             .initialPoint(x0)
-            .sigma(sigma)
+            .initialSigma(sigma)
             .updateMode(diag ? UpdateMode.SEP_CMA : UpdateMode.ACTIVE_CMA)
             .maxIterations(maxEval)   // prevent maxIterations from stopping early
             .maxEvaluations(maxEval)
             .stopFitness(expectedF + fTol)   // drive convergence to target precision
-            .tolX(1e-30)             // disable TolX early stopping
-            .tolFun(1e-30)           // disable TolFun early stopping
+            .parameterTolerance(1e-30)             // disable TolX early stopping
+            .functionTolerance(1e-30)           // disable TolFun early stopping
             .random(new Random(42));
         if (lambda > 0) p.populationSize(lambda);
         if (bds != null) p.bounds(bds);
@@ -361,7 +361,7 @@ class CMAESIntegrationTest {
         Optimization r = Minimizer.cmaes()
             .objective((x, n) -> { double e = 1.0 - x[0]; return e * e; })
             .initialPoint(0.0)
-            .sigma(0.1)
+            .initialSigma(0.1)
             .populationSize(5)
             .bounds(Bound.between(-1e6, 1.5))
             .maxEvaluations(10_000)
@@ -385,7 +385,7 @@ class CMAESIntegrationTest {
         Optimization noBound = Minimizer.cmaes()
             .objective(fn)
             .initialPoint(1.0)
-            .sigma(0.1)
+            .initialSigma(0.1)
             .populationSize(5)
             .maxEvaluations(100_000)
             .random(new Random(42))
@@ -395,7 +395,7 @@ class CMAESIntegrationTest {
         Optimization nearLo = Minimizer.cmaes()
             .objective(fn)
             .initialPoint(1.0)
-            .sigma(10.0)
+            .initialSigma(10.0)
             .populationSize(5)
             .bounds(Bound.between(-20.0, 5e16))
             .maxEvaluations(100_000)
@@ -406,7 +406,7 @@ class CMAESIntegrationTest {
         Optimization nearHi = Minimizer.cmaes()
             .objective(fn)
             .initialPoint(1.0)
-            .sigma(10.0)
+            .initialSigma(10.0)
             .populationSize(5)
             .bounds(Bound.between(-5e16, 20.0))
             .maxEvaluations(100_000)
@@ -429,7 +429,7 @@ class CMAESIntegrationTest {
         Optimization r = Minimizer.cmaes()
             .objective(CMAESIntegrationTest::rastrigin)
             .initialPoint(point(5, 2.0))
-            .sigma(2.0)
+            .initialSigma(2.0)
             .maxEvaluations(200_000)
             .restartMode(RestartMode.ipop(9, 2))
             .stopFitness(1e-6)
@@ -445,7 +445,7 @@ class CMAESIntegrationTest {
         Optimization r = Minimizer.cmaes()
             .objective(CMAESIntegrationTest::sphere)
             .initialPoint(point(5, 1.0))
-            .sigma(0.5)
+            .initialSigma(0.5)
             .maxEvaluations(50_000)
             .restartMode(RestartMode.bipop(5))
             .stopFitness(1e-8)
@@ -552,12 +552,12 @@ class CMAESIntegrationTest {
         Optimization r = Minimizer.cmaes()
             .objective(CMAESIntegrationTest::sphere)
             .initialPoint(point(DIM, 1.0))
-            .sigma(0.1)
+            .initialSigma(0.1)
             .populationSize(LAMBDA)
             .maxEvaluations(100_000)
             .stopFitness(1e-5)
-            .tolX(1e-30)
-            .tolFun(1e-30)
+            .parameterTolerance(1e-30)
+            .functionTolerance(1e-30)
             .random(new Random(42))
             .solve();
         assertEquals(Optimization.Status.FUNCTION_TOLERANCE_REACHED, r.getStatus(),
@@ -584,12 +584,12 @@ class CMAESIntegrationTest {
         Optimization r = Minimizer.cmaes()
             .objective(CMAESIntegrationTest::elli)
             .initialPoint(point(DIM, 1.0))
-            .sigma(0.1)
+            .initialSigma(0.1)
             .populationSize(LAMBDA)
             .maxEvaluations(50_000)
             .stopFitness(1e-10)
-            .tolX(1e-30)
-            .tolFun(1e-30)
+            .parameterTolerance(1e-30)
+            .functionTolerance(1e-30)
             .updateMode(UpdateMode.ACTIVE_CMA)
             .random(new Random(42))
             .solve();
@@ -602,12 +602,12 @@ class CMAESIntegrationTest {
         CMAESProblem p = Minimizer.cmaes()
             .objective(CMAESIntegrationTest::elli)
             .initialPoint(point(DIM, 1.0))
-            .sigma(0.1)
+            .initialSigma(0.1)
             .populationSize(LAMBDA)
             .maxEvaluations(50_000)
             .stopFitness(1e-10)
-            .tolX(1e-30)
-            .tolFun(1e-30)
+            .parameterTolerance(1e-30)
+            .functionTolerance(1e-30)
             .updateMode(UpdateMode.ACTIVE_CMA)
             .random(new Random(42));
         CMAESWorkspace ws = new CMAESWorkspace();

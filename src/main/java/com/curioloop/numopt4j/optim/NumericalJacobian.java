@@ -88,7 +88,7 @@ public enum NumericalJacobian {
      * <p>Requires 2n function evaluations total (2 per parameter, no base evaluation).
      * Truncation error is O(h²) ≈ 1e-11. Significantly more accurate than forward
      * difference at the cost of twice as many evaluations. This is the default method
-     * used by {@link com.curioloop.numopt4j.optim.trf.TRFProblem#residuals(java.util.function.BiConsumer, int)}.</p>
+     * used by {@link com.curioloop.numopt4j.optim.trf.TRFProblem#residuals(Multivariate.Objective, int)}.</p>
      */
     CENTRAL {
         @Override

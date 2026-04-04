@@ -28,14 +28,14 @@ class CMAESProblemTest {
     @Test
     void defaultParametersAreCorrect() {
         CMAESProblem p = new CMAESProblem();
-        assertEquals(0.3, p.sigma0(), 1e-15);
-        assertEquals(0, p.lambdaConfig());
+        assertEquals(0.3, p.initialSigma(), 1e-15);
+        assertEquals(0, p.populationSize());
         assertEquals(1000, p.maxIterations());
         assertNull(p.restartMode());
         assertEquals(Double.NEGATIVE_INFINITY, p.stopFitness());
         assertEquals(1e-11, p.parameterTolerance(), 1e-20);
         assertEquals(1e-12, p.functionTolerance(), 1e-20);
-        assertEquals(1e3, p.sigmaUpperBound(), 1e-10);
+        assertEquals(1e3, p.maxSigmaRatio(), 1e-10);
         assertEquals(UpdateMode.ACTIVE_CMA, p.updateMode());
     }
 
@@ -131,13 +131,13 @@ class CMAESProblemTest {
     @Test
     void negativeSigmaThrowsIllegalArgument() {
         assertThrows(IllegalArgumentException.class,
-            () -> new CMAESProblem().sigma(-1.0));
+            () -> new CMAESProblem().initialSigma(-1.0));
     }
 
     @Test
     void zeroSigmaThrowsIllegalArgument() {
         assertThrows(IllegalArgumentException.class,
-            () -> new CMAESProblem().sigma(0.0));
+            () -> new CMAESProblem().initialSigma(0.0));
     }
 
     // ── Workspace dimension mismatch ──────────────────────────────────────

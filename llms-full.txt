@@ -120,7 +120,7 @@ Optimization r00 = Minimizer.cmaes()
 Optimization r00b = Minimizer.cmaes()
     .objective(fn)
     .initialPoint(x0)
-    .sigma(0.5)
+    .initialSigma(0.5)
     .restartMode(RestartMode.ipop(9, 2))
     .maxEvaluations(100000)
     .bounds(Bound.between(-5, 5), Bound.between(-5, 5))
@@ -215,7 +215,7 @@ new CMAESProblem()
 | `stopFitness(double v)` | Stop when best fitness < v | -∞ | — |
 | `parameterTolerance(double v)` | Step-size convergence tolerance | 1e-11 | > 0 |
 | `functionTolerance(double v)` | Fitness history range tolerance | 1e-12 | > 0 |
-| `sigmaUpperBound(double v)` | Divergence guard (σ·D[i] > v·σ₀) | 1e3 | > 0 |
+| `maxSigmaRatio(double v)` | Divergence guard (σ·D[i] > v·σ₀) | 1e3 | > 0 |
 | `random(Random r)` | Custom random number generator | new Random() | non-null |
 | `solve()` / `solve(CMAESWorkspace ws)` | Execute optimization, return result | — | — |
 | `workspace()` | Create new uninitialized workspace (for reuse) | — | — |
@@ -256,7 +256,7 @@ Optimization result2 = Minimizer.cmaes()
         return s;
     })
     .initialPoint(new double[5])
-    .sigma(0.5)
+    .initialSigma(0.5)
     .maxEvaluations(50000)
     .tolFun(1e-10)
     .solve();
@@ -269,7 +269,7 @@ Optimization result3 = Minimizer.cmaes()
         return s;
     })
     .initialPoint(new double[5])
-    .sigma(2.0)
+    .initialSigma(2.0)
     .restartMode(RestartMode.ipop(9, 2))
     .maxEvaluations(200000)
     .bounds(Bound.between(-5.12, 5.12))

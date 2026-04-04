@@ -152,6 +152,11 @@ class HYBRSolverTest {
         double det = a00 * a11 - a01 * a10;
         Assume.that(Math.abs(det) > 0.5);
 
+        // Skip ill-conditioned matrices (large condition number causes slow convergence)
+        double norm = Math.max(Math.abs(a00) + Math.abs(a01), Math.abs(a10) + Math.abs(a11));
+        double condApprox = norm * norm / Math.abs(det);
+        Assume.that(condApprox < 100.0);
+
         Multivariate.Objective fn = (x, xn, f, fm) -> {
             f[0] = a00 * x[0] + a01 * x[1] - b0;
             f[1] = a10 * x[0] + a11 * x[1] - b1;

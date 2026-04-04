@@ -55,11 +55,13 @@ class QuadratureTest {
                 .tolerances(1e-12, 1e-12);
 
         AdaptivePool workspace = new AdaptivePool();
-        double[] arena = workspace.arena();
         Quadrature result = problem.integrate(workspace);
+        double[] arena = workspace.arena();  // arena allocated after first integrate
 
         assertThat(result.isSuccessful()).isTrue();
         assertThat(result.getValue()).isCloseTo(2.0, offset(1e-12));
+        // second integrate reuses the same arena
+        problem.integrate(workspace);
         assertThat(workspace.arena()).isSameAs(arena);
     }
 
@@ -518,7 +520,7 @@ class QuadratureTest {
     @Test
     void fixedRejectsNullRule() {
         assertThatThrownBy(() -> Integrator.fixed().function(Math::sin).bounds(0.0, 1.0).points(8).rule(null))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(NullPointerException.class)
                 .hasMessageContaining("rule must not be null");
     }
 

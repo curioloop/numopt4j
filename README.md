@@ -463,17 +463,3 @@ Four methods available with different accuracy/performance tradeoffs:
 | `BACKWARD` | `(f(x) - f(x-h)) / h` | O(h) | 1 |
 | `CENTRAL` | `(f(x+h) - f(x-h)) / 2h` | O(h²) | 2 |
 | `FIVE_POINT` | `(-f(x+2h) + 8f(x+h) - 8f(x-h) + f(x-2h)) / 12h` | O(h⁴) | 4 |
-
-## Building Native Library
-
-```bash
-mkdir build && cd build
-cmake ..
-make
-```
-
-The native library will be placed in `src/main/resources/native/<platform>/`.
-
-## License
-
-MIT License

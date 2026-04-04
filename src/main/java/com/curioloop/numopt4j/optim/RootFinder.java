@@ -1,7 +1,7 @@
 package com.curioloop.numopt4j.optim;
 import java.util.Objects;
-
 import java.util.function.DoubleUnaryOperator;
+import java.util.function.Supplier;
 
 import com.curioloop.numopt4j.optim.root.BrentqProblem;
 import com.curioloop.numopt4j.optim.root.BroydenProblem;
@@ -118,7 +118,7 @@ public abstract class RootFinder<F, W, S extends RootFinder<F, W, S>> implements
      * Returns {@code external} if non-null; otherwise returns (and caches) the internal workspace,
      * creating it via {@code ctor} on first use.
      */
-    protected W resolveWorkspace(W external, java.util.function.Supplier<W> ctor) {
+    protected W resolveWorkspace(W external, Supplier<W> ctor) {
         if (external != null) return external;
         if (workspace == null) workspace = ctor.get();
         return workspace;

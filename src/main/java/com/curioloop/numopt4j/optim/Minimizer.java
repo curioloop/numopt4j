@@ -9,6 +9,8 @@ import com.curioloop.numopt4j.optim.subplex.SubplexProblem;
 import com.curioloop.numopt4j.optim.slsqp.SLSQPProblem;
 import com.curioloop.numopt4j.optim.trf.TRFProblem;
 
+import java.util.function.Supplier;
+
 /**
  * Abstract base for minimization problem builders.
  *
@@ -150,7 +152,7 @@ public abstract class Minimizer<O, W, S extends Minimizer<O, W, S>> implements P
      * Returns {@code external} if non-null; otherwise returns (and caches) the internal workspace,
      * creating it via {@code ctor} on first use.
      */
-    protected W resolveWorkspace(W external, java.util.function.Supplier<W> ctor) {
+    protected W resolveWorkspace(W external, Supplier<W> ctor) {
         if (external != null) return external;
         if (workspace == null) workspace = ctor.get();
         return workspace;

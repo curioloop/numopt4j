@@ -71,7 +71,7 @@ import java.util.Random;
  *   <tr><td>stopFitness</td><td>−∞</td><td>disabled</td></tr>
  *   <tr><td>parameterTolerance</td><td>1e-11</td><td>step-size convergence threshold</td></tr>
  *   <tr><td>functionTolerance</td><td>1e-12</td><td>fitness history range threshold</td></tr>
- *   <tr><td>sigmaUpperBound</td><td>1e3</td><td>σ divergence guard</td></tr>
+ *   <tr><td>maxSigmaRatio</td><td>1e3</td><td>σ divergence guard</td></tr>
  * </table>
  *
  * @see Minimizer#cmaes()
@@ -93,15 +93,15 @@ public final class CMAESProblem
     double stopFitness = Double.NEGATIVE_INFINITY;
     double parameterTolerance = 1e-11;
     double functionTolerance = 1e-12;
-    double sigmaUpperBound = 1e3;
+    double maxSigmaRatio = 1e3;
     private Random rng = new Random();
 
     public CMAESProblem() {}
 
     // ── Getters ───────────────────────────────────────────────────────────
 
-    public double sigma0()               { return sigma0; }
-    public int lambdaConfig()            { return lambda; }
+    public double initialSigma()         { return sigma0; }
+    public int populationSize()          { return lambda; }
     public int maxIterations()           { return maxIterations; }
     public UpdateMode updateMode() { return updateMode; }
     public int maxResample()             { return maxResample; }
@@ -109,7 +109,7 @@ public final class CMAESProblem
     public double stopFitness()          { return stopFitness; }
     public double parameterTolerance()   { return parameterTolerance; }
     public double functionTolerance()    { return functionTolerance; }
-    public double sigmaUpperBound()      { return sigmaUpperBound; }
+    public double maxSigmaRatio()      { return maxSigmaRatio; }
 
     /** Effective lambda (auto-computed if not set). */
     public int effectiveLambda() {
@@ -134,9 +134,9 @@ public final class CMAESProblem
     }
 
     /** Sets the initial step size σ₀ (must be positive and finite; default 0.3). */
-    public CMAESProblem sigma(double s) {
+    public CMAESProblem initialSigma(double s) {
         if (s <= 0 || !Double.isFinite(s))
-            throw new IllegalArgumentException("sigma must be positive and finite, got " + s);
+            throw new IllegalArgumentException("initialSigma must be positive and finite, got " + s);
         this.sigma0 = s;
         return this;
     }
@@ -226,10 +226,10 @@ public final class CMAESProblem
         return this;
     }
 
-    /** σ divergence guard: stop when σ·D_i &gt; sigmaUpperBound·σ₀ for any i (default 1e3). */
-    public CMAESProblem sigmaUpperBound(double v) {
-        if (v <= 0) throw new IllegalArgumentException("sigmaUpperBound must be positive, got " + v);
-        this.sigmaUpperBound = v;
+    /** σ divergence guard: stop when σ·D_i &gt; maxSigmaRatio·σ₀ for any i (default 1e3). */
+    public CMAESProblem maxSigmaRatio(double v) {
+        if (v <= 0) throw new IllegalArgumentException("maxSigmaRatio must be positive, got " + v);
+        this.maxSigmaRatio = v;
         return this;
     }
 
@@ -247,7 +247,7 @@ public final class CMAESProblem
         requireObjective();
         requireInitialPoint();
         if (sigma0 <= 0)
-            throw new IllegalArgumentException("sigma must be positive, got " + sigma0);
+            throw new IllegalArgumentException("initialSigma must be positive, got " + sigma0);
     }
 
     // ── Problem interface ─────────────────────────────────────────────────
@@ -298,7 +298,7 @@ public final class CMAESProblem
         c.stopFitness = this.stopFitness;
         c.parameterTolerance = this.parameterTolerance;
         c.functionTolerance = this.functionTolerance;
-        c.sigmaUpperBound = this.sigmaUpperBound;
+        c.maxSigmaRatio = this.maxSigmaRatio;
         c.rng = this.rng;
         return c;
     }
