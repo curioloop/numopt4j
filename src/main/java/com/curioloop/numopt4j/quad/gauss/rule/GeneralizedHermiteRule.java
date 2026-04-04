@@ -13,9 +13,9 @@ import com.curioloop.numopt4j.quad.gauss.GaussRule;
  *
  * <p>Three-term recurrence (Golub-Welsch):
  *   diagonal αₖ = 0  (rule is symmetric about 0)
- *   off-diagonal βₖ = √(k/2)          for k odd
- *                   = √(k/2 + s)      for k even (k ≥ 2)
- *                   = √s              for k = 1 (first off-diagonal, even index 0→1)
+ *   off-diagonal βₖ = √(k/2 + s)      for k odd
+ *                   = √(k/2)           for k even
+ * When s = 0, both cases collapse to √(k/2) = standard Hermite rule.
  * Zero-th moment: μ₀ = Γ(s + 1/2)</p>
  *
  * <p>Usage — ∫₋∞^∞ f(x) dx (absorbing the weight):
@@ -50,11 +50,11 @@ public final class GeneralizedHermiteRule implements GaussRule {
     /**
      * Fills the Jacobi matrix for the generalized Hermite recurrence:
      *   αₖ = 0  (symmetric rule)
-     *   β₁ = √s,  βₖ = √(⌊k/2⌋/1 + s·(k mod 2 == 0 ? 1 : 0))
      *
-     * <p>More precisely, for the off-diagonal entry at position i (1-indexed):
-     *   i odd:  βᵢ = √(i/2)
-     *   i even: βᵢ = √(i/2 + s)</p>
+     * <p>For the off-diagonal entry at position i (1-indexed):
+     *   i odd:  βᵢ = √(i/2 + s)   — matches QuantLib GaussHermitePolynomial::beta()
+     *   i even: βᵢ = √(i/2)
+     * When s=0 both cases reduce to √(i/2), recovering the standard Hermite rule.</p>
      */
     @Override
     public void fillJacobi(int n, double[] arena, int diag, int offDiag) {
@@ -63,8 +63,8 @@ public final class GeneralizedHermiteRule implements GaussRule {
         for (int i = 1; i < n; i++) {
             // i is the 1-based index of the off-diagonal entry
             double val = (i % 2 == 1)
-                    ? 0.5 * i          // odd i: k/2 where k=i
-                    : 0.5 * i + s;     // even i: k/2 + s
+                    ? 0.5 * i + s      // odd i: i/2 + s
+                    : 0.5 * i;         // even i: i/2
             arena[offDiag + i - 1] = Math.sqrt(val);
         }
     }

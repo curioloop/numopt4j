@@ -24,6 +24,14 @@ import java.util.function.DoubleUnaryOperator;
  * and I_coarse is the parent interval estimate.</p>
  *
  * <p>Convergence criterion: totalError ≤ max(absTol, relTol·|totalEstimate|)</p>
+ *
+ * <p>absTol scaling: before entering recursion the effective absolute tolerance is
+ * scaled by the initial full-interval estimate, matching QuantLib's behaviour:
+ *   effectiveAbsTol = max(absTol, relTol · |initialEstimate|)
+ * Without this scaling, the absTol-halving at each bisection level causes the
+ * tolerance to collapse to machine epsilon for deeply nested sub-intervals
+ * (e.g. the oscillatory tail of a Heston characteristic-function integral),
+ * leading to MAX_EVALUATIONS_REACHED even with generous absTol settings.</p>
  */
 final class GaussLobattoCore {
 
@@ -59,9 +67,15 @@ final class GaussLobattoCore {
                     Quadrature.Status.ABNORMAL_TERMINATION, 0, evalCount[0]);
         }
 
+        // Scale absTol by the initial full-interval estimate, matching QuantLib:
+        //   effectiveAbsTol = max(absTol, relTol * |initialEstimate|)
+        // Without this, absTol halves at every bisection level and collapses to
+        // near-zero for deeply nested sub-intervals, causing spurious non-convergence.
+        double effectiveAbsTol = Math.max(absTol, relTol * Math.abs(coarse));
+
         int[] subdivCount = {0};
         double result = refine(f, min, max, fa, fb, coarse,
-                absTol, relTol, maxSubdivisions, maxEvaluations,
+                effectiveAbsTol, relTol, maxSubdivisions, maxEvaluations,
                 evalCount, subdivCount, pool);
 
         Quadrature.Status status = Double.isNaN(result)
@@ -129,6 +143,10 @@ final class GaussLobattoCore {
         double tol      = Math.max(absTol, relTol * Math.abs(combined));
 
         if (error <= tol) return combined;
+
+        // Protective check (QuantLib): if the sub-interval contribution is already
+        // below numerical precision, further bisection cannot improve accuracy.
+        if (Math.abs(combined) == 0.0 || absTol > Math.abs(combined)) return combined;
 
         // Bisect both halves
         double l = refine(f, a, m, fa, fm, left,  absTol * 0.5, relTol,
