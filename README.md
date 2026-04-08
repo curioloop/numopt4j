@@ -11,6 +11,7 @@ High-performance numerical optimization library for Java.
 - **TRF**: Trust Region Reflective for nonlinear least squares
 - **Root finding**: Brentq (1-D), HYBR and Broyden (N-D) via `RootFinder`
 - **Numerical integration**: adaptive GK15, fixed Gauss-Legendre, oscillatory, improper, endpoint-singular, Cauchy principal value, Filon (highly oscillatory), and sampled-data quadrature via `Integrator`
+- **ODE solvers**: adaptive explicit RK (RK23, RK45, DOP853) and implicit stiff solvers (BDF, Radau IIA) with dense output, event detection, and workspace reuse via `Integrator.ode()`
 - **Linear regression**: OLS and WLS with SVD/QR solvers, full statistical output via `Regressor`
 - **Matrix decompositions**: LU, QR, LQ, SVD, Cholesky/LDLᵀ, Schur, Eigen, GEVD, GGEVD, GSVD via `Decomposer`
 - Workspace reuse for high-frequency scenarios
@@ -305,6 +306,77 @@ for (double[] bounds : intervals) {
 }
 ```
 
+### ODE Initial Value Problems
+
+```java
+import com.curioloop.numopt4j.quad.Trajectory;
+import com.curioloop.numopt4j.quad.ode.*;
+
+// Non-stiff: dy/dt = -y, y(0) = 1  (RK45, default)
+Trajectory sol = Integrator.ode(ODE.Method.RK45)
+    .equation((t, y, dydt) -> dydt[0] = -y[0])
+    .bounds(0.0, 5.0).initialState(1.0)
+    .tolerances(1e-6, 1e-9)
+    .integrate();
+
+double[] t = sol.timeSeries.t;
+double[] y = sol.timeSeries.y;  // column-major: y[i*m + j] = equation i at time j
+
+// Stiff: Van der Pol μ=1000 (BDF)
+Trajectory stiff = Integrator.ode(ODE.Method.BDF)
+    .equation((t, y, dydt) -> {
+        dydt[0] = y[1];
+        dydt[1] = 1000 * (1 - y[0]*y[0]) * y[1] - y[0];
+    })
+    .bounds(0.0, 500.0).initialState(2.0, 0.0)
+    .tolerances(1e-3, 1e-6).integrate();
+
+// With analytic Jacobian (faster for stiff problems)
+ODE vanderpol = (t, y, dydt, jac) -> {
+    dydt[0] = y[1];
+    dydt[1] = 1000 * (1 - y[0]*y[0]) * y[1] - y[0];
+    if (jac != null) {
+        jac[0] = 0;           jac[1] = 1;
+        jac[2] = -2000*y[0]*y[1] - 1;
+        jac[3] = 1000*(1 - y[0]*y[0]);
+    }
+};
+Trajectory sol2 = Integrator.ode(ODE.Method.Radau)
+    .equation(vanderpol).bounds(0.0, 10.0).initialState(2.0, 0.0).integrate();
+
+// Dense output: evaluate solution at any t in [t0, tf]
+Trajectory dense = Integrator.ode(ODE.Method.RK45)
+    .equation((t, y, dydt) -> dydt[0] = -y[0])
+    .bounds(0.0, 5.0).initialState(1.0).denseOutput(true).integrate();
+
+double[] out = new double[1];
+dense.denseOutput.interpolate(2.5, out);  // y(2.5)
+
+// Event detection: stop when y[0] crosses zero (falling)
+Trajectory event = Integrator.ode(ODE.Method.RK45)
+    .equation((t, y, dydt) -> { dydt[0] = y[1]; dydt[1] = -9.8; })
+    .bounds(0.0, 100.0).initialState(0.0, 50.0)
+    .detectors(new ODEEvent((t, y) -> y[0], ODEEvent.Trigger.FALLING, 1))
+    .integrate();
+
+// event.getStatus() == Trajectory.Status.EVENT
+// event.events[0][0].t  — precise landing time
+// event.events[0][0].y  — state at landing
+
+// Evaluate at specific time points
+double[] ts = {1.0, 2.0, 3.0, 4.0, 5.0};
+Trajectory atPoints = Integrator.ode(ODE.Method.RK45)
+    .equation((t, y, dydt) -> dydt[0] = -y[0])
+    .bounds(0.0, 5.0).initialState(1.0).evalAt(ts).integrate();
+
+// Workspace reuse across multiple solves
+ODEPool ws = ODEIntegral.workspace(ODE.Method.RK45);
+for (double[] y0 : initialConditions) {
+    Trajectory r = Integrator.ode(ODE.Method.RK45)
+        .equation(fn).bounds(0.0, 1.0).initialState(y0).integrate(ws);
+}
+```
+
 ## API Reference
 
 ### Minimizer (facade — static factory entry point)
@@ -417,6 +489,7 @@ Integrator.improperFixed(ImproperOpts)          // → ImproperIntegral.Fixed (f
 Integrator.sampled(SampledRule)                 // → SampledIntegral (scalar total)
 Integrator.cumulative(SampledRule)              // → CumulativeIntegral (running total array)
 Integrator.filon(FilonOpts)                     // → FilonIntegral (highly oscillatory finite interval)
+Integrator.ode(ODE.Method)                      // → ODEIntegral (ODE IVP solver)
 ```
 
 **OscillatoryOpts**: `COS`, `SIN` (finite interval); `COS_UPPER`, `SIN_UPPER` (semi-infinite)
@@ -440,6 +513,33 @@ r.isSuccessful()       // true if CONVERGED
 r.getIterations()      // adaptive subdivisions or refinement levels
 r.getEvaluations()     // total function evaluations
 ```
+
+**Trajectory result** (ODE IVP):
+```java
+sol.timeSeries.t          // double[] time points
+sol.timeSeries.y          // double[] state, column-major: y[i*m+j] = equation i at time j
+sol.timeSeries.dim        // number of equations
+sol.denseOutput           // Trajectory.DenseOutput, null if not requested
+sol.denseOutput.interpolate(t, out)  // evaluate at arbitrary t (zero allocation)
+sol.events                // Trajectory.EventPoint[][], null if no detectors
+sol.events[i][j].t        // time of j-th occurrence of i-th event
+sol.events[i][j].y        // state at that event
+sol.getStatus()           // Trajectory.Status: SUCCESS, EVENT, FAILED
+sol.isSuccessful()        // true unless FAILED
+sol.getFunctionEvaluations()
+sol.getJacobianEvaluations()  // 0 for explicit methods
+sol.getLuDecompositions()     // 0 for explicit methods
+```
+
+**ODE.Method**:
+
+| Method | Type | Order | Use case |
+|--------|------|-------|----------|
+| `RK23` | Explicit | 3(2) | Non-stiff, loose tolerances |
+| `RK45` | Explicit | 5(4) | Non-stiff, general purpose (default) |
+| `DOP853` | Explicit | 8(5,3) | Non-stiff, tight tolerances |
+| `BDF` | Implicit | 1–5 | Stiff problems |
+| `Radau` | Implicit | 5 | Stiff problems, high accuracy |
 
 ### Bound
 

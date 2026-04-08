@@ -33,13 +33,16 @@ com.curioloop.numopt4j.optim.lbfgsb   # LBFGSBProblem, LBFGSBWorkspace
 com.curioloop.numopt4j.optim.slsqp    # SLSQPProblem, SLSQPWorkspace
 com.curioloop.numopt4j.optim.trf      # TRFProblem, TRFWorkspace
 com.curioloop.numopt4j.optim.root     # BrentqProblem, HYBRProblem, HYBRWorkspace, BroydenProblem, BroydenWorkspace
-com.curioloop.numopt4j.quad           # Integrator, Integral, Quadrature (result + Status)
+com.curioloop.numopt4j.quad           # Integrator, Integral, Quadrature (result + Status), Trajectory (ODE result)
 com.curioloop.numopt4j.quad.adapt     # AdaptiveIntegral, AdaptivePool
 com.curioloop.numopt4j.quad.gauss     # FixedIntegral, WeightedIntegral, GaussRule, GaussPool
 com.curioloop.numopt4j.quad.gauss.rule # JacobiRule, LegendreRule, LaguerreRule, HermiteRule, GeneralizedLaguerreRule, GeneralizedHermiteRule
 com.curioloop.numopt4j.quad.special   # OscillatoryIntegral, OscillatoryOpts, EndpointSingularIntegral, EndpointOpts
                                       # PrincipalValueIntegral, ImproperIntegral, ImproperOpts
 com.curioloop.numopt4j.quad.sampled   # SampledIntegral, CumulativeIntegral, SampledRule, FilonIntegral, FilonOpts
+com.curioloop.numopt4j.quad.ode       # ODEIntegral, ODE, ODEEvent, ODEPool, ODECore, EventHandler
+com.curioloop.numopt4j.quad.ode.rk    # RungeKuttaCore, RungeKuttaPool, ButcherTableau
+com.curioloop.numopt4j.quad.ode.implicit # BDFCore, BDFPool, RadauCore, RadauPool, ImplicitCore, ImplicitPool
 ```
 
 
@@ -52,7 +55,9 @@ Have a residual function (least squares)?
             ├─ Yes → RootFinder.brentq() (1-D) or RootFinder.hybr() / RootFinder.broyden() (N-D)
             └─ No  → Numerical integration problem?
                       ├─ Yes → Integrator.adaptive() / .fixed() / .oscillatory() / .improper() / ...
-                      └─ No  → Have equality/inequality constraints?
+                      └─ No  → ODE initial value problem?
+                                ├─ Yes → Integrator.ode(ODE.Method) → ODEIntegral
+                                └─ No  → Have equality/inequality constraints?
                                 ├─ Yes → SLSQPProblem via Minimizer.slsqp()
                                 └─ No  → Gradient available?
                                           ├─ Yes → LBFGSBProblem via Minimizer.lbfgsb()
@@ -1889,6 +1894,7 @@ Integrator.improperFixed(ImproperOpts)    // → ImproperIntegral.Fixed
 Integrator.sampled(SampledRule)           // → SampledIntegral
 Integrator.cumulative(SampledRule)        // → CumulativeIntegral
 Integrator.filon(FilonOpts)               // → FilonIntegral
+Integrator.ode(ODE.Method)                // → ODEIntegral (ODE IVP solver)
 ```
 
 ---
@@ -2374,5 +2380,244 @@ AdaptivePool ws = new AdaptivePool();
 for (double[] interval : intervals) {
     Quadrature r = problem.bounds(interval[0], interval[1]).integrate(ws);
     // process r
+}
+```
+
+---
+
+## 39. ODEIntegral — ODE Initial Value Problem Solver
+
+`com.curioloop.numopt4j.quad.ode.ODEIntegral`
+
+Fluent facade for solving dy/dt = f(t, y), y(t₀) = y₀ over [t₀, tf] using adaptive step-size methods. Corresponds to scipy `solve_ivp`. Entry point: `Integrator.ode(ODE.Method)`.
+
+### Constructor
+
+```java
+new ODEIntegral(ODE.Method method)   // method is required and immutable
+```
+
+### Builder Methods
+
+```java
+.equation(ODE.Equation f)            // lambda RHS: (t, y, dydt) -> void
+.equation(ODE ode)                   // RHS + analytic Jacobian: (t, y, dydt, jac) -> void
+.bounds(double t0, double tf)        // required; tf < t0 for backward integration
+.initialState(double... y0)          // required; copied internally
+.tolerances(double rtol, double atol) // default 1e-3, 1e-6
+.maxStep(double h)                   // default Double.MAX_VALUE
+.firstStep(double h)                 // default NaN (auto-estimated via Hairer's formula)
+.evalAt(double[] ts)                 // output only at these times (monotone, within [t0,tf])
+.denseOutput(boolean b)              // build piecewise polynomial interpolant
+.detectors(ODEEvent... events)       // register event detectors
+.integrate()                         // → Trajectory (fresh workspace)
+.integrate(ODEPool workspace)        // → Trajectory (reuse workspace)
+```
+
+### Static Workspace Factory
+
+```java
+ODEPool ws = ODEIntegral.workspace(ODE.Method.RK45);  // allocate matching workspace type
+```
+
+---
+
+## 40. ODE — System Interface
+
+`com.curioloop.numopt4j.quad.ode.ODE`
+
+```java
+// Lightweight RHS-only (lambda-friendly)
+@FunctionalInterface
+interface ODE.Equation {
+    void evaluate(double t, double[] y, double[] dydt);
+}
+
+// Full interface with optional analytic Jacobian
+interface ODE {
+    void evaluate(double t, double[] y, double[] dydt, double[] jac);
+    // jac: row-major n×n, jac[i*n+j] = ∂fᵢ/∂yⱼ; skip when jac == null
+}
+```
+
+### ODE.Method
+
+| Method | Type | Order | Stiff | Notes |
+|--------|------|-------|-------|-------|
+| `RK23` | Explicit | 3(2) | No | Bogacki-Shampine; loose tolerances |
+| `RK45` | Explicit | 5(4) | No | Dormand-Prince; general purpose (default) |
+| `DOP853` | Explicit | 8(5,3) | No | Hairer; tight tolerances, smooth problems |
+| `BDF` | Implicit | 1–5 | Yes | Variable-order; large stiff systems |
+| `Radau` | Implicit | 5 | Yes | Radau IIA; high accuracy stiff problems |
+
+---
+
+## 41. ODEEvent — Event Detection
+
+`com.curioloop.numopt4j.quad.ode.ODEEvent`
+
+Defines a zero-crossing event of a scalar indicator g(t, y). The solver monitors sign changes after each step and uses Brent's method to locate the precise crossing time.
+
+```java
+new ODEEvent(
+    ODEEvent.Equation equation,   // g(t, y) → double; event fires on sign change
+    ODEEvent.Trigger trigger,     // RISING / FALLING / EITHER
+    int terminal                  // 0 = non-terminal; N > 0 = stop after N occurrences
+)
+```
+
+**ODEEvent.Trigger**:
+- `RISING` — g goes from negative to positive
+- `FALLING` — g goes from positive to negative
+- `EITHER` — either direction
+
+---
+
+## 42. Trajectory — ODE Result Type
+
+`com.curioloop.numopt4j.quad.Trajectory`
+
+Immutable result of an ODE integration.
+
+### Fields
+
+```java
+sol.timeSeries          // Trajectory.TimeSeries
+sol.timeSeries.t        // double[] time points, length m (monotone)
+sol.timeSeries.y        // double[] state, column-major: y[i*m+j] = equation i at time j
+sol.timeSeries.dim      // number of equations
+
+sol.denseOutput         // Trajectory.DenseOutput, null if not requested
+sol.events              // Trajectory.EventPoint[][], null if no detectors
+                        // events[i][j] = j-th occurrence of i-th ODEEvent
+```
+
+### Methods
+
+```java
+sol.getStatus()              // Trajectory.Status: SUCCESS / EVENT / FAILED
+sol.isSuccessful()           // true unless FAILED
+sol.getDimension()           // n (number of equations)
+sol.getTimePoints()          // m (number of output time points)
+sol.getFunctionEvaluations() // total RHS evaluations
+sol.getJacobianEvaluations() // Jacobian evaluations (0 for explicit methods)
+sol.getLuDecompositions()    // LU factorizations (0 for explicit methods)
+```
+
+### Trajectory.Status
+
+| Status | Description |
+|--------|-------------|
+| `SUCCESS` | Reached tf successfully |
+| `EVENT` | Stopped at a terminal event before tf |
+| `FAILED` | Step size became too small (stiffness or ill-conditioning) |
+
+### Trajectory.DenseOutput
+
+```java
+sol.denseOutput.interpolate(double t, double[] out)
+// Evaluates the piecewise polynomial at t ∈ [t0, tf], writes into out (zero allocation)
+// Throws IllegalArgumentException if t is out of range or out.length < n
+```
+
+### Trajectory.EventPoint
+
+```java
+sol.events[i][j].t   // double — precisely located event time
+sol.events[i][j].y   // double[] — interpolated state at event time, length n
+```
+
+---
+
+## 43. ODEPool — Workspace Reuse
+
+`com.curioloop.numopt4j.quad.ode.ODEPool`
+
+Base workspace class. Subclasses: `RungeKuttaPool` (RK23/RK45/DOP853), `BDFPool` (BDF), `RadauPool` (Radau).
+
+Allocate via `ODEIntegral.workspace(ODE.Method)` and pass to `integrate(ODEPool)`.
+
+```java
+// Allocate once, reuse across many solves of the same method
+ODEPool ws = ODEIntegral.workspace(ODE.Method.RK45);
+
+for (double[] y0 : initialConditions) {
+    Trajectory r = Integrator.ode(ODE.Method.RK45)
+        .equation(fn).bounds(0.0, 1.0).initialState(y0)
+        .tolerances(1e-6, 1e-9).integrate(ws);
+    // process r
+}
+```
+
+The workspace is grown as needed (never shrunk). Passing a workspace of the wrong type causes it to be ignored and a fresh one allocated.
+
+---
+
+## 44. ODE Quick Examples
+
+```java
+import com.curioloop.numopt4j.quad.Trajectory;
+import com.curioloop.numopt4j.quad.ode.*;
+
+// ── Non-stiff: dy/dt = -y ──────────────────────────────────────────────────
+Trajectory sol = Integrator.ode(ODE.Method.RK45)
+    .equation((t, y, dydt) -> dydt[0] = -y[0])
+    .bounds(0.0, 5.0).initialState(1.0)
+    .tolerances(1e-6, 1e-9).integrate();
+
+double[] t = sol.timeSeries.t;
+double[] y = sol.timeSeries.y;  // y[0*m+j] = y(t[j])
+
+// ── Stiff: Van der Pol μ=1000 (BDF) ───────────────────────────────────────
+Trajectory stiff = Integrator.ode(ODE.Method.BDF)
+    .equation((t, y, dydt) -> {
+        dydt[0] = y[1];
+        dydt[1] = 1000 * (1 - y[0]*y[0]) * y[1] - y[0];
+    })
+    .bounds(0.0, 500.0).initialState(2.0, 0.0)
+    .tolerances(1e-3, 1e-6).integrate();
+
+// ── Analytic Jacobian (faster for stiff) ──────────────────────────────────
+ODE sys = (t, y, dydt, jac) -> {
+    dydt[0] = y[1];
+    dydt[1] = 1000 * (1 - y[0]*y[0]) * y[1] - y[0];
+    if (jac != null) {
+        jac[0] = 0;  jac[1] = 1;
+        jac[2] = -2000*y[0]*y[1] - 1;
+        jac[3] = 1000*(1 - y[0]*y[0]);
+    }
+};
+Trajectory sol2 = Integrator.ode(ODE.Method.Radau)
+    .equation(sys).bounds(0.0, 10.0).initialState(2.0, 0.0).integrate();
+
+// ── Dense output ──────────────────────────────────────────────────────────
+Trajectory dense = Integrator.ode(ODE.Method.RK45)
+    .equation((t, y, dydt) -> dydt[0] = -y[0])
+    .bounds(0.0, 5.0).initialState(1.0).denseOutput(true).integrate();
+
+double[] out = new double[1];
+dense.denseOutput.interpolate(2.5, out);  // y(2.5) ≈ e^{-2.5}
+
+// ── evalAt: output only at specific times ─────────────────────────────────
+Trajectory atPoints = Integrator.ode(ODE.Method.RK45)
+    .equation((t, y, dydt) -> dydt[0] = -y[0])
+    .bounds(0.0, 5.0).initialState(1.0)
+    .evalAt(new double[]{1.0, 2.0, 3.0, 4.0, 5.0}).integrate();
+
+// ── Event detection: projectile landing ───────────────────────────────────
+Trajectory event = Integrator.ode(ODE.Method.RK45)
+    .equation((t, y, dydt) -> { dydt[0] = y[1]; dydt[1] = -9.8; })
+    .bounds(0.0, 100.0).initialState(0.0, 50.0)
+    .detectors(new ODEEvent((t, y) -> y[0], ODEEvent.Trigger.FALLING, 1))
+    .integrate();
+// event.getStatus() == Trajectory.Status.EVENT
+// event.events[0][0].t ≈ 100/9.8 ≈ 10.2 s
+
+// ── Workspace reuse ───────────────────────────────────────────────────────
+ODEPool ws = ODEIntegral.workspace(ODE.Method.BDF);
+for (double[] y0 : initialConditions) {
+    Trajectory r = Integrator.ode(ODE.Method.BDF)
+        .equation(stiffFn).bounds(0.0, 1.0).initialState(y0)
+        .tolerances(1e-4, 1e-7).integrate(ws);
 }
 ```

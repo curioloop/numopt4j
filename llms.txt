@@ -15,6 +15,7 @@ numopt4j is a Java numerical library supporting derivative-free optimization, un
 - Multivariate root-finding with Jacobian → HYBR (`RootFinder.hybr()`)
 - Multivariate root-finding Jacobian-free → Broyden (`RootFinder.broyden()`)
 - Numerical integration (adaptive/fixed/oscillatory/improper/singular/sampled/Filon) → `Integrator`
+- ODE initial value problems (RK23/RK45/DOP853/BDF/Radau, dense output, events) → `Integrator.ode()`
 - Matrix decompositions → `Decomposer` facade (LU, QR, LQ, SVD, Cholesky, Schur, Eigen, GEVD, GGEVD, GSVD)
 - Linear regression (OLS/WLS) → `Regressor` facade
 
@@ -28,13 +29,16 @@ com.curioloop.numopt4j.optim.lbfgsb      # LBFGSBProblem, LBFGSBWorkspace
 com.curioloop.numopt4j.optim.slsqp       # SLSQPProblem, SLSQPWorkspace
 com.curioloop.numopt4j.optim.trf         # TRFProblem, TRFWorkspace
 com.curioloop.numopt4j.optim.root        # BrentqProblem, HYBRProblem, HYBRWorkspace, BroydenProblem, BroydenWorkspace
-com.curioloop.numopt4j.quad              # Integrator, Integral, Quadrature (result + Status)
+com.curioloop.numopt4j.quad              # Integrator, Integral, Quadrature (result + Status), Trajectory (ODE result)
 com.curioloop.numopt4j.quad.adapt        # AdaptiveIntegral, AdaptivePool
 com.curioloop.numopt4j.quad.gauss        # FixedIntegral, WeightedIntegral, GaussRule, GaussPool
 com.curioloop.numopt4j.quad.gauss.rule   # JacobiRule, LegendreRule, LaguerreRule, HermiteRule, GeneralizedLaguerreRule, GeneralizedHermiteRule
 com.curioloop.numopt4j.quad.special      # OscillatoryIntegral, OscillatoryOpts, EndpointSingularIntegral, EndpointOpts
                                          # PrincipalValueIntegral, ImproperIntegral, ImproperOpts
 com.curioloop.numopt4j.quad.sampled      # SampledIntegral, CumulativeIntegral, SampledRule, FilonIntegral, FilonOpts
+com.curioloop.numopt4j.quad.ode          # ODEIntegral, ODE, ODEEvent, ODEPool, ODECore, EventHandler
+com.curioloop.numopt4j.quad.ode.rk       # RungeKuttaCore, RungeKuttaPool, ButcherTableau
+com.curioloop.numopt4j.quad.ode.implicit # BDFCore, BDFPool, RadauCore, RadauPool, ImplicitCore, ImplicitPool
 com.curioloop.numopt4j.linalg            # Decomposer, Decomposition, Regression, Regressor
 com.curioloop.numopt4j.linalg.mat        # LU, QR, LQ, SVD, Cholesky, Schur, Eigen, GEVD, GGEVD, GSVD
 com.curioloop.numopt4j.linalg.reg        # OLS, WLS, Prediction
@@ -650,6 +654,7 @@ Integrator.improperFixed(ImproperOpts)    // → ImproperIntegral.Fixed
 Integrator.sampled(SampledRule)           // → SampledIntegral
 Integrator.cumulative(SampledRule)        // → CumulativeIntegral
 Integrator.filon(FilonOpts)               // → FilonIntegral
+Integrator.ode(ODE.Method)                // → ODEIntegral (ODE IVP solver)
 ```
 
 ### FixedIntegral — Gauss-Legendre on [a, b]
@@ -836,6 +841,128 @@ Quadrature r2 = problem.bounds(0.0, 2.0).integrate(ws);  // ws reused
 GaussPool gws = new GaussPool();
 double v1 = Integrator.fixed().function(f1).bounds(0,1).points(8).integrate(gws);
 double v2 = Integrator.fixed().function(f2).bounds(0,1).points(8).integrate(gws);
+```
+
+## ODEIntegral — ODE Initial Value Problem Solver
+
+`com.curioloop.numopt4j.quad.ode.ODEIntegral`
+
+Solves dy/dt = f(t, y), y(t₀) = y₀ using adaptive step-size methods. Entry point: `Integrator.ode(ODE.Method)`.
+
+### Constructor / Factory
+
+```java
+new ODEIntegral(ODE.Method method)          // direct construction
+Integrator.ode(ODE.Method method)           // via Integrator facade
+```
+
+### Builder Methods
+
+```java
+.equation(ODE.Equation f)       // lambda: (t, y, dydt) -> void
+.equation(ODE ode)              // with analytic Jacobian: (t, y, dydt, jac) -> void
+.bounds(double t0, double tf)   // integration interval; tf < t0 for backward
+.initialState(double... y0)     // initial condition
+.tolerances(double rtol, double atol)  // default 1e-3, 1e-6
+.maxStep(double h)              // default Double.MAX_VALUE
+.firstStep(double h)            // default NaN (auto-estimated)
+.evalAt(double[] ts)            // output at specific times only
+.denseOutput(boolean b)         // enable piecewise polynomial interpolant
+.detectors(ODEEvent... events)  // event detection
+.integrate()                    // → Trajectory
+.integrate(ODEPool workspace)   // with workspace reuse
+```
+
+### ODE.Method
+
+| Method | Type | Order | Use case |
+|--------|------|-------|----------|
+| `RK23` | Explicit | 3(2) | Non-stiff, loose tolerances |
+| `RK45` | Explicit | 5(4) | Non-stiff, general purpose (default) |
+| `DOP853` | Explicit | 8(5,3) | Non-stiff, tight tolerances |
+| `BDF` | Implicit | 1–5 | Stiff problems |
+| `Radau` | Implicit | 5 | Stiff problems, high accuracy |
+
+### Workspace Reuse
+
+```java
+ODEPool ws = ODEIntegral.workspace(ODE.Method.RK45);
+for (double[] y0 : initialConditions) {
+    Trajectory r = Integrator.ode(ODE.Method.RK45)
+        .equation(fn).bounds(0.0, 1.0).initialState(y0).integrate(ws);
+}
+```
+
+### Trajectory (result type)
+
+```java
+sol.timeSeries.t          // double[] time points, length m
+sol.timeSeries.y          // double[] state, column-major: y[i*m+j] = equation i at time j
+sol.timeSeries.dim        // number of equations n
+sol.denseOutput           // Trajectory.DenseOutput, null if not requested
+sol.denseOutput.interpolate(t, out)  // evaluate at arbitrary t ∈ [t0,tf], zero allocation
+sol.events                // Trajectory.EventPoint[][], null if no detectors
+sol.events[i][j].t        // time of j-th occurrence of i-th event
+sol.events[i][j].y        // state at that event, length n
+sol.getStatus()           // Trajectory.Status: SUCCESS / EVENT / FAILED
+sol.isSuccessful()        // true unless FAILED
+sol.getFunctionEvaluations()
+sol.getJacobianEvaluations()  // 0 for explicit methods
+sol.getLuDecompositions()     // 0 for explicit methods
+```
+
+### ODEEvent
+
+```java
+new ODEEvent(
+    (t, y) -> y[0],              // indicator g(t,y); event fires on sign change
+    ODEEvent.Trigger.FALLING,    // RISING / FALLING / EITHER
+    1                            // terminal count: stop after N occurrences; 0 = non-terminal
+)
+```
+
+### Quick Examples
+
+```java
+import com.curioloop.numopt4j.quad.Trajectory;
+import com.curioloop.numopt4j.quad.ode.*;
+
+// Non-stiff: dy/dt = -y
+Trajectory sol = Integrator.ode(ODE.Method.RK45)
+    .equation((t, y, dydt) -> dydt[0] = -y[0])
+    .bounds(0.0, 5.0).initialState(1.0).integrate();
+
+// Stiff: Van der Pol (BDF)
+Trajectory stiff = Integrator.ode(ODE.Method.BDF)
+    .equation((t, y, dydt) -> {
+        dydt[0] = y[1];
+        dydt[1] = 1000 * (1 - y[0]*y[0]) * y[1] - y[0];
+    })
+    .bounds(0.0, 500.0).initialState(2.0, 0.0).tolerances(1e-3, 1e-6).integrate();
+
+// Analytic Jacobian (faster for stiff)
+ODE sys = (t, y, dydt, jac) -> {
+    dydt[0] = -y[0];
+    if (jac != null) jac[0] = -1.0;
+};
+Trajectory sol2 = Integrator.ode(ODE.Method.Radau).equation(sys)
+    .bounds(0.0, 5.0).initialState(1.0).integrate();
+
+// Dense output
+Trajectory dense = Integrator.ode(ODE.Method.RK45)
+    .equation((t, y, dydt) -> dydt[0] = -y[0])
+    .bounds(0.0, 5.0).initialState(1.0).denseOutput(true).integrate();
+double[] out = new double[1];
+dense.denseOutput.interpolate(2.5, out);  // y(2.5)
+
+// Event detection: stop when y[0] hits zero (falling)
+Trajectory event = Integrator.ode(ODE.Method.RK45)
+    .equation((t, y, dydt) -> { dydt[0] = y[1]; dydt[1] = -9.8; })
+    .bounds(0.0, 100.0).initialState(0.0, 50.0)
+    .detectors(new ODEEvent((t, y) -> y[0], ODEEvent.Trigger.FALLING, 1))
+    .integrate();
+// event.getStatus() == Trajectory.Status.EVENT
+// event.events[0][0].t  — precise event time
 ```
 
 ## Documentation

@@ -51,10 +51,22 @@ public final class BrentqSolver {
      * @throws IllegalArgumentException if {@code f(xa) * f(xb) > 0}
      */
     public static Optimization solve(
+            DoubleUnaryOperator f, double xa, double xb, double xtol, double rtol, int maxiter) {
+        return solveInner(f, xa, xb, xtol, rtol, maxiter, null);
+    }
+
+    public static double findRoot(
+            DoubleUnaryOperator f, double xa, double xb, double xtol, double rtol, int maxiter) {
+        double[] root = {0};
+        solveInner(f, xa, xb, xtol, rtol, maxiter, root);
+        return root[0];
+    }
+
+    static Optimization solveInner(
             DoubleUnaryOperator f,
             double xa, double xb,
             double xtol, double rtol,
-            int maxiter) {
+            int maxiter, double[] root) {
 
         double xpre = xa, xcur = xb;
         double xblk = 0, fblk = 0, spre = 0, scur = 0;
@@ -64,9 +76,11 @@ public final class BrentqSolver {
 
         // Handle endpoints that are already roots
         if (fpre == 0) {
+            if (root != null) { root[0] = xpre; return null; }
             return new Optimization(xpre, null, 0, Optimization.Status.COEFFICIENT_TOLERANCE_REACHED, 0, 0);
         }
         if (fcur == 0) {
+            if (root != null) { root[0] = xcur; return null; }
             return new Optimization(xcur, null, 0, Optimization.Status.COEFFICIENT_TOLERANCE_REACHED, 0, 0);
         }
 
@@ -79,6 +93,7 @@ public final class BrentqSolver {
 
         // Check for NaN/Inf in initial evaluations
         if (!Double.isFinite(fpre) || !Double.isFinite(fcur)) {
+            if (root != null) { root[0] = xcur; return null; }
             return new Optimization(xcur, null, Math.abs(fcur), Optimization.Status.ABNORMAL_TERMINATION, 0, 0);
         }
 
@@ -102,6 +117,7 @@ public final class BrentqSolver {
 
             // Convergence check
             if (fcur == 0 || Math.abs(sbis) < delta) {
+                if (root != null) { root[0] = xcur; return null; }
                 return new Optimization(xcur, null, Math.abs(fcur), Optimization.Status.COEFFICIENT_TOLERANCE_REACHED, i, i);
             }
 
@@ -138,10 +154,12 @@ public final class BrentqSolver {
 
             // Check for NaN/Inf after function evaluation
             if (!Double.isFinite(fcur)) {
+                if (root != null) { root[0] = xcur; return null; }
                 return new Optimization(xcur, null, Math.abs(fcur), Optimization.Status.ABNORMAL_TERMINATION, i, i);
             }
         }
 
+        if (root != null) { root[0] = xcur; return null; }
         return new Optimization(xcur, null, Math.abs(fcur), Optimization.Status.MAX_ITERATIONS_REACHED, maxiter, maxiter);
     }
 }

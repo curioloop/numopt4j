@@ -3,6 +3,8 @@
  */
 package com.curioloop.numopt4j.quad;
 
+import com.curioloop.numopt4j.quad.ode.ODE;
+import com.curioloop.numopt4j.quad.ode.ODEIntegral;
 import com.curioloop.numopt4j.quad.adapt.AdaptiveIntegral;
 import com.curioloop.numopt4j.quad.gauss.FixedIntegral;
 import com.curioloop.numopt4j.quad.gauss.WeightedIntegral;
@@ -44,6 +46,11 @@ import com.curioloop.numopt4j.quad.special.PrincipalValueIntegral;
  *
  * // Sampled data
  * double total = Integrator.sampled(SampledRule.SIMPSON).samples(y, dx).integrate();
+ *
+ * // ODE IVP: dy/dt = -y, y(0) = 1
+ * Trajectory sol = Integrator.ode(ODE.Method.RK45)
+ *     .equation((t, y, dydt) -> dydt[0] = -y[0])
+ *     .bounds(0.0, 5.0).initialState(1.0).integrate();
  * }</pre>
  */
 public final class Integrator {
@@ -142,10 +149,27 @@ public final class Integrator {
     public static ImproperIntegral.Adaptive improper(ImproperOpts opts) { return new ImproperIntegral.Adaptive(opts); }
 
     /**
-     * Returns a fixed-point Gauss-Legendre builder pre-configured with the given improper domain opts.
+     * Returns a fixed Gauss-Legendre builder pre-configured with the given improper domain opts.
      * Requires {@code .function()}, bound(s) per opts, and {@code .points()}.
      *
      * @see ImproperOpts
      */
     public static ImproperIntegral.Fixed improperFixed(ImproperOpts opts) { return new ImproperIntegral.Fixed(opts); }
+
+    // -----------------------------------------------------------------------
+    // ODE initial value problem
+    // -----------------------------------------------------------------------
+
+    /**
+     * Returns a blank {@link ODEIntegral} builder pre-configured with the given solver method.
+     * Requires {@code .equation()}, {@code .bounds()}, and {@code .initialState()} before integrating.
+     *
+     * @param method solver method (e.g. {@link ODE.Method#RK45}, {@link ODE.Method#BDF})
+     * @see ODEIntegral
+     */
+    public static ODEIntegral ode(ODE.Method method) {
+        return new ODEIntegral(method);
+    }
+
 }
+
