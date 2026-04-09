@@ -18,9 +18,9 @@ import java.util.Objects;
  *
  * <p>Concrete subclasses implement {@link #step()} and {@link #interpolate(double, double[])}.</p>
  *
- * @param <W> workspace type, must extend {@link ODEPool}
+ * @param <W> workspace type, must extend {@link IVPPool}
  */
-public abstract class ODECore<W extends ODEPool> {
+public abstract class IVPCore<W extends IVPPool> {
 
     /** System dimension. */
     protected final int n;
@@ -67,7 +67,7 @@ public abstract class ODECore<W extends ODEPool> {
      * @param tBound  end time
      * @param ws      workspace (must not be null)
      */
-    protected ODECore(int n, double t0, double[] y0, double tBound, W ws) {
+    protected IVPCore(int n, double t0, double[] y0, double tBound, W ws) {
         this.n         = n;
         this.t         = t0;
         this.tOld      = Double.NaN;
@@ -135,7 +135,7 @@ public abstract class ODECore<W extends ODEPool> {
      */
     protected double selectInitialStep(ODE.Equation fun, double t0, double[] y0,
                                        double[] f0, int order,
-                                       double rtol, double atol, double maxStep,
+                                       double rtol, double[] atol, double maxStep,
                                        double[] y1Buf, double[] f1Buf) {
         int n = y0.length;
         if (n == 0) return Double.MAX_VALUE;
@@ -143,10 +143,10 @@ public abstract class ODECore<W extends ODEPool> {
         double intervalLength = Math.abs(tBound - t0);
         if (intervalLength == 0.0) return 0.0;
 
-        // scale[i] = atol + |y0[i]| * rtol
+        // scale[i] = atol[i] + |y0[i]| * rtol
         double d0 = 0, d1 = 0;
         for (int i = 0; i < n; i++) {
-            double scale = atol + Math.abs(y0[i]) * rtol;
+            double scale = atol(atol, i) + Math.abs(y0[i]) * rtol;
             d0 += (y0[i] / scale) * (y0[i] / scale);
             d1 += (f0[i] / scale) * (f0[i] / scale);
         }
@@ -171,7 +171,7 @@ public abstract class ODECore<W extends ODEPool> {
         // d2 = ‖(f1 - f0) / scale‖ / h0
         double d2 = 0;
         for (int i = 0; i < n; i++) {
-            double scale = atol + Math.abs(y0[i]) * rtol;
+            double scale = atol(atol, i) + Math.abs(y0[i]) * rtol;
             double diff = (f1Buf[i] - f0[i]) / scale;
             d2 += diff * diff;
         }
@@ -211,5 +211,10 @@ public abstract class ODECore<W extends ODEPool> {
             sum += v * v;
         }
         return Math.sqrt(sum / n);
+    }
+
+    /** Returns {@code atol[i]} for vector atol, or {@code atol[0]} for scalar atol. */
+    protected static double atol(double[] atol, int i) {
+        return atol.length == 1 ? atol[0] : atol[i];
     }
 }

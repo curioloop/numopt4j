@@ -17,10 +17,10 @@ import com.curioloop.numopt4j.quad.ode.rk.RungeKuttaPool;
  * <p>Subclasses ({@link RungeKuttaPool},
  * {@link ImplicitPool}) add method-specific buffers.</p>
  *
- * <p>Workspaces can be pre-allocated and passed to {@link ODEIntegral#integrate(ODEPool)}
+ * <p>Workspaces can be pre-allocated and passed to {@link IVPIntegral#integrate(IVPPool)}
  * to avoid repeated allocation when solving many problems of the same size.</p>
  */
-public abstract class ODEPool {
+public abstract class IVPPool {
 
     /** System dimension (set by {@link #ensureBase}). */
     public int n;

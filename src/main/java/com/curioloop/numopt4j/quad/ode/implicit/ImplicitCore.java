@@ -4,7 +4,7 @@
 package com.curioloop.numopt4j.quad.ode.implicit;
 
 import com.curioloop.numopt4j.quad.ode.ODE;
-import com.curioloop.numopt4j.quad.ode.ODECore;
+import com.curioloop.numopt4j.quad.ode.IVPCore;
 
 /**
  * Abstract base for implicit ODE solvers (BDF and Radau IIA).
@@ -20,7 +20,7 @@ import com.curioloop.numopt4j.quad.ode.ODECore;
  *
  * @param <W> workspace type, must extend {@link ImplicitPool}
  */
-abstract class ImplicitCore<W extends ImplicitPool> extends ODECore<W> {
+abstract class ImplicitCore<W extends ImplicitPool> extends IVPCore<W> {
 
     // -----------------------------------------------------------------------
     // Numerical Jacobian constants (scipy num_jac adaptive forward difference)
@@ -47,17 +47,17 @@ abstract class ImplicitCore<W extends ImplicitPool> extends ODECore<W> {
     // Shared implicit-solver fields
     // -----------------------------------------------------------------------
 
-    /** RHS function (always non-null). */
+    /** RHS function (always non-null). Derived from {@link #ode} when user passes a full ODE. */
     protected final ODE.Equation fun;
 
-    /** Full ODE interface with optional analytic Jacobian; {@code null} = use numerical diff. */
+    /** Full ODE interface with analytic Jacobian; {@code null} when user passes {@link ODE.Equation} only. */
     protected final ODE ode;
 
     /** Relative tolerance. */
     protected final double rtol;
 
-    /** Absolute tolerance. */
-    protected final double atol;
+    /** Absolute tolerance (scalar or per-component vector). */
+    protected final double[] atol;
 
     /** Maximum allowed step size. */
     protected final double maxStep;
@@ -92,15 +92,14 @@ abstract class ImplicitCore<W extends ImplicitPool> extends ODECore<W> {
      * @param maxStep maximum step size
      */
     protected ImplicitCore(int n, double t0, double[] y0, double tBound, W ws,
-                            ODE.Equation fun, ODE ode,
-                            double rtol, double atol, double maxStep) {
+                            ODE.Equation rhs, ODE ode,
+                            double rtol, double[] atol, double maxStep) {
         super(n, t0, y0, tBound, ws);
-        this.fun       = fun;
-        this.ode       = ode;
-        this.rtol      = rtol;
-        this.atol      = atol;
+        this.ode  = ode;
+        this.fun  = rhs != null ? rhs : (t, y, dydt) -> ode.evaluate(t, y, dydt, null);
+        this.rtol = rtol;
+        this.atol = atol;
         this.maxStep   = maxStep;
-        // newton_tol = max(10*eps/rtol, min(0.03, sqrt(rtol)))
         this.newtonTol = Math.max(10.0 * Math.ulp(1.0) / rtol, Math.min(0.03, Math.sqrt(rtol)));
         this.luValid    = false;
         this.jacCurrent = false;

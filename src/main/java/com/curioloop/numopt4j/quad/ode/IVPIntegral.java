@@ -21,11 +21,10 @@ import java.util.Objects;
  * <pre>
  *   dy/dt = f(t, y),   y(t₀) = y₀,   t ∈ [t₀, tf]
  * </pre>
- * using an adaptive step-size method selected via {@link #method(ODE.Method)}.</p>
  *
  * <h2>Usage</h2>
  * <pre>{@code
- * Trajectory sol = new ODEIntegral(ODE.Method.RK45)
+ * Trajectory sol = new ODEIntegral(IVPMethod.RK45)
  *     .equation((t, y, dydt) -> { dydt[0] = -y[0]; })
  *     .bounds(0.0, 5.0)
  *     .initialState(1.0)
@@ -39,24 +38,25 @@ import java.util.Objects;
  *
  * <h2>Method Selection</h2>
  * <ul>
- *   <li>{@link ODE.Method#RK45} (default) — good general-purpose choice for non-stiff problems.</li>
- *   <li>{@link ODE.Method#RK23} — lower-order, faster for loose tolerances.</li>
- *   <li>{@link ODE.Method#DOP853} — high-order, for smooth problems with tight tolerances.</li>
- *   <li>{@link ODE.Method#BDF} / {@link ODE.Method#Radau} — implicit methods for stiff problems.</li>
+ *   <li>{@link IVPMethod#RK45} (default) — good general-purpose choice for non-stiff problems.</li>
+ *   <li>{@link IVPMethod#RK23} — lower-order, faster for loose tolerances.</li>
+ *   <li>{@link IVPMethod#DOP853} — high-order, for smooth problems with tight tolerances.</li>
+ *   <li>{@link IVPMethod#BDF} / {@link IVPMethod#Radau} — implicit methods for stiff problems.</li>
  * </ul>
  *
  * @see ODE
  * @see Trajectory
  * @see ODEEvent
  */
-public class ODEIntegral implements Integral<Trajectory, ODEPool> {
+public class IVPIntegral implements Integral<Trajectory, IVPPool> {
 
     // -----------------------------------------------------------------------
     // Required parameters
     // -----------------------------------------------------------------------
 
-    private final ODE.Method method;
-    private ODE    equation;
+    private final IVPMethod method;
+    private ODE          equation;      // full ODE with optional analytic Jacobian
+    private ODE.Equation rhs;  // RHS-only (no Jacobian); set when user passes ODE.Equation
     private double t0 = Double.NaN, tf = Double.NaN;
     private double[] y0;
 
@@ -65,14 +65,14 @@ public class ODEIntegral implements Integral<Trajectory, ODEPool> {
     // -----------------------------------------------------------------------
 
     private double     rtol     = 1e-3;
-    private double     atol     = 1e-6;
+    private double[]   atol     = {1e-6};
     private double     maxStep  = Double.MAX_VALUE;
     private double     firstStep = Double.NaN;
     private double[]   evalAt;
     private boolean    denseOutput = false;
-    private ODEEvent[] detectors;
+    private ODEEvent[] eventDetectors;
 
-    public ODEIntegral(ODE.Method method) {
+    public IVPIntegral(IVPMethod method) {
         this.method = Objects.requireNonNull(method);
     }
 
@@ -84,14 +84,15 @@ public class ODEIntegral implements Integral<Trajectory, ODEPool> {
      * Sets the ODE system (RHS + optional analytic Jacobian).
      * Use this overload for stiff problems where an analytic Jacobian is available.
      */
-    public ODEIntegral equation(ODE f) { this.equation = f; return this; }
+    public IVPIntegral equation(ODE f) { this.equation = f; this.rhs = null; return this; }
 
     /**
      * Sets the ODE right-hand side as a lambda-friendly {@link ODE.Equation}.
      * The Jacobian will be approximated numerically when needed.
      */
-    public ODEIntegral equation(ODE.Equation f) {
-        this.equation = (t, y, dydt, jac) -> f.evaluate(t, y, dydt);
+    public IVPIntegral equation(ODE.Equation f) {
+        this.rhs = f;
+        this.equation = null;
         return this;
     }
 
@@ -99,31 +100,38 @@ public class ODEIntegral implements Integral<Trajectory, ODEPool> {
      * Sets the integration interval {@code [t₀, tf]}.
      * Use {@code tf < t0} for backward integration.
      */
-    public ODEIntegral bounds(double t0, double tf) { this.t0 = t0; this.tf = tf; return this; }
+    public IVPIntegral bounds(double t0, double tf) { this.t0 = t0; this.tf = tf; return this; }
 
     /**
      * Sets the initial state {@code y(t₀) = y₀}.
      * The array is copied; the original is not modified.
      */
-    public ODEIntegral initialState(double... y0) { this.y0 = y0.clone(); return this; }
+    public IVPIntegral initialState(double... y0) { this.y0 = y0.clone(); return this; }
 
     /**
      * Sets relative and absolute tolerances.
+     * {@code atol} may be a scalar (applied to all components) or a per-component vector of length n.
      * Default: {@code rtol = 1e-3}, {@code atol = 1e-6}.
      */
-    public ODEIntegral tolerances(double rtol, double atol) { this.rtol = rtol; this.atol = atol; return this; }
+    public IVPIntegral tolerances(double rtol, double... atol) {
+        if (rtol <= 0) throw new IllegalArgumentException("rtol must be positive");
+        for (double a : atol) if (a <= 0) throw new IllegalArgumentException("atol must be positive");
+        this.rtol = rtol;
+        this.atol = atol.clone();
+        return this;
+    }
 
     /**
      * Sets the maximum allowed step size.
      * Default: {@code Double.MAX_VALUE} (no limit).
      */
-    public ODEIntegral maxStep(double h) { this.maxStep = h; return this; }
+    public IVPIntegral maxStep(double h) { this.maxStep = h; return this; }
 
     /**
      * Sets the initial step size.
      * Default: {@code NaN} (auto-estimated via Hairer's formula).
      */
-    public ODEIntegral firstStep(double h) { this.firstStep = h; return this; }
+    public IVPIntegral firstStep(double h) { this.firstStep = h; return this; }
 
     /**
      * Sets specific time points at which the solution is evaluated.
@@ -131,20 +139,20 @@ public class ODEIntegral implements Integral<Trajectory, ODEPool> {
      * and lie within {@code [t₀, tf]}.
      * When set, the output {@link Trajectory.TimeSeries} contains exactly these points.
      */
-    public ODEIntegral evalAt(double[] ts) { this.evalAt = ts == null ? null : ts.clone(); return this; }
+    public IVPIntegral evalAt(double[] ts) { this.evalAt = ts == null ? null : ts.clone(); return this; }
 
     /**
      * Enables or disables dense output.
      * When {@code true}, {@link Trajectory#denseOutput} is populated with a piecewise
      * polynomial interpolant that can be evaluated at any time in {@code [t₀, tf]}.
      */
-    public ODEIntegral denseOutput(boolean b) { this.denseOutput = b; return this; }
+    public IVPIntegral denseOutput(boolean b) { this.denseOutput = b; return this; }
 
     /**
      * Registers event detectors to monitor during integration.
      * Each detector defines a scalar indicator function whose zero crossings are detected.
      */
-    public ODEIntegral detectors(ODEEvent... ds) { this.detectors = ds; return this; }
+    public IVPIntegral detectors(ODEEvent... ds) { this.eventDetectors = ds; return this; }
 
     // -----------------------------------------------------------------------
     // integrate
@@ -155,12 +163,12 @@ public class ODEIntegral implements Integral<Trajectory, ODEPool> {
 
     /**
      * Returns a pre-allocated workspace for the given method.
-     * Pass to {@link #integrate(ODEPool)} to avoid repeated allocation across multiple solves.
+     * Pass to {@link #integrate(IVPPool)} to avoid repeated allocation across multiple solves.
      *
      * @param method solver method
      * @return a fresh, empty workspace of the appropriate type
      */
-    public static ODEPool workspace(ODE.Method method) {
+    public static IVPPool workspace(IVPMethod method) {
         switch (method) {
             case RK23: case RK45: case DOP853: return new RungeKuttaPool();
             case BDF:   return new BDFPool();
@@ -181,22 +189,24 @@ public class ODEIntegral implements Integral<Trajectory, ODEPool> {
      * @throws IllegalArgumentException if parameters are invalid
      */
     @Override
-    public Trajectory integrate(ODEPool workspace) {
+    public Trajectory integrate(IVPPool workspace) {
         // Validate parameters
-        if (equation == null) throw new IllegalStateException("equation is required");
+        if (equation == null && rhs == null) throw new IllegalStateException("equation is required");
         if (Double.isNaN(t0) || Double.isNaN(tf)) throw new IllegalStateException("bounds(t0, tf) is required");
         if (y0 == null) throw new IllegalStateException("initialState is required");
         if (t0 == tf) throw new IllegalArgumentException("t0 must not equal tf");
-        if (rtol <= 0 || atol <= 0) throw new IllegalArgumentException("rtol and atol must be positive");
+        if (rtol <= 0 || atol[0] <= 0) throw new IllegalArgumentException("rtol and atol must be positive");
+        if (atol.length != 1 && atol.length != y0.length)
+            throw new IllegalArgumentException(
+                    "atol length must be 1 (scalar) or match system dimension " + y0.length + ", got " + atol.length);
         validateEvalAt();
 
         // Create solver
-        ODE.Equation funEq = (t, y, dydt) -> equation.evaluate(t, y, dydt, null);
-        ODECore<?> solver = createSolver(funEq, workspace);
+        IVPCore<?> solver = createSolver(workspace);
 
         // Initialize event handler
-        EventHandler eventHandler = (detectors != null && detectors.length > 0)
-                ? new EventHandler(detectors, t0, y0) : null;
+        EventHandler eventHandler = (eventDetectors != null && eventDetectors.length > 0)
+                ? new EventHandler(eventDetectors, t0, y0) : null;
 
         int n = y0.length;
         TimeSeriesBuffer out = new TimeSeriesBuffer(n);
@@ -204,15 +214,10 @@ public class ODEIntegral implements Integral<Trajectory, ODEPool> {
         // Dense output buffer (only used when denseOutput=true)
         DenseOutputBuffer denseOutBuf = denseOutput ? new DenseOutputBuffer(n) : null;
 
-        // t_eval handling — normalize to always-ascending scan direction
+        // t_eval handling
         boolean forward = tf > t0;
         double[] tEvalSorted = evalAt;
         int tEvalIdx = 0;
-        if (tEvalSorted != null && !forward) {
-            tEvalSorted = tEvalSorted.clone();
-            reverseArray(tEvalSorted);
-            tEvalIdx = tEvalSorted.length;
-        }
 
         // Initial point (only when not using t_eval)
         if (evalAt == null) out.add(t0, y0);
@@ -237,8 +242,8 @@ public class ODEIntegral implements Integral<Trajectory, ODEPool> {
                         if (te >= tOld) { solver.interpolate(te, yTmp); out.add(te, yTmp); }
                     }
                 } else {
-                    while (tEvalIdx > 0 && tEvalSorted[tEvalIdx - 1] >= tCur) {
-                        double te = tEvalSorted[--tEvalIdx];
+                    while (tEvalIdx < tEvalSorted.length && tEvalSorted[tEvalIdx] >= tCur) {
+                        double te = tEvalSorted[tEvalIdx++];
                         if (te <= tOld) { solver.interpolate(te, yTmp); out.add(te, yTmp); }
                     }
                 }
@@ -307,29 +312,24 @@ public class ODEIntegral implements Integral<Trajectory, ODEPool> {
         }
     }
 
-    private ODECore<?> createSolver(ODE.Equation funEq, ODEPool workspace) {
+    private IVPCore<?> createSolver(IVPPool workspace) {
         switch (method) {
-            case RK23: {
-                RungeKuttaPool ws = workspace instanceof RungeKuttaPool ? (RungeKuttaPool) workspace : new RungeKuttaPool();
-                return RungeKuttaCore.rk23(funEq, t0, y0, tf, rtol, atol, maxStep, firstStep, ws);
-            }
-            case RK45: {
-                RungeKuttaPool ws = workspace instanceof RungeKuttaPool ? (RungeKuttaPool) workspace : new RungeKuttaPool();
-                return RungeKuttaCore.rk45(funEq, t0, y0, tf, rtol, atol, maxStep, firstStep, ws);
-            }
-            case DOP853: {
-                RungeKuttaPool ws = workspace instanceof RungeKuttaPool ? (RungeKuttaPool) workspace : new RungeKuttaPool();
-                return RungeKuttaCore.dop853(funEq, t0, y0, tf, rtol, atol, maxStep, firstStep, ws);
-            }
             case BDF: {
                 BDFPool ws = workspace instanceof BDFPool ? (BDFPool) workspace : new BDFPool();
-                return new BDFCore(funEq, equation, t0, y0, tf, rtol, atol, maxStep, firstStep, ws);
+                return new BDFCore(rhs, equation, t0, y0, tf, rtol, atol, maxStep, firstStep, ws);
             }
             case Radau: {
                 RadauPool ws = workspace instanceof RadauPool ? (RadauPool) workspace : new RadauPool();
-                return new RadauCore(funEq, equation, t0, y0, tf, rtol, atol, maxStep, firstStep, ws);
+                return new RadauCore(rhs, equation, t0, y0, tf, rtol, atol, maxStep, firstStep, ws);
             }
             default:
+                RungeKuttaPool ws = workspace instanceof RungeKuttaPool ? (RungeKuttaPool) workspace : new RungeKuttaPool();
+                ODE.Equation fun = rhs != null ? rhs : (t, y, dydt) -> equation.evaluate(t, y, dydt, null);
+                switch (method) {
+                    case RK23: return RungeKuttaCore.rk23(fun, t0, y0, tf, rtol, atol, maxStep, firstStep, ws);
+                    case RK45: return RungeKuttaCore.rk45(fun, t0, y0, tf, rtol, atol, maxStep, firstStep, ws);
+                    case DOP853: return RungeKuttaCore.dop853(fun, t0, y0, tf, rtol, atol, maxStep, firstStep, ws);
+                }
                 throw new IllegalArgumentException("Unknown method: " + method);
         }
     }
@@ -367,7 +367,7 @@ public class ODEIntegral implements Integral<Trajectory, ODEPool> {
             size++;
         }
 
-        Trajectory.DenseOutput build(double t0, double tf, ODEPool pool) {
+        Trajectory.DenseOutput build(double t0, double tf, IVPPool pool) {
             return new Trajectory.DenseOutput(
                     java.util.Arrays.copyOf(tBuf,   size * 2),
                     java.util.Arrays.copyOf(coeffs, size),
@@ -427,9 +427,4 @@ public class ODEIntegral implements Integral<Trajectory, ODEPool> {
         }
     }
 
-    private static void reverseArray(double[] arr) {
-        for (int i = 0, j = arr.length - 1; i < j; i++, j--) {
-            double tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
-        }
-    }
 }

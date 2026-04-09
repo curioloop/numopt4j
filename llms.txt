@@ -36,7 +36,7 @@ com.curioloop.numopt4j.quad.gauss.rule   # JacobiRule, LegendreRule, LaguerreRul
 com.curioloop.numopt4j.quad.special      # OscillatoryIntegral, OscillatoryOpts, EndpointSingularIntegral, EndpointOpts
                                          # PrincipalValueIntegral, ImproperIntegral, ImproperOpts
 com.curioloop.numopt4j.quad.sampled      # SampledIntegral, CumulativeIntegral, SampledRule, FilonIntegral, FilonOpts
-com.curioloop.numopt4j.quad.ode          # ODEIntegral, ODE, ODEEvent, ODEPool, ODECore, EventHandler
+com.curioloop.numopt4j.quad.ode          # IVPIntegral, ODE, ODEEvent, IVPPool, IVPCore
 com.curioloop.numopt4j.quad.ode.rk       # RungeKuttaCore, RungeKuttaPool, ButcherTableau
 com.curioloop.numopt4j.quad.ode.implicit # BDFCore, BDFPool, RadauCore, RadauPool, ImplicitCore, ImplicitPool
 com.curioloop.numopt4j.linalg            # Decomposer, Decomposition, Regression, Regressor
@@ -654,7 +654,7 @@ Integrator.improperFixed(ImproperOpts)    // → ImproperIntegral.Fixed
 Integrator.sampled(SampledRule)           // → SampledIntegral
 Integrator.cumulative(SampledRule)        // → CumulativeIntegral
 Integrator.filon(FilonOpts)               // → FilonIntegral
-Integrator.ode(ODE.Method)                // → ODEIntegral (ODE IVP solver)
+Integrator.ode(IVPMethod)                // → IVPIntegral (ODE IVP solver)
 ```
 
 ### FixedIntegral — Gauss-Legendre on [a, b]
@@ -843,17 +843,17 @@ double v1 = Integrator.fixed().function(f1).bounds(0,1).points(8).integrate(gws)
 double v2 = Integrator.fixed().function(f2).bounds(0,1).points(8).integrate(gws);
 ```
 
-## ODEIntegral — ODE Initial Value Problem Solver
+## IVPIntegral — ODE Initial Value Problem Solver
 
-`com.curioloop.numopt4j.quad.ode.ODEIntegral`
+`com.curioloop.numopt4j.quad.ode.IVPIntegral`
 
-Solves dy/dt = f(t, y), y(t₀) = y₀ using adaptive step-size methods. Entry point: `Integrator.ode(ODE.Method)`.
+Solves dy/dt = f(t, y), y(t₀) = y₀ using adaptive step-size methods. Entry point: `Integrator.ode(IVPMethod)`.
 
 ### Constructor / Factory
 
 ```java
-new ODEIntegral(ODE.Method method)          // direct construction
-Integrator.ode(ODE.Method method)           // via Integrator facade
+new IVPIntegral(IVPMethod method)          // direct construction
+Integrator.ode(IVPMethod method)           // via Integrator facade
 ```
 
 ### Builder Methods
@@ -870,10 +870,10 @@ Integrator.ode(ODE.Method method)           // via Integrator facade
 .denseOutput(boolean b)         // enable piecewise polynomial interpolant
 .detectors(ODEEvent... events)  // event detection
 .integrate()                    // → Trajectory
-.integrate(ODEPool workspace)   // with workspace reuse
+.integrate(IVPPool workspace)   // with workspace reuse
 ```
 
-### ODE.Method
+### IVPMethod
 
 | Method | Type | Order | Use case |
 |--------|------|-------|----------|
@@ -886,9 +886,9 @@ Integrator.ode(ODE.Method method)           // via Integrator facade
 ### Workspace Reuse
 
 ```java
-ODEPool ws = ODEIntegral.workspace(ODE.Method.RK45);
+IVPPool ws = IVPIntegral.workspace(IVPMethod.RK45);
 for (double[] y0 : initialConditions) {
-    Trajectory r = Integrator.ode(ODE.Method.RK45)
+    Trajectory r = Integrator.ode(IVPMethod.RK45)
         .equation(fn).bounds(0.0, 1.0).initialState(y0).integrate(ws);
 }
 ```
@@ -928,12 +928,12 @@ import com.curioloop.numopt4j.quad.Trajectory;
 import com.curioloop.numopt4j.quad.ode.*;
 
 // Non-stiff: dy/dt = -y
-Trajectory sol = Integrator.ode(ODE.Method.RK45)
+Trajectory sol = Integrator.ode(IVPMethod.RK45)
     .equation((t, y, dydt) -> dydt[0] = -y[0])
     .bounds(0.0, 5.0).initialState(1.0).integrate();
 
 // Stiff: Van der Pol (BDF)
-Trajectory stiff = Integrator.ode(ODE.Method.BDF)
+Trajectory stiff = Integrator.ode(IVPMethod.BDF)
     .equation((t, y, dydt) -> {
         dydt[0] = y[1];
         dydt[1] = 1000 * (1 - y[0]*y[0]) * y[1] - y[0];
@@ -945,18 +945,18 @@ ODE sys = (t, y, dydt, jac) -> {
     dydt[0] = -y[0];
     if (jac != null) jac[0] = -1.0;
 };
-Trajectory sol2 = Integrator.ode(ODE.Method.Radau).equation(sys)
+Trajectory sol2 = Integrator.ode(IVPMethod.Radau).equation(sys)
     .bounds(0.0, 5.0).initialState(1.0).integrate();
 
 // Dense output
-Trajectory dense = Integrator.ode(ODE.Method.RK45)
+Trajectory dense = Integrator.ode(IVPMethod.RK45)
     .equation((t, y, dydt) -> dydt[0] = -y[0])
     .bounds(0.0, 5.0).initialState(1.0).denseOutput(true).integrate();
 double[] out = new double[1];
 dense.denseOutput.interpolate(2.5, out);  // y(2.5)
 
 // Event detection: stop when y[0] hits zero (falling)
-Trajectory event = Integrator.ode(ODE.Method.RK45)
+Trajectory event = Integrator.ode(IVPMethod.RK45)
     .equation((t, y, dydt) -> { dydt[0] = y[1]; dydt[1] = -9.8; })
     .bounds(0.0, 100.0).initialState(0.0, 50.0)
     .detectors(new ODEEvent((t, y) -> y[0], ODEEvent.Trigger.FALLING, 1))

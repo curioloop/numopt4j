@@ -73,7 +73,7 @@ final class EventHandler {
      * @param y      state at step end
      * @return {@link Trajectory.EventPoint} if a terminal event fired, {@code null} otherwise
      */
-    public Trajectory.EventPoint process(ODECore<?> solver, double tOld, double t, double[] y) {
+    public Trajectory.EventPoint process(IVPCore<?> solver, double tOld, double t, double[] y) {
         int nd = events.length;
         for (int i = 0; i < nd; i++) gNew[i] = events[i].equation.evaluate(t, y);
 
@@ -168,7 +168,7 @@ final class EventHandler {
      * Locates the zero of {@code g(t, y(t))} within {@code [tOld, t]} using Brent's method.
      * Interpolates the state at each trial point via the solver's dense output.
      */
-    private double solveEventEquation(ODEEvent event, ODECore<?> solver,
+    private double solveEventEquation(ODEEvent event, IVPCore<?> solver,
                                       double tOld, double t) {
         double lo = Math.min(tOld, t), hi = Math.max(tOld, t);
         return BrentqSolver.findRoot(

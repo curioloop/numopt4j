@@ -2,7 +2,7 @@ package com.curioloop.numopt4j.quad.ode.rk;
 
 import com.curioloop.numopt4j.linalg.blas.BLAS;
 import com.curioloop.numopt4j.quad.ode.ODE;
-import com.curioloop.numopt4j.quad.ode.ODECore;
+import com.curioloop.numopt4j.quad.ode.IVPCore;
 
 /**
  * Generic explicit Runge-Kutta stepping core, strictly following scipy rk.py RungeKutta._step_impl and rk_step.
@@ -12,7 +12,7 @@ import com.curioloop.numopt4j.quad.ode.ODECore;
  *
  * <p>All vector operations use hand-written loops, reusing buffers in {@link RungeKuttaPool}, zero allocation in hot path.</p>
  */
-public class RungeKuttaCore extends ODECore<RungeKuttaPool> {
+public class RungeKuttaCore extends IVPCore<RungeKuttaPool> {
 
     // Step size control constants (corresponding to scipy rk.py)
     private static final double SAFETY     = 0.9;
@@ -27,7 +27,7 @@ public class RungeKuttaCore extends ODECore<RungeKuttaPool> {
 
     private final double maxStep;
     private final double rtol;
-    private final double atol;
+    private final double[] atol;
 
 
     // -----------------------------------------------------------------------
@@ -37,7 +37,7 @@ public class RungeKuttaCore extends ODECore<RungeKuttaPool> {
     private RungeKuttaCore(
             ODE.Equation fun,
             double t0, double[] y0, double tBound,
-            double rtol, double atol, double maxStep, double firstStep,
+            double rtol, double[] atol, double maxStep, double firstStep,
             RungeKuttaPool ws,
             ButcherTableau tab) {
 
@@ -70,7 +70,7 @@ public class RungeKuttaCore extends ODECore<RungeKuttaPool> {
     /** Creates a RK23 (Bogacki-Shampine 3(2) order) solver. */
     public static RungeKuttaCore rk23(
             ODE.Equation fun, double t0, double[] y0, double tBound,
-            double rtol, double atol, double maxStep, double firstStep,
+            double rtol, double[] atol, double maxStep, double firstStep,
             RungeKuttaPool ws) {
         return new RungeKuttaCore(fun, t0, y0, tBound, rtol, atol, maxStep, firstStep, ws,
                 ButcherTableau.RK23);
@@ -79,7 +79,7 @@ public class RungeKuttaCore extends ODECore<RungeKuttaPool> {
     /** Creates a RK45 (Dormand-Prince 5(4) order) solver. */
     public static RungeKuttaCore rk45(
             ODE.Equation fun, double t0, double[] y0, double tBound,
-            double rtol, double atol, double maxStep, double firstStep,
+            double rtol, double[] atol, double maxStep, double firstStep,
             RungeKuttaPool ws) {
         return new RungeKuttaCore(fun, t0, y0, tBound, rtol, atol, maxStep, firstStep, ws,
                 ButcherTableau.RK45);
@@ -88,7 +88,7 @@ public class RungeKuttaCore extends ODECore<RungeKuttaPool> {
     /** Creates a DOP853 (8(5,3) order) solver. */
     public static RungeKuttaCore dop853(
             ODE.Equation fun, double t0, double[] y0, double tBound,
-            double rtol, double atol, double maxStep, double firstStep,
+            double rtol, double[] atol, double maxStep, double firstStep,
             RungeKuttaPool ws) {
         return new RungeKuttaCore(fun, t0, y0, tBound, rtol, atol, maxStep, firstStep, ws,
                 ButcherTableau.DOP853);
@@ -97,7 +97,7 @@ public class RungeKuttaCore extends ODECore<RungeKuttaPool> {
     /** Creates a solver from a custom {@link ButcherTableau}. */
     public static RungeKuttaCore of(
             ODE.Equation fun, double t0, double[] y0, double tBound,
-            double rtol, double atol, double maxStep, double firstStep,
+            double rtol, double[] atol, double maxStep, double firstStep,
             RungeKuttaPool ws, ButcherTableau tableau) {
         return new RungeKuttaCore(fun, t0, y0, tBound, rtol, atol, maxStep, firstStep, ws, tableau);
     }
@@ -150,7 +150,7 @@ public class RungeKuttaCore extends ODECore<RungeKuttaPool> {
             double[] yNew  = ws.yTmp;
             double[] scale = ws.errBuf;
             for (int i = 0; i < n; i++) {
-                scale[i] = atol + Math.max(Math.abs(y[i]), Math.abs(yNew[i])) * rtol;
+                scale[i] = atol(atol, i) + Math.max(Math.abs(y[i]), Math.abs(yNew[i])) * rtol;
             }
 
             // Error norm

@@ -3,12 +3,12 @@
  */
 package com.curioloop.numopt4j.quad.ode.implicit;
 
-import com.curioloop.numopt4j.quad.ode.ODEPool;
+import com.curioloop.numopt4j.quad.ode.IVPPool;
 
 /**
  * Shared workspace base class for implicit ODE solvers (BDF and Radau).
  *
- * <p>Extends {@link ODEPool} with the buffers needed by all implicit methods:
+ * <p>Extends {@link IVPPool} with the buffers needed by all implicit methods:
  * <ul>
  *   <li>{@link #jacBuf} — n×n Jacobian matrix (row-major).</li>
  *   <li>{@link #newtonBuf} — Newton iteration increment vector.</li>
@@ -19,7 +19,7 @@ import com.curioloop.numopt4j.quad.ode.ODEPool;
  *
  * <p>Concrete subclasses ({@link BDFPool}, {@link RadauPool}) add method-specific buffers.</p>
  */
-public abstract class ImplicitPool extends ODEPool {
+public abstract class ImplicitPool extends IVPPool {
 
     /**
      * Jacobian buffer, n×n, row-major: {@code jacBuf[i*n+j] = ∂fᵢ/∂yⱼ}.

@@ -3,18 +3,18 @@
  */
 package com.curioloop.numopt4j.quad;
 
+import com.curioloop.numopt4j.quad.ode.IVPIntegral;
+import com.curioloop.numopt4j.quad.ode.IVPPool;
 import com.curioloop.numopt4j.quad.ode.ODEEvent;
-import com.curioloop.numopt4j.quad.ode.ODEIntegral;
-import com.curioloop.numopt4j.quad.ode.ODEPool;
 
 /**
- * Result of an ODE initial value problem integration performed by {@link ODEIntegral}.
+ * Result of an ODE initial value problem integration performed by {@link IVPIntegral}.
  *
  * <p>Carries:
  * <ul>
  *   <li>{@link #timeSeries} — time points and corresponding state vectors.</li>
  *   <li>{@link #denseOutput} — piecewise polynomial interpolant (non-null only when
- *       {@link ODEIntegral#denseOutput(boolean) denseOutput(true)} was requested).</li>
+ *       {@link IVPIntegral#denseOutput(boolean) denseOutput(true)} was requested).</li>
  *   <li>{@link #events} — per-detector event records (non-null only when detectors were registered).</li>
  *   <li>Solver statistics: {@link #getFunctionEvaluations()}, {@link #getJacobianEvaluations()},
  *       {@link #getLuDecompositions()}.</li>
@@ -153,7 +153,7 @@ public class Trajectory {
      * <p>Internally, binary-searches for the step containing the query time, then delegates
      * to the pool's method-specific interpolation logic.</p>
      *
-     * <p>Only available when {@link ODEIntegral#denseOutput(boolean) denseOutput(true)} was set.</p>
+     * <p>Only available when {@link IVPIntegral#denseOutput(boolean) denseOutput(true)} was set.</p>
      */
     public static final class DenseOutput {
 
@@ -164,10 +164,10 @@ public class Trajectory {
         private final double  tMin, tMax;
         private final boolean forward;
         private final int     n;
-        private final ODEPool pool;
+        private final IVPPool pool;
 
         public DenseOutput(double[] tBounds, double[][] coeffs,
-                    double t0, double tf, int n, ODEPool pool) {
+                    double t0, double tf, int n, IVPPool pool) {
             this.tBounds = tBounds;
             this.coeffs  = coeffs;
             this.tMin    = Math.min(t0, tf);
@@ -215,7 +215,7 @@ public class Trajectory {
 
     /**
      * Dense-output interpolant, or {@code null} when not requested.
-     * Request via {@link ODEIntegral#denseOutput(boolean) denseOutput(true)}.
+     * Request via {@link IVPIntegral#denseOutput(boolean) denseOutput(true)}.
      */
     public final DenseOutput denseOutput;
 

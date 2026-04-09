@@ -102,20 +102,20 @@ public class BDFCore extends ImplicitCore<BDFPool> {
      * @param firstStep initial step size (NaN = auto-estimate)
      * @param ws       workspace (null = auto-allocate)
      */
-    public BDFCore(ODE.Equation fun, ODE ode,
+    public BDFCore(ODE.Equation rhs, ODE ode,
                    double t0, double[] y0, double tBound,
-                   double rtol, double atol, double maxStep, double firstStep,
+                   double rtol, double[] atol, double maxStep, double firstStep,
                    BDFPool ws) {
-        super(y0.length, t0, y0, tBound, ws, fun, ode, rtol, atol, maxStep);
+        super(y0.length, t0, y0, tBound, ws, rhs, ode, rtol, atol, maxStep);
         ws.ensure(n);
 
         // Compute initial f(t0, y0)
-        fun.evaluate(t0, this.y, this.f);
+        this.fun.evaluate(t0, this.y, this.f);
         nfev++;
 
         // Initial step size
         if (Double.isNaN(firstStep)) {
-            this.hAbs = selectInitialStep(fun, t0, y0, this.f, 1, rtol, atol, maxStep,
+            this.hAbs = selectInitialStep(this.fun, t0, y0, this.f, 1, rtol, atol, maxStep,
                     this.ws.yTmp, this.ws.fTmp);
         } else {
             this.hAbs = Math.abs(firstStep);
@@ -208,7 +208,7 @@ public class BDFCore extends ImplicitCore<BDFPool> {
             // scale = atol + rtol * |y_predict|
             double[] scale = ws.scaleBuf;
             for (int i = 0; i < n; i++) {
-                scale[i] = atol + rtol * Math.abs(yPredict[i]);
+                scale[i] = atol(atol, i) + rtol * Math.abs(yPredict[i]);
             }
 
             double c = h / ALPHA[order];
@@ -263,7 +263,7 @@ public class BDFCore extends ImplicitCore<BDFPool> {
 
             // Recompute scale using y_new
             for (int i = 0; i < n; i++) {
-                scale[i] = atol + rtol * Math.abs(yNew[i]);
+                scale[i] = atol(atol, i) + rtol * Math.abs(yNew[i]);
             }
 
             double errorConst = ERROR_CONST[order];

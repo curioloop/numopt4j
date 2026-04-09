@@ -120,20 +120,20 @@ public class RadauCore extends ImplicitCore<RadauPool> {
      * @param firstStep initial step size (NaN = auto-estimate)
      * @param ws        workspace (null = auto-allocate)
      */
-    public RadauCore(ODE.Equation fun, ODE ode,
+    public RadauCore(ODE.Equation rhs, ODE ode,
                      double t0, double[] y0, double tBound,
-                     double rtol, double atol, double maxStep, double firstStep,
+                     double rtol, double[] atol, double maxStep, double firstStep,
                      RadauPool ws) {
-        super(y0.length, t0, y0, tBound, ws, fun, ode, rtol, atol, maxStep);
+        super(y0.length, t0, y0, tBound, ws, rhs, ode, rtol, atol, maxStep);
         ws.ensure(n);
 
         // Compute initial f(t0, y0)
-        fun.evaluate(t0, this.y, this.f);
+        this.fun.evaluate(t0, this.y, this.f);
         nfev++;
 
         // Initial step size
         if (Double.isNaN(firstStep)) {
-            this.hAbs = selectInitialStep(fun, t0, y0, this.f, 3, rtol, atol, maxStep,
+            this.hAbs = selectInitialStep(this.fun, t0, y0, this.f, 3, rtol, atol, maxStep,
                     this.ws.yTmp, this.ws.fTmp);
         } else {
             this.hAbs = Math.abs(firstStep);
@@ -210,7 +210,7 @@ public class RadauCore extends ImplicitCore<RadauPool> {
             // scale = atol + |y| * rtol
             double[] scale = ws.scaleBuf;
             for (int i = 0; i < n; i++) {
-                scale[i] = atol + Math.abs(y[i]) * rtol;
+                scale[i] = atol(atol, i) + Math.abs(y[i]) * rtol;
             }
 
             boolean converged = false;
@@ -263,7 +263,7 @@ public class RadauCore extends ImplicitCore<RadauPool> {
 
             // scale = atol + max(|y|, |y_new|) * rtol
             for (int i = 0; i < n; i++) {
-                scale[i] = atol + Math.max(Math.abs(y[i]), Math.abs(yNew[i])) * rtol;
+                scale[i] = atol(atol, i) + Math.max(Math.abs(y[i]), Math.abs(yNew[i])) * rtol;
             }
 
             double safety = 0.9 * (2.0 * NEWTON_MAXITER + 1.0) / (2.0 * NEWTON_MAXITER + nIter);

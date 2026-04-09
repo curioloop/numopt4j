@@ -3,7 +3,7 @@
  */
 package com.curioloop.numopt4j.quad.ode.rk;
 
-import com.curioloop.numopt4j.quad.ode.ODEPool;
+import com.curioloop.numopt4j.quad.ode.IVPPool;
 
 /**
  * Workspace for explicit Runge-Kutta solvers (RK23, RK45, DOP853).
@@ -14,7 +14,7 @@ import com.curioloop.numopt4j.quad.ode.ODEPool;
  * <p>For DOP853, {@code KExtended} contains both the main stages and the extra stages
  * needed for dense output; {@code K} is a view of the first {@code (nStages+1)*n} elements.</p>
  */
-public class RungeKuttaPool extends ODEPool {
+public class RungeKuttaPool extends IVPPool {
 
     /**
      * Stage slope matrix, shape {@code (nStages+1) × n}, row-major.
