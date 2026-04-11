@@ -2,6 +2,7 @@
  * Copyright (c) 2025 curioloop. All rights reserved.
  */
 package com.curioloop.numopt4j.quad.gauss;
+
 import java.util.Objects;
 
 import com.curioloop.numopt4j.quad.gauss.rule.GeneralizedHermiteRule;
@@ -58,84 +59,141 @@ public interface GaussRule {
      *
      * <p>Given the three-term recurrence
      *   p_{n+1}(x) = (x − αₙ)·pₙ(x) − βₙ·p_{n−1}(x),
-     * the quadrature nodes are the eigenvalues of the symmetric tridiagonal matrix
+     * the quadrature nodes are the eigenvalues of the symmetric tridiagonal Jacobi matrix
      *   J = diag(α₀,…,αₙ₋₁) + off-diag(√β₁,…,√βₙ₋₁),
      * and the weights are wᵢ = μ₀·v₀ᵢ² where v₀ᵢ is the first component of the
-     * i-th normalised eigenvector.  The eigendecomposition uses LAPACK dsteqr.</p>
+     * i-th normalised eigenvector.</p>
      *
-     * @param workspace reusable rule-generation workspace, must not be null
+     * <p>Implementation: Wilkinson-shift implicit QL iteration tracking only the first
+     * row of the accumulated orthogonal matrix Q (QuantLib {@code TqrEigenDecomposition}
+     * with {@code OnlyFirstRowEigenVector}).  Each Givens rotation updates two scalars
+     * instead of n values, reducing per-iteration cost from O(n) to O(1).
+     * Temporary storage is O(n): {@code diag} and {@code sub} reuse the pool arena;
+     * only {@code ev0[n]} (first eigenvector row) is separately allocated.</p>
+     *
+     * <p>After convergence, eigenvalues are sorted in descending order and each
+     * eigenvector component is normalised to be non-negative, matching QuantLib
+     * convention.</p>
+     *
+     * @param workspace reusable rule-generation workspace; arena must be sized for
+     *                  at least {@code 2·points} doubles (nodes + weights regions)
      */
     default void generate(GaussPool workspace) {
         int n = workspace.points;
         if (n <= 0) throw new IllegalArgumentException("points must be > 0");
         Objects.requireNonNull(workspace, "workspace must not be null");
 
-        // Arena layout: [nodes(n) | weights(n)] — total 2n doubles.
-        // During QR iteration we reuse this space:
-        //   arena[0..n-1]   → diag (diagonal αₖ, later eigenvalues)
-        //   arena[n..2n-1]  → sub  (off-diagonal βₖ, 1-indexed: sub[0] unused)
-        // Only ev0 (first row of Q) needs a separate allocation.
+        // Arena layout during QR iteration:
+        //   arena[dOff .. dOff+n-1]   — diagonal αₖ, overwritten with eigenvalues (nodes)
+        //   arena[sOff .. sOff+n-1]   — sub-diagonal βₖ (1-indexed: sOff+0 unused,
+        //                               sOff+k = βₖ for k=1..n-1), later overwritten
+        //                               with weights
         double[] arena = workspace.arena();
-        int dOff = workspace.nodesOffset();    // diag lives at arena[0..n-1]
-        int sOff = workspace.weightsOffset();  // sub  lives at arena[n..2n-1]
+        int dOff = workspace.nodesOffset();    // nodes region  → diag during QR
+        int sOff = workspace.weightsOffset();  // weights region → sub  during QR
 
-        // fillJacobi writes n diagonal entries at dOff and n-1 off-diagonal entries at sOff+1.
-        // sub is 1-indexed: arena[sOff+0] is unused, arena[sOff+k] = βₖ for k=1..n-1.
+        // Step 1: fill Jacobi matrix into arena.
+        // fillJacobi writes n diagonal entries at dOff and n-1 off-diagonal entries
+        // starting at sOff+1 (so sub is 1-indexed: arena[sOff+k] = βₖ for k=1..n-1).
         fillJacobi(n, arena, dOff, arena, sOff + 1);
-        arena[sOff] = 0.0; // sub[0] unused, ensure clean
+        arena[sOff] = 0.0; // sub[0] unused; zero it for a clean convergence check
 
+        // Step 2: initialise ev0 as the first row of the n×n identity matrix.
+        // ev0[j] tracks Q[0][j] — the first component of each accumulated Givens rotation.
         double[] ev0 = new double[n];
-        ev0[0] = 1.0;  // first row of identity: e₀ = [1, 0, ..., 0]
+        ev0[0] = 1.0;
 
-        // Wilkinson-shift QL iteration (QuantLib TqrEigenDecomposition, first-row-only variant)
+        // Step 3: Wilkinson-shift QL iteration.
+        // Outer loop deflates one eigenvalue per pass (k counts down from n-1 to 1).
         for (int k = n - 1; k >= 1; k--) {
             while (!offDiagIsZero(k, arena, dOff, arena, sOff)) {
+                // Find the start l of the active sub-block [l..k].
                 int l = k;
                 while (l > 0 && !offDiagIsZero(l, arena, dOff, arena, sOff)) l--;
 
-                // Wilkinson shift: eigenvalue of the trailing 2×2 sub-matrix closest to diag[k]
-                double dk  = arena[dOff + k], dk1 = arena[dOff + k - 1], sk = arena[sOff + k];
+                // Wilkinson shift: eigenvalue of the trailing 2×2 sub-matrix closest to diag[k].
+                // Overrelaxation (×1.25) on the first pass (k == n-1) matches QuantLib's
+                // Overrelaxation strategy and improves convergence for the largest eigenvalue.
+                double dk = arena[dOff + k];
+                double dk1 = arena[dOff + k - 1];
+                double sk = arena[sOff + k];
                 double t1 = Math.sqrt(0.25 * (dk * dk + dk1 * dk1) - 0.5 * dk1 * dk + sk * sk);
                 double t2 = 0.5 * (dk + dk1);
-                double lambda = (Math.abs(t2 + t1 - dk) < Math.abs(t2 - t1 - dk))
-                        ? t2 + t1 : t2 - t1;
-                double q = arena[dOff + l] - lambda;
+                double lambda = Math.abs(t2 + t1 - dk) < Math.abs(t2 - t1 - dk)
+                        ? t2 + t1
+                        : t2 - t1;
+                double q = arena[dOff + l] - ((k == n - 1) ? 1.25 : 1.0) * lambda;
 
-                // QR sweep from l+1 to k
-                double sine = 1.0, cosine = 1.0, u = 0.0;
+                // QR sweep: apply a sequence of Givens rotations from l+1 to k.
+                double sine = 1.0;
+                double cosine = 1.0;
+                double u = 0.0;
                 boolean underflow = false;
                 for (int i = l + 1; i <= k && !underflow; i++) {
                     double h = cosine * arena[sOff + i];
-                    double p = sine   * arena[sOff + i];
+                    double p = sine * arena[sOff + i];
+
                     arena[sOff + i - 1] = Math.sqrt(p * p + q * q);
                     if (arena[sOff + i - 1] != 0.0) {
-                        sine   = p / arena[sOff + i - 1];
+                        sine = p / arena[sOff + i - 1];
                         cosine = q / arena[sOff + i - 1];
+
                         double g = arena[dOff + i - 1] - u;
                         double t = (arena[dOff + i] - g) * sine + 2.0 * cosine * h;
                         u = sine * t;
                         arena[dOff + i - 1] = g + u;
                         q = cosine * t - h;
-                        // update only the first row of Q
+
+                        // Update only the first row of Q (O(1) instead of O(n)).
                         double e = ev0[i - 1];
                         ev0[i - 1] = sine * ev0[i] + cosine * e;
-                        ev0[i]     = cosine * ev0[i] - sine * e;
-                    } else {
+                        ev0[i] = cosine * ev0[i] - sine * e;
+                    }
+                    else {
+                        // Recover from underflow: sub-diagonal element collapsed to zero.
                         arena[dOff + i - 1] -= u;
                         arena[sOff + l] = 0.0;
                         underflow = true;
                     }
                 }
+
                 if (!underflow) {
                     arena[dOff + k] -= u;
-                    arena[sOff + k]  = q;
-                    arena[sOff + l]  = 0.0;
+                    arena[sOff + k] = q;
+                    arena[sOff + l] = 0.0;
                 }
             }
         }
 
-        // arena[dOff..dOff+n-1] now holds eigenvalues (nodes).
-        // Compute weights = μ₀·v₀ᵢ² and write into arena[sOff..sOff+n-1].
+        // Step 4: sort eigenvalues in descending order, carrying ev0 along.
+        // Also normalise each ev0[i] to be non-negative (QuantLib convention:
+        // the first component of every eigenvector is non-negative).
+        for (int i = 0; i < n - 1; i++) {
+            int best = i;
+            for (int j = i + 1; j < n; j++) {
+                if (arena[dOff + j] > arena[dOff + best]) {
+                    best = j;
+                }
+            }
+            if (best != i) {
+                double d = arena[dOff + i];
+                arena[dOff + i] = arena[dOff + best];
+                arena[dOff + best] = d;
+
+                double e = ev0[i];
+                ev0[i] = ev0[best];
+                ev0[best] = e;
+            }
+            if (ev0[i] < 0.0) {
+                ev0[i] = -ev0[i];
+            }
+        }
+        if (ev0[n - 1] < 0.0) {
+            ev0[n - 1] = -ev0[n - 1];
+        }
+
+        // Step 5: compute weights wᵢ = μ₀·v₀ᵢ² and write into the weights region.
+        // arena[dOff..] already holds the sorted eigenvalues (nodes).
         double mu0 = zeroMoment();
         for (int j = 0; j < n; j++) {
             arena[sOff + j] = mu0 * ev0[j] * ev0[j];

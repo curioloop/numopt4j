@@ -23,6 +23,9 @@ import java.util.function.DoubleUnaryOperator;
  * and any {@link JacobiRule} (∫_{−1}^{1} (1−x)^α (1+x)^β f dx).</p>
  *
  * <p>Minimum required setters: {@code .function()}, {@code .points()}, {@code .rule()}.</p>
+ *
+ * <p>Accumulation uses reverse compensated summation to reduce cancellation error
+ * on high-order weighted rules.</p>
  */
 public class WeightedIntegral implements Integral<Double, GaussPool> {
 
@@ -60,9 +63,18 @@ public class WeightedIntegral implements Integral<Double, GaussPool> {
         }
         GaussPool pool = workspace.ensure(points, rule);
 
+        double[] arena = pool.arena();
+        int nodeOffset = pool.nodesOffset();
+        int weightOffset = pool.weightsOffset();
+
         double sum = 0.0;
-        for (int i = 0; i < points; i++) {
-            sum += pool.weightAt(i) * function.applyAsDouble(pool.nodeAt(i));
+        double compensation = 0.0;
+        for (int i = points - 1; i >= 0; --i) {
+            double term = arena[weightOffset + i] * function.applyAsDouble(arena[nodeOffset + i]);
+            double adjusted = term - compensation;
+            double updated = sum + adjusted;
+            compensation = (updated - sum) - adjusted;
+            sum = updated;
         }
         return sum;
     }

@@ -75,9 +75,20 @@ public class FixedIntegral implements Integral<Double, GaussPool> {
 
         double center = 0.5 * (min + max);
         double halfWidth = 0.5 * (max - min);
+
+        double[] arena = pool.arena();
+        int nodeOffset = pool.nodesOffset();
+        int weightOffset = pool.weightsOffset();
+
         double sum = 0.0;
-        for (int i = 0; i < points; i++) {
-            sum += pool.weightAt(i) * function.applyAsDouble(center + halfWidth * pool.nodeAt(i));
+        double compensation = 0.0;
+        for (int i = points - 1; i >= 0; --i) {
+            double mappedNode = center + halfWidth * arena[nodeOffset + i];
+            double term = arena[weightOffset + i] * function.applyAsDouble(mappedNode);
+            double adjusted = term - compensation;
+            double updated = sum + adjusted;
+            compensation = (updated - sum) - adjusted;
+            sum = updated;
         }
         return halfWidth * sum;
     }
