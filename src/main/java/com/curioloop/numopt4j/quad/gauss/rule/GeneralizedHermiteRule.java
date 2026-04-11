@@ -68,4 +68,14 @@ public final class GeneralizedHermiteRule implements GaussRule {
             arena[offDiag + i - 1] = Math.sqrt(val);
         }
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof GeneralizedHermiteRule)) return false;
+        return Double.compare(s, ((GeneralizedHermiteRule) o).s) == 0;
+    }
+
+    @Override
+    public int hashCode() { return Double.hashCode(s); }
 }

@@ -159,8 +159,7 @@ public abstract class ImproperIntegral<T extends ImproperIntegral<T>> {
                 if (this.workspace == null) this.workspace = new GaussPool();
                 workspace = this.workspace;
             }
-            GaussPool pool = workspace.ensure(points);
-            GaussRule.legendre().generate(points, pool);
+            GaussPool pool = workspace.ensure(points, GaussRule.legendre());
             double sum = 0.0;
             switch (opts) {
                 case UPPER:

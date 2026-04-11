@@ -77,8 +77,7 @@ final class EndpointSingularCore {
 
         for (int level = 0; level < maxRefinements; level++) {
             int points = INITIAL_POINTS << level;
-            workspace.ensure(points);
-            rule.generate(points, workspace);
+            workspace.ensure(points, rule);
 
             double value = 0.0;
             for (int i = 0; i < points; i++) {

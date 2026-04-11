@@ -118,28 +118,27 @@ public class FilonIntegral implements Integral<Double, Void> {
         final double beta  = 2.0 * ((1 + cosT * cosT) / theta2 - sin2T / theta3);
         final double gamma = 4.0 * (sinT / theta3 - cosT / theta2);
 
-        // Evaluate f at all 2n+1 equally spaced points
-        final double[] x = new double[2 * n + 1];
-        final double[] v = new double[2 * n + 1];
-        for (int i = 0; i <= 2 * n; i++) {
-            x[i] = min + i * h;
-            v[i] = function.applyAsDouble(x[i]);
-        }
-
-        // Even-indexed sum C_{2n} and odd-indexed sum C_{2n+1}
-        // trig2 = cos (cosine kernel) or sin (sine kernel)
-        double c2n  = v[0] * trig2(t * x[0])
-                    - 0.5 * (v[2 * n] * trig2(t * x[2 * n]) + v[0] * trig2(t * x[0]));
-        double c2n1 = 0.0;
-        for (int i = 1; i <= n; i++) {
-            c2n  += v[2 * i]     * trig2(t * x[2 * i]);
-            c2n1 += v[2 * i - 1] * trig2(t * x[2 * i - 1]);
-        }
-
-        // trig1 = sin (cosine kernel) or cos (sine kernel)
+        // Evaluate f and accumulate sums in a single pass — no x[] array needed.
+        // trig1 = sin (cosine kernel) or cos (sine kernel)  — used for endpoint terms
+        // trig2 = cos (cosine kernel) or sin (sine kernel)  — used for C_{2n}, C_{2n+1}
         // sign  = +1 (cosine) or -1 (sine)
         final double sign = (opts == FilonOpts.COS) ? 1.0 : -1.0;
-        return h * (alpha * (v[2 * n] * trig1(t * x[2 * n]) - v[0] * trig1(t * x[0])) * sign
+
+        // Endpoint values (needed for both the alpha term and the C_{2n} boundary correction)
+        final double x0   = min,          xEnd = min + 2 * n * h;
+        final double v0   = function.applyAsDouble(x0);
+        final double vEnd = function.applyAsDouble(xEnd);
+
+        // C_{2n}: trapezoidal-style sum over even-indexed points
+        //   = 0.5*v0*trig2(t*x0) + v2 * trig2(t*x2) + ... + 0.5*vEnd*trig2(t*xEnd)
+        double c2n  = 0.5 * (v0 * trig2(t * x0) + vEnd * trig2(t * xEnd));
+        double c2n1 = 0.0;
+        for (int i = 1; i <= n; i++) {
+            if (i < n) c2n += function.applyAsDouble(min + 2 * i * h) * trig2(t * (min + 2 * i * h));
+            c2n1 += function.applyAsDouble(min + (2 * i - 1) * h) * trig2(t * (min + (2 * i - 1) * h));
+        }
+
+        return h * (alpha * (vEnd * trig1(t * xEnd) - v0 * trig1(t * x0)) * sign
                   + beta  * c2n
                   + gamma * c2n1);
     }

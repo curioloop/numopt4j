@@ -57,4 +57,14 @@ public final class GeneralizedLaguerreRule implements GaussRule {
         for (int i = 1; i < n; i++)
             arena[offDiag + i - 1] = Math.sqrt((double) i * (i + s));
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof GeneralizedLaguerreRule)) return false;
+        return Double.compare(s, ((GeneralizedLaguerreRule) o).s) == 0;
+    }
+
+    @Override
+    public int hashCode() { return Double.hashCode(s); }
 }

@@ -21,12 +21,33 @@ public final class GaussPool {
     int spectrumOffset;
     int offDiagonalOffset;
     int workOffset;
+    GaussRule cachedRule;
 
     public GaussPool() {}
 
+    /**
+     * Ensures the arena is sized for {@code points}, then generates nodes and weights
+     * for {@code rule} if the cached result does not already match.
+     *
+     * <p>The cache is keyed on {@code (points, rule)} using {@link Object#equals}.
+     * Stateless singleton rules (Legendre, Laguerre, Hermite) hit the cache by identity;
+     * parameterized rules (Jacobi, GeneralizedLaguerre, GeneralizedHermite) must implement
+     * {@code equals}/{@code hashCode} for the cache to be effective.</p>
+     *
+     * @return {@code true} if nodes/weights were recomputed, {@code false} if the cache was hit
+     */
+    public GaussPool ensure(int points, GaussRule rule) {
+        ensure(points);
+        if (!rule.equals(cachedRule)) {
+            rule.generate(this);
+            cachedRule = rule;
+        }
+        return this;
+    }
+
     /** Ensures the arena can hold buffers for a rule with the given number of points. */
-    public GaussPool ensure(int points) {
-        if (this.points == points && arena != null) return this; // fast path: already sized
+    private void ensure(int points) {
+        if (this.points == points && arena != null) return; // fast path: already sized
         long matrixSize = (long) points * points;
         long total = 2L * points + matrixSize + points + Math.max(0, points - 1L) + Math.max(1L, 2L * points);
         if (total > Integer.MAX_VALUE) throw new IllegalArgumentException("points too large for quadrature workspace");
@@ -40,7 +61,7 @@ public final class GaussPool {
         int required = workOffset + Math.max(1, 2 * points);
         if (arena == null || arena.length < required) arena = new double[required];
         this.points = points;
-        return this;
+        cachedRule = null; // arena resized, cached nodes/weights are invalid
     }
 
     public double[] arena()        { return arena; }

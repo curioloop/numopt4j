@@ -60,13 +60,12 @@ public interface GaussRule {
      * and the weights are wᵢ = μ₀·v₀ᵢ² where v₀ᵢ is the first component of the
      * i-th normalised eigenvector.  The eigendecomposition uses LAPACK dsteqr.</p>
      *
-     * @param points    number of quadrature points, must be positive
      * @param workspace reusable rule-generation workspace, must not be null
      */
-    default void generate(int points, GaussPool workspace) {
+    default void generate(GaussPool workspace) {
+        int points = workspace.points;
         if (points <= 0) throw new IllegalArgumentException("points must be > 0");
         Objects.requireNonNull(workspace, "workspace must not be null");
-        workspace.ensure(points);
         double[] arena = workspace.arena();
         int mat = workspace.matrixOffset(), spec = workspace.spectrumOffset();
         int offDiag = workspace.offDiagonalOffset(), nodes = workspace.nodesOffset();

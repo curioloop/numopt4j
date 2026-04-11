@@ -71,4 +71,17 @@ public final class JacobiRule implements GaussRule {
         if (!Double.isFinite(value)) throw new IllegalArgumentException(name + " must be finite");
         if (value <= -1.0) throw new IllegalArgumentException(name + " must be > -1");
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof JacobiRule)) return false;
+        JacobiRule that = (JacobiRule) o;
+        return Double.compare(alpha, that.alpha) == 0 && Double.compare(beta, that.beta) == 0;
+    }
+
+    @Override
+    public int hashCode() {
+        return 31 * Double.hashCode(alpha) + Double.hashCode(beta);
+    }
 }

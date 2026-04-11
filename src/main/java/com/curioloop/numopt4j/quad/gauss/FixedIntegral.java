@@ -71,8 +71,7 @@ public class FixedIntegral implements Integral<Double, GaussPool> {
             if (this.workspace == null) this.workspace = new GaussPool();
             workspace = this.workspace;
         }
-        GaussPool pool = workspace.ensure(points);
-        GaussRule.legendre().generate(points, pool);
+        GaussPool pool = workspace.ensure(points, GaussRule.legendre());
 
         double center = 0.5 * (min + max);
         double halfWidth = 0.5 * (max - min);
