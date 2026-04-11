@@ -73,10 +73,10 @@ final class GK15Core {
 
     private GK15Core() {}
 
-    static Quadrature integrate(DoubleUnaryOperator f, double min, double max,
-                                double absTol, double relTol,
-                                int maxSubdivisions, int maxEvaluations,
-                                AdaptivePool workspace) {
+    static Quadrature.Status integrate(DoubleUnaryOperator f, double min, double max,
+                                       double absTol, double relTol,
+                                       int maxSubdivisions, int maxEvaluations,
+                                       AdaptivePool workspace) {
         AdaptivePool pool = workspace.ensure(maxSubdivisions);
         double[] arena = pool.arena();
         int[] heap = pool.heap();
@@ -93,8 +93,9 @@ final class GK15Core {
 
         int r0 = gk15(f, min, max, left);
         if (r0 > 0) {
-            return new Quadrature(Double.NaN, Double.NaN,
-                    Quadrature.Status.ABNORMAL_TERMINATION, 0, r0);
+            pool.resultValue = Double.NaN; pool.resultError = Double.NaN;
+            pool.resultIterations = 0;     pool.resultEvaluations = r0;
+            return Quadrature.Status.ABNORMAL_TERMINATION;
         }
 
         arena[leftOffset]     = min;
@@ -114,12 +115,14 @@ final class GK15Core {
 
         while (totalError > tolerance(absTol, relTol, totalEstimate)) {
             if (count >= maxSubdivisions) {
-                return new Quadrature(totalEstimate, totalError,
-                        Quadrature.Status.MAX_SUBDIVISIONS_REACHED, iterations, evaluations);
+                pool.resultValue = totalEstimate; pool.resultError = totalError;
+                pool.resultIterations = iterations; pool.resultEvaluations = evaluations;
+                return Quadrature.Status.MAX_SUBDIVISIONS_REACHED;
             }
             if (evaluations + 30 > maxEvaluations) {
-                return new Quadrature(totalEstimate, totalError,
-                        Quadrature.Status.MAX_EVALUATIONS_REACHED, iterations, evaluations);
+                pool.resultValue = totalEstimate; pool.resultError = totalError;
+                pool.resultIterations = iterations; pool.resultEvaluations = evaluations;
+                return Quadrature.Status.MAX_EVALUATIONS_REACHED;
             }
 
             int split = heapPop(heap, --heapSize, arena, errorOffset);
@@ -127,8 +130,9 @@ final class GK15Core {
             double hi  = arena[rightOffset + split];
             double mid = 0.5 * (lo + hi);
             if (!(lo < mid && mid < hi)) {
-                return new Quadrature(totalEstimate, totalError,
-                        Quadrature.Status.ROUND_OFF_DETECTED, iterations, evaluations);
+                pool.resultValue = totalEstimate; pool.resultError = totalError;
+                pool.resultIterations = iterations; pool.resultEvaluations = evaluations;
+                return Quadrature.Status.ROUND_OFF_DETECTED;
             }
 
             double oldEstimate = arena[estimateOffset + split];
@@ -138,8 +142,9 @@ final class GK15Core {
             int rR = gk15(f, mid, hi, right);
             evaluations += Math.abs(rL) + Math.abs(rR);
             if (rL > 0 || rR > 0) {
-                return new Quadrature(Double.NaN, Double.NaN,
-                        Quadrature.Status.ABNORMAL_TERMINATION, iterations, evaluations);
+                pool.resultValue = Double.NaN; pool.resultError = Double.NaN;
+                pool.resultIterations = iterations; pool.resultEvaluations = evaluations;
+                return Quadrature.Status.ABNORMAL_TERMINATION;
             }
 
             // Kahan compensated update: (left + right) − old
@@ -163,8 +168,9 @@ final class GK15Core {
             iterations++;
         }
 
-        return new Quadrature(totalEstimate, totalError,
-                Quadrature.Status.CONVERGED, iterations, evaluations);
+        pool.resultValue = totalEstimate; pool.resultError = totalError;
+        pool.resultIterations = iterations; pool.resultEvaluations = evaluations;
+        return Quadrature.Status.CONVERGED;
     }
 
     // -----------------------------------------------------------------------

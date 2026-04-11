@@ -112,8 +112,10 @@ public class AdaptiveIntegral implements Integral<Quadrature, AdaptivePool> {
         }
         AdaptivePool pool = workspace.ensure(maxSubdivisions);
         if (rule == AdaptiveRule.GAUSS_LOBATTO) {
-            return GaussLobattoCore.integrate(function, min, max,
+            Quadrature.Status status = GaussLobattoCore.integrate(function, min, max,
                     absTol, relTol, maxSubdivisions, maxEvaluations, pool);
+            return new Quadrature(pool.resultValue, pool.resultError, status,
+                    pool.resultIterations, pool.resultEvaluations);
         }
         return integrate(function, min, max, breakpoints, absTol, relTol, maxSubdivisions, maxEvaluations, pool);
     }
@@ -140,7 +142,9 @@ public class AdaptiveIntegral implements Integral<Quadrature, AdaptivePool> {
                                        AdaptivePool pool) {
         double[] internalPoints = Checks.validateBreakpoints(points, min, max);
         if (internalPoints.length == 0) {
-            return GK15Core.integrate(f, min, max, absTol, relTol, maxSubdivisions, maxEvaluations, pool);
+            Quadrature.Status status = GK15Core.integrate(f, min, max, absTol, relTol, maxSubdivisions, maxEvaluations, pool);
+            return new Quadrature(pool.resultValue, pool.resultError, status,
+                    pool.resultIterations, pool.resultEvaluations);
         }
 
         double totalValue = 0.0, totalError = 0.0;
@@ -151,23 +155,33 @@ public class AdaptiveIntegral implements Integral<Quadrature, AdaptivePool> {
 
         for (int i = 0; i <= internalPoints.length; i++) {
             double right = i == internalPoints.length ? max : internalPoints[i];
-            Quadrature partial = GK15Core.integrate(
+            Quadrature.Status status = GK15Core.integrate(
                     f, left, right, segmentAbsTol, relTol,
                     Math.max(1, remainingSubdivisions), Math.max(1, remainingEvaluations), pool);
 
-            totalValue += partial.getValue();
-            totalError += partial.getEstimatedError();
-            totalIterations += partial.getIterations();
-            totalEvaluations += partial.getEvaluations();
-            remainingEvaluations -= partial.getEvaluations();
-            remainingSubdivisions -= partial.getIterations() + 1;
+            totalValue      += pool.resultValue;
+            totalError      += pool.resultError;
+            totalIterations += pool.resultIterations;
+            totalEvaluations += pool.resultEvaluations;
+            remainingEvaluations  -= pool.resultEvaluations;
+            remainingSubdivisions -= pool.resultIterations + 1;
 
-            if (!partial.isSuccessful()) {
-                return new Quadrature(totalValue, totalError,
-                        partial.getStatus(), totalIterations, totalEvaluations);
+            if (!status.isConverged()) {
+                return new Quadrature(totalValue, totalError, status, totalIterations, totalEvaluations);
             }
             left = right;
         }
         return new Quadrature(totalValue, totalError, Quadrature.Status.CONVERGED, totalIterations, totalEvaluations);
+    }
+
+    /**
+     * Integrates a single segment [min, max] via GK15, writing results into pool.
+     * Returns the status; callers read value/error/iterations/evaluations from pool.
+     */
+    public static Quadrature.Status integrateSegment(DoubleUnaryOperator f, double min, double max,
+                                                     double absTol, double relTol,
+                                                     int maxSubdivisions, int maxEvaluations,
+                                                     AdaptivePool pool) {
+        return GK15Core.integrate(f, min, max, absTol, relTol, maxSubdivisions, maxEvaluations, pool);
     }
 }

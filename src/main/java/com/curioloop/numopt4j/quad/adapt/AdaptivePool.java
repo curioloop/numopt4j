@@ -8,6 +8,13 @@ package com.curioloop.numopt4j.quad.adapt;
  *
  * <p>Backed by a single contiguous arena plus a max-heap index array.
  * Reuse across multiple calls avoids repeated allocation.</p>
+ *
+ * <p>After a call to {@link com.curioloop.numopt4j.quad.adapt.GK15Core} or
+ * {@link com.curioloop.numopt4j.quad.adapt.GaussLobattoCore}, the fields
+ * {@link #resultValue}, {@link #resultError}, {@link #resultIterations} and
+ * {@link #resultEvaluations} hold the raw output so the caller can build a
+ * {@link com.curioloop.numopt4j.quad.Quadrature} without an extra allocation
+ * per segment.</p>
  */
 public final class AdaptivePool {
 
@@ -18,6 +25,17 @@ public final class AdaptivePool {
     int intervalRightOffset;
     int intervalEstimateOffset;
     int intervalErrorOffset;
+
+    // Mutable result slots — written by GK15Core / GaussLobattoCore
+    double resultValue;
+    double resultError;
+    int    resultIterations;
+    int    resultEvaluations;
+
+    public double resultValue()      { return resultValue; }
+    public double resultError()      { return resultError; }
+    public int    resultIterations() { return resultIterations; }
+    public int    resultEvaluations(){ return resultEvaluations; }
 
     public AdaptivePool() {}
 

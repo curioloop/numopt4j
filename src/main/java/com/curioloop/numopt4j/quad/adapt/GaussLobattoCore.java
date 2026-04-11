@@ -46,31 +46,29 @@ final class GaussLobattoCore {
 
     private GaussLobattoCore() {}
 
-    static Quadrature integrate(DoubleUnaryOperator f, double min, double max,
-                                double absTol, double relTol,
-                                int maxSubdivisions, int maxEvaluations,
-                                AdaptivePool workspace) {
+    static Quadrature.Status integrate(DoubleUnaryOperator f, double min, double max,
+                                       double absTol, double relTol,
+                                       int maxSubdivisions, int maxEvaluations,
+                                       AdaptivePool workspace) {
         AdaptivePool pool = workspace.ensure(maxSubdivisions);
 
         // Evaluate the 4-point rule on the initial interval
         double fa = f.applyAsDouble(min);
         double fb = f.applyAsDouble(max);
         if (!Double.isFinite(fa) || !Double.isFinite(fb)) {
-            return new Quadrature(Double.NaN, Double.NaN,
-                    Quadrature.Status.ABNORMAL_TERMINATION, 0, 2);
+            pool.resultValue = Double.NaN; pool.resultError = Double.NaN;
+            pool.resultIterations = 0;     pool.resultEvaluations = 2;
+            return Quadrature.Status.ABNORMAL_TERMINATION;
         }
 
         int[] evalCount = {2};
         double coarse = lobatto4(f, min, max, fa, fb, evalCount);
         if (!Double.isFinite(coarse)) {
-            return new Quadrature(Double.NaN, Double.NaN,
-                    Quadrature.Status.ABNORMAL_TERMINATION, 0, evalCount[0]);
+            pool.resultValue = Double.NaN; pool.resultError = Double.NaN;
+            pool.resultIterations = 0;     pool.resultEvaluations = evalCount[0];
+            return Quadrature.Status.ABNORMAL_TERMINATION;
         }
 
-        // Scale absTol by the initial full-interval estimate, matching QuantLib:
-        //   effectiveAbsTol = max(absTol, relTol * |initialEstimate|)
-        // Without this, absTol halves at every bisection level and collapses to
-        // near-zero for deeply nested sub-intervals, causing spurious non-convergence.
         double effectiveAbsTol = Math.max(absTol, relTol * Math.abs(coarse));
 
         int[] subdivCount = {0};
@@ -84,9 +82,11 @@ final class GaussLobattoCore {
                 : (subdivCount[0] >= maxSubdivisions   ? Quadrature.Status.MAX_SUBDIVISIONS_REACHED
                 : Quadrature.Status.CONVERGED));
 
-        return new Quadrature(Double.isNaN(result) ? Double.NaN : result,
-                Double.isNaN(result) ? Double.NaN : 0.0,
-                status, subdivCount[0], evalCount[0]);
+        pool.resultValue = Double.isNaN(result) ? Double.NaN : result;
+        pool.resultError = Double.isNaN(result) ? Double.NaN : 0.0;
+        pool.resultIterations = subdivCount[0];
+        pool.resultEvaluations = evalCount[0];
+        return status;
     }
 
     /**

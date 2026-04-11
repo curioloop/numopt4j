@@ -65,25 +65,26 @@ final class OscillatoryCore {
             double right = left + cycleWidth;
             double cycleAbsTol = cycleTolerance(absTol, relTol, totalValue, factor);
             int cycleEvaluations = Math.max(1, maxEvaluations - totalEvaluations);
-            Quadrature partial = AdaptiveIntegral.integrate(weighted, left, right, null,
+            Quadrature.Status cycleStatus = AdaptiveIntegral.integrateSegment(weighted, left, right,
                     cycleAbsTol, 0.0, maxSubdivisions, cycleEvaluations, workspace);
 
-            totalIterations += partial.getIterations();
-            totalEvaluations += partial.getEvaluations();
-            totalValue += partial.getValue();
-            totalError += partial.getEstimatedError();
+            totalIterations  += workspace.resultIterations();
+            totalEvaluations += workspace.resultEvaluations();
+            double cycleValue = workspace.resultValue();
+            totalValue += cycleValue;
+            totalError += workspace.resultError();
             partialSums[cycle] = totalValue;
 
             // Only abort on hard numerical failures (NaN/Inf), not on limit-reached
             // statuses — those are expected when per-cycle tolerance is tight.
-            if (partial.getStatus() == Quadrature.Status.ABNORMAL_TERMINATION
-                    || partial.getStatus() == Quadrature.Status.ROUND_OFF_DETECTED) {
+            if (cycleStatus == Quadrature.Status.ABNORMAL_TERMINATION
+                    || cycleStatus == Quadrature.Status.ROUND_OFF_DETECTED) {
                 return new Quadrature(totalValue, totalError,
-                        partial.getStatus(), totalIterations, totalEvaluations);
+                        cycleStatus, totalIterations, totalEvaluations);
             }
 
             Extrapolation extrapolation = extrapolate(partialSums, cycle + 1, epsilonA, epsilonB);
-            double directError = totalError + Math.abs(partial.getValue());
+            double directError = totalError + Math.abs(cycleValue);
             double candidateValue = totalValue;
             double candidateError = directError;
 
