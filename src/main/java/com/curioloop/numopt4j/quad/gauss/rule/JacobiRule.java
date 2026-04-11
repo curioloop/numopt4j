@@ -43,12 +43,12 @@ public final class JacobiRule implements GaussRule {
     }
 
     @Override
-    public void fillJacobi(int n, double[] arena, int diag, int offDiag) {
+    public void fillJacobi(int n, double[] diag, int diagOff, double[] offDiag, int offDiagOff) {
         double sum = alpha + beta;
         for (int i = 0; i < n; i++) {
             double k = i;
             double denom = (2.0 * k + sum) * (2.0 * k + sum + 2.0);
-            arena[diag + i] = Math.abs(denom) <= Math.ulp(1.0)
+            diag[diagOff + i] = Math.abs(denom) <= Math.ulp(1.0)
                     ? 0.0
                     : (beta * beta - alpha * alpha) / denom;
         }
@@ -57,10 +57,10 @@ public final class JacobiRule implements GaussRule {
             double edge = k + 1.0 + sum;
             double d0 = 2.0 * k + sum + 1.0, d1 = 2.0 * k + sum + 2.0, d2 = 2.0 * k + sum + 3.0;
             if (Math.abs(edge) <= Math.ulp(1.0) && Math.abs(d0) <= Math.ulp(1.0)) {
-                arena[offDiag + i - 1] = Math.sqrt(
+                offDiag[offDiagOff + i - 1] = Math.sqrt(
                         4.0 * (k + 1.0) * (k + 1.0 + alpha) * (k + 1.0 + beta) / (d1 * d1 * d2));
             } else {
-                arena[offDiag + i - 1] = Math.sqrt(
+                offDiag[offDiagOff + i - 1] = Math.sqrt(
                         4.0 * (k + 1.0) * (k + 1.0 + alpha) * (k + 1.0 + beta) * edge
                                 / (d1 * d1 * d0 * d2));
             }

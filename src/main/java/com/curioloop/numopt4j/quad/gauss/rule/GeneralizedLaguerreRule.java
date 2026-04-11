@@ -51,11 +51,11 @@ public final class GeneralizedLaguerreRule implements GaussRule {
      *   βₖ = √(k·(k+s))
      */
     @Override
-    public void fillJacobi(int n, double[] arena, int diag, int offDiag) {
+    public void fillJacobi(int n, double[] diag, int diagOff, double[] offDiag, int offDiagOff) {
         for (int i = 0; i < n; i++)
-            arena[diag + i] = 2.0 * i + s + 1.0;
+            diag[diagOff + i] = 2.0 * i + s + 1.0;
         for (int i = 1; i < n; i++)
-            arena[offDiag + i - 1] = Math.sqrt((double) i * (i + s));
+            offDiag[offDiagOff + i - 1] = Math.sqrt((double) i * (i + s));
     }
 
     @Override

@@ -57,15 +57,15 @@ public final class GeneralizedHermiteRule implements GaussRule {
      * When s=0 both cases reduce to √(i/2), recovering the standard Hermite rule.</p>
      */
     @Override
-    public void fillJacobi(int n, double[] arena, int diag, int offDiag) {
+    public void fillJacobi(int n, double[] diag, int diagOff, double[] offDiag, int offDiagOff) {
         for (int i = 0; i < n; i++)
-            arena[diag + i] = 0.0;
+            diag[diagOff + i] = 0.0;
         for (int i = 1; i < n; i++) {
             // i is the 1-based index of the off-diagonal entry
             double val = (i % 2 == 1)
                     ? 0.5 * i + s      // odd i: i/2 + s
                     : 0.5 * i;         // even i: i/2
-            arena[offDiag + i - 1] = Math.sqrt(val);
+            offDiag[offDiagOff + i - 1] = Math.sqrt(val);
         }
     }
 

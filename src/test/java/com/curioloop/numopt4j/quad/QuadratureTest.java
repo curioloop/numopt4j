@@ -480,7 +480,7 @@ class QuadratureTest {
         Integrator.weighted().function(x -> x).points(4).rule(GaussRule.laguerre()).integrate(pool);
 
         assertThat(pool.arena()).isSameAs(arena);
-        assertThat(pool.arena().length).isGreaterThanOrEqualTo(96);
+        assertThat(pool.arena().length).isGreaterThanOrEqualTo(16);
     }
 
     @Test

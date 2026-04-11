@@ -25,8 +25,8 @@ public final class HermiteRule implements GaussRule {
     public double zeroMoment() { return SQRT_PI; }
 
     @Override
-    public void fillJacobi(int points, double[] arena, int diag, int offDiag) {
-        for (int i = 0; i < points; i++) arena[diag + i] = 0.0;
-        for (int i = 1; i < points; i++) arena[offDiag + i - 1] = Math.sqrt(0.5 * i);
+    public void fillJacobi(int points, double[] diag, int diagOff, double[] offDiag, int offDiagOff) {
+        for (int i = 0; i < points; i++) diag[diagOff + i] = 0.0;
+        for (int i = 1; i < points; i++) offDiag[offDiagOff + i - 1] = Math.sqrt(0.5 * i);
     }
 }

@@ -23,9 +23,9 @@ public final class LegendreRule implements GaussRule {
     public double zeroMoment() { return 2.0; }
 
     @Override
-    public void fillJacobi(int points, double[] arena, int diag, int offDiag) {
-        for (int i = 0; i < points; i++) arena[diag + i] = 0.0;
+    public void fillJacobi(int points, double[] diag, int diagOff, double[] offDiag, int offDiagOff) {
+        for (int i = 0; i < points; i++) diag[diagOff + i] = 0.0;
         for (int i = 1; i < points; i++)
-            arena[offDiag + i - 1] = i / Math.sqrt(4.0 * i * i - 1.0);
+            offDiag[offDiagOff + i - 1] = i / Math.sqrt(4.0 * i * i - 1.0);
     }
 }
