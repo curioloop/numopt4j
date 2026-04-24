@@ -61,4 +61,68 @@ class DlatrsTest {
         assertEquals(1.0, scale, TOL);
         assertEquals(0.6, x[0], TOL);
     }
+
+    @Test
+    void testLowerUnitNoTransIgnoresStoredDiagonal() {
+        double[] A = {
+            7.0, 0.0, 0.0,
+            0.25, 8.0, 0.0,
+            -0.5, 0.75, 9.0
+        };
+        double[] x = {1.0, -1.75, 1.0};
+        double[] cnorm = new double[3];
+
+        double scale = Dlatrs.dlatrs(BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.Unit, false, 3, A, 3, x, 0, cnorm, 0);
+
+        assertEquals(1.0, scale, TOL);
+        assertArrayEquals(new double[] {1.0, -2.0, 3.0}, x, TOL);
+    }
+
+    @Test
+    void testLowerUnitTransIgnoresStoredDiagonal() {
+        double[] A = {
+            7.0, 0.0, 0.0,
+            0.25, 8.0, 0.0,
+            -0.5, 0.75, 9.0
+        };
+        double[] x = {-1.0, 0.25, 3.0};
+        double[] cnorm = new double[3];
+
+        double scale = Dlatrs.dlatrs(BLAS.Uplo.Lower, BLAS.Trans.Trans, BLAS.Diag.Unit, false, 3, A, 3, x, 0, cnorm, 0);
+
+        assertEquals(1.0, scale, TOL);
+        assertArrayEquals(new double[] {1.0, -2.0, 3.0}, x, TOL);
+    }
+
+    @Test
+    void testUpperUnitNoTransIgnoresStoredDiagonal() {
+        double[] A = {
+            7.0, 0.25, -0.5,
+            0.0, 8.0, 0.75,
+            0.0, 0.0, 9.0
+        };
+        double[] x = {-1.0, 0.25, 3.0};
+        double[] cnorm = new double[3];
+
+        double scale = Dlatrs.dlatrs(BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.Unit, false, 3, A, 3, x, 0, cnorm, 0);
+
+        assertEquals(1.0, scale, TOL);
+        assertArrayEquals(new double[] {1.0, -2.0, 3.0}, x, TOL);
+    }
+
+    @Test
+    void testUpperUnitTransIgnoresStoredDiagonal() {
+        double[] A = {
+            7.0, 0.25, -0.5,
+            0.0, 8.0, 0.75,
+            0.0, 0.0, 9.0
+        };
+        double[] x = {1.0, -1.75, 1.0};
+        double[] cnorm = new double[3];
+
+        double scale = Dlatrs.dlatrs(BLAS.Uplo.Upper, BLAS.Trans.Trans, BLAS.Diag.Unit, false, 3, A, 3, x, 0, cnorm, 0);
+
+        assertEquals(1.0, scale, TOL);
+        assertArrayEquals(new double[] {1.0, -2.0, 3.0}, x, TOL);
+    }
 }

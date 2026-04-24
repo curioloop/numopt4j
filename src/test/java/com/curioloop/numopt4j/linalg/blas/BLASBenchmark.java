@@ -150,12 +150,12 @@ public class BLASBenchmark {
                 int bRowI = bOff + i * ldb;
                 int j = 0;
                 for (; j < n4; j += 4) {
-                    B[bRowI+j]   = FMA.op(aik, B[bRowK+j],   B[bRowI+j]);
-                    B[bRowI+j+1] = FMA.op(aik, B[bRowK+j+1], B[bRowI+j+1]);
-                    B[bRowI+j+2] = FMA.op(aik, B[bRowK+j+2], B[bRowI+j+2]);
-                    B[bRowI+j+3] = FMA.op(aik, B[bRowK+j+3], B[bRowI+j+3]);
+                    B[bRowI+j]   = Math.fma(aik, B[bRowK+j],   B[bRowI+j]);
+                    B[bRowI+j+1] = Math.fma(aik, B[bRowK+j+1], B[bRowI+j+1]);
+                    B[bRowI+j+2] = Math.fma(aik, B[bRowK+j+2], B[bRowI+j+2]);
+                    B[bRowI+j+3] = Math.fma(aik, B[bRowK+j+3], B[bRowI+j+3]);
                 }
-                for (; j < n; j++) B[bRowI+j] = FMA.op(aik, B[bRowK+j], B[bRowI+j]);
+                for (; j < n; j++) B[bRowI+j] = Math.fma(aik, B[bRowK+j], B[bRowI+j]);
             }
             double diag = unitDiag ? alpha : alpha * A[aOff + k * lda + k];
             int j = 0;
@@ -180,12 +180,12 @@ public class BLASBenchmark {
                 int bRowI = bOff + i * ldb;
                 int j = 0;
                 for (; j < n4; j += 4) {
-                    B[bRowI+j]   = FMA.op(aik, B[bRowK+j],   B[bRowI+j]);
-                    B[bRowI+j+1] = FMA.op(aik, B[bRowK+j+1], B[bRowI+j+1]);
-                    B[bRowI+j+2] = FMA.op(aik, B[bRowK+j+2], B[bRowI+j+2]);
-                    B[bRowI+j+3] = FMA.op(aik, B[bRowK+j+3], B[bRowI+j+3]);
+                    B[bRowI+j]   = Math.fma(aik, B[bRowK+j],   B[bRowI+j]);
+                    B[bRowI+j+1] = Math.fma(aik, B[bRowK+j+1], B[bRowI+j+1]);
+                    B[bRowI+j+2] = Math.fma(aik, B[bRowK+j+2], B[bRowI+j+2]);
+                    B[bRowI+j+3] = Math.fma(aik, B[bRowK+j+3], B[bRowI+j+3]);
                 }
-                for (; j < n; j++) B[bRowI+j] = FMA.op(aik, B[bRowK+j], B[bRowI+j]);
+                for (; j < n; j++) B[bRowI+j] = Math.fma(aik, B[bRowK+j], B[bRowI+j]);
             }
             double diag = unitDiag ? alpha : alpha * A[aOff + k * lda + k];
             int j = 0;
@@ -213,12 +213,12 @@ public class BLASBenchmark {
                     double sum = 0.0;
                     int p = 0;
                     for (; p + 3 < k; p += 4) {
-                        sum = FMA.op(A[aiOff+p],   A[ajOff+p],   sum);
-                        sum = FMA.op(A[aiOff+p+1], A[ajOff+p+1], sum);
-                        sum = FMA.op(A[aiOff+p+2], A[ajOff+p+2], sum);
-                        sum = FMA.op(A[aiOff+p+3], A[ajOff+p+3], sum);
+                        sum = Math.fma(A[aiOff+p],   A[ajOff+p],   sum);
+                        sum = Math.fma(A[aiOff+p+1], A[ajOff+p+1], sum);
+                        sum = Math.fma(A[aiOff+p+2], A[ajOff+p+2], sum);
+                        sum = Math.fma(A[aiOff+p+3], A[ajOff+p+3], sum);
                     }
-                    for (; p < k; p++) sum = FMA.op(A[aiOff+p], A[ajOff+p], sum);
+                    for (; p < k; p++) sum = Math.fma(A[aiOff+p], A[ajOff+p], sum);
                     C[cOff+i*ldc+j] += alpha * sum;
                 }
             }
@@ -230,12 +230,12 @@ public class BLASBenchmark {
                     double sum = 0.0;
                     int p = 0;
                     for (; p + 3 < k; p += 4) {
-                        sum = FMA.op(A[aiOff+p],   A[ajOff+p],   sum);
-                        sum = FMA.op(A[aiOff+p+1], A[ajOff+p+1], sum);
-                        sum = FMA.op(A[aiOff+p+2], A[ajOff+p+2], sum);
-                        sum = FMA.op(A[aiOff+p+3], A[ajOff+p+3], sum);
+                        sum = Math.fma(A[aiOff+p],   A[ajOff+p],   sum);
+                        sum = Math.fma(A[aiOff+p+1], A[ajOff+p+1], sum);
+                        sum = Math.fma(A[aiOff+p+2], A[ajOff+p+2], sum);
+                        sum = Math.fma(A[aiOff+p+3], A[ajOff+p+3], sum);
                     }
-                    for (; p < k; p++) sum = FMA.op(A[aiOff+p], A[ajOff+p], sum);
+                    for (; p < k; p++) sum = Math.fma(A[aiOff+p], A[ajOff+p], sum);
                     C[cOff+i*ldc+j] += alpha * sum;
                 }
             }
@@ -256,12 +256,12 @@ public class BLASBenchmark {
                 for (; i < m4; i += 4) {
                     int b0 = bOff + i * ldb, b1 = bOff + (i+1) * ldb;
                     int b2 = bOff + (i+2) * ldb, b3 = bOff + (i+3) * ldb;
-                    B[b0+j] = FMA.op(akj, B[b0+k], B[b0+j]);
-                    B[b1+j] = FMA.op(akj, B[b1+k], B[b1+j]);
-                    B[b2+j] = FMA.op(akj, B[b2+k], B[b2+j]);
-                    B[b3+j] = FMA.op(akj, B[b3+k], B[b3+j]);
+                    B[b0+j] = Math.fma(akj, B[b0+k], B[b0+j]);
+                    B[b1+j] = Math.fma(akj, B[b1+k], B[b1+j]);
+                    B[b2+j] = Math.fma(akj, B[b2+k], B[b2+j]);
+                    B[b3+j] = Math.fma(akj, B[b3+k], B[b3+j]);
                 }
-                for (; i < m; i++) { int bi = bOff + i * ldb; B[bi+j] = FMA.op(akj, B[bi+k], B[bi+j]); }
+                for (; i < m; i++) { int bi = bOff + i * ldb; B[bi+j] = Math.fma(akj, B[bi+k], B[bi+j]); }
             }
             double diag = unitDiag ? alpha : alpha * A[aRowK + k];
             int i = 0;
@@ -287,12 +287,12 @@ public class BLASBenchmark {
                 for (; i < m4; i += 4) {
                     int b0 = bOff + i * ldb, b1 = bOff + (i+1) * ldb;
                     int b2 = bOff + (i+2) * ldb, b3 = bOff + (i+3) * ldb;
-                    B[b0+j] = FMA.op(akj, B[b0+k], B[b0+j]);
-                    B[b1+j] = FMA.op(akj, B[b1+k], B[b1+j]);
-                    B[b2+j] = FMA.op(akj, B[b2+k], B[b2+j]);
-                    B[b3+j] = FMA.op(akj, B[b3+k], B[b3+j]);
+                    B[b0+j] = Math.fma(akj, B[b0+k], B[b0+j]);
+                    B[b1+j] = Math.fma(akj, B[b1+k], B[b1+j]);
+                    B[b2+j] = Math.fma(akj, B[b2+k], B[b2+j]);
+                    B[b3+j] = Math.fma(akj, B[b3+k], B[b3+j]);
                 }
-                for (; i < m; i++) { int bi = bOff + i * ldb; B[bi+j] = FMA.op(akj, B[bi+k], B[bi+j]); }
+                for (; i < m; i++) { int bi = bOff + i * ldb; B[bi+j] = Math.fma(akj, B[bi+k], B[bi+j]); }
             }
             double diag = unitDiag ? alpha : alpha * A[aRowK + k];
             int i = 0;
@@ -316,7 +316,7 @@ public class BLASBenchmark {
             for (int i = 0; i < m; i++) {
                 double sum = unitDiag ? B[bOff+i*ldb+j] : A[aOff+i*lda+i] * B[bOff+i*ldb+j];
                 for (int k = i + 1; k < m; k++)
-                    sum = FMA.op(A[aOff+i*lda+k], B[bOff+k*ldb+j], sum);
+                    sum = Math.fma(A[aOff+i*lda+k], B[bOff+k*ldb+j], sum);
                 B[bOff+i*ldb+j] = alpha * sum;
             }
         }
@@ -331,7 +331,7 @@ public class BLASBenchmark {
                 int kEnd = unitDiag ? i : i + 1;
                 double sum = 0.0;
                 for (int k = 0; k < kEnd; k++)
-                    sum = FMA.op(A[aOff+i*lda+k], B[bOff+k*ldb+j], sum);
+                    sum = Math.fma(A[aOff+i*lda+k], B[bOff+k*ldb+j], sum);
                 if (unitDiag) sum += B[bOff+i*ldb+j];
                 B[bOff+i*ldb+j] = alpha * sum;
             }
@@ -348,7 +348,7 @@ public class BLASBenchmark {
                 for (int i = ii; i < ii + 4 && i < m; i++) {
                     double sum = 0.0;
                     int kEnd = unitDiag ? j : j + 1;
-                    for (int k = 0; k < kEnd; k++) sum = FMA.op(B[bOff+i*ldb+k], A[aOff+k*lda+j], sum);
+                    for (int k = 0; k < kEnd; k++) sum = Math.fma(B[bOff+i*ldb+k], A[aOff+k*lda+j], sum);
                     if (unitDiag) sum += B[bOff+i*ldb+j];
                     B[bOff+i*ldb+j] = alpha * sum;
                 }
@@ -357,7 +357,7 @@ public class BLASBenchmark {
                 for (int i = m4; i < m; i++) {
                     double sum = 0.0;
                     int kEnd = unitDiag ? j : j + 1;
-                    for (int k = 0; k < kEnd; k++) sum = FMA.op(B[bOff+i*ldb+k], A[aOff+k*lda+j], sum);
+                    for (int k = 0; k < kEnd; k++) sum = Math.fma(B[bOff+i*ldb+k], A[aOff+k*lda+j], sum);
                     if (unitDiag) sum += B[bOff+i*ldb+j];
                     B[bOff+i*ldb+j] = alpha * sum;
                 }
@@ -375,7 +375,7 @@ public class BLASBenchmark {
                 for (int i = ii; i < ii + 4 && i < m; i++) {
                     double sum = 0.0;
                     int kStart = unitDiag ? j + 1 : j;
-                    for (int k = kStart; k < n; k++) sum = FMA.op(B[bOff+i*ldb+k], A[aOff+k*lda+j], sum);
+                    for (int k = kStart; k < n; k++) sum = Math.fma(B[bOff+i*ldb+k], A[aOff+k*lda+j], sum);
                     if (unitDiag) sum += B[bOff+i*ldb+j];
                     B[bOff+i*ldb+j] = alpha * sum;
                 }
@@ -384,7 +384,7 @@ public class BLASBenchmark {
                 for (int i = m4; i < m; i++) {
                     double sum = 0.0;
                     int kStart = unitDiag ? j + 1 : j;
-                    for (int k = kStart; k < n; k++) sum = FMA.op(B[bOff+i*ldb+k], A[aOff+k*lda+j], sum);
+                    for (int k = kStart; k < n; k++) sum = Math.fma(B[bOff+i*ldb+k], A[aOff+k*lda+j], sum);
                     if (unitDiag) sum += B[bOff+i*ldb+j];
                     B[bOff+i*ldb+j] = alpha * sum;
                 }
@@ -404,12 +404,12 @@ public class BLASBenchmark {
                     double sum = 0.0;
                     int p = 0;
                     for (; p + 3 < k; p += 4) {
-                        sum = FMA.op(A[aiOff+p],   A[ajOff+p],   sum);
-                        sum = FMA.op(A[aiOff+p+1], A[ajOff+p+1], sum);
-                        sum = FMA.op(A[aiOff+p+2], A[ajOff+p+2], sum);
-                        sum = FMA.op(A[aiOff+p+3], A[ajOff+p+3], sum);
+                        sum = Math.fma(A[aiOff+p],   A[ajOff+p],   sum);
+                        sum = Math.fma(A[aiOff+p+1], A[ajOff+p+1], sum);
+                        sum = Math.fma(A[aiOff+p+2], A[ajOff+p+2], sum);
+                        sum = Math.fma(A[aiOff+p+3], A[ajOff+p+3], sum);
                     }
-                    for (; p < k; p++) sum = FMA.op(A[aiOff+p], A[ajOff+p], sum);
+                    for (; p < k; p++) sum = Math.fma(A[aiOff+p], A[ajOff+p], sum);
                     C[cOff+i*ldc+j] += alpha * sum;
                 }
             }
@@ -421,12 +421,12 @@ public class BLASBenchmark {
                     double sum = 0.0;
                     int p = 0;
                     for (; p + 3 < k; p += 4) {
-                        sum = FMA.op(A[aiOff+p],   A[ajOff+p],   sum);
-                        sum = FMA.op(A[aiOff+p+1], A[ajOff+p+1], sum);
-                        sum = FMA.op(A[aiOff+p+2], A[ajOff+p+2], sum);
-                        sum = FMA.op(A[aiOff+p+3], A[ajOff+p+3], sum);
+                        sum = Math.fma(A[aiOff+p],   A[ajOff+p],   sum);
+                        sum = Math.fma(A[aiOff+p+1], A[ajOff+p+1], sum);
+                        sum = Math.fma(A[aiOff+p+2], A[ajOff+p+2], sum);
+                        sum = Math.fma(A[aiOff+p+3], A[ajOff+p+3], sum);
                     }
-                    for (; p < k; p++) sum = FMA.op(A[aiOff+p], A[ajOff+p], sum);
+                    for (; p < k; p++) sum = Math.fma(A[aiOff+p], A[ajOff+p], sum);
                     C[cOff+i*ldc+j] += alpha * sum;
                 }
             }

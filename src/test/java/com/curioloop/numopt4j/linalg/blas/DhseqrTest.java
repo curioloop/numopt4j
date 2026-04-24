@@ -5,6 +5,8 @@ package com.curioloop.numopt4j.linalg.blas;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.Random;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class DhseqrTest {
@@ -238,5 +240,87 @@ class DhseqrTest {
         }
 
         assertEquals(traceOriginal, traceAfter, TOL, "Trace should be preserved");
+    }
+
+    @Test
+    void testLargePathRandomHessenbergConvergesWithQueryWorkspace() {
+        int n = 96;
+        double[] H = randomHessenberg(n, 42L);
+        double[] wr = new double[n];
+        double[] wi = new double[n];
+        double[] work = new double[Dhseqr.dhseqrQuery(n, 0, n - 1)];
+
+        int info = Dhseqr.dhseqr('E', 'N', n, 0, n - 1, H, n, wr, wi, null, 1, work, 0, work.length);
+
+        assertEquals(0, info);
+        for (int i = 0; i < n; i++) {
+            assertTrue(Double.isFinite(wr[i]));
+            assertTrue(Double.isFinite(wi[i]));
+        }
+    }
+
+    @Test
+    void testLargePathStructuredSchurVectorsConvergeWithQueryWorkspace() {
+        int n = 96;
+        double[] H = structuredHessenberg(n, 20260424L + 29L * n);
+        double[] wr = new double[n];
+        double[] wi = new double[n];
+        double[] Z = new double[n * n];
+        double[] work = new double[Dhseqr.dhseqrQuery(n, 0, n - 1)];
+
+        int info = Dhseqr.dhseqr('S', 'I', n, 0, n - 1, H, n, wr, wi, Z, n, work, 0, work.length);
+
+        assertEquals(0, info);
+        for (int row = 2; row < n; row++) {
+            for (int col = 0; col < row - 1; col++) {
+                assertEquals(0.0, H[row * n + col], 0.0);
+            }
+        }
+        assertTrue(DlaqrTestSupport.maxOrthogonalityError(Z, n, n) < 1e-10, "Z should remain orthogonal");
+        for (double value : Z) {
+            assertTrue(Double.isFinite(value));
+        }
+    }
+
+    private static double[] randomHessenberg(int n, long seed) {
+        Random random = new Random(seed);
+        double[] h = new double[n * n];
+        for (int row = 0; row < n; row++) {
+            int rowOff = row * n;
+            for (int col = Math.max(0, row - 1); col < n; col++) {
+                h[rowOff + col] = random.nextDouble() * 10.0 - 5.0;
+            }
+        }
+        return h;
+    }
+
+    private static double[] structuredHessenberg(int n, long seed) {
+        Random random = new Random(seed);
+        double[] h = new double[n * n];
+        for (int row = 0; row < n; row++) {
+            int rowOff = row * n;
+            for (int col = 0; col < n; col++) {
+                if (col < row - 1) {
+                    h[rowOff + col] = 0.0;
+                } else if (col == row) {
+                    h[rowOff + col] = 0.04 * (n - row) + 0.15 * (random.nextDouble() - 0.5);
+                } else if (col == row + 1) {
+                    h[rowOff + col] = 0.18 * (random.nextDouble() - 0.5);
+                } else {
+                    h[rowOff + col] = 0.03 * (random.nextDouble() - 0.5);
+                }
+            }
+        }
+
+        for (int i = 0; i < n - 1; i++) {
+            h[(i + 1) * n + i] = 0.12 + 0.08 * random.nextDouble();
+        }
+
+        for (int i = 0; i + 1 < n; i += 6) {
+            h[i * n + i + 1] += 0.16;
+            h[(i + 1) * n + i] += 0.10;
+            h[(i + 1) * n + i + 1] = h[i * n + i] + 0.01 * (random.nextDouble() - 0.5);
+        }
+        return h;
     }
 }

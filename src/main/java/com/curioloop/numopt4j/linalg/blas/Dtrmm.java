@@ -145,12 +145,12 @@ public interface Dtrmm {
                 int bRowI = bOff + i * ldb;
                 int j = 0;
                 for (; j < n4; j += 4) {
-                    B[bRowI + j]     = FMA.op(aik, B[bRowK + j],     B[bRowI + j]);
-                    B[bRowI + j + 1] = FMA.op(aik, B[bRowK + j + 1], B[bRowI + j + 1]);
-                    B[bRowI + j + 2] = FMA.op(aik, B[bRowK + j + 2], B[bRowI + j + 2]);
-                    B[bRowI + j + 3] = FMA.op(aik, B[bRowK + j + 3], B[bRowI + j + 3]);
+                    B[bRowI + j]     = Math.fma(aik, B[bRowK + j],     B[bRowI + j]);
+                    B[bRowI + j + 1] = Math.fma(aik, B[bRowK + j + 1], B[bRowI + j + 1]);
+                    B[bRowI + j + 2] = Math.fma(aik, B[bRowK + j + 2], B[bRowI + j + 2]);
+                    B[bRowI + j + 3] = Math.fma(aik, B[bRowK + j + 3], B[bRowI + j + 3]);
                 }
-                for (; j < n; j++) B[bRowI + j] = FMA.op(aik, B[bRowK + j], B[bRowI + j]);
+                for (; j < n; j++) B[bRowI + j] = Math.fma(aik, B[bRowK + j], B[bRowI + j]);
             }
             // Scale diagonal row k
             double diag = unitDiag ? alpha : alpha * A[aOff + k * lda + k];
@@ -176,7 +176,7 @@ public interface Dtrmm {
             for (int i = 0; i < m; i++) {
                 double sum = unitDiag ? B[bOff + i * ldb + j] : A[aOff + i * lda + i] * B[bOff + i * ldb + j];
                 for (int k = i + 1; k < m; k++) {
-                    sum = FMA.op(A[aOff + i * lda + k], B[bOff + k * ldb + j], sum);
+                    sum = Math.fma(A[aOff + i * lda + k], B[bOff + k * ldb + j], sum);
                 }
                 B[bOff + i * ldb + j] = alpha * sum;
             }
@@ -229,12 +229,12 @@ public interface Dtrmm {
                 int bRowI = bOff + i * ldb;
                 int j = 0;
                 for (; j < n4; j += 4) {
-                    B[bRowI + j]     = FMA.op(aik, B[bRowK + j],     B[bRowI + j]);
-                    B[bRowI + j + 1] = FMA.op(aik, B[bRowK + j + 1], B[bRowI + j + 1]);
-                    B[bRowI + j + 2] = FMA.op(aik, B[bRowK + j + 2], B[bRowI + j + 2]);
-                    B[bRowI + j + 3] = FMA.op(aik, B[bRowK + j + 3], B[bRowI + j + 3]);
+                    B[bRowI + j]     = Math.fma(aik, B[bRowK + j],     B[bRowI + j]);
+                    B[bRowI + j + 1] = Math.fma(aik, B[bRowK + j + 1], B[bRowI + j + 1]);
+                    B[bRowI + j + 2] = Math.fma(aik, B[bRowK + j + 2], B[bRowI + j + 2]);
+                    B[bRowI + j + 3] = Math.fma(aik, B[bRowK + j + 3], B[bRowI + j + 3]);
                 }
-                for (; j < n; j++) B[bRowI + j] = FMA.op(aik, B[bRowK + j], B[bRowI + j]);
+                for (; j < n; j++) B[bRowI + j] = Math.fma(aik, B[bRowK + j], B[bRowI + j]);
             }
             // Step 2: scale diagonal row k
             double diag = unitDiag ? alpha : alpha * A[aOff + k * lda + k];
@@ -264,7 +264,7 @@ public interface Dtrmm {
                 // For unit: exclude diagonal from loop (k=0 to i-1)
                 int kEnd = unitDiag ? i : i + 1;
                 for (int k = 0; k < kEnd; k++) {
-                    sum = FMA.op(A[aOff + i * lda + k], B[bOff + k * ldb + j], sum);
+                    sum = Math.fma(A[aOff + i * lda + k], B[bOff + k * ldb + j], sum);
                 }
                 if (unitDiag) {
                     // For unit diagonal, add B[i,j] (diagonal = 1)
@@ -322,7 +322,7 @@ public interface Dtrmm {
                     // B[i,j] = sum(k=i to m-1) A[k,i] * B[k,j]
                     int kStart = unitDiag ? i + 1 : i;
                     for (int k = kStart; k < m; k++) {
-                        sum = FMA.op(A[aOff + k * lda + i], B[bOff + k * ldb + j], sum);
+                        sum = Math.fma(A[aOff + k * lda + i], B[bOff + k * ldb + j], sum);
                     }
                     if (unitDiag) {
                         sum += B[bOff + i * ldb + j];
@@ -339,7 +339,7 @@ public interface Dtrmm {
                     double sum = 0.0;
                     int kStart = unitDiag ? i + 1 : i;
                     for (int k = kStart; k < m; k++) {
-                        sum = FMA.op(A[aOff + k * lda + i], B[bOff + k * ldb + j], sum);
+                        sum = Math.fma(A[aOff + k * lda + i], B[bOff + k * ldb + j], sum);
                     }
                     if (unitDiag) {
                         sum += B[bOff + i * ldb + j];
@@ -365,7 +365,7 @@ public interface Dtrmm {
                 // For unit: exclude diagonal from loop (k=i+1 to m-1)
                 int kStart = unitDiag ? i + 1 : i;
                 for (int k = kStart; k < m; k++) {
-                    sum = FMA.op(A[aOff + k * lda + i], B[bOff + k * ldb + j], sum);
+                    sum = Math.fma(A[aOff + k * lda + i], B[bOff + k * ldb + j], sum);
                 }
                 if (unitDiag) {
                     // For unit diagonal, add B[i,j] (diagonal = 1)
@@ -423,7 +423,7 @@ public interface Dtrmm {
                     // B[i,j] = sum(k=0 to i) A[k,i] * B[k,j]
                     int kEnd = unitDiag ? i : i + 1;
                     for (int k = 0; k < kEnd; k++) {
-                        sum = FMA.op(A[aOff + k * lda + i], B[bOff + k * ldb + j], sum);
+                        sum = Math.fma(A[aOff + k * lda + i], B[bOff + k * ldb + j], sum);
                     }
                     if (unitDiag) {
                         sum += B[bOff + i * ldb + j];
@@ -440,7 +440,7 @@ public interface Dtrmm {
                     double sum = 0.0;
                     int kEnd = unitDiag ? i : i + 1;
                     for (int k = 0; k < kEnd; k++) {
-                        sum = FMA.op(A[aOff + k * lda + i], B[bOff + k * ldb + j], sum);
+                        sum = Math.fma(A[aOff + k * lda + i], B[bOff + k * ldb + j], sum);
                     }
                     if (unitDiag) {
                         sum += B[bOff + i * ldb + j];
@@ -466,7 +466,7 @@ public interface Dtrmm {
                 // For unit: exclude diagonal from loop (k=0 to i-1)
                 int kEnd = unitDiag ? i : i + 1;
                 for (int k = 0; k < kEnd; k++) {
-                    sum = FMA.op(A[aOff + k * lda + i], B[bOff + k * ldb + j], sum);
+                    sum = Math.fma(A[aOff + k * lda + i], B[bOff + k * ldb + j], sum);
                 }
                 if (unitDiag) {
                     // For unit diagonal, add B[i,j] (diagonal = 1)
@@ -527,7 +527,7 @@ public interface Dtrmm {
                 for (int i = ii; i < ii + 4 && i < m; i++) {
                     double sum = 0.0;
                     int kEnd = unitDiag ? j : j + 1;
-                    for (int k = 0; k < kEnd; k++) sum = FMA.op(B[bOff+i*ldb+k], A[aOff+k*lda+j], sum);
+                    for (int k = 0; k < kEnd; k++) sum = Math.fma(B[bOff+i*ldb+k], A[aOff+k*lda+j], sum);
                     if (unitDiag) sum += B[bOff+i*ldb+j];
                     B[bOff+i*ldb+j] = alpha * sum;
                 }
@@ -540,7 +540,7 @@ public interface Dtrmm {
                 for (int i = m4; i < m; i++) {
                     double sum = 0.0;
                     int kEnd = unitDiag ? j : j + 1;
-                    for (int k = 0; k < kEnd; k++) sum = FMA.op(B[bOff+i*ldb+k], A[aOff+k*lda+j], sum);
+                    for (int k = 0; k < kEnd; k++) sum = Math.fma(B[bOff+i*ldb+k], A[aOff+k*lda+j], sum);
                     if (unitDiag) sum += B[bOff+i*ldb+j];
                     B[bOff+i*ldb+j] = alpha * sum;
                 }
@@ -563,7 +563,7 @@ public interface Dtrmm {
                 // For unit: exclude diagonal from loop (k=0 to j-1)
                 int kEnd = unitDiag ? j : j + 1;
                 for (int k = 0; k < kEnd; k++) {
-                    sum = FMA.op(B[bOff + i * ldb + k], A[aOff + k * lda + j], sum);
+                    sum = Math.fma(B[bOff + i * ldb + k], A[aOff + k * lda + j], sum);
                 }
                 if (unitDiag) {
                     // For unit diagonal, add B[i,j] (diagonal = 1)
@@ -623,14 +623,14 @@ public interface Dtrmm {
                 for (; i < m4; i += 4) {
                     int b0 = bOff + i * ldb, b1 = bOff + (i+1) * ldb;
                     int b2 = bOff + (i+2) * ldb, b3 = bOff + (i+3) * ldb;
-                    B[b0 + j] = FMA.op(akj, B[b0 + k], B[b0 + j]);
-                    B[b1 + j] = FMA.op(akj, B[b1 + k], B[b1 + j]);
-                    B[b2 + j] = FMA.op(akj, B[b2 + k], B[b2 + j]);
-                    B[b3 + j] = FMA.op(akj, B[b3 + k], B[b3 + j]);
+                    B[b0 + j] = Math.fma(akj, B[b0 + k], B[b0 + j]);
+                    B[b1 + j] = Math.fma(akj, B[b1 + k], B[b1 + j]);
+                    B[b2 + j] = Math.fma(akj, B[b2 + k], B[b2 + j]);
+                    B[b3 + j] = Math.fma(akj, B[b3 + k], B[b3 + j]);
                 }
                 for (; i < m; i++) {
                     int bi = bOff + i * ldb;
-                    B[bi + j] = FMA.op(akj, B[bi + k], B[bi + j]);
+                    B[bi + j] = Math.fma(akj, B[bi + k], B[bi + j]);
                 }
             }
             // Scale diagonal column k
@@ -661,7 +661,7 @@ public interface Dtrmm {
                 // For unit: exclude diagonal from loop (k=j+1 to n-1)
                 int kStart = unitDiag ? j + 1 : j;
                 for (int k = kStart; k < n; k++) {
-                    sum = FMA.op(B[bOff + i * ldb + k], A[aOff + k * lda + j], sum);
+                    sum = Math.fma(B[bOff + i * ldb + k], A[aOff + k * lda + j], sum);
                 }
                 if (unitDiag) {
                     // For unit diagonal, add B[i,j] (diagonal = 1)
@@ -718,7 +718,7 @@ public interface Dtrmm {
                     // Upper triangular transpose: column j depends on B[i,j] to B[i,n-1]
                     int kStart = unitDiag ? j + 1 : j;
                     for (int k = kStart; k < n; k++) {
-                        sum = FMA.op(B[bOff + i * ldb + k], A[aOff + j * lda + k], sum);;
+                        sum = Math.fma(B[bOff + i * ldb + k], A[aOff + j * lda + k], sum);;
                     }
                     if (unitDiag) {
                         sum += B[bOff + i * ldb + j];
@@ -735,7 +735,7 @@ public interface Dtrmm {
                     double sum = 0.0;
                     int kStart = unitDiag ? j + 1 : j;
                     for (int k = kStart; k < n; k++) {
-                        sum = FMA.op(B[bOff + i * ldb + k], A[aOff + j * lda + k], sum);;
+                        sum = Math.fma(B[bOff + i * ldb + k], A[aOff + j * lda + k], sum);;
                     }
                     if (unitDiag) {
                         sum += B[bOff + i * ldb + j];
@@ -766,7 +766,7 @@ public interface Dtrmm {
                 // For unit: exclude diagonal (k=j+1 to n-1)
                 int kStart = unitDiag ? j + 1 : j;
                 for (int k = kStart; k < n; k++) {
-                    sum = FMA.op(B[bRow + k], A[aOff + j * lda + k], sum);
+                    sum = Math.fma(B[bRow + k], A[aOff + j * lda + k], sum);
                 }
                 
                 // Add diagonal term for unit diagonal only
@@ -825,7 +825,7 @@ public interface Dtrmm {
                     // Lower triangular transpose: column j depends on B[i,0] to B[i,j]
                     int kEnd = unitDiag ? j : j + 1;
                     for (int k = 0; k < kEnd; k++) {
-                        sum = FMA.op(B[bOff + i * ldb + k], A[aOff + j * lda + k], sum);;
+                        sum = Math.fma(B[bOff + i * ldb + k], A[aOff + j * lda + k], sum);;
                     }
                     if (unitDiag) {
                         sum += B[bOff + i * ldb + j];
@@ -842,7 +842,7 @@ public interface Dtrmm {
                     double sum = 0.0;
                     int kEnd = unitDiag ? j : j + 1;
                     for (int k = 0; k < kEnd; k++) {
-                        sum = FMA.op(B[bOff + i * ldb + k], A[aOff + j * lda + k], sum);;
+                        sum = Math.fma(B[bOff + i * ldb + k], A[aOff + j * lda + k], sum);;
                     }
                     if (unitDiag) {
                         sum += B[bOff + i * ldb + j];
@@ -873,7 +873,7 @@ public interface Dtrmm {
                 // For unit: exclude diagonal (k=0 to j-1)
                 int kEnd = unitDiag ? j : j + 1;
                 for (int k = 0; k < kEnd; k++) {
-                    sum = FMA.op(B[bRow + k], A[aOff + j * lda + k], sum);
+                    sum = Math.fma(B[bRow + k], A[aOff + j * lda + k], sum);
                 }
                 
                 // Add diagonal term for unit diagonal only

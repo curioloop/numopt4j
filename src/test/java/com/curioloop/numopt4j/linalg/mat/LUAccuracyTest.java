@@ -68,7 +68,7 @@ class LUAccuracyTest {
     
     @Test
     void testHilbertInverse() {
-        int n = 8;
+        int n = 12;
         double[] A = new double[n * n];
         for (int i = 0; i < n; i++) {
             for (int j = 0; j < n; j++) {

@@ -5,6 +5,8 @@ package com.curioloop.numopt4j.linalg.blas;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.Random;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class DtrsmTest {
@@ -576,6 +578,81 @@ class DtrsmTest {
         
         for (int i = 0; i < m * n; i++) {
             assertEquals(expected[i], Bcopy[i], TOL, "Mismatch at index " + i);
+        }
+    }
+
+    @Test
+    void testLeftWideRandomParity() {
+        verifyRandomLeftParity(BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.Unit, 24, 160, 29, 167);
+        verifyRandomLeftParity(BLAS.Uplo.Upper, BLAS.Trans.Trans, BLAS.Diag.NonUnit, 24, 160, 29, 167);
+        verifyRandomLeftParity(BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, 40, 96, 44, 101);
+        verifyRandomLeftParity(BLAS.Uplo.Lower, BLAS.Trans.Trans, BLAS.Diag.Unit, 40, 96, 44, 101);
+    }
+
+    @Test
+    void testRightWideRandomParity() {
+        verifyRandomRightParity(BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, 128, 64, 69, 71);
+        verifyRandomRightParity(BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.NonUnit, 128, 64, 69, 71);
+        verifyRandomRightParity(BLAS.Uplo.Upper, BLAS.Trans.Trans, BLAS.Diag.NonUnit, 160, 24, 29, 31);
+        verifyRandomRightParity(BLAS.Uplo.Lower, BLAS.Trans.Trans, BLAS.Diag.Unit, 160, 24, 29, 31);
+        verifyRandomRightParity(BLAS.Uplo.Upper, BLAS.Trans.Trans, BLAS.Diag.NonUnit, 96, 40, 47, 53);
+        verifyRandomRightParity(BLAS.Uplo.Lower, BLAS.Trans.Trans, BLAS.Diag.NonUnit, 96, 40, 47, 53);
+    }
+
+    private static void verifyRandomLeftParity(BLAS.Uplo uplo, BLAS.Trans trans, BLAS.Diag diag,
+                                               int m, int n, int lda, int ldb) {
+        Random random = new Random(20260423L + 31L * uplo.ordinal() + 17L * trans.ordinal() + 13L * diag.ordinal() + m + n);
+        double[] a = new double[m * lda];
+        double[] baseline = new double[m * ldb];
+        double[] current = new double[m * ldb];
+        fillTriangular(random, a, uplo, diag, m, lda);
+        fillRandom(random, baseline);
+        System.arraycopy(baseline, 0, current, 0, baseline.length);
+
+        BlasTestSupport.dtrsmScalar(BLAS.Side.Left, uplo, trans, diag, m, n, a, 0, lda, baseline, 0, ldb);
+        Dtrsm.dtrsm(BLAS.Side.Left, uplo, trans, diag, m, n, 1.0, a, 0, lda, current, 0, ldb);
+        assertArrayClose(baseline, current);
+    }
+
+    private static void verifyRandomRightParity(BLAS.Uplo uplo, BLAS.Trans trans, BLAS.Diag diag,
+                                                int m, int n, int lda, int ldb) {
+        Random random = new Random(20260423L + 43L * uplo.ordinal() + 19L * trans.ordinal() + 11L * diag.ordinal() + m + n);
+        double[] a = new double[n * lda];
+        double[] baseline = new double[m * ldb];
+        double[] current = new double[m * ldb];
+        fillTriangular(random, a, uplo, diag, n, lda);
+        fillRandom(random, baseline);
+        System.arraycopy(baseline, 0, current, 0, baseline.length);
+
+        BlasTestSupport.dtrsmScalar(BLAS.Side.Right, uplo, trans, diag, m, n, a, 0, lda, baseline, 0, ldb);
+        Dtrsm.dtrsm(BLAS.Side.Right, uplo, trans, diag, m, n, 1.0, a, 0, lda, current, 0, ldb);
+        assertArrayClose(baseline, current);
+    }
+
+    private static void fillTriangular(Random random, double[] a, BLAS.Uplo uplo, BLAS.Diag diag, int m, int lda) {
+        for (int i = 0; i < m; i++) {
+            int rowOff = i * lda;
+            for (int j = 0; j < m; j++) {
+                if (uplo == BLAS.Uplo.Upper ? j >= i : j <= i) {
+                    a[rowOff + j] = random.nextDouble() - 0.5;
+                } else {
+                    a[rowOff + j] = 0.0;
+                }
+            }
+            a[rowOff + i] = diag == BLAS.Diag.Unit ? 1.0 : a[rowOff + i] + m;
+        }
+    }
+
+    private static void fillRandom(Random random, double[] values) {
+        for (int i = 0; i < values.length; i++) {
+            values[i] = random.nextDouble() - 0.5;
+        }
+    }
+
+    private static void assertArrayClose(double[] expected, double[] actual) {
+        for (int i = 0; i < expected.length; i++) {
+            double tolerance = Math.max(1e-12, Math.abs(expected[i]) * 1e-10);
+            assertEquals(expected[i], actual[i], tolerance, "Mismatch at index " + i);
         }
     }
 }

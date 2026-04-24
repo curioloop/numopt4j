@@ -3,6 +3,9 @@
  */
 package com.curioloop.numopt4j.linalg.blas;
 
+import jdk.incubator.vector.DoubleVector;
+import jdk.incubator.vector.VectorSpecies;
+
 /**
  * DTRSM solves triangular matrix equations (in-place).
  *
@@ -19,6 +22,8 @@ package com.curioloop.numopt4j.linalg.blas;
  * <p>Row-major storage is used throughout. A and B are row-major matrices.</p>
  */
 public interface Dtrsm {
+
+    int ROW_UPDATE_SIMD_MIN_N = 32;
 
     /**
      * Solves a triangular matrix equation (in-place).
@@ -114,11 +119,22 @@ public interface Dtrsm {
             int bRow = bOff + i * ldb;
 
             // Subtract known contributions from rows below
-            for (int k = i + 1; k < m; k++) {
+            int k = i + 1;
+            for (; k + 1 < m; k += 2) {
+                double aik0 = -A[aRow + k];
+                double aik1 = -A[aRow + k + 1];
+                if (aik0 != 0.0 || aik1 != 0.0) {
+                    dtrsmRowUpdate2(n,
+                        aik0, B, bOff + k * ldb,
+                        aik1, B, bOff + (k + 1) * ldb,
+                        B, bRow);
+                }
+            }
+            for (; k < m; k++) {
                 double aik = A[aRow + k];
-                int bRowK = bOff + k * ldb;
-                // B[bRow,:] -= aik * B[bRowK,:]
-                Daxpy.daxpy(n, -aik, B, bRowK, 1, B, bRow, 1);
+                if (aik != 0.0) {
+                    dtrsmRowUpdate1(n, -aik, B, bOff + k * ldb, B, bRow);
+                }
             }
 
             // Divide by diagonal
@@ -142,11 +158,23 @@ public interface Dtrsm {
             int bRow = bOff + i * ldb;
 
             // Subtract known contributions from rows above
-            for (int k = 0; k < i; k++) {
+            int k = 0;
+            int k2 = (i / 2) * 2;
+            for (; k < k2; k += 2) {
+                double aik0 = -A[aRow + k];
+                double aik1 = -A[aRow + k + 1];
+                if (aik0 != 0.0 || aik1 != 0.0) {
+                    dtrsmRowUpdate2(n,
+                        aik0, B, bOff + k * ldb,
+                        aik1, B, bOff + (k + 1) * ldb,
+                        B, bRow);
+                }
+            }
+            for (; k < i; k++) {
                 double aik = A[aRow + k];
-                int bRowK = bOff + k * ldb;
-                // B[bRow,:] -= aik * B[bRowK,:]
-                Daxpy.daxpy(n, -aik, B, bRowK, 1, B, bRow, 1);
+                if (aik != 0.0) {
+                    dtrsmRowUpdate1(n, -aik, B, bOff + k * ldb, B, bRow);
+                }
             }
 
             // Divide by diagonal
@@ -169,16 +197,26 @@ public interface Dtrsm {
         // => X[0] = (B[0] - A[0,1]*X[1] - ...) / A[0,0]
         // Process from top to bottom
         for (int i = 0; i < m; i++) {
-            int aCol = aOff + i;  // Column i of A (stride lda)
             int bRow = bOff + i * ldb;
 
             // Subtract known contributions
-            for (int k = 0; k < i; k++) {
-                // A[k,i] is at A[k*lda + i]
+            int k = 0;
+            int k2 = (i / 2) * 2;
+            for (; k < k2; k += 2) {
+                double aki0 = -A[aOff + k * lda + i];
+                double aki1 = -A[aOff + (k + 1) * lda + i];
+                if (aki0 != 0.0 || aki1 != 0.0) {
+                    dtrsmRowUpdate2(n,
+                        aki0, B, bOff + k * ldb,
+                        aki1, B, bOff + (k + 1) * ldb,
+                        B, bRow);
+                }
+            }
+            for (; k < i; k++) {
                 double aki = A[aOff + k * lda + i];
-                int bRowK = bOff + k * ldb;
-                // B[bRow,:] -= aki * B[bRowK,:]
-                Daxpy.daxpy(n, -aki, B, bRowK, 1, B, bRow, 1);
+                if (aki != 0.0) {
+                    dtrsmRowUpdate1(n, -aki, B, bOff + k * ldb, B, bRow);
+                }
             }
 
             // Divide by diagonal
@@ -202,12 +240,22 @@ public interface Dtrsm {
             int bRow = bOff + i * ldb;
 
             // Subtract known contributions
-            for (int k = i + 1; k < m; k++) {
-                // A[k,i] is at A[k*lda + i]
+            int k = i + 1;
+            for (; k + 1 < m; k += 2) {
+                double aki0 = -A[aOff + k * lda + i];
+                double aki1 = -A[aOff + (k + 1) * lda + i];
+                if (aki0 != 0.0 || aki1 != 0.0) {
+                    dtrsmRowUpdate2(n,
+                        aki0, B, bOff + k * ldb,
+                        aki1, B, bOff + (k + 1) * ldb,
+                        B, bRow);
+                }
+            }
+            for (; k < m; k++) {
                 double aki = A[aOff + k * lda + i];
-                int bRowK = bOff + k * ldb;
-                // B[bRow,:] -= aki * B[bRowK,:]
-                Daxpy.daxpy(n, -aki, B, bRowK, 1, B, bRow, 1);
+                if (aki != 0.0) {
+                    dtrsmRowUpdate1(n, -aki, B, bOff + k * ldb, B, bRow);
+                }
             }
 
             // Divide by diagonal
@@ -215,6 +263,65 @@ public interface Dtrsm {
                 Dscal.dscal(n, 1.0 / A[aOff + i * lda + i], B, bRow, 1);
             }
         }
+    }
+
+    static void dtrsmRowUpdate1(int n,
+                                double alpha, double[] x, int xOff,
+                                double[] y, int yOff) {
+        if (n <= 0 || alpha == 0.0) {
+            return;
+        }
+
+        if (isSIMDRowUpdateCandidate(n) && DtrsmRowUpdateSIMD.dtrsmRowUpdate1(n, alpha, x, xOff, y, yOff)) {
+            return;
+        }
+
+        int j = 0;
+        for (; j + 3 < n; j += 4) {
+            y[yOff + j] = Math.fma(alpha, x[xOff + j], y[yOff + j]);
+            y[yOff + j + 1] = Math.fma(alpha, x[xOff + j + 1], y[yOff + j + 1]);
+            y[yOff + j + 2] = Math.fma(alpha, x[xOff + j + 2], y[yOff + j + 2]);
+            y[yOff + j + 3] = Math.fma(alpha, x[xOff + j + 3], y[yOff + j + 3]);
+        }
+        for (; j < n; j++) {
+            y[yOff + j] = Math.fma(alpha, x[xOff + j], y[yOff + j]);
+        }
+    }
+
+    static void dtrsmRowUpdate2(int n,
+                                double alpha0, double[] x0, int x0Off,
+                                double alpha1, double[] x1, int x1Off,
+                                double[] y, int yOff) {
+        if (n <= 0 || (alpha0 == 0.0 && alpha1 == 0.0)) {
+            return;
+        }
+        if (alpha0 == 0.0) {
+            dtrsmRowUpdate1(n, alpha1, x1, x1Off, y, yOff);
+            return;
+        }
+        if (alpha1 == 0.0) {
+            dtrsmRowUpdate1(n, alpha0, x0, x0Off, y, yOff);
+            return;
+        }
+        // Two-row fused updates stayed ahead on the accepted skinny-RHS replay shapes, so keep the pair kernel inline.
+        if (isSIMDRowUpdateCandidate(n) && DtrsmRowUpdateSIMD.dtrsmRowUpdate2(n, alpha0, x0, x0Off, alpha1, x1, x1Off, y, yOff)) {
+            return;
+        }
+
+        int j = 0;
+        for (; j + 3 < n; j += 4) {
+            y[yOff + j] = Math.fma(alpha0, x0[x0Off + j], Math.fma(alpha1, x1[x1Off + j], y[yOff + j]));
+            y[yOff + j + 1] = Math.fma(alpha0, x0[x0Off + j + 1], Math.fma(alpha1, x1[x1Off + j + 1], y[yOff + j + 1]));
+            y[yOff + j + 2] = Math.fma(alpha0, x0[x0Off + j + 2], Math.fma(alpha1, x1[x1Off + j + 2], y[yOff + j + 2]));
+            y[yOff + j + 3] = Math.fma(alpha0, x0[x0Off + j + 3], Math.fma(alpha1, x1[x1Off + j + 3], y[yOff + j + 3]));
+        }
+        for (; j < n; j++) {
+            y[yOff + j] = Math.fma(alpha0, x0[x0Off + j], Math.fma(alpha1, x1[x1Off + j], y[yOff + j]));
+        }
+    }
+
+    private static boolean isSIMDRowUpdateCandidate(int n) {
+        return n >= ROW_UPDATE_SIMD_MIN_N && SIMD.supportDaxpy();
     }
 
     // ==================== Right Side: Solve X * A = B ====================
@@ -243,8 +350,15 @@ public interface Dtrsm {
                     B[bRow + k] = bk / A[aOff + k * lda + k];
                     bk = B[bRow + k];
                 }
-                for (int j = k + 1; j < n; j++) {
-                    B[bRow + j] -= bk * A[aOff + k * lda + j];
+                int tail = n - k - 1;
+                if (tail > 0) {
+                    if (tail >= ROW_UPDATE_SIMD_MIN_N) {
+                        dtrsmRowUpdate1(tail, -bk, A, aOff + k * lda + k + 1, B, bRow + k + 1);
+                    } else {
+                        for (int j = k + 1; j < n; j++) {
+                            B[bRow + j] = Math.fma(-bk, A[aOff + k * lda + j], B[bRow + j]);
+                        }
+                    }
                 }
             }
         }
@@ -274,8 +388,14 @@ public interface Dtrsm {
                     B[bRow + k] = bk / A[aOff + k * lda + k];
                     bk = B[bRow + k];
                 }
-                for (int j = 0; j < k; j++) {
-                    B[bRow + j] -= bk * A[aOff + k * lda + j];
+                if (k > 0) {
+                    if (k >= ROW_UPDATE_SIMD_MIN_N) {
+                        dtrsmRowUpdate1(k, -bk, A, aOff + k * lda, B, bRow);
+                    } else {
+                        for (int j = 0; j < k; j++) {
+                            B[bRow + j] = Math.fma(-bk, A[aOff + k * lda + j], B[bRow + j]);
+                        }
+                    }
                 }
             }
         }
@@ -292,12 +412,24 @@ public interface Dtrsm {
         for (int i = 0; i < m; i++) {
             int bRow = bOff + i * ldb;
             for (int j = n - 1; j >= 0; j--) {
-                double sum = B[bRow + j];
-                for (int k = j + 1; k < n; k++) {
-                    sum -= A[aOff + j * lda + k] * B[bRow + k];
+                int aRow = aOff + j * lda;
+                double sum0 = B[bRow + j];
+                double sum1 = 0.0;
+                double sum2 = 0.0;
+                double sum3 = 0.0;
+                int k = j + 1;
+                for (; k + 3 < n; k += 4) {
+                    sum0 = Math.fma(-A[aRow + k], B[bRow + k], sum0);
+                    sum1 = Math.fma(-A[aRow + k + 1], B[bRow + k + 1], sum1);
+                    sum2 = Math.fma(-A[aRow + k + 2], B[bRow + k + 2], sum2);
+                    sum3 = Math.fma(-A[aRow + k + 3], B[bRow + k + 3], sum3);
+                }
+                double sum = (sum0 + sum1) + (sum2 + sum3);
+                for (; k < n; k++) {
+                    sum = Math.fma(-A[aRow + k], B[bRow + k], sum);
                 }
                 if (!unitDiag) {
-                    sum /= A[aOff + j * lda + j];
+                    sum /= A[aRow + j];
                 }
                 B[bRow + j] = sum;
             }
@@ -317,7 +449,7 @@ public interface Dtrsm {
             for (int j = 0; j < n; j++) {
                 double sum = B[bRow + j];
                 for (int k = 0; k < j; k++) {
-                    sum -= A[aOff + j * lda + k] * B[bRow + k];
+                    sum = Math.fma(-A[aOff + j * lda + k], B[bRow + k], sum);
                 }
                 if (!unitDiag) {
                     sum /= A[aOff + j * lda + j];
@@ -325,5 +457,59 @@ public interface Dtrsm {
                 B[bRow + j] = sum;
             }
         }
+    }
+}
+
+final class DtrsmRowUpdateSIMD {
+
+    private static final VectorSpecies<Double> SPECIES = Gate.SPECIES;
+    private static final int LANES = Gate.LANES;
+
+    private DtrsmRowUpdateSIMD() {
+    }
+
+    static boolean dtrsmRowUpdate1(int n,
+                                   double alpha, double[] x, int xOff,
+                                   double[] y, int yOff) {
+        if (LANES <= 1) {
+            return false;
+        }
+
+        DoubleVector alphaVec = DoubleVector.broadcast(SPECIES, alpha);
+        int limit = SPECIES.loopBound(n);
+        int j = 0;
+        for (; j < limit; j += LANES) {
+            DoubleVector xVec = DoubleVector.fromArray(SPECIES, x, xOff + j);
+            DoubleVector yVec = DoubleVector.fromArray(SPECIES, y, yOff + j);
+            alphaVec.fma(xVec, yVec).intoArray(y, yOff + j);
+        }
+        for (; j < n; j++) {
+            y[yOff + j] = Math.fma(alpha, x[xOff + j], y[yOff + j]);
+        }
+        return true;
+    }
+
+    static boolean dtrsmRowUpdate2(int n,
+                                   double alpha0, double[] x0, int x0Off,
+                                   double alpha1, double[] x1, int x1Off,
+                                   double[] y, int yOff) {
+        if (LANES <= 1) {
+            return false;
+        }
+
+        DoubleVector alpha0Vec = DoubleVector.broadcast(SPECIES, alpha0);
+        DoubleVector alpha1Vec = DoubleVector.broadcast(SPECIES, alpha1);
+        int limit = SPECIES.loopBound(n);
+        int j = 0;
+        for (; j < limit; j += LANES) {
+            DoubleVector x0Vec = DoubleVector.fromArray(SPECIES, x0, x0Off + j);
+            DoubleVector x1Vec = DoubleVector.fromArray(SPECIES, x1, x1Off + j);
+            DoubleVector yVec = DoubleVector.fromArray(SPECIES, y, yOff + j);
+            alpha0Vec.fma(x0Vec, alpha1Vec.fma(x1Vec, yVec)).intoArray(y, yOff + j);
+        }
+        for (; j < n; j++) {
+            y[yOff + j] = Math.fma(alpha0, x0[x0Off + j], Math.fma(alpha1, x1[x1Off + j], y[yOff + j]));
+        }
+        return true;
     }
 }

@@ -108,7 +108,13 @@ public interface Dgemm {
      * Scales matrix C by beta.
      */
     static void scaleC(double[] C, int cOff, int ldc, int m, int n, double beta) {
+        
         if (beta == 0.0) {
+            int span = m * n;
+            if ((m == 1 || ldc == n) && span >= 3072) {
+                java.util.Arrays.fill(C, cOff, cOff + span, 0.0);
+                return;
+            }
             for (int i = 0; i < m; i++) {
                 int cRow = cOff + i * ldc;
                 for (int j = 0; j < n; j++) {
@@ -141,7 +147,7 @@ public interface Dgemm {
         
         // Choose algorithm based on sizes (use max block dimension as threshold)
         int maxBlock = Math.max(BLOCK_M, Math.max(BLOCK_N, BLOCK_K));
-        if (m < maxBlock && n < maxBlock && k < maxBlock) {
+        if ((m < maxBlock && n < maxBlock && k < maxBlock) || preferThinKDirect(m, n, k)) {
             dgemmNNDirect(m, n, k, alpha, A, aOff, lda, B, bOff, ldb, C, cOff, ldc);
         } else {
             dgemmNNBlocked(m, n, k, alpha, A, aOff, lda, B, bOff, ldb, C, cOff, ldc);
@@ -156,9 +162,8 @@ public interface Dgemm {
                         double[] A, int aOff, int lda,
                         double[] B, int bOff, int ldb,
                         double[] C, int cOff, int ldc) {
-        
-        int maxBlock = Math.max(BLOCK_M, Math.max(BLOCK_N, BLOCK_K));
-        if (m < maxBlock && n < maxBlock && k < maxBlock) {
+
+        if (preferTNDirect(m, n, k)) {
             dgemmTNDirect(m, n, k, alpha, A, aOff, lda, B, bOff, ldb, C, cOff, ldc);
         } else {
             dgemmTNBlocked(m, n, k, alpha, A, aOff, lda, B, bOff, ldb, C, cOff, ldc);
@@ -175,7 +180,7 @@ public interface Dgemm {
                         double[] C, int cOff, int ldc) {
         
         int maxBlock = Math.max(BLOCK_M, Math.max(BLOCK_N, BLOCK_K));
-        if (m < maxBlock && n < maxBlock && k < maxBlock) {
+        if ((m < maxBlock && n < maxBlock && k < maxBlock) || preferThinKDirect(m, n, k)) {
             dgemmNTDirect(m, n, k, alpha, A, aOff, lda, B, bOff, ldb, C, cOff, ldc);
         } else {
             dgemmNTBlocked(m, n, k, alpha, A, aOff, lda, B, bOff, ldb, C, cOff, ldc);
@@ -197,6 +202,39 @@ public interface Dgemm {
         } else {
             dgemmTTBlocked(m, n, k, alpha, A, aOff, lda, B, bOff, ldb, C, cOff, ldc);
         }
+    }
+
+    /**
+     * Thin-k direct gate for the NN/NT caller surfaces.
+     *
+     * <p>Optimization target: Dgebrd/Dlabrd-style trailing A22 updates, where k is small
+     * and the live rectangles are much wider/taller than the generic small-matrix regime.</p>
+     */
+    static boolean preferThinKDirect(int m, int n, int k) {
+        return k <= BLOCK_K / 2 && m <= BLOCK_M * 7 && n <= BLOCK_N * 5;
+    }
+
+    /**
+     * TN direct gate for the transpose-left caller surfaces.
+     *
+     * <p>Optimization targets:</p>
+     * <ul>
+     *   <li>genuinely small TN tiles,</li>
+     *   <li>skinny-RHS transpose updates from Dtrtrs/Dtrsm-style callers,</li>
+     *   <li>square TN gram products such as the OLS QR {@code R^T R} path.</li>
+     * </ul>
+     *
+     * <p>Keep this gate narrow. Broader TN direct expansion was explored against Dpotrf-style
+     * callers and did not produce stable full-caller wins.</p>
+     */
+    static boolean preferTNDirect(int m, int n, int k) {
+        if (m <= BLOCK_M && n <= BLOCK_N && k <= BLOCK_K / 2) {
+            return true;
+        }
+        if (m == n && n == k && k >= 96 && k <= 160) {
+            return true;
+        }
+        return k <= BLOCK_K / 2 && m <= BLOCK_M * 2 && n <= 48;
     }
 
     /**
@@ -258,17 +296,17 @@ public interface Dgemm {
                     double bj2 = B[bRow + j + 2];
                     double bj3 = B[bRow + j + 3];
                     
-                    c00 = FMA.op(a0l, bj0, c00);     c01 = FMA.op(a0l, bj1, c01);
-                    c02 = FMA.op(a0l, bj2, c02); c03 = FMA.op(a0l, bj3, c03);
+                    c00 = Math.fma(a0l, bj0, c00);     c01 = Math.fma(a0l, bj1, c01);
+                    c02 = Math.fma(a0l, bj2, c02); c03 = Math.fma(a0l, bj3, c03);
                     
-                    c10 = FMA.op(a1l, bj0, c10);     c11 = FMA.op(a1l, bj1, c11);
-                    c12 = FMA.op(a1l, bj2, c12); c13 = FMA.op(a1l, bj3, c13);
+                    c10 = Math.fma(a1l, bj0, c10);     c11 = Math.fma(a1l, bj1, c11);
+                    c12 = Math.fma(a1l, bj2, c12); c13 = Math.fma(a1l, bj3, c13);
                     
-                    c20 = FMA.op(a2l, bj0, c20);     c21 = FMA.op(a2l, bj1, c21);
-                    c22 = FMA.op(a2l, bj2, c22); c23 = FMA.op(a2l, bj3, c23);
+                    c20 = Math.fma(a2l, bj0, c20);     c21 = Math.fma(a2l, bj1, c21);
+                    c22 = Math.fma(a2l, bj2, c22); c23 = Math.fma(a2l, bj3, c23);
                     
-                    c30 = FMA.op(a3l, bj0, c30);     c31 = FMA.op(a3l, bj1, c31);
-                    c32 = FMA.op(a3l, bj2, c32); c33 = FMA.op(a3l, bj3, c33);
+                    c30 = Math.fma(a3l, bj0, c30);     c31 = Math.fma(a3l, bj1, c31);
+                    c32 = Math.fma(a3l, bj2, c32); c33 = Math.fma(a3l, bj3, c33);
                 }
                 
                 // Apply alpha at write-back (once per accumulator, not k times)
@@ -328,10 +366,10 @@ public interface Dgemm {
                         double bj2 = B[bRow + j + 2];
                         double bj3 = B[bRow + j + 3];
                         
-                        c00 = FMA.op(a0l, bj0, c00);     c01 = FMA.op(a0l, bj1, c01);
-                        c02 = FMA.op(a0l, bj2, c02); c03 = FMA.op(a0l, bj3, c03);
-                        c10 = FMA.op(a1l, bj0, c10);     c11 = FMA.op(a1l, bj1, c11);
-                        c12 = FMA.op(a1l, bj2, c12); c13 = FMA.op(a1l, bj3, c13);
+                        c00 = Math.fma(a0l, bj0, c00);     c01 = Math.fma(a0l, bj1, c01);
+                        c02 = Math.fma(a0l, bj2, c02); c03 = Math.fma(a0l, bj3, c03);
+                        c10 = Math.fma(a1l, bj0, c10);     c11 = Math.fma(a1l, bj1, c11);
+                        c12 = Math.fma(a1l, bj2, c12); c13 = Math.fma(a1l, bj3, c13);
                     }
                     
                     // Apply alpha at write-back
@@ -368,10 +406,10 @@ public interface Dgemm {
                         // No alpha here
                         double ail = A[aRow + l];
                         int bRow = bOff + l * ldb;
-                        c0 = FMA.op(ail, B[bRow + j], c0);
-                        c1 = FMA.op(ail, B[bRow + j + 1], c1);
-                        c2 = FMA.op(ail, B[bRow + j + 2], c2);
-                        c3 = FMA.op(ail, B[bRow + j + 3], c3);
+                        c0 = Math.fma(ail, B[bRow + j], c0);
+                        c1 = Math.fma(ail, B[bRow + j + 1], c1);
+                        c2 = Math.fma(ail, B[bRow + j + 2], c2);
+                        c3 = Math.fma(ail, B[bRow + j + 3], c3);
                     }
                     
                     // Apply alpha at write-back
@@ -402,11 +440,14 @@ public interface Dgemm {
                                double[] A, int aOff, int lda,
                                double[] B, int bOff, int ldb,
                                double[] C, int cOff, int ldc) {
+        if (k <= BLOCK_K / 2) {
+            dgemmNNBlockedThinK(m, n, k, alpha, A, aOff, lda, B, bOff, ldb, C, cOff, ldc);
+            return;
+        }
         
         // Outer blocking for L2 cache (2x inner block size)
         final int OUTER_M = BLOCK_M * 2;
         final int OUTER_N = BLOCK_N * 2;
-        final int OUTER_K = BLOCK_K * 2;
         
         // BLIS-style: i-j-kk loop order to defer C write-back
         for (int ii = 0; ii < m; ii += OUTER_M) {
@@ -418,6 +459,25 @@ public interface Dgemm {
                 // Process this (ii, jj) block across ALL k-blocks with deferred write-back
                 dgemmNNBlockBlis(ii, iMax, jj, jMax, k, alpha,
                                  A, aOff, lda, B, bOff, ldb, C, cOff, ldc, BLOCK_K);
+            }
+        }
+    }
+
+    static void dgemmNNBlockedThinK(int m, int n, int k, double alpha,
+                                    double[] A, int aOff, int lda,
+                                    double[] B, int bOff, int ldb,
+                                    double[] C, int cOff, int ldc) {
+
+        final int OUTER_M = BLOCK_M * 2;
+        final int OUTER_N = BLOCK_N * 2;
+
+        for (int ii = 0; ii < m; ii += OUTER_M) {
+            int iMax = Math.min(ii + OUTER_M, m);
+
+            for (int jj = 0; jj < n; jj += OUTER_N) {
+                int jMax = Math.min(jj + OUTER_N, n);
+                dgemmNNMicroBlis4x4(ii, iMax, jj, jMax, k, alpha,
+                    A, aOff, lda, B, bOff, ldb, C, cOff, ldc, k);
             }
         }
     }
@@ -492,17 +552,17 @@ public interface Dgemm {
                     double bj2 = B[bRow + j + 2];
                     double bj3 = B[bRow + j + 3];
                     
-                    c00 = FMA.op(a0k, bj0, c00);     c01 = FMA.op(a0k, bj1, c01);
-                    c02 = FMA.op(a0k, bj2, c02); c03 = FMA.op(a0k, bj3, c03);
+                    c00 = Math.fma(a0k, bj0, c00);     c01 = Math.fma(a0k, bj1, c01);
+                    c02 = Math.fma(a0k, bj2, c02); c03 = Math.fma(a0k, bj3, c03);
                     
-                    c10 = FMA.op(a1k, bj0, c10);     c11 = FMA.op(a1k, bj1, c11);
-                    c12 = FMA.op(a1k, bj2, c12); c13 = FMA.op(a1k, bj3, c13);
+                    c10 = Math.fma(a1k, bj0, c10);     c11 = Math.fma(a1k, bj1, c11);
+                    c12 = Math.fma(a1k, bj2, c12); c13 = Math.fma(a1k, bj3, c13);
                     
-                    c20 = FMA.op(a2k, bj0, c20);     c21 = FMA.op(a2k, bj1, c21);
-                    c22 = FMA.op(a2k, bj2, c22); c23 = FMA.op(a2k, bj3, c23);
+                    c20 = Math.fma(a2k, bj0, c20);     c21 = Math.fma(a2k, bj1, c21);
+                    c22 = Math.fma(a2k, bj2, c22); c23 = Math.fma(a2k, bj3, c23);
                     
-                    c30 = FMA.op(a3k, bj0, c30);     c31 = FMA.op(a3k, bj1, c31);
-                    c32 = FMA.op(a3k, bj2, c32); c33 = FMA.op(a3k, bj3, c33);
+                    c30 = Math.fma(a3k, bj0, c30);     c31 = Math.fma(a3k, bj1, c31);
+                    c32 = Math.fma(a3k, bj2, c32); c33 = Math.fma(a3k, bj3, c33);
                 }
                 
                 // Apply alpha at write-back
@@ -548,10 +608,10 @@ public interface Dgemm {
                     // No alpha here
                     double aik = A[aRow + k];
                     int bRow = bOff + k * ldb;
-                    c0 = FMA.op(aik, B[bRow + j], c0);
-                    c1 = FMA.op(aik, B[bRow + j + 1], c1);
-                    c2 = FMA.op(aik, B[bRow + j + 2], c2);
-                    c3 = FMA.op(aik, B[bRow + j + 3], c3);
+                    c0 = Math.fma(aik, B[bRow + j], c0);
+                    c1 = Math.fma(aik, B[bRow + j + 1], c1);
+                    c2 = Math.fma(aik, B[bRow + j + 2], c2);
+                    c3 = Math.fma(aik, B[bRow + j + 3], c3);
                 }
                 
                 // Apply alpha at write-back
@@ -626,17 +686,17 @@ public interface Dgemm {
                         double bj2 = B[bRow + j + 2];
                         double bj3 = B[bRow + j + 3];
                         
-                        c00 = FMA.op(a0k, bj0, c00);     c01 = FMA.op(a0k, bj1, c01);
-                        c02 = FMA.op(a0k, bj2, c02); c03 = FMA.op(a0k, bj3, c03);
+                        c00 = Math.fma(a0k, bj0, c00);     c01 = Math.fma(a0k, bj1, c01);
+                        c02 = Math.fma(a0k, bj2, c02); c03 = Math.fma(a0k, bj3, c03);
                         
-                        c10 = FMA.op(a1k, bj0, c10);     c11 = FMA.op(a1k, bj1, c11);
-                        c12 = FMA.op(a1k, bj2, c12); c13 = FMA.op(a1k, bj3, c13);
+                        c10 = Math.fma(a1k, bj0, c10);     c11 = Math.fma(a1k, bj1, c11);
+                        c12 = Math.fma(a1k, bj2, c12); c13 = Math.fma(a1k, bj3, c13);
                         
-                        c20 = FMA.op(a2k, bj0, c20);     c21 = FMA.op(a2k, bj1, c21);
-                        c22 = FMA.op(a2k, bj2, c22); c23 = FMA.op(a2k, bj3, c23);
+                        c20 = Math.fma(a2k, bj0, c20);     c21 = Math.fma(a2k, bj1, c21);
+                        c22 = Math.fma(a2k, bj2, c22); c23 = Math.fma(a2k, bj3, c23);
                         
-                        c30 = FMA.op(a3k, bj0, c30);     c31 = FMA.op(a3k, bj1, c31);
-                        c32 = FMA.op(a3k, bj2, c32); c33 = FMA.op(a3k, bj3, c33);
+                        c30 = Math.fma(a3k, bj0, c30);     c31 = Math.fma(a3k, bj1, c31);
+                        c32 = Math.fma(a3k, bj2, c32); c33 = Math.fma(a3k, bj3, c33);
                     }
                 }
                 
@@ -684,10 +744,10 @@ public interface Dgemm {
                 for (int k = 0; k < kTotal; k++) {
                     double aik = A[aRow + k];
                     int bRow = bOff + k * ldb;
-                    c0 = FMA.op(aik, B[bRow + j], c0);
-                    c1 = FMA.op(aik, B[bRow + j + 1], c1);
-                    c2 = FMA.op(aik, B[bRow + j + 2], c2);
-                    c3 = FMA.op(aik, B[bRow + j + 3], c3);
+                    c0 = Math.fma(aik, B[bRow + j], c0);
+                    c1 = Math.fma(aik, B[bRow + j + 1], c1);
+                    c2 = Math.fma(aik, B[bRow + j + 2], c2);
+                    c3 = Math.fma(aik, B[bRow + j + 3], c3);
                 }
                 
                 C[cRow + j] += alpha * c0;
@@ -755,17 +815,17 @@ public interface Dgemm {
                     double bj2 = B[bRow + j + 2];
                     double bj3 = B[bRow + j + 3];
                     
-                    c00 = FMA.op(a0l, bj0, c00);     c01 = FMA.op(a0l, bj1, c01);
-                    c02 = FMA.op(a0l, bj2, c02); c03 = FMA.op(a0l, bj3, c03);
+                    c00 = Math.fma(a0l, bj0, c00);     c01 = Math.fma(a0l, bj1, c01);
+                    c02 = Math.fma(a0l, bj2, c02); c03 = Math.fma(a0l, bj3, c03);
                     
-                    c10 = FMA.op(a1l, bj0, c10);     c11 = FMA.op(a1l, bj1, c11);
-                    c12 = FMA.op(a1l, bj2, c12); c13 = FMA.op(a1l, bj3, c13);
+                    c10 = Math.fma(a1l, bj0, c10);     c11 = Math.fma(a1l, bj1, c11);
+                    c12 = Math.fma(a1l, bj2, c12); c13 = Math.fma(a1l, bj3, c13);
                     
-                    c20 = FMA.op(a2l, bj0, c20);     c21 = FMA.op(a2l, bj1, c21);
-                    c22 = FMA.op(a2l, bj2, c22); c23 = FMA.op(a2l, bj3, c23);
+                    c20 = Math.fma(a2l, bj0, c20);     c21 = Math.fma(a2l, bj1, c21);
+                    c22 = Math.fma(a2l, bj2, c22); c23 = Math.fma(a2l, bj3, c23);
                     
-                    c30 = FMA.op(a3l, bj0, c30);     c31 = FMA.op(a3l, bj1, c31);
-                    c32 = FMA.op(a3l, bj2, c32); c33 = FMA.op(a3l, bj3, c33);
+                    c30 = Math.fma(a3l, bj0, c30);     c31 = Math.fma(a3l, bj1, c31);
+                    c32 = Math.fma(a3l, bj2, c32); c33 = Math.fma(a3l, bj3, c33);
                 }
                 
                 C[cRow0 + j] += alpha * c00;     C[cRow0 + j + 1] += alpha * c01;
@@ -877,14 +937,14 @@ public interface Dgemm {
                     double bj2 = B[bRow + j + 2];
                     double bj3 = B[bRow + j + 3];
                     
-                    c00 = FMA.op(a0l, bj0, c00);     c01 = FMA.op(a0l, bj1, c01);
-                    c02 = FMA.op(a0l, bj2, c02); c03 = FMA.op(a0l, bj3, c03);
-                    c10 = FMA.op(a1l, bj0, c10);     c11 = FMA.op(a1l, bj1, c11);
-                    c12 = FMA.op(a1l, bj2, c12); c13 = FMA.op(a1l, bj3, c13);
-                    c20 = FMA.op(a2l, bj0, c20);     c21 = FMA.op(a2l, bj1, c21);
-                    c22 = FMA.op(a2l, bj2, c22); c23 = FMA.op(a2l, bj3, c23);
-                    c30 = FMA.op(a3l, bj0, c30);     c31 = FMA.op(a3l, bj1, c31);
-                    c32 = FMA.op(a3l, bj2, c32); c33 = FMA.op(a3l, bj3, c33);
+                    c00 = Math.fma(a0l, bj0, c00);     c01 = Math.fma(a0l, bj1, c01);
+                    c02 = Math.fma(a0l, bj2, c02); c03 = Math.fma(a0l, bj3, c03);
+                    c10 = Math.fma(a1l, bj0, c10);     c11 = Math.fma(a1l, bj1, c11);
+                    c12 = Math.fma(a1l, bj2, c12); c13 = Math.fma(a1l, bj3, c13);
+                    c20 = Math.fma(a2l, bj0, c20);     c21 = Math.fma(a2l, bj1, c21);
+                    c22 = Math.fma(a2l, bj2, c22); c23 = Math.fma(a2l, bj3, c23);
+                    c30 = Math.fma(a3l, bj0, c30);     c31 = Math.fma(a3l, bj1, c31);
+                    c32 = Math.fma(a3l, bj2, c32); c33 = Math.fma(a3l, bj3, c33);
                 }
                 
                 C[cRow0 + j] += alpha * c00;     C[cRow0 + j + 1] += alpha * c01;
@@ -950,31 +1010,34 @@ public interface Dgemm {
             int cRow3 = cOff + (i + 3) * ldc;
             
             for (int j = 0; j < n4; j += 4) {
+                int bCol0 = bOff + j * ldb;
+                int bCol1 = bCol0 + ldb;
+                int bCol2 = bCol1 + ldb;
+                int bCol3 = bCol2 + ldb;
                 double c00 = 0.0, c01 = 0.0, c02 = 0.0, c03 = 0.0;
                 double c10 = 0.0, c11 = 0.0, c12 = 0.0, c13 = 0.0;
                 double c20 = 0.0, c21 = 0.0, c22 = 0.0, c23 = 0.0;
                 double c30 = 0.0, c31 = 0.0, c32 = 0.0, c33 = 0.0;
                 
                 for (int l = 0; l < k; l++) {
-                    // B^T: access column j to j+3, row l
-                    int bColJ = bOff + j * ldb + l;
-                    int bColJ1 = bOff + (j + 1) * ldb + l;
-                    int bColJ2 = bOff + (j + 2) * ldb + l;
-                    int bColJ3 = bOff + (j + 3) * ldb + l;
-                    
                     double a0l = A[aRow0 + l];
                     double a1l = A[aRow1 + l];
                     double a2l = A[aRow2 + l];
                     double a3l = A[aRow3 + l];
-                    
-                    c00 += a0l * B[bColJ];  c01 += a0l * B[bColJ1];
-                    c02 += a0l * B[bColJ2]; c03 += a0l * B[bColJ3];
-                    c10 += a1l * B[bColJ];  c11 += a1l * B[bColJ1];
-                    c12 += a1l * B[bColJ2]; c13 += a1l * B[bColJ3];
-                    c20 += a2l * B[bColJ];  c21 += a2l * B[bColJ1];
-                    c22 += a2l * B[bColJ2]; c23 += a2l * B[bColJ3];
-                    c30 += a3l * B[bColJ];  c31 += a3l * B[bColJ1];
-                    c32 += a3l * B[bColJ2]; c33 += a3l * B[bColJ3];
+
+                    double bj0 = B[bCol0 + l];
+                    double bj1 = B[bCol1 + l];
+                    double bj2 = B[bCol2 + l];
+                    double bj3 = B[bCol3 + l];
+
+                    c00 = Math.fma(a0l, bj0, c00);  c01 = Math.fma(a0l, bj1, c01);
+                    c02 = Math.fma(a0l, bj2, c02);  c03 = Math.fma(a0l, bj3, c03);
+                    c10 = Math.fma(a1l, bj0, c10);  c11 = Math.fma(a1l, bj1, c11);
+                    c12 = Math.fma(a1l, bj2, c12);  c13 = Math.fma(a1l, bj3, c13);
+                    c20 = Math.fma(a2l, bj0, c20);  c21 = Math.fma(a2l, bj1, c21);
+                    c22 = Math.fma(a2l, bj2, c22);  c23 = Math.fma(a2l, bj3, c23);
+                    c30 = Math.fma(a3l, bj0, c30);  c31 = Math.fma(a3l, bj1, c31);
+                    c32 = Math.fma(a3l, bj2, c32);  c33 = Math.fma(a3l, bj3, c33);
                 }
                 
                 C[cRow0 + j] += alpha * c00;     C[cRow0 + j + 1] += alpha * c01;
@@ -988,13 +1051,14 @@ public interface Dgemm {
             }
             
             for (int j = n4; j < n; j++) {
+                int bCol = bOff + j * ldb;
                 double s0 = 0.0, s1 = 0.0, s2 = 0.0, s3 = 0.0;
                 for (int l = 0; l < k; l++) {
-                    double bj = B[bOff + j * ldb + l];
-                    s0 += A[aRow0 + l] * bj;
-                    s1 += A[aRow1 + l] * bj;
-                    s2 += A[aRow2 + l] * bj;
-                    s3 += A[aRow3 + l] * bj;
+                    double bj = B[bCol + l];
+                    s0 = Math.fma(A[aRow0 + l], bj, s0);
+                    s1 = Math.fma(A[aRow1 + l], bj, s1);
+                    s2 = Math.fma(A[aRow2 + l], bj, s2);
+                    s3 = Math.fma(A[aRow3 + l], bj, s3);
                 }
                 C[cRow0 + j] += alpha * s0;
                 C[cRow1 + j] += alpha * s1;
@@ -1007,9 +1071,10 @@ public interface Dgemm {
             int aRow = aOff + i * lda;
             int cRow = cOff + i * ldc;
             for (int j = 0; j < n; j++) {
+                int bCol = bOff + j * ldb;
                 double sum = 0.0;
                 for (int l = 0; l < k; l++) {
-                    sum += A[aRow + l] * B[bOff + j * ldb + l];
+                    sum = Math.fma(A[aRow + l], B[bCol + l], sum);
                 }
                 C[cRow + j] += alpha * sum;
             }
@@ -1023,6 +1088,10 @@ public interface Dgemm {
                                 double[] A, int aOff, int lda,
                                 double[] B, int bOff, int ldb,
                                 double[] C, int cOff, int ldc) {
+        if (k <= BLOCK_K / 2) {
+            dgemmNTBlockedThinK(m, n, k, alpha, A, aOff, lda, B, bOff, ldb, C, cOff, ldc);
+            return;
+        }
         
         final int OUTER_M = BLOCK_M * 2;
         final int OUTER_N = BLOCK_N * 2;
@@ -1051,6 +1120,25 @@ public interface Dgemm {
         }
     }
 
+    static void dgemmNTBlockedThinK(int m, int n, int k, double alpha,
+                                    double[] A, int aOff, int lda,
+                                    double[] B, int bOff, int ldb,
+                                    double[] C, int cOff, int ldc) {
+
+        final int OUTER_M = BLOCK_M * 2;
+        final int OUTER_N = BLOCK_N * 2;
+
+        for (int ii = 0; ii < m; ii += OUTER_M) {
+            int iMax = Math.min(ii + OUTER_M, m);
+
+            for (int jj = 0; jj < n; jj += OUTER_N) {
+                int jMax = Math.min(jj + OUTER_N, n);
+                dgemmNTBlock(ii, iMax, jj, jMax, 0, k, alpha,
+                    A, aOff, lda, B, bOff, ldb, C, cOff, ldc);
+            }
+        }
+    }
+
     static void dgemmNTBlock(int iStart, int iEnd, int jStart, int jEnd, int kStart, int kEnd,
                               double alpha, double[] A, int aOff, int lda,
                               double[] B, int bOff, int ldb,
@@ -1070,34 +1158,33 @@ public interface Dgemm {
             int cRow3 = cOff + (i + 3) * ldc;
             
             for (int j = jStart; j < j4End; j += 4) {
+                int bCol0 = bOff + j * ldb;
+                int bCol1 = bCol0 + ldb;
+                int bCol2 = bCol1 + ldb;
+                int bCol3 = bCol2 + ldb;
                 double c00 = 0.0, c01 = 0.0, c02 = 0.0, c03 = 0.0;
                 double c10 = 0.0, c11 = 0.0, c12 = 0.0, c13 = 0.0;
                 double c20 = 0.0, c21 = 0.0, c22 = 0.0, c23 = 0.0;
                 double c30 = 0.0, c31 = 0.0, c32 = 0.0, c33 = 0.0;
                 
                 for (int l = kStart; l < kEnd; l++) {
-                    int bColJ = bOff + j * ldb + l;
-                    int bColJ1 = bOff + (j + 1) * ldb + l;
-                    int bColJ2 = bOff + (j + 2) * ldb + l;
-                    int bColJ3 = bOff + (j + 3) * ldb + l;
-                    
                     double a0l = A[aRow0 + l];
                     double a1l = A[aRow1 + l];
                     double a2l = A[aRow2 + l];
                     double a3l = A[aRow3 + l];
-                    double bj0 = B[bColJ];
-                    double bj1 = B[bColJ1];
-                    double bj2 = B[bColJ2];
-                    double bj3 = B[bColJ3];
+                    double bj0 = B[bCol0 + l];
+                    double bj1 = B[bCol1 + l];
+                    double bj2 = B[bCol2 + l];
+                    double bj3 = B[bCol3 + l];
                     
-                    c00 = FMA.op(a0l, bj0, c00);  c01 = FMA.op(a0l, bj1, c01);
-                    c02 = FMA.op(a0l, bj2, c02); c03 = FMA.op(a0l, bj3, c03);
-                    c10 = FMA.op(a1l, bj0, c10);  c11 = FMA.op(a1l, bj1, c11);
-                    c12 = FMA.op(a1l, bj2, c12); c13 = FMA.op(a1l, bj3, c13);
-                    c20 = FMA.op(a2l, bj0, c20);  c21 = FMA.op(a2l, bj1, c21);
-                    c22 = FMA.op(a2l, bj2, c22); c23 = FMA.op(a2l, bj3, c23);
-                    c30 = FMA.op(a3l, bj0, c30);  c31 = FMA.op(a3l, bj1, c31);
-                    c32 = FMA.op(a3l, bj2, c32); c33 = FMA.op(a3l, bj3, c33);
+                    c00 = Math.fma(a0l, bj0, c00);  c01 = Math.fma(a0l, bj1, c01);
+                    c02 = Math.fma(a0l, bj2, c02); c03 = Math.fma(a0l, bj3, c03);
+                    c10 = Math.fma(a1l, bj0, c10);  c11 = Math.fma(a1l, bj1, c11);
+                    c12 = Math.fma(a1l, bj2, c12); c13 = Math.fma(a1l, bj3, c13);
+                    c20 = Math.fma(a2l, bj0, c20);  c21 = Math.fma(a2l, bj1, c21);
+                    c22 = Math.fma(a2l, bj2, c22); c23 = Math.fma(a2l, bj3, c23);
+                    c30 = Math.fma(a3l, bj0, c30);  c31 = Math.fma(a3l, bj1, c31);
+                    c32 = Math.fma(a3l, bj2, c32); c33 = Math.fma(a3l, bj3, c33);
                 }
                 
                 C[cRow0 + j] += alpha * c00;     C[cRow0 + j + 1] += alpha * c01;
@@ -1111,9 +1198,10 @@ public interface Dgemm {
             }
             
             for (int j = j4End; j < jEnd; j++) {
+                int bCol = bOff + j * ldb;
                 double s0 = 0.0, s1 = 0.0, s2 = 0.0, s3 = 0.0;
                 for (int l = kStart; l < kEnd; l++) {
-                    double bj = B[bOff + j * ldb + l];
+                    double bj = B[bCol + l];
                     s0 += A[aRow0 + l] * bj;
                     s1 += A[aRow1 + l] * bj;
                     s2 += A[aRow2 + l] * bj;
@@ -1130,9 +1218,10 @@ public interface Dgemm {
             int aRow = aOff + i * lda;
             int cRow = cOff + i * ldc;
             for (int j = jStart; j < jEnd; j++) {
+                int bCol = bOff + j * ldb;
                 double sum = 0.0;
                 for (int l = kStart; l < kEnd; l++) {
-                    sum += A[aRow + l] * B[bOff + j * ldb + l];
+                    sum += A[aRow + l] * B[bCol + l];
                 }
                 C[cRow + j] += alpha * sum;
             }

@@ -222,11 +222,7 @@ public interface Dlarfb {
         if (m <= 0 || n <= 0 || k <= 0) return;
 
         // W = C1 (copy first k columns of C to work, row-major: work[i*ldwork+j] = C[i*ldc+j]
-        for (int i = 0; i < m; i++) {
-            for (int j = 0; j < k; j++) {
-                work[wOff + i * ldwork + j] = C[cOff + i * ldc + j];
-            }
-        }
+        copyLeadingColumnsToWork(C, cOff, ldc, work, wOff, ldwork, m, k);
 
         // W = W * V1 (V1 is k x k unit lower triangular)
         BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.Unit, m, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
@@ -265,11 +261,7 @@ public interface Dlarfb {
         if (m <= 0 || n <= 0 || k <= 0) return;
 
         // W = C1 (row-major)
-        for (int i = 0; i < m; i++) {
-            for (int j = 0; j < k; j++) {
-                work[wOff + i * ldwork + j] = C[cOff + i * ldc + j];
-            }
-        }
+        copyLeadingColumnsToWork(C, cOff, ldc, work, wOff, ldwork, m, k);
 
         // W = W * V1
         BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.NoTrans, BLAS.Diag.Unit, m, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
@@ -404,11 +396,7 @@ public interface Dlarfb {
         int v2Off = vOff + (n - k) * ldv;
 
         // W = C2 (copy last k columns of C to work, row-major)
-        for (int i = 0; i < m; i++) {
-            for (int j = 0; j < k; j++) {
-                work[wOff + i * ldwork + j] = C[cOff + i * ldc + (n - k + j)];
-            }
-        }
+        copyTrailingColumnsToWork(C, cOff, ldc, work, wOff, ldwork, m, n, k);
 
         // W = W * V2 (V2 is unit upper triangular)
         BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.Unit, m, k, 1.0, V, v2Off, ldv, work, wOff, ldwork);
@@ -446,11 +434,7 @@ public interface Dlarfb {
         int v2Off = vOff + (n - k) * ldv;
 
         // W = C2 (row-major)
-        for (int i = 0; i < m; i++) {
-            for (int j = 0; j < k; j++) {
-                work[wOff + i * ldwork + j] = C[cOff + i * ldc + (n - k + j)];
-            }
-        }
+        copyTrailingColumnsToWork(C, cOff, ldc, work, wOff, ldwork, m, n, k);
 
         // W = W * V2
         BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.NoTrans, BLAS.Diag.Unit, m, k, 1.0, V, v2Off, ldv, work, wOff, ldwork);
@@ -579,11 +563,7 @@ public interface Dlarfb {
         if (m <= 0 || n <= 0 || k <= 0) return;
 
         // W = C1 (row-major: work[i*ldwork+j] = C[i*ldc+j])
-        for (int i = 0; i < m; i++) {
-            for (int j = 0; j < k; j++) {
-                work[wOff + i * ldwork + j] = C[cOff + i * ldc + j];
-            }
-        }
+        copyLeadingColumnsToWork(C, cOff, ldc, work, wOff, ldwork, m, k);
 
         // W = W * V1^T
         BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.Trans, BLAS.Diag.Unit, m, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
@@ -622,11 +602,7 @@ public interface Dlarfb {
         if (m <= 0 || n <= 0 || k <= 0) return;
 
         // W = C1 (row-major: work[i*ldwork+j] = C[i*ldc+j])
-        for (int i = 0; i < m; i++) {
-            for (int j = 0; j < k; j++) {
-                work[wOff + i * ldwork + j] = C[cOff + i * ldc + j];
-            }
-        }
+        copyLeadingColumnsToWork(C, cOff, ldc, work, wOff, ldwork, m, k);
 
         // W = W * V1^T
         BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Upper, BLAS.Trans.Trans, BLAS.Diag.Unit, m, k, 1.0, V, vOff, ldv, work, wOff, ldwork);
@@ -760,11 +736,7 @@ public interface Dlarfb {
 
         // W = C2 (row-major: work[i*ldwork+j] = C[i*ldc+(n-k+j)])
         // Copy last k columns of C to work
-        for (int j = 0; j < k; j++) {
-            for (int i = 0; i < m; i++) {
-                work[wOff + i * ldwork + j] = C[cOff + i * ldc + (n - k + j)];
-            }
-        }
+        copyTrailingColumnsToWork(C, cOff, ldc, work, wOff, ldwork, m, n, k);
 
         // W *= V2ᵀ.
         // V2 is the last k columns of V, stored as k×k lower unit triangular.
@@ -807,11 +779,7 @@ public interface Dlarfb {
         int v2Off = vOff + (n - k);
 
         // W = C2 (row-major: work[i*ldwork+j] = C[i*ldc+(n-k+j)])
-        for (int i = 0; i < m; i++) {
-            for (int j = 0; j < k; j++) {
-                work[wOff + i * ldwork + j] = C[cOff + i * ldc + (n - k + j)];
-            }
-        }
+        copyTrailingColumnsToWork(C, cOff, ldc, work, wOff, ldwork, m, n, k);
 
         // W = W * V2^T (V2 is unit lower triangular)
         BLAS.dtrmm(BLAS.Side.Right, BLAS.Uplo.Lower, BLAS.Trans.Trans, BLAS.Diag.NonUnit, m, k, 1.0, V, v2Off, ldv, work, wOff, ldwork);
@@ -837,6 +805,23 @@ public interface Dlarfb {
             for (int j = 0; j < k; j++) {
                 C[cOff + i * ldc + (n - k + j)] -= work[wOff + i * ldwork + j];
             }
+        }
+    }
+
+    private static void copyLeadingColumnsToWork(double[] C, int cOff, int ldc,
+                                                 double[] work, int wOff, int ldwork,
+                                                 int rows, int width) {
+        for (int i = 0; i < rows; i++) {
+            System.arraycopy(C, cOff + i * ldc, work, wOff + i * ldwork, width);
+        }
+    }
+
+    private static void copyTrailingColumnsToWork(double[] C, int cOff, int ldc,
+                                                  double[] work, int wOff, int ldwork,
+                                                  int rows, int n, int width) {
+        int colOff = n - width;
+        for (int i = 0; i < rows; i++) {
+            System.arraycopy(C, cOff + i * ldc + colOff, work, wOff + i * ldwork, width);
         }
     }
 

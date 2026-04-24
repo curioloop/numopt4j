@@ -525,9 +525,155 @@ public class DgemmTest {
         }
     }
 
+    @Test
+    void testThinKWideGateShapes() {
+        verifyThinKWideGateShape(352, 224, 32);
+        verifyThinKWideGateShape(448, 320, 64);
+    }
+
+    @Test
+    void testTNSkinnyGateShapes() {
+        verifyTNGateShape(64, 48, 64);
+        verifyTNGateShape(128, 48, 64);
+    }
+
+    @Test
+    void testTNSquareGateShapes() {
+        verifyTNGateShape(96, 96, 96);
+        verifyTNGateShape(112, 112, 112);
+        verifyTNGateShape(128, 128, 128);
+        verifyTNGateShape(160, 160, 160);
+    }
+
+    @Test
+    void testTNPanel64GateShapes() {
+        verifyTNGateShape(64, 128, 64);
+        verifyTNGateShape(64, 64, 128);
+        verifyTNGateShape(64, 192, 64);
+        verifyTNGateShape(64, 128, 128);
+        verifyTNGateShape(64, 64, 192);
+    }
+
+    @Test
+    void testScaleCScalesContiguousSpanWhenLeadingDimensionMatchesColumnCount() {
+        int m = 5;
+        int n = 96;
+        int ldc = n;
+        int cOff = 4;
+        double beta = -0.75;
+        double[] actual = new double[cOff + m * n + 3];
+        double[] expected = new double[actual.length];
+        fillRandom(actual);
+        System.arraycopy(actual, 0, expected, 0, actual.length);
+
+        for (int index = cOff; index < cOff + m * n; index++) {
+            expected[index] *= beta;
+        }
+
+        Dgemm.scaleC(actual, cOff, ldc, m, n, beta);
+
+        assertThat(maxDiff(actual, expected)).isLessThan(1e-12);
+    }
+
+    @Test
+    void testScaleCZeroesContiguousSpanWhenLeadingDimensionMatchesColumnCount() {
+        int m = 32;
+        int n = 96;
+        int ldc = n;
+        int cOff = 4;
+        double[] actual = new double[cOff + m * n + 3];
+        double[] expected = new double[actual.length];
+        fillRandom(actual);
+        System.arraycopy(actual, 0, expected, 0, actual.length);
+
+        for (int index = cOff; index < cOff + m * n; index++) {
+            expected[index] = 0.0;
+        }
+
+        Dgemm.scaleC(actual, cOff, ldc, m, n, 0.0);
+
+        assertThat(maxDiff(actual, expected)).isLessThan(1e-12);
+    }
+
+    @Test
+    void testScaleCZeroesUsedRegionWithLeadingDimensionPadding() {
+        int m = 4;
+        int n = 7;
+        int ldc = 11;
+        int cOff = 3;
+        double[] actual = new double[cOff + m * ldc + 5];
+        double[] expected = new double[actual.length];
+        fillRandom(actual);
+        System.arraycopy(actual, 0, expected, 0, actual.length);
+
+        for (int row = 0; row < m; row++) {
+            int rowOff = cOff + row * ldc;
+            for (int col = 0; col < n; col++) {
+                expected[rowOff + col] = 0.0;
+            }
+        }
+
+        Dgemm.scaleC(actual, cOff, ldc, m, n, 0.0);
+
+        assertThat(maxDiff(actual, expected)).isLessThan(1e-12);
+    }
+
     // ========================================
     // Helper methods
     // ========================================
+
+    private void verifyThinKWideGateShape(int m, int n, int k) {
+        int lda = k + 3;
+        int ldb = n + 5;
+        int ldbTrans = k + 11;
+        int ldc = n + 7;
+
+        double[] A = new double[m * lda];
+        double[] B = new double[k * ldb];
+        double[] BTrans = new double[n * ldbTrans];
+        double[] cTemplate = new double[m * ldc];
+        fillSubMatrix(A, 0, 0, m, k, lda);
+        fillSubMatrix(B, 0, 0, k, n, ldb);
+        fillSubMatrix(BTrans, 0, 0, n, k, ldbTrans);
+        fillSubMatrix(cTemplate, 0, 0, m, n, ldc);
+
+        double[] expectedNN = cTemplate.clone();
+        double[] actualNN = cTemplate.clone();
+        BlasTestSupport.scalarDgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, m, n, k,
+            1.0, A, 0, lda, B, 0, ldb, 1.0, expectedNN, 0, ldc);
+        Dgemm.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.NoTrans, m, n, k,
+            1.0, A, 0, lda, B, 0, ldb, 1.0, actualNN, 0, ldc);
+        BlasTestSupport.assertUsedRegionClose("NN wide thin-k gate parity", expectedNN, actualNN, m, n, ldc, 1e-11);
+
+        double[] expectedNT = cTemplate.clone();
+        double[] actualNT = cTemplate.clone();
+        BlasTestSupport.scalarDgemm(BLAS.Trans.NoTrans, BLAS.Trans.Trans, m, n, k,
+            1.0, A, 0, lda, BTrans, 0, ldbTrans, 1.0, expectedNT, 0, ldc);
+        Dgemm.dgemm(BLAS.Trans.NoTrans, BLAS.Trans.Trans, m, n, k,
+            1.0, A, 0, lda, BTrans, 0, ldbTrans, 1.0, actualNT, 0, ldc);
+        BlasTestSupport.assertUsedRegionClose("NT wide thin-k gate parity", expectedNT, actualNT, m, n, ldc, 1e-11);
+    }
+
+    private void verifyTNGateShape(int m, int n, int k) {
+        int ldaTrans = m + 9;
+        int ldb = n + 5;
+        int ldc = n + 7;
+
+        double[] aTrans = new double[k * ldaTrans];
+        double[] b = new double[k * ldb];
+        double[] cTemplate = new double[m * ldc];
+        fillSubMatrix(aTrans, 0, 0, k, m, ldaTrans);
+        fillSubMatrix(b, 0, 0, k, n, ldb);
+        fillSubMatrix(cTemplate, 0, 0, m, n, ldc);
+
+        double[] expected = cTemplate.clone();
+        double[] actual = cTemplate.clone();
+        BlasTestSupport.scalarDgemm(BLAS.Trans.Trans, BLAS.Trans.NoTrans, m, n, k,
+            1.0, aTrans, 0, ldaTrans, b, 0, ldb, 1.0, expected, 0, ldc);
+        Dgemm.dgemm(BLAS.Trans.Trans, BLAS.Trans.NoTrans, m, n, k,
+            1.0, aTrans, 0, ldaTrans, b, 0, ldb, 1.0, actual, 0, ldc);
+        BlasTestSupport.assertUsedRegionClose("TN skinny gate parity", expected, actual, m, n, ldc, 1e-11);
+    }
 
     private double[] createRandomMatrix(int rows, int cols) {
         if (rows <= 0 || cols <= 0) return new double[0];
@@ -543,6 +689,12 @@ public class DgemmTest {
             for (int j = 0; j < cols; j++) {
                 A[(rowOff + i) * lda + (colOff + j)] = (rand.nextDouble() - 0.5) * 2;
             }
+        }
+    }
+
+    private void fillRandom(double[] values) {
+        for (int i = 0; i < values.length; i++) {
+            values[i] = (rand.nextDouble() - 0.5) * 2;
         }
     }
 

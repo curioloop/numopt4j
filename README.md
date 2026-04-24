@@ -19,7 +19,7 @@ High-performance numerical optimization library for Java.
 
 ## Requirements
 
-- Java 8+
+- Java 25+
 - Native library for your platform (included for darwin-aarch64)
 
 ## Installation

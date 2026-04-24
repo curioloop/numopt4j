@@ -5,6 +5,8 @@ package com.curioloop.numopt4j.linalg.blas;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.Random;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class DlasrTest {
@@ -332,5 +334,78 @@ class DlasrTest {
         double col1Norm = Math.sqrt(A[1]*A[1] + A[4]*A[4] + A[7]*A[7]);
         assertEquals(1.0, col0Norm, TOL);
         assertEquals(1.0, col1Norm, TOL);
+    }
+
+    @Test
+    void testRandomParityAllModes() {
+        BLAS.Side[] sides = {BLAS.Side.Left, BLAS.Side.Right};
+        char[] pivots = {'V', 'T', 'B'};
+        char[] directs = {'F', 'B'};
+        int[][] shapes = {
+            {4, 7},
+            {9, 5},
+            {16, 13}
+        };
+
+        for (BLAS.Side side : sides) {
+            for (char pivot : pivots) {
+                for (char direct : directs) {
+                    for (int[] shape : shapes) {
+                        verifyParity(side, pivot, direct, shape[0], shape[1], shape[1] + 3,
+                            5, 2, 3,
+                            20260423L + side.ordinal() * 97L + pivot * 31L + direct * 17L + shape[0] * 13L + shape[1]);
+                    }
+                }
+            }
+        }
+    }
+
+    private static void verifyParity(BLAS.Side side, char pivot, char direct, int m, int n, int lda,
+                                     int aOff, int cOff, int sOff, long seed) {
+        int rotations = side == BLAS.Side.Left ? m - 1 : n - 1;
+        double[] c = new double[cOff + rotations + 2];
+        double[] s = new double[sOff + rotations + 2];
+        double[] expected = new double[aOff + m * lda + 7];
+        double[] actual = new double[expected.length];
+        Random random = new Random(seed);
+
+        fillRotations(random, c, cOff, s, sOff, rotations);
+        fillDense(random, expected);
+        System.arraycopy(expected, 0, actual, 0, expected.length);
+
+        BlasTestSupport.scalarDlasr(side, pivot, direct, m, n, c, cOff, s, sOff, expected, aOff, lda);
+        Dlasr.dlasr(side, pivot, direct, m, n, c, cOff, s, sOff, actual, aOff, lda);
+
+        assertMatrixClose(expected, actual, 1e-12);
+    }
+
+    private static void fillRotations(Random random, double[] c, int cOff, double[] s, int sOff, int rotations) {
+        for (int i = 0; i < rotations; i++) {
+            if ((i & 3) == 0) {
+                c[cOff + i] = 1.0;
+                s[sOff + i] = 0.0;
+            } else {
+                double theta = (random.nextDouble() - 0.5) * (2.0 * Math.PI);
+                c[cOff + i] = Math.cos(theta);
+                s[sOff + i] = Math.sin(theta);
+            }
+        }
+    }
+
+    private static void fillDense(Random random, double[] matrix) {
+        for (int i = 0; i < matrix.length; i++) {
+            matrix[i] = random.nextDouble() - 0.5;
+        }
+    }
+
+    private static void assertMatrixClose(double[] expected, double[] actual, double tolerance) {
+        assertEquals(expected.length, actual.length);
+        for (int i = 0; i < expected.length; i++) {
+            final int index = i;
+            double diff = Math.abs(expected[i] - actual[i]);
+            double scale = Math.max(1.0, Math.max(Math.abs(expected[i]), Math.abs(actual[i])));
+            assertTrue(diff <= tolerance * scale,
+                () -> "Mismatch at index " + index + ": expected=" + expected[index] + ", actual=" + actual[index]);
+        }
     }
 }

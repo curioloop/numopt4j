@@ -72,44 +72,77 @@ interface Drot {
     static void drot(int n, double[] x, int xOff, int incX,
                      double[] y, int yOff, int incY, double c, double s) {
         if (n <= 0) return;
+        if (c == 1.0 && s == 0.0) return;
 
         if (incX == 1 && incY == 1) {
-            int k = 0;
-            for (; k + 3 < n; k += 4) {
-                int i0 = xOff + k, j0 = yOff + k;
-                
-                double t0 = FMA.op(c, x[i0], s * y[j0]);
-                y[j0] = FMA.op(c, y[j0], -s * x[i0]);
-                x[i0] = t0;
-
-                double t1 = FMA.op(c, x[i0 + 1], s * y[j0 + 1]);
-                y[j0 + 1] = FMA.op(c, y[j0 + 1], -s * x[i0 + 1]);
-                x[i0 + 1] = t1;
-
-                double t2 = FMA.op(c, x[i0 + 2], s * y[j0 + 2]);
-                y[j0 + 2] = FMA.op(c, y[j0 + 2], -s * x[i0 + 2]);
-                x[i0 + 2] = t2;
-
-                double t3 = FMA.op(c, x[i0 + 3], s * y[j0 + 3]);
-                y[j0 + 3] = FMA.op(c, y[j0 + 3], -s * x[i0 + 3]);
-                x[i0 + 3] = t3;
-            }
-            for (; k < n; k++) {
-                int i = xOff + k, j = yOff + k;
-                double temp = FMA.op(c, x[i], s * y[j]);
-                y[j] = FMA.op(c, y[j], -s * x[i]);
-                x[i] = temp;
-            }
-        } else {
-            int ix = xOff + ((incX > 0) ? 0 : (n - 1) * (-incX));
-            int iy = yOff + ((incY > 0) ? 0 : (n - 1) * (-incY));
-            for (int i = 0; i < n; i++) {
-                double temp = FMA.op(c, x[ix], s * y[iy]);
-                y[iy] = FMA.op(c, y[iy], -s * x[ix]);
-                x[ix] = temp;
-                ix += incX;
-                iy += incY;
-            }
+            drotContiguous(n, x, xOff, y, yOff, c, s);
+            return;
         }
+
+        if (incX == incY && incX > 0) {
+            drotEqualPositiveStride(n, x, xOff, y, yOff, incX, c, s);
+            return;
+        }
+
+        int ix = xOff + ((incX > 0) ? 0 : (n - 1) * (-incX));
+        int iy = yOff + ((incY > 0) ? 0 : (n - 1) * (-incY));
+        for (int i = 0; i < n; i++) {
+            rotatePair(x, ix, y, iy, c, s);
+            ix += incX;
+            iy += incY;
+        }
+    }
+
+    private static void drotContiguous(int n, double[] x, int xOff,
+                                       double[] y, int yOff, double c, double s) {
+        int k = 0;
+        for (; k + 3 < n; k += 4) {
+            int i0 = xOff + k;
+            int j0 = yOff + k;
+
+            rotatePair(x, i0, y, j0, c, s);
+            rotatePair(x, i0 + 1, y, j0 + 1, c, s);
+            rotatePair(x, i0 + 2, y, j0 + 2, c, s);
+            rotatePair(x, i0 + 3, y, j0 + 3, c, s);
+        }
+        for (; k < n; k++) {
+            rotatePair(x, xOff + k, y, yOff + k, c, s);
+        }
+    }
+
+    private static void drotEqualPositiveStride(int n, double[] x, int xOff,
+                                                double[] y, int yOff, int inc,
+                                                double c, double s) {
+        int ix = xOff;
+        int iy = yOff;
+        int i = 0;
+        for (; i + 3 < n; i += 4) {
+            rotatePair(x, ix, y, iy, c, s);
+            ix += inc;
+            iy += inc;
+
+            rotatePair(x, ix, y, iy, c, s);
+            ix += inc;
+            iy += inc;
+
+            rotatePair(x, ix, y, iy, c, s);
+            ix += inc;
+            iy += inc;
+
+            rotatePair(x, ix, y, iy, c, s);
+            ix += inc;
+            iy += inc;
+        }
+        for (; i < n; i++) {
+            rotatePair(x, ix, y, iy, c, s);
+            ix += inc;
+            iy += inc;
+        }
+    }
+
+    private static void rotatePair(double[] x, int xIndex, double[] y, int yIndex, double c, double s) {
+        double temp = Math.fma(c, x[xIndex], s * y[yIndex]);
+        y[yIndex] = Math.fma(c, y[yIndex], -s * x[xIndex]);
+        x[xIndex] = temp;
     }
 }

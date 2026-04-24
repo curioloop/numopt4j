@@ -85,12 +85,12 @@ interface Dsymm {
             // Diagonal contribution: C[i,:] += alpha * A[i,i] * B[i,:]
             double aii = alpha * A[aOff + i * lda + i];
             for (int j = 0; j < n4; j += 4) {
-                C[cRowI + j]     = FMA.op(aii, B[bRowI + j],     C[cRowI + j]);
-                C[cRowI + j + 1] = FMA.op(aii, B[bRowI + j + 1], C[cRowI + j + 1]);
-                C[cRowI + j + 2] = FMA.op(aii, B[bRowI + j + 2], C[cRowI + j + 2]);
-                C[cRowI + j + 3] = FMA.op(aii, B[bRowI + j + 3], C[cRowI + j + 3]);
+                C[cRowI + j]     = Math.fma(aii, B[bRowI + j],     C[cRowI + j]);
+                C[cRowI + j + 1] = Math.fma(aii, B[bRowI + j + 1], C[cRowI + j + 1]);
+                C[cRowI + j + 2] = Math.fma(aii, B[bRowI + j + 2], C[cRowI + j + 2]);
+                C[cRowI + j + 3] = Math.fma(aii, B[bRowI + j + 3], C[cRowI + j + 3]);
             }
-            for (int j = n4; j < n; j++) C[cRowI + j] = FMA.op(aii, B[bRowI + j], C[cRowI + j]);
+            for (int j = n4; j < n; j++) C[cRowI + j] = Math.fma(aii, B[bRowI + j], C[cRowI + j]);
 
             // Off-diagonal: A[i,k] for k > i (upper triangle)
             for (int k = i + 1; k < m; k++) {
@@ -103,18 +103,18 @@ interface Dsymm {
                     double bi2 = B[bRowI + j + 2], bi3 = B[bRowI + j + 3];
                     double bk0 = B[bRowK + j],     bk1 = B[bRowK + j + 1];
                     double bk2 = B[bRowK + j + 2], bk3 = B[bRowK + j + 3];
-                    C[cRowI + j]     = FMA.op(aik, bk0, C[cRowI + j]);
-                    C[cRowI + j + 1] = FMA.op(aik, bk1, C[cRowI + j + 1]);
-                    C[cRowI + j + 2] = FMA.op(aik, bk2, C[cRowI + j + 2]);
-                    C[cRowI + j + 3] = FMA.op(aik, bk3, C[cRowI + j + 3]);
-                    C[cRowK + j]     = FMA.op(aik, bi0, C[cRowK + j]);
-                    C[cRowK + j + 1] = FMA.op(aik, bi1, C[cRowK + j + 1]);
-                    C[cRowK + j + 2] = FMA.op(aik, bi2, C[cRowK + j + 2]);
-                    C[cRowK + j + 3] = FMA.op(aik, bi3, C[cRowK + j + 3]);
+                    C[cRowI + j]     = Math.fma(aik, bk0, C[cRowI + j]);
+                    C[cRowI + j + 1] = Math.fma(aik, bk1, C[cRowI + j + 1]);
+                    C[cRowI + j + 2] = Math.fma(aik, bk2, C[cRowI + j + 2]);
+                    C[cRowI + j + 3] = Math.fma(aik, bk3, C[cRowI + j + 3]);
+                    C[cRowK + j]     = Math.fma(aik, bi0, C[cRowK + j]);
+                    C[cRowK + j + 1] = Math.fma(aik, bi1, C[cRowK + j + 1]);
+                    C[cRowK + j + 2] = Math.fma(aik, bi2, C[cRowK + j + 2]);
+                    C[cRowK + j + 3] = Math.fma(aik, bi3, C[cRowK + j + 3]);
                 }
                 for (int j = n4; j < n; j++) {
-                    C[cRowI + j] = FMA.op(aik, B[bRowK + j], C[cRowI + j]);
-                    C[cRowK + j] = FMA.op(aik, B[bRowI + j], C[cRowK + j]);
+                    C[cRowI + j] = Math.fma(aik, B[bRowK + j], C[cRowI + j]);
+                    C[cRowK + j] = Math.fma(aik, B[bRowI + j], C[cRowK + j]);
                 }
             }
         }
@@ -137,12 +137,12 @@ interface Dsymm {
             // Diagonal
             double aii = alpha * A[aOff + i * lda + i];
             for (int j = 0; j < n4; j += 4) {
-                C[cRowI + j]     = FMA.op(aii, B[bRowI + j],     C[cRowI + j]);
-                C[cRowI + j + 1] = FMA.op(aii, B[bRowI + j + 1], C[cRowI + j + 1]);
-                C[cRowI + j + 2] = FMA.op(aii, B[bRowI + j + 2], C[cRowI + j + 2]);
-                C[cRowI + j + 3] = FMA.op(aii, B[bRowI + j + 3], C[cRowI + j + 3]);
+                C[cRowI + j]     = Math.fma(aii, B[bRowI + j],     C[cRowI + j]);
+                C[cRowI + j + 1] = Math.fma(aii, B[bRowI + j + 1], C[cRowI + j + 1]);
+                C[cRowI + j + 2] = Math.fma(aii, B[bRowI + j + 2], C[cRowI + j + 2]);
+                C[cRowI + j + 3] = Math.fma(aii, B[bRowI + j + 3], C[cRowI + j + 3]);
             }
-            for (int j = n4; j < n; j++) C[cRowI + j] = FMA.op(aii, B[bRowI + j], C[cRowI + j]);
+            for (int j = n4; j < n; j++) C[cRowI + j] = Math.fma(aii, B[bRowI + j], C[cRowI + j]);
 
             // Off-diagonal: A[i,k] for k < i (lower triangle, stored at A[i*lda+k])
             for (int k = 0; k < i; k++) {
@@ -154,18 +154,18 @@ interface Dsymm {
                     double bi2 = B[bRowI + j + 2], bi3 = B[bRowI + j + 3];
                     double bk0 = B[bRowK + j],     bk1 = B[bRowK + j + 1];
                     double bk2 = B[bRowK + j + 2], bk3 = B[bRowK + j + 3];
-                    C[cRowI + j]     = FMA.op(aik, bk0, C[cRowI + j]);
-                    C[cRowI + j + 1] = FMA.op(aik, bk1, C[cRowI + j + 1]);
-                    C[cRowI + j + 2] = FMA.op(aik, bk2, C[cRowI + j + 2]);
-                    C[cRowI + j + 3] = FMA.op(aik, bk3, C[cRowI + j + 3]);
-                    C[cRowK + j]     = FMA.op(aik, bi0, C[cRowK + j]);
-                    C[cRowK + j + 1] = FMA.op(aik, bi1, C[cRowK + j + 1]);
-                    C[cRowK + j + 2] = FMA.op(aik, bi2, C[cRowK + j + 2]);
-                    C[cRowK + j + 3] = FMA.op(aik, bi3, C[cRowK + j + 3]);
+                    C[cRowI + j]     = Math.fma(aik, bk0, C[cRowI + j]);
+                    C[cRowI + j + 1] = Math.fma(aik, bk1, C[cRowI + j + 1]);
+                    C[cRowI + j + 2] = Math.fma(aik, bk2, C[cRowI + j + 2]);
+                    C[cRowI + j + 3] = Math.fma(aik, bk3, C[cRowI + j + 3]);
+                    C[cRowK + j]     = Math.fma(aik, bi0, C[cRowK + j]);
+                    C[cRowK + j + 1] = Math.fma(aik, bi1, C[cRowK + j + 1]);
+                    C[cRowK + j + 2] = Math.fma(aik, bi2, C[cRowK + j + 2]);
+                    C[cRowK + j + 3] = Math.fma(aik, bi3, C[cRowK + j + 3]);
                 }
                 for (int j = n4; j < n; j++) {
-                    C[cRowI + j] = FMA.op(aik, B[bRowK + j], C[cRowI + j]);
-                    C[cRowK + j] = FMA.op(aik, B[bRowI + j], C[cRowK + j]);
+                    C[cRowI + j] = Math.fma(aik, B[bRowK + j], C[cRowI + j]);
+                    C[cRowK + j] = Math.fma(aik, B[bRowI + j], C[cRowK + j]);
                 }
             }
         }
@@ -197,12 +197,12 @@ interface Dsymm {
             int bRowI = bOff + i * ldb;
             // Diagonal pass: C[i,j] += alpha * A[j,j] * B[i,j]
             for (int j = 0; j < n4; j += 4) {
-                C[cRowI + j]     = FMA.op(alpha * A[aOff + j * lda + j],         B[bRowI + j],     C[cRowI + j]);
-                C[cRowI + j + 1] = FMA.op(alpha * A[aOff + (j+1) * lda + (j+1)], B[bRowI + j + 1], C[cRowI + j + 1]);
-                C[cRowI + j + 2] = FMA.op(alpha * A[aOff + (j+2) * lda + (j+2)], B[bRowI + j + 2], C[cRowI + j + 2]);
-                C[cRowI + j + 3] = FMA.op(alpha * A[aOff + (j+3) * lda + (j+3)], B[bRowI + j + 3], C[cRowI + j + 3]);
+                C[cRowI + j]     = Math.fma(alpha * A[aOff + j * lda + j],         B[bRowI + j],     C[cRowI + j]);
+                C[cRowI + j + 1] = Math.fma(alpha * A[aOff + (j+1) * lda + (j+1)], B[bRowI + j + 1], C[cRowI + j + 1]);
+                C[cRowI + j + 2] = Math.fma(alpha * A[aOff + (j+2) * lda + (j+2)], B[bRowI + j + 2], C[cRowI + j + 2]);
+                C[cRowI + j + 3] = Math.fma(alpha * A[aOff + (j+3) * lda + (j+3)], B[bRowI + j + 3], C[cRowI + j + 3]);
             }
-            for (int j = n4; j < n; j++) C[cRowI + j] = FMA.op(alpha * A[aOff + j * lda + j], B[bRowI + j], C[cRowI + j]);
+            for (int j = n4; j < n; j++) C[cRowI + j] = Math.fma(alpha * A[aOff + j * lda + j], B[bRowI + j], C[cRowI + j]);
 
             // Off-diagonal: A[k,j] for k < j (upper triangle)
             for (int k = 0; k < n; k++) {
@@ -212,8 +212,8 @@ interface Dsymm {
                     int jEnd = Math.min(((k + 4) / 4) * 4, n);
                     for (; j < jEnd; j++) {
                         double akj = A[aOff + k * lda + j];
-                        C[cRowI + j] = FMA.op(bik, akj, C[cRowI + j]);
-                        C[cRowI + k] = FMA.op(alpha * B[bRowI + j], akj, C[cRowI + k]);
+                        C[cRowI + j] = Math.fma(bik, akj, C[cRowI + j]);
+                        C[cRowI + k] = Math.fma(alpha * B[bRowI + j], akj, C[cRowI + k]);
                     }
                     break;
                 }
@@ -222,19 +222,19 @@ interface Dsymm {
                 for (int j = Math.max(k + 1, jStart); j < n4; j += 4) {
                     double akj0 = A[aOff + k * lda + j],     akj1 = A[aOff + k * lda + j + 1];
                     double akj2 = A[aOff + k * lda + j + 2], akj3 = A[aOff + k * lda + j + 3];
-                    C[cRowI + j]     = FMA.op(bik, akj0, C[cRowI + j]);
-                    C[cRowI + j + 1] = FMA.op(bik, akj1, C[cRowI + j + 1]);
-                    C[cRowI + j + 2] = FMA.op(bik, akj2, C[cRowI + j + 2]);
-                    C[cRowI + j + 3] = FMA.op(bik, akj3, C[cRowI + j + 3]);
-                    C[cRowI + k] = FMA.op(alpha * B[bRowI + j],     akj0, C[cRowI + k]);
-                    C[cRowI + k] = FMA.op(alpha * B[bRowI + j + 1], akj1, C[cRowI + k]);
-                    C[cRowI + k] = FMA.op(alpha * B[bRowI + j + 2], akj2, C[cRowI + k]);
-                    C[cRowI + k] = FMA.op(alpha * B[bRowI + j + 3], akj3, C[cRowI + k]);
+                    C[cRowI + j]     = Math.fma(bik, akj0, C[cRowI + j]);
+                    C[cRowI + j + 1] = Math.fma(bik, akj1, C[cRowI + j + 1]);
+                    C[cRowI + j + 2] = Math.fma(bik, akj2, C[cRowI + j + 2]);
+                    C[cRowI + j + 3] = Math.fma(bik, akj3, C[cRowI + j + 3]);
+                    C[cRowI + k] = Math.fma(alpha * B[bRowI + j],     akj0, C[cRowI + k]);
+                    C[cRowI + k] = Math.fma(alpha * B[bRowI + j + 1], akj1, C[cRowI + k]);
+                    C[cRowI + k] = Math.fma(alpha * B[bRowI + j + 2], akj2, C[cRowI + k]);
+                    C[cRowI + k] = Math.fma(alpha * B[bRowI + j + 3], akj3, C[cRowI + k]);
                 }
                 for (int j = Math.max(k + 1, n4); j < n; j++) {
                     double akj = A[aOff + k * lda + j];
-                    C[cRowI + j] = FMA.op(bik, akj, C[cRowI + j]);
-                    C[cRowI + k] = FMA.op(alpha * B[bRowI + j], akj, C[cRowI + k]);
+                    C[cRowI + j] = Math.fma(bik, akj, C[cRowI + j]);
+                    C[cRowI + k] = Math.fma(alpha * B[bRowI + j], akj, C[cRowI + k]);
                 }
             }
         }
@@ -258,12 +258,12 @@ interface Dsymm {
             int bRowI = bOff + i * ldb;
             // Diagonal pass
             for (int j = 0; j < n4; j += 4) {
-                C[cRowI + j]     = FMA.op(alpha * A[aOff + j * lda + j],         B[bRowI + j],     C[cRowI + j]);
-                C[cRowI + j + 1] = FMA.op(alpha * A[aOff + (j+1) * lda + (j+1)], B[bRowI + j + 1], C[cRowI + j + 1]);
-                C[cRowI + j + 2] = FMA.op(alpha * A[aOff + (j+2) * lda + (j+2)], B[bRowI + j + 2], C[cRowI + j + 2]);
-                C[cRowI + j + 3] = FMA.op(alpha * A[aOff + (j+3) * lda + (j+3)], B[bRowI + j + 3], C[cRowI + j + 3]);
+                C[cRowI + j]     = Math.fma(alpha * A[aOff + j * lda + j],         B[bRowI + j],     C[cRowI + j]);
+                C[cRowI + j + 1] = Math.fma(alpha * A[aOff + (j+1) * lda + (j+1)], B[bRowI + j + 1], C[cRowI + j + 1]);
+                C[cRowI + j + 2] = Math.fma(alpha * A[aOff + (j+2) * lda + (j+2)], B[bRowI + j + 2], C[cRowI + j + 2]);
+                C[cRowI + j + 3] = Math.fma(alpha * A[aOff + (j+3) * lda + (j+3)], B[bRowI + j + 3], C[cRowI + j + 3]);
             }
-            for (int j = n4; j < n; j++) C[cRowI + j] = FMA.op(alpha * A[aOff + j * lda + j], B[bRowI + j], C[cRowI + j]);
+            for (int j = n4; j < n; j++) C[cRowI + j] = Math.fma(alpha * A[aOff + j * lda + j], B[bRowI + j], C[cRowI + j]);
 
             // Off-diagonal: A[j,k] for k < j (lower triangle)
             // Rewrite as: for each k, iterate j > k
@@ -273,26 +273,26 @@ interface Dsymm {
                 int jStart4 = ((k + 4) / 4) * 4;
                 for (int j = k + 1; j < Math.min(jStart4, n); j++) {
                     double ajk = A[aOff + j * lda + k];
-                    C[cRowI + j] = FMA.op(bik, ajk, C[cRowI + j]);
-                    C[cRowI + k] = FMA.op(alpha * B[bRowI + j], ajk, C[cRowI + k]);
+                    C[cRowI + j] = Math.fma(bik, ajk, C[cRowI + j]);
+                    C[cRowI + k] = Math.fma(alpha * B[bRowI + j], ajk, C[cRowI + k]);
                 }
                 // 4-wide loop
                 for (int j = Math.max(k + 1, jStart4); j < n4; j += 4) {
                     double ajk0 = A[aOff + j * lda + k],       ajk1 = A[aOff + (j+1) * lda + k];
                     double ajk2 = A[aOff + (j+2) * lda + k],   ajk3 = A[aOff + (j+3) * lda + k];
-                    C[cRowI + j]     = FMA.op(bik, ajk0, C[cRowI + j]);
-                    C[cRowI + j + 1] = FMA.op(bik, ajk1, C[cRowI + j + 1]);
-                    C[cRowI + j + 2] = FMA.op(bik, ajk2, C[cRowI + j + 2]);
-                    C[cRowI + j + 3] = FMA.op(bik, ajk3, C[cRowI + j + 3]);
-                    C[cRowI + k] = FMA.op(alpha * B[bRowI + j],     ajk0, C[cRowI + k]);
-                    C[cRowI + k] = FMA.op(alpha * B[bRowI + j + 1], ajk1, C[cRowI + k]);
-                    C[cRowI + k] = FMA.op(alpha * B[bRowI + j + 2], ajk2, C[cRowI + k]);
-                    C[cRowI + k] = FMA.op(alpha * B[bRowI + j + 3], ajk3, C[cRowI + k]);
+                    C[cRowI + j]     = Math.fma(bik, ajk0, C[cRowI + j]);
+                    C[cRowI + j + 1] = Math.fma(bik, ajk1, C[cRowI + j + 1]);
+                    C[cRowI + j + 2] = Math.fma(bik, ajk2, C[cRowI + j + 2]);
+                    C[cRowI + j + 3] = Math.fma(bik, ajk3, C[cRowI + j + 3]);
+                    C[cRowI + k] = Math.fma(alpha * B[bRowI + j],     ajk0, C[cRowI + k]);
+                    C[cRowI + k] = Math.fma(alpha * B[bRowI + j + 1], ajk1, C[cRowI + k]);
+                    C[cRowI + k] = Math.fma(alpha * B[bRowI + j + 2], ajk2, C[cRowI + k]);
+                    C[cRowI + k] = Math.fma(alpha * B[bRowI + j + 3], ajk3, C[cRowI + k]);
                 }
                 for (int j = Math.max(k + 1, n4); j < n; j++) {
                     double ajk = A[aOff + j * lda + k];
-                    C[cRowI + j] = FMA.op(bik, ajk, C[cRowI + j]);
-                    C[cRowI + k] = FMA.op(alpha * B[bRowI + j], ajk, C[cRowI + k]);
+                    C[cRowI + j] = Math.fma(bik, ajk, C[cRowI + j]);
+                    C[cRowI + k] = Math.fma(alpha * B[bRowI + j], ajk, C[cRowI + k]);
                 }
             }
         }

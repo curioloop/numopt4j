@@ -86,18 +86,18 @@ interface Dsyr2k {
                     double sum2 = 0.0;
                     int l = 0;
                     for (; l + 3 < k; l += 4) {
-                        sum1 = FMA.op(A[aiOff + l], B[bjOff + l], sum1);
-                        sum1 = FMA.op(A[aiOff + l + 1], B[bjOff + l + 1], sum1);
-                        sum1 = FMA.op(A[aiOff + l + 2], B[bjOff + l + 2], sum1);
-                        sum1 = FMA.op(A[aiOff + l + 3], B[bjOff + l + 3], sum1);
-                        sum2 = FMA.op(B[biOff + l], A[ajOff + l], sum2);
-                        sum2 = FMA.op(B[biOff + l + 1], A[ajOff + l + 1], sum2);
-                        sum2 = FMA.op(B[biOff + l + 2], A[ajOff + l + 2], sum2);
-                        sum2 = FMA.op(B[biOff + l + 3], A[ajOff + l + 3], sum2);
+                        sum1 = Math.fma(A[aiOff + l], B[bjOff + l], sum1);
+                        sum1 = Math.fma(A[aiOff + l + 1], B[bjOff + l + 1], sum1);
+                        sum1 = Math.fma(A[aiOff + l + 2], B[bjOff + l + 2], sum1);
+                        sum1 = Math.fma(A[aiOff + l + 3], B[bjOff + l + 3], sum1);
+                        sum2 = Math.fma(B[biOff + l], A[ajOff + l], sum2);
+                        sum2 = Math.fma(B[biOff + l + 1], A[ajOff + l + 1], sum2);
+                        sum2 = Math.fma(B[biOff + l + 2], A[ajOff + l + 2], sum2);
+                        sum2 = Math.fma(B[biOff + l + 3], A[ajOff + l + 3], sum2);
                     }
                     for (; l < k; l++) {
-                        sum1 = FMA.op(A[aiOff + l], B[bjOff + l], sum1);
-                        sum2 = FMA.op(B[biOff + l], A[ajOff + l], sum2);
+                        sum1 = Math.fma(A[aiOff + l], B[bjOff + l], sum1);
+                        sum2 = Math.fma(B[biOff + l], A[ajOff + l], sum2);
                     }
                     C[ciOff + j] += alpha * (sum1 + sum2);
                 }
@@ -114,18 +114,18 @@ interface Dsyr2k {
                     double sum2 = 0.0;
                     int l = 0;
                     for (; l + 3 < k; l += 4) {
-                        sum1 = FMA.op(A[aiOff + l], B[bjOff + l], sum1);
-                        sum1 = FMA.op(A[aiOff + l + 1], B[bjOff + l + 1], sum1);
-                        sum1 = FMA.op(A[aiOff + l + 2], B[bjOff + l + 2], sum1);
-                        sum1 = FMA.op(A[aiOff + l + 3], B[bjOff + l + 3], sum1);
-                        sum2 = FMA.op(B[biOff + l], A[ajOff + l], sum2);
-                        sum2 = FMA.op(B[biOff + l + 1], A[ajOff + l + 1], sum2);
-                        sum2 = FMA.op(B[biOff + l + 2], A[ajOff + l + 2], sum2);
-                        sum2 = FMA.op(B[biOff + l + 3], A[ajOff + l + 3], sum2);
+                        sum1 = Math.fma(A[aiOff + l], B[bjOff + l], sum1);
+                        sum1 = Math.fma(A[aiOff + l + 1], B[bjOff + l + 1], sum1);
+                        sum1 = Math.fma(A[aiOff + l + 2], B[bjOff + l + 2], sum1);
+                        sum1 = Math.fma(A[aiOff + l + 3], B[bjOff + l + 3], sum1);
+                        sum2 = Math.fma(B[biOff + l], A[ajOff + l], sum2);
+                        sum2 = Math.fma(B[biOff + l + 1], A[ajOff + l + 1], sum2);
+                        sum2 = Math.fma(B[biOff + l + 2], A[ajOff + l + 2], sum2);
+                        sum2 = Math.fma(B[biOff + l + 3], A[ajOff + l + 3], sum2);
                     }
                     for (; l < k; l++) {
-                        sum1 = FMA.op(A[aiOff + l], B[bjOff + l], sum1);
-                        sum2 = FMA.op(B[biOff + l], A[ajOff + l], sum2);
+                        sum1 = Math.fma(A[aiOff + l], B[bjOff + l], sum1);
+                        sum2 = Math.fma(B[biOff + l], A[ajOff + l], sum2);
                     }
                     C[ciOff + j] += alpha * (sum1 + sum2);
                 }
@@ -159,8 +159,8 @@ interface Dsyr2k {
                     double alphaBi = alpha * B[bpOff + i];
                     int ciOff = cOff + i * ldc;
                     for (int j = i; j < n; j++) {
-                        C[ciOff + j] = FMA.op(alphaAi, B[bpOff + j], C[ciOff + j]);
-                        C[ciOff + j] = FMA.op(alphaBi, A[apOff + j], C[ciOff + j]);
+                        C[ciOff + j] = Math.fma(alphaAi, B[bpOff + j], C[ciOff + j]);
+                        C[ciOff + j] = Math.fma(alphaBi, A[apOff + j], C[ciOff + j]);
                     }
                 }
             }
@@ -173,8 +173,8 @@ interface Dsyr2k {
                     double alphaBi = alpha * B[bpOff + i];
                     int ciOff = cOff + i * ldc;
                     for (int j = 0; j <= i; j++) {
-                        C[ciOff + j] = FMA.op(alphaAi, B[bpOff + j], C[ciOff + j]);
-                        C[ciOff + j] = FMA.op(alphaBi, A[apOff + j], C[ciOff + j]);
+                        C[ciOff + j] = Math.fma(alphaAi, B[bpOff + j], C[ciOff + j]);
+                        C[ciOff + j] = Math.fma(alphaBi, A[apOff + j], C[ciOff + j]);
                     }
                 }
             }

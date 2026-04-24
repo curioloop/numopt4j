@@ -53,16 +53,16 @@ interface Dptsv {
                 // No row interchange required.
                 if (di == 0) return false;
                 double fact = dli / di;
-                d[dOff + i + 1] = FMA.op(-fact, du[duOff + i], d[dOff + i + 1]);
+                d[dOff + i + 1] = Math.fma(-fact, du[duOff + i], d[dOff + i + 1]);
                 for (int j = 0; j < nrhs; j++)
-                    B[bOff + (i + 1) * ldb + j] = FMA.op(-fact, B[bOff + i * ldb + j], B[bOff + (i + 1) * ldb + j]);
+                    B[bOff + (i + 1) * ldb + j] = Math.fma(-fact, B[bOff + i * ldb + j], B[bOff + (i + 1) * ldb + j]);
                 dl[dlOff + i] = 0;
             } else {
                 // Interchange rows i and i+1.
                 double fact = di / dli;
                 d[dOff + i] = dli;
                 double tmp = d[dOff + i + 1];
-                d[dOff + i + 1] = FMA.op(-fact, tmp, du[duOff + i]);
+                d[dOff + i + 1] = Math.fma(-fact, tmp, du[duOff + i]);
                 du[duOff + i] = tmp;
                 if (i + 1 < n - 1) {
                     dl[dlOff + i] = du[duOff + i + 1];
@@ -71,7 +71,7 @@ interface Dptsv {
                 for (int j = 0; j < nrhs; j++) {
                     tmp = B[bOff + i * ldb + j];
                     B[bOff + i * ldb + j] = B[bOff + (i + 1) * ldb + j];
-                    B[bOff + (i + 1) * ldb + j] = FMA.op(-fact, B[bOff + (i + 1) * ldb + j], tmp);
+                    B[bOff + (i + 1) * ldb + j] = Math.fma(-fact, B[bOff + (i + 1) * ldb + j], tmp);
                 }
             }
         }
@@ -81,11 +81,11 @@ interface Dptsv {
         for (int j = 0; j < nrhs; j++) {
             B[bOff + (n - 1) * ldb + j] /= d[dOff + n - 1];
             if (n > 1)
-                B[bOff + (n - 2) * ldb + j] = FMA.op(-du[duOff + n - 2], B[bOff + (n - 1) * ldb + j],
+                B[bOff + (n - 2) * ldb + j] = Math.fma(-du[duOff + n - 2], B[bOff + (n - 1) * ldb + j],
                         B[bOff + (n - 2) * ldb + j]) / d[dOff + n - 2];
             for (int i = n - 3; i >= 0; i--)
-                B[bOff + i * ldb + j] = FMA.op(-dl[dlOff + i], B[bOff + (i + 2) * ldb + j],
-                        FMA.op(-du[duOff + i], B[bOff + (i + 1) * ldb + j], B[bOff + i * ldb + j]))
+                B[bOff + i * ldb + j] = Math.fma(-dl[dlOff + i], B[bOff + (i + 2) * ldb + j],
+                        Math.fma(-du[duOff + i], B[bOff + (i + 1) * ldb + j], B[bOff + i * ldb + j]))
                         / d[dOff + i];
         }
         return true;
@@ -114,28 +114,28 @@ interface Dptsv {
             if (d[dOff + i] <= 0) return false;
             double ei = e[eOff + i];
             e[eOff + i] /= d[dOff + i];
-            d[dOff + i + 1] = FMA.op(-e[eOff + i], ei, d[dOff + i + 1]);
+            d[dOff + i + 1] = Math.fma(-e[eOff + i], ei, d[dOff + i + 1]);
         }
         for (int i = i4; i < n - 4; i += 4) {
             if (d[dOff + i] <= 0) return false;
             double ei = e[eOff + i];
             e[eOff + i] /= d[dOff + i];
-            d[dOff + i + 1] = FMA.op(-e[eOff + i], ei, d[dOff + i + 1]);
+            d[dOff + i + 1] = Math.fma(-e[eOff + i], ei, d[dOff + i + 1]);
 
             if (d[dOff + i + 1] <= 0) return false;
             ei = e[eOff + i + 1];
             e[eOff + i + 1] /= d[dOff + i + 1];
-            d[dOff + i + 2] = FMA.op(-e[eOff + i + 1], ei, d[dOff + i + 2]);
+            d[dOff + i + 2] = Math.fma(-e[eOff + i + 1], ei, d[dOff + i + 2]);
 
             if (d[dOff + i + 2] <= 0) return false;
             ei = e[eOff + i + 2];
             e[eOff + i + 2] /= d[dOff + i + 2];
-            d[dOff + i + 3] = FMA.op(-e[eOff + i + 2], ei, d[dOff + i + 3]);
+            d[dOff + i + 3] = Math.fma(-e[eOff + i + 2], ei, d[dOff + i + 3]);
 
             if (d[dOff + i + 3] <= 0) return false;
             ei = e[eOff + i + 3];
             e[eOff + i + 3] /= d[dOff + i + 3];
-            d[dOff + i + 4] = FMA.op(-e[eOff + i + 3], ei, d[dOff + i + 4]);
+            d[dOff + i + 4] = Math.fma(-e[eOff + i + 3], ei, d[dOff + i + 4]);
         }
         return d[dOff + n - 1] > 0;
     }
@@ -168,7 +168,7 @@ interface Dptsv {
         for (int j = 0; j < nrhs; j++) {
             // Solve L * x = b.
             for (int i = 1; i < n; i++)
-                B[bOff + i * ldb + j] = FMA.op(-e[eOff + i - 1], B[bOff + (i - 1) * ldb + j], B[bOff + i * ldb + j]);
+                B[bOff + i * ldb + j] = Math.fma(-e[eOff + i - 1], B[bOff + (i - 1) * ldb + j], B[bOff + i * ldb + j]);
             // Solve D * Lᵀ * x = b.
             B[bOff + (n - 1) * ldb + j] /= d[dOff + n - 1];
             for (int i = n - 2; i >= 0; i--)

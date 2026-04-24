@@ -3,6 +3,9 @@
  */
 package com.curioloop.numopt4j.linalg.blas;
 
+import jdk.incubator.vector.DoubleVector;
+import jdk.incubator.vector.VectorSpecies;
+
 /**
  * DSCAL scales a vector by a constant.
  * 
@@ -12,11 +15,19 @@ package com.curioloop.numopt4j.linalg.blas;
  */
 interface Dscal {
 
+    int SIMD_MIN_N = 80;
+
     /**
      * Scales vector x by constant alpha.
      */
     static void dscal(int n, double alpha, double[] x, int xOff, int incX) {
         if (n <= 0) return;
+
+        if (incX == 1 && n >= SIMD_MIN_N && SIMD.supportDscal()) {
+            if (DscalSIMD.dscal(n, alpha, x, xOff)) {
+                return;
+            }
+        }
 
         if (incX == 1) {
             int k = 0;
@@ -36,5 +47,39 @@ interface Dscal {
                 xi += incX;
             }
         }
+    }
+}
+
+final class DscalSIMD {
+
+    private static final VectorSpecies<Double> SPECIES = Gate.SPECIES;
+    private static final int LANES = Gate.LANES;
+
+    private DscalSIMD() {
+    }
+
+    static boolean dscal(int n, double alpha, double[] x, int xOff) {
+        if (LANES <= 1) {
+            return false;
+        }
+
+        DoubleVector alphaVec = DoubleVector.broadcast(SPECIES, alpha);
+        int limit = SPECIES.loopBound(n);
+        int k = 0;
+        for (; k < limit; k += LANES) {
+            alphaVec.mul(DoubleVector.fromArray(SPECIES, x, xOff + k)).intoArray(x, xOff + k);
+        }
+        for (; k < n; k++) {
+            x[xOff + k] *= alpha;
+        }
+        return true;
+    }
+
+    static boolean probe() {
+        if (LANES <= 1) {
+            return false;
+        }
+        double[] x = new double[LANES];
+        return dscal(LANES, 1.0, x, 0);
     }
 }

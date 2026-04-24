@@ -37,8 +37,8 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
+        <maven.compiler.release>25</maven.compiler.release>
+        <vector.module>jdk.incubator.vector</vector.module>
         <junit.version>5.10.1</junit.version>
         <jqwik.version>1.8.2</jqwik.version>
         <gpg.skip>true</gpg.skip>
@@ -101,9 +101,19 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.11.0</version>
                 <configuration>
-                    <source>1.8</source>
-                    <target>1.8</target>
+                    <release>${maven.compiler.release}</release>
                     <parameters>true</parameters>
+                    <compilerArgs>
+                        <arg>--add-modules</arg>
+                        <arg>${vector.module}</arg>
+                    </compilerArgs>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.openjdk.jmh</groupId>
+                            <artifactId>jmh-generator-annprocess</artifactId>
+                            <version>1.37</version>
+                        </path>
+                    </annotationProcessorPaths>
                 </configuration>
             </plugin>
             <plugin>
@@ -111,6 +121,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.2</version>
                 <configuration>
+                    <argLine>--add-modules ${vector.module}</argLine>
                     <includes>
                         <include>**/*Test.java</include>
                         <include>**/*Properties.java</include>
@@ -139,6 +150,10 @@
                 <version>3.6.3</version>
                 <configuration>
                     <doclint>none</doclint>
+                    <additionalJOptions>
+                        <additionalJOption>--add-modules</additionalJOption>
+                        <additionalJOption>${vector.module}</additionalJOption>
+                    </additionalJOptions>
                 </configuration>
                 <executions>
                     <execution>

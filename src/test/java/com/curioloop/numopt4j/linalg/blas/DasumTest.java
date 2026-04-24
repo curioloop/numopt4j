@@ -3,8 +3,10 @@
  */
 package com.curioloop.numopt4j.linalg.blas;
 
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -121,5 +123,36 @@ class DasumTest {
         }
         double result = Dasum.dasum(n, x, 0, 1);
         assertEquals(n, result, EPSILON);
+    }
+
+    @Test
+    @DisplayName("dasum: random parity various strides")
+    void testRandomParityVariousStrides() {
+        int[] sizes = {1, 5, 17, 64, 255};
+        int[] increments = {1, 3, -2};
+
+        for (int n : sizes) {
+            for (int incX : increments) {
+                verifyParity(n, incX, 20260423L + n * 31L + incX * 17L);
+            }
+        }
+    }
+
+    private static void verifyParity(int n, int incX, long seed) {
+        double[] vector = new double[1 + (n - 1) * Math.abs(incX)];
+        Random random = new Random(seed);
+        fillUsedVector(random, vector, 0, incX, n);
+
+        double expected = BlasTestSupport.scalarDasum(n, vector, 0, incX);
+        double actual = Dasum.dasum(n, vector, 0, incX);
+        assertEquals(expected, actual, 1e-12 * Math.max(1.0, Math.abs(expected)));
+    }
+
+    private static void fillUsedVector(Random random, double[] vector, int off, int inc, int n) {
+        int index = off + (inc < 0 ? (n - 1) * (-inc) : 0);
+        for (int i = 0; i < n; i++) {
+            vector[index] = (random.nextDouble() - 0.5) * 2.0;
+            index += inc;
+        }
     }
 }

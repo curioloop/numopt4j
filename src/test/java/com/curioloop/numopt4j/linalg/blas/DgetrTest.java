@@ -250,4 +250,28 @@ class DgetrTest {
         int info = Dgetr.dgetrf(n, n, A, 0, n, ipiv, 0);
         assertEquals(0, info);
     }
+
+    @Test
+    void testDgeconParityOnUnitLowerPath() {
+        double[] original = {
+            5.0, 0.2, 0.1, 0.0,
+            0.3, 4.5, 0.2, 0.1,
+            0.1, 0.25, 4.8, 0.15,
+            0.0, 0.1, 0.2, 5.2
+        };
+        int n = 4;
+        double[] lu = original.clone();
+        int[] ipiv = new int[n];
+
+        int info = Dgetr.dgetrf(n, n, lu, 0, n, ipiv, 0);
+        assertEquals(0, info);
+
+        double anorm = Dlange.dlange('1', n, n, original, 0, n);
+        double expected = BlasTestSupport.scalarDgecon('1', n, lu, n, anorm, new double[4 * n], new int[n]);
+        double actual = Dgetr.dgecon('1', n, lu, n, anorm, new double[4 * n], new int[n]);
+
+        assertTrue(Double.isFinite(actual));
+        assertTrue(actual > 0.0);
+        assertEquals(expected, actual, 1e-12);
+    }
 }

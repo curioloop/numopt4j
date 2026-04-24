@@ -56,15 +56,15 @@ interface Dnrm2 {
             
             if (ax > TBIG) {
                 double scaled = ax * SBIG;
-                abig = FMA.op(scaled, scaled, abig);
+                abig = Math.fma(scaled, scaled, abig);
                 notbig = false;
             } else if (ax < TSML) {
                 if (notbig) {
                     double scaled = ax * SSML;
-                    asml = FMA.op(scaled, scaled, asml);
+                    asml = Math.fma(scaled, scaled, asml);
                 }
             } else {
-                amed = FMA.op(ax, ax, amed);
+                amed = Math.fma(ax, ax, amed);
             }
             ix += incX;
         }

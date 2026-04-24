@@ -92,7 +92,10 @@ public interface Dlatrs {
                         }
                     }
                 } else {
-                    Dtrsl.dtrsl(A, 0, lda, n, x, xOff, upper ? BLAS.Uplo.Upper : BLAS.Uplo.Lower, notrans ? BLAS.Trans.NoTrans : BLAS.Trans.Trans);
+                    Dtrsl.dtrsl(A, 0, lda, n, x, xOff,
+                        upper ? BLAS.Uplo.Upper : BLAS.Uplo.Lower,
+                        notrans ? BLAS.Trans.NoTrans : BLAS.Trans.Trans,
+                        diag);
                     return scale;
                 }
             }
@@ -121,12 +124,10 @@ public interface Dlatrs {
             }
         }
 
-        int jmax = 0;
         double xmax = abs(x[xOff]);
         for (int i = 1; i < n; i++) {
             if (abs(x[xOff + i]) > xmax) {
                 xmax = abs(x[xOff + i]);
-                jmax = i;
             }
         }
         double xbnd = xmax;
@@ -157,7 +158,10 @@ public interface Dlatrs {
         }
 
         if (grow * tscal > smlnum) {
-            Dtrsl.dtrsl(A, 0, lda, n, x, xOff, upper ? BLAS.Uplo.Upper : BLAS.Uplo.Lower, notrans ? BLAS.Trans.NoTrans : BLAS.Trans.Trans);
+            Dtrsl.dtrsl(A, 0, lda, n, x, xOff,
+                upper ? BLAS.Uplo.Upper : BLAS.Uplo.Lower,
+                notrans ? BLAS.Trans.NoTrans : BLAS.Trans.Trans,
+                diag);
             if (tscal != 1.0) {
                 for (int j = 0; j < n; j++) {
                     cnorm[cnormOff + j] /= tscal;

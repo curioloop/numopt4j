@@ -3,6 +3,7 @@
 .claude/
 .vscode/
 .qoder/
+tmp/
 build/
 target/
 dogfood/

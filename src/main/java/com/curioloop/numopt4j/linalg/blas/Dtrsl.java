@@ -28,6 +28,8 @@ package com.curioloop.numopt4j.linalg.blas;
  * <p>This implementation is optimized for small matrices (n ≤ 40):</p>
  * <ul>
  *   <li>Inlined BLAS operations to reduce function call overhead</li>
+ *   <li>4-way unrolled scalar row/column walks in the hot solve kernels</li>
+ *   <li>Zero-skip on axpy-style no-trans updates when the solved entry is zero</li>
  *   <li>Delayed singularity check for better branch prediction</li>
  *   <li>Specialized methods for each solve type</li>
  * </ul>
@@ -74,20 +76,26 @@ interface Dtrsl {
      */
     static int dtrsl(double[] t, int tOff, int ldt, int n,
                      double[] b, int bOff, BLAS.Uplo uplo, BLAS.Trans trans) {
+        return dtrsl(t, tOff, ldt, n, b, bOff, uplo, trans, BLAS.Diag.NonUnit);
+    }
+
+    static int dtrsl(double[] t, int tOff, int ldt, int n,
+                     double[] b, int bOff, BLAS.Uplo uplo, BLAS.Trans trans, BLAS.Diag diag) {
         boolean upper = (uplo == BLAS.Uplo.Upper);
         boolean transpose = (trans == BLAS.Trans.Trans || trans == BLAS.Trans.Conj);
+        boolean nounit = (diag == BLAS.Diag.NonUnit);
 
         if (!upper) {
             if (!transpose) {
-                return solveLowerN(t, tOff, ldt, n, b, bOff);
+                return solveLowerN(t, tOff, ldt, n, b, bOff, nounit);
             } else {
-                return solveLowerT(t, tOff, ldt, n, b, bOff);
+                return solveLowerT(t, tOff, ldt, n, b, bOff, nounit);
             }
         } else {
             if (!transpose) {
-                return solveUpperN(t, tOff, ldt, n, b, bOff);
+                return solveUpperN(t, tOff, ldt, n, b, bOff, nounit);
             } else {
-                return solveUpperT(t, tOff, ldt, n, b, bOff);
+                return solveUpperT(t, tOff, ldt, n, b, bOff, nounit);
             }
         }
     }
@@ -97,24 +105,45 @@ interface Dtrsl {
      * Optimized with delayed singularity check and inlined operations.
      */
     static int solveLowerN(double[] t, int tOff, int ldt, int n,
-                           double[] b, int bOff) {
+                           double[] b, int bOff, boolean nounit) {
         if (n <= 0) return 0;  // Handle empty case
 
-        double diag = t[tOff];
-        if (diag == 0.0) return 1;
-        b[bOff] /= diag;
+        double diag = 1.0;
+        if (nounit) {
+            diag = t[tOff];
+            if (diag == 0.0) return 1;
+            b[bOff] /= diag;
+        }
 
         for (int j = 1; j < n; j++) {
             int jCol = tOff + j * ldt;
-            diag = t[jCol + j];
-            if (diag == 0.0) return j + 1;
-
-            // Inline daxpy: b[j:n] += (-b[j-1]) * t[j*ldt+(j-1) + i*ldt] for i=0..n-j-1
-            double scale = -b[bOff + j - 1];
-            for (int i = 0; i < n - j; i++) {
-                b[bOff + j + i] = FMA.op(scale, t[jCol + (j - 1) + i * ldt], b[bOff + j + i]);
+            if (nounit) {
+                diag = t[jCol + j];
+                if (diag == 0.0) return j + 1;
             }
-            b[bOff + j] /= diag;
+
+            double scale = -b[bOff + j - 1];
+            int bIndex = bOff + j;
+            if (scale != 0.0) {
+                int tIndex = jCol + j - 1;
+                int limit = n - j;
+                int i = 0;
+                int unrolled = limit & ~3;
+                for (; i < unrolled; i += 4) {
+                    b[bIndex + i] = Math.fma(scale, t[tIndex], b[bIndex + i]);
+                    b[bIndex + i + 1] = Math.fma(scale, t[tIndex + ldt], b[bIndex + i + 1]);
+                    b[bIndex + i + 2] = Math.fma(scale, t[tIndex + 2 * ldt], b[bIndex + i + 2]);
+                    b[bIndex + i + 3] = Math.fma(scale, t[tIndex + 3 * ldt], b[bIndex + i + 3]);
+                    tIndex += 4 * ldt;
+                }
+                for (; i < limit; i++) {
+                    b[bIndex + i] = Math.fma(scale, t[tIndex], b[bIndex + i]);
+                    tIndex += ldt;
+                }
+            }
+            if (nounit) {
+                b[bIndex] /= diag;
+            }
         }
         return 0;
     }
@@ -124,26 +153,52 @@ interface Dtrsl {
      * Optimized with delayed singularity check and inlined ddot.
      */
     static int solveLowerT(double[] t, int tOff, int ldt, int n,
-                           double[] b, int bOff) {
+                           double[] b, int bOff, boolean nounit) {
         if (n <= 0) return 0;  // Handle empty case
 
         int lastCol = tOff + (n - 1) * ldt;
-        double diag = t[lastCol + (n - 1)];
-        if (diag == 0.0) return n;
-        b[bOff + n - 1] /= diag;
+        double diag = 1.0;
+        if (nounit) {
+            diag = t[lastCol + (n - 1)];
+            if (diag == 0.0) return n;
+            b[bOff + n - 1] /= diag;
+        }
 
         for (int jj = 1; jj < n; jj++) {
             int j = n - 1 - jj;
             int jCol = tOff + j * ldt;
-            diag = t[jCol + j];
-            if (diag == 0.0) return j + 1;
-
-            // Inline ddot: sum of t[(j+1)*ldt + j + i*ldt] * b[j+1+i] for i=0..jj-1
-            double dot = 0.0;
-            for (int i = 0; i < jj; i++) {
-                dot = FMA.op(t[tOff + (j + 1) * ldt + j + i * ldt], b[bOff + j + 1 + i], dot);
+            if (nounit) {
+                diag = t[jCol + j];
+                if (diag == 0.0) return j + 1;
             }
-            b[bOff + j] = (b[bOff + j] - dot) / diag;
+
+            int tIndex = tOff + (j + 1) * ldt + j;
+            int bIndex = bOff + j + 1;
+            double dot0 = 0.0;
+            double dot1 = 0.0;
+            double dot2 = 0.0;
+            double dot3 = 0.0;
+            int i = 0;
+            int unrolled = jj & ~3;
+            for (; i < unrolled; i += 4) {
+                dot0 = Math.fma(t[tIndex], b[bIndex], dot0);
+                dot1 = Math.fma(t[tIndex + ldt], b[bIndex + 1], dot1);
+                dot2 = Math.fma(t[tIndex + 2 * ldt], b[bIndex + 2], dot2);
+                dot3 = Math.fma(t[tIndex + 3 * ldt], b[bIndex + 3], dot3);
+                tIndex += 4 * ldt;
+                bIndex += 4;
+            }
+            double dot = (dot0 + dot1) + (dot2 + dot3);
+            for (; i < jj; i++) {
+                dot = Math.fma(t[tIndex], b[bIndex], dot);
+                tIndex += ldt;
+                bIndex++;
+            }
+            if (nounit) {
+                b[bOff + j] = (b[bOff + j] - dot) / diag;
+            } else {
+                b[bOff + j] -= dot;
+            }
         }
         return 0;
     }
@@ -153,26 +208,46 @@ interface Dtrsl {
      * Optimized with delayed singularity check and inlined daxpy.
      */
     static int solveUpperN(double[] t, int tOff, int ldt, int n,
-                           double[] b, int bOff) {
+                           double[] b, int bOff, boolean nounit) {
         if (n <= 0) return 0;  // Handle empty case
 
         int lastCol = tOff + (n - 1) * ldt;
-        double diag = t[lastCol + (n - 1)];
-        if (diag == 0.0) return n;
-        b[bOff + n - 1] /= diag;
+        double diag = 1.0;
+        if (nounit) {
+            diag = t[lastCol + (n - 1)];
+            if (diag == 0.0) return n;
+            b[bOff + n - 1] /= diag;
+        }
 
         for (int jj = 1; jj < n; jj++) {
             int j = n - 1 - jj;
             int jCol = tOff + j * ldt;
-            diag = t[jCol + j];
-            if (diag == 0.0) return j + 1;
-
-            // Inline daxpy: b[0:j+1] += (-b[j+1]) * t[j+1 + i*ldt] for i=0..j
-            double scale = -b[bOff + j + 1];
-            for (int i = 0; i <= j; i++) {
-                b[bOff + i] = FMA.op(scale, t[tOff + j + 1 + i * ldt], b[bOff + i]);
+            if (nounit) {
+                diag = t[jCol + j];
+                if (diag == 0.0) return j + 1;
             }
-            b[bOff + j] /= diag;
+
+            double scale = -b[bOff + j + 1];
+            if (scale != 0.0) {
+                int tIndex = tOff + j + 1;
+                int i = 0;
+                int limit = j + 1;
+                int unrolled = limit & ~3;
+                for (; i < unrolled; i += 4) {
+                    b[bOff + i] = Math.fma(scale, t[tIndex], b[bOff + i]);
+                    b[bOff + i + 1] = Math.fma(scale, t[tIndex + ldt], b[bOff + i + 1]);
+                    b[bOff + i + 2] = Math.fma(scale, t[tIndex + 2 * ldt], b[bOff + i + 2]);
+                    b[bOff + i + 3] = Math.fma(scale, t[tIndex + 3 * ldt], b[bOff + i + 3]);
+                    tIndex += 4 * ldt;
+                }
+                for (; i < limit; i++) {
+                    b[bOff + i] = Math.fma(scale, t[tIndex], b[bOff + i]);
+                    tIndex += ldt;
+                }
+            }
+            if (nounit) {
+                b[bOff + j] /= diag;
+            }
         }
         return 0;
     }
@@ -182,24 +257,50 @@ interface Dtrsl {
      * Optimized with delayed singularity check and inlined ddot.
      */
     static int solveUpperT(double[] t, int tOff, int ldt, int n,
-                           double[] b, int bOff) {
+                           double[] b, int bOff, boolean nounit) {
         if (n <= 0) return 0;  // Handle empty case
 
-        double diag = t[tOff];
-        if (diag == 0.0) return 1;
-        b[bOff] /= diag;
+        double diag = 1.0;
+        if (nounit) {
+            diag = t[tOff];
+            if (diag == 0.0) return 1;
+            b[bOff] /= diag;
+        }
 
         for (int j = 1; j < n; j++) {
             int jCol = tOff + j * ldt;
-            diag = t[jCol + j];
-            if (diag == 0.0) return j + 1;
-
-            // Inline ddot: sum of t[j + i*ldt] * b[i] for i=0..j-1
-            double dot = 0.0;
-            for (int i = 0; i < j; i++) {
-                dot = FMA.op(t[tOff + j + i * ldt], b[bOff + i], dot);
+            if (nounit) {
+                diag = t[jCol + j];
+                if (diag == 0.0) return j + 1;
             }
-            b[bOff + j] = (b[bOff + j] - dot) / diag;
+
+            int tIndex = tOff + j;
+            int bIndex = bOff;
+            double dot0 = 0.0;
+            double dot1 = 0.0;
+            double dot2 = 0.0;
+            double dot3 = 0.0;
+            int i = 0;
+            int unrolled = j & ~3;
+            for (; i < unrolled; i += 4) {
+                dot0 = Math.fma(t[tIndex], b[bIndex], dot0);
+                dot1 = Math.fma(t[tIndex + ldt], b[bIndex + 1], dot1);
+                dot2 = Math.fma(t[tIndex + 2 * ldt], b[bIndex + 2], dot2);
+                dot3 = Math.fma(t[tIndex + 3 * ldt], b[bIndex + 3], dot3);
+                tIndex += 4 * ldt;
+                bIndex += 4;
+            }
+            double dot = (dot0 + dot1) + (dot2 + dot3);
+            for (; i < j; i++) {
+                dot = Math.fma(t[tIndex], b[bIndex], dot);
+                tIndex += ldt;
+                bIndex++;
+            }
+            if (nounit) {
+                b[bOff + j] = (b[bOff + j] - dot) / diag;
+            } else {
+                b[bOff + j] -= dot;
+            }
         }
         return 0;
     }

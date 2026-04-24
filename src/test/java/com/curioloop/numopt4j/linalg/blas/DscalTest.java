@@ -5,6 +5,9 @@ package com.curioloop.numopt4j.linalg.blas;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
+import java.util.Random;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class DscalTest {
@@ -45,5 +48,47 @@ class DscalTest {
     @Test
     void testEmpty() {
         Dscal.dscal(0, 2.0, new double[0], 0, 1);
+    }
+
+    @Test
+    void testLargeContiguousMatchesReference() {
+        int n = 4096;
+        double alpha = -1.5;
+        double[] actual = randomVector(n, 42);
+        double[] expected = Arrays.copyOf(actual, actual.length);
+
+        dscalReference(n, alpha, expected, 0, 1);
+        Dscal.dscal(n, alpha, actual, 0, 1);
+
+        assertArrayEquals(expected, actual, TOL);
+    }
+
+    @Test
+    void testStrideThreeMatchesReference() {
+        int n = 4;
+        double[] actual = {1.0, 9.0, 9.0, 2.0, 9.0, 9.0, 3.0, 9.0, 9.0, 4.0};
+        double[] expected = Arrays.copyOf(actual, actual.length);
+
+        dscalReference(n, -0.25, expected, 0, 3);
+        Dscal.dscal(n, -0.25, actual, 0, 3);
+
+        assertArrayEquals(expected, actual, TOL);
+    }
+
+    private double[] randomVector(int n, long seed) {
+        Random random = new Random(seed);
+        double[] vector = new double[n];
+        for (int i = 0; i < n; i++) {
+            vector[i] = random.nextDouble() - 0.5;
+        }
+        return vector;
+    }
+
+    private void dscalReference(int n, double alpha, double[] x, int xOff, int incX) {
+        int xi = xOff;
+        for (int i = 0; i < n; i++) {
+            x[xi] *= alpha;
+            xi += incX;
+        }
     }
 }

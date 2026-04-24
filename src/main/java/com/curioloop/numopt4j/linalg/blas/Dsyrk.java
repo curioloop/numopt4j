@@ -97,13 +97,13 @@ interface Dsyrk {
                         double sum = 0.0;
                         int p = 0;
                         for (; p + 3 < k; p += 4) {
-                            sum = FMA.op(A[aiOff + p], A[ajOff + p], sum);
-                            sum = FMA.op(A[aiOff + p + 1], A[ajOff + p + 1], sum);
-                            sum = FMA.op(A[aiOff + p + 2], A[ajOff + p + 2], sum);
-                            sum = FMA.op(A[aiOff + p + 3], A[ajOff + p + 3], sum);
+                            sum = Math.fma(A[aiOff + p], A[ajOff + p], sum);
+                            sum = Math.fma(A[aiOff + p + 1], A[ajOff + p + 1], sum);
+                            sum = Math.fma(A[aiOff + p + 2], A[ajOff + p + 2], sum);
+                            sum = Math.fma(A[aiOff + p + 3], A[ajOff + p + 3], sum);
                         }
                         for (; p < k; p++) {
-                            sum = FMA.op(A[aiOff + p], A[ajOff + p], sum);
+                            sum = Math.fma(A[aiOff + p], A[ajOff + p], sum);
                         }
                         C[cOff + i * ldc + j] += alpha * sum;
                     }
@@ -116,13 +116,13 @@ interface Dsyrk {
                         double sum = 0.0;
                         int p = 0;
                         for (; p + 3 < k; p += 4) {
-                            sum = FMA.op(A[aiOff + p], A[ajOff + p], sum);
-                            sum = FMA.op(A[aiOff + p + 1], A[ajOff + p + 1], sum);
-                            sum = FMA.op(A[aiOff + p + 2], A[ajOff + p + 2], sum);
-                            sum = FMA.op(A[aiOff + p + 3], A[ajOff + p + 3], sum);
+                            sum = Math.fma(A[aiOff + p], A[ajOff + p], sum);
+                            sum = Math.fma(A[aiOff + p + 1], A[ajOff + p + 1], sum);
+                            sum = Math.fma(A[aiOff + p + 2], A[ajOff + p + 2], sum);
+                            sum = Math.fma(A[aiOff + p + 3], A[ajOff + p + 3], sum);
                         }
                         for (; p < k; p++) {
-                            sum = FMA.op(A[aiOff + p], A[ajOff + p], sum);
+                            sum = Math.fma(A[aiOff + p], A[ajOff + p], sum);
                         }
                         C[cOff + i * ldc + j] += alpha * sum;
                     }
@@ -166,7 +166,7 @@ interface Dsyrk {
                         double alphaAi = alpha * A[rowOff + i];
                         int cRowOff = cOff + i * ldc;
                         for (int j = i; j < n; j++) {
-                            C[cRowOff + j] = FMA.op(alphaAi, A[rowOff + j], C[cRowOff + j]);
+                            C[cRowOff + j] = Math.fma(alphaAi, A[rowOff + j], C[cRowOff + j]);
                         }
                     }
                 }
@@ -177,7 +177,7 @@ interface Dsyrk {
                         double alphaAi = alpha * A[rowOff + i];
                         int cRowOff = cOff + i * ldc;
                         for (int j = 0; j <= i; j++) {
-                            C[cRowOff + j] = FMA.op(alphaAi, A[rowOff + j], C[cRowOff + j]);
+                            C[cRowOff + j] = Math.fma(alphaAi, A[rowOff + j], C[cRowOff + j]);
                         }
                     }
                 }

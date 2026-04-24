@@ -125,9 +125,27 @@ interface Dlaqr {
      * @return optimal workspace size
      */
     static int dlaqr04Query(int n) {
+        return dlaqr04Query(true, true, n, 0, n - 1, 1);
+    }
+
+    static int dlaqr04Query(boolean wantt, boolean wantz, int n, int ilo, int ihi, int recur) {
         if (n == 0) return 1;
         if (n <= NTINY) return 1;
-        return max(10, n);
+
+        String jbcmpz = (wantt ? "S" : "E") + (wantz ? "V" : "N");
+        String fname = recur > 0 ? "DLAQR0" : "DLAQR4";
+
+        int nwr = Ilaenv.ilaenv(13, fname, jbcmpz, n, ilo, ihi, -1);
+        nwr = max(2, nwr);
+        nwr = min(ihi - ilo + 1, min((n - 1) / 3, nwr));
+
+        int nsr = Ilaenv.ilaenv(15, fname, jbcmpz, n, ilo, ihi, -1);
+        nsr = min(nsr, min((n - 3) / 6, ihi - ilo));
+        nsr = max(2, nsr & ~1);
+
+        int lwkopt = dlaqr23Query(n, nwr + 1, recur);
+        lwkopt = max(3 * nsr / 2, lwkopt);
+        return max(max(10, n), lwkopt);
     }
 
     /**
@@ -145,7 +163,7 @@ interface Dlaqr {
         if (nw > 2) {
             lwkopt = n + lwkopt;
             if (recur > 0) {
-                lwkopt = max(lwkopt, dlaqr04Query(nw));
+                lwkopt = max(lwkopt, dlaqr04Query(true, true, nw, 0, nw - 1, recur - 1));
             }
         }
         lwkopt += nw + (TREXC_WORK_BASE + n) + DLANV2_RESULT;
@@ -194,7 +212,7 @@ interface Dlaqr {
         }
 
         if (lwork == -1) {
-            work[workOff] = dlaqr04Query(n);
+            work[workOff] = dlaqr04Query(wantt, wantz, n, ilo, ihi, recur);
             return 0;
         }
 
@@ -380,7 +398,7 @@ interface Dlaqr {
             dlaqr5(wantt, wantz, kacc22, n, ktop, kbot, ns,
                    wr, wrOff + ks, wi, wiOff + ks,
                    h, hOff, ldh, iloz, ihiz, z, zOff, ldz,
-                   work, 3, 1,
+                     work, workOff + 3, 3,
                    h, hOff + ku * ldh, ldh,
                    nhv, h, hOff + kwv * ldh, ldh,
                    nhv, h, hOff + ku * ldh + kwh, ldh);
