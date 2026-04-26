@@ -15,6 +15,9 @@ import java.util.function.DoubleUnaryOperator;
  */
 public final class Checks {
 
+    /** ULP guard band used to reject principal-value poles that are too close to an endpoint. */
+    private static final double PRINCIPAL_VALUE_BOUNDARY_GAP_ULPS = 128.0;
+
     /** Default maximum number of oscillation cycles for {@link special.OscillatoryIntegral}. */
     public static final int DEFAULT_MAX_CYCLES = 64;
 
@@ -101,6 +104,18 @@ public final class Checks {
         }
         if (pole == min || pole == max) {
             throw new IllegalArgumentException("pole must not coincide with an integration bound");
+        }
+        if (pole > min && pole < max) {
+            double span = Math.abs(max - min);
+            double scale = Math.max(1.0,
+                    Math.max(Math.abs(min), Math.max(Math.abs(max), Math.abs(pole))));
+            double minGap = Math.max(
+                    PRINCIPAL_VALUE_BOUNDARY_GAP_ULPS * Math.ulp(scale),
+                    PRINCIPAL_VALUE_BOUNDARY_GAP_ULPS * Math.ulp(1.0) * span);
+            if (Math.min(pole - min, max - pole) <= minGap) {
+                throw new IllegalArgumentException(
+                        "pole is too close to an integration bound for stable principal value regularization");
+            }
         }
     }
 

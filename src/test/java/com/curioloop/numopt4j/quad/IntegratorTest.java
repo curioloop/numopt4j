@@ -3,6 +3,9 @@
  */
 package com.curioloop.numopt4j.quad;
 
+import com.curioloop.numopt4j.quad.de.DEPool;
+import com.curioloop.numopt4j.quad.de.DoubleExponentialIntegral;
+import com.curioloop.numopt4j.quad.de.DEOpts;
 import com.curioloop.numopt4j.quad.sampled.SampledRule;
 import org.junit.jupiter.api.Test;
 
@@ -212,6 +215,47 @@ class IntegratorTest {
                 .function(x -> Math.pow(x, 7)).bounds(0.0, 1.0).points(4).integrate();
 
         assertThat(integral).isCloseTo(1.0 / 8.0, offset(EPS));
+    }
+
+    @Test
+    void doubleExponentialTanhSinhMatchesPolynomialIntegral() {
+        Quadrature result = Integrator.doubleExponential(DEOpts.TANH_SINH)
+                .function(x -> x * x)
+                .bounds(0.0, 2.0)
+                .tolerance(1e-10)
+                .integrate();
+
+        assertThat(result.isSuccessful()).isTrue();
+        assertThat(result.getValue()).isCloseTo(8.0 / 3.0, offset(1e-10));
+    }
+
+    @Test
+    void doubleExponentialExpSinhMatchesExponentialTail() {
+        Quadrature result = Integrator.doubleExponential(DEOpts.EXP_SINH)
+                .function(x -> Math.exp(-x))
+                .bounds(0.0, Double.POSITIVE_INFINITY)
+                .tolerance(1e-10)
+                .integrate();
+
+        assertThat(result.isSuccessful()).isTrue();
+        assertThat(result.getValue()).isCloseTo(1.0, offset(1e-10));
+    }
+
+    @Test
+    void doubleExponentialBuilderAcceptsReusablePool() {
+        DEPool pool = new DEPool();
+        DoubleExponentialIntegral problem = Integrator.doubleExponential(DEOpts.TANH_SINH)
+                .function(x -> x * x)
+                .bounds(0.0, 2.0)
+                .tolerance(1e-10);
+
+        Quadrature first = problem.integrate(pool);
+        Quadrature second = problem.integrate(pool);
+
+        assertThat(first.isSuccessful()).isTrue();
+        assertThat(second.isSuccessful()).isTrue();
+        assertThat(first.getValue()).isCloseTo(8.0 / 3.0, offset(1e-10));
+        assertThat(second.getValue()).isCloseTo(first.getValue(), offset(0.0));
     }
 
     // -----------------------------------------------------------------------

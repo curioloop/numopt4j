@@ -107,7 +107,12 @@ public class PrincipalValueIntegral implements Integral<Quadrature, AdaptivePool
                 x -> (function.applyAsDouble(x) - valueAtPole) / (x - pole),
                 min, max, new double[]{pole}, absTol, relTol, maxSubdivisions, maxEvaluations, pool);
 
-        double logContribution = valueAtPole * Math.log(Math.abs((max - pole) / (pole - min)));
+        double logContribution = valueAtPole * (Math.log(max - pole) - Math.log(pole - min));
+        if (!Double.isFinite(logContribution)) {
+            return new Quadrature(Double.NaN, Double.NaN,
+                Quadrature.Status.ABNORMAL_TERMINATION,
+                regularized.getIterations(), regularized.getEvaluations() + 1);
+        }
         return new Quadrature(regularized.getValue() + logContribution,
                 regularized.getEstimatedError(), regularized.getStatus(),
                 regularized.getIterations(), regularized.getEvaluations() + 1);

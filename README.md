@@ -10,7 +10,7 @@ High-performance numerical optimization library for Java.
 - **SLSQP**: Sequential Least Squares Programming with equality/inequality constraints
 - **TRF**: Trust Region Reflective for nonlinear least squares
 - **Root finding**: Brentq (1-D), HYBR and Broyden (N-D) via `RootFinder`
-- **Numerical integration**: adaptive GK15, fixed Gauss-Legendre, oscillatory, improper, endpoint-singular, Cauchy principal value, Filon (highly oscillatory), and sampled-data quadrature via `Integrator`
+- **Numerical integration**: adaptive GK15, fixed Gauss-Legendre, double-exponential (tanh-sinh / exp-sinh / sinh-sinh), oscillatory, improper, endpoint-singular, Cauchy principal value, Filon (highly oscillatory), and sampled-data quadrature via `Integrator`
 - **ODE solvers**: adaptive explicit RK (RK23, RK45, DOP853) and implicit stiff solvers (BDF, Radau IIA) with dense output, event detection, and workspace reuse via `Integrator.ode()`
 - **Linear regression**: OLS and WLS with SVD/QR solvers, full statistical output via `Regressor`
 - **Matrix decompositions**: LU, QR, LQ, SVD, Cholesky/LDLᵀ, Schur, Eigen, GEVD, GGEVD, GSVD via `Decomposer`
@@ -255,6 +255,7 @@ for (double[] x0 : initialPoints) {
 import com.curioloop.numopt4j.quad.*;
 import com.curioloop.numopt4j.quad.gauss.*;
 import com.curioloop.numopt4j.quad.adapt.*;
+import com.curioloop.numopt4j.quad.de.*;
 import com.curioloop.numopt4j.quad.special.*;
 import com.curioloop.numopt4j.quad.sampled.*;
 
@@ -266,6 +267,22 @@ double v = Integrator.fixed()
 Quadrature r = Integrator.adaptive()
     .function(Math::sin).bounds(0.0, Math.PI).tolerances(1e-10, 1e-10).integrate();
 System.out.printf("value=%.10f  error=%.2e%n", r.getValue(), r.getEstimatedError());
+
+// Double-exponential: tanh-sinh on a finite interval
+Quadrature rDe = Integrator.doubleExponential(DEOpts.TANH_SINH)
+    .function(x -> Math.sqrt(Math.max(0.0, 1.0 - x * x)))
+    .bounds(-1.0, 1.0)
+    .tolerance(1e-10)
+    .integrate();
+
+// Reuse DE workspace across repeated solves
+DoubleExponentialIntegral de = Integrator.doubleExponential(DEOpts.EXP_SINH)
+    .function(x -> Math.exp(-x))
+    .bounds(0.0, Double.POSITIVE_INFINITY)
+    .tolerance(1e-10);
+DEPool deWs = new DEPool();
+Quadrature first = de.integrate(deWs);
+Quadrature second = de.bounds(1.0, Double.POSITIVE_INFINITY).integrate(deWs);
 
 // Oscillatory: ∫₀^∞ e^{-x}·cos(2x) dx
 Quadrature r2 = Integrator.oscillatory(OscillatoryOpts.COS_UPPER)

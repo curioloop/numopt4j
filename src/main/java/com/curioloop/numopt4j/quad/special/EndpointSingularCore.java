@@ -3,11 +3,14 @@
  */
 package com.curioloop.numopt4j.quad.special;
 
+import com.curioloop.numopt4j.quad.de.DEPool;
+import com.curioloop.numopt4j.quad.de.DoubleExponentialCore;
 import com.curioloop.numopt4j.quad.Quadrature;
 
 import com.curioloop.numopt4j.quad.gauss.GaussPool;
 import com.curioloop.numopt4j.quad.gauss.GaussRule;
 
+import java.util.function.DoubleBinaryOperator;
 import java.util.function.DoubleUnaryOperator;
 
 /**
@@ -19,11 +22,10 @@ import java.util.function.DoubleUnaryOperator;
  *       Target: ∫_{a}^{b} (x−a)^α (b−x)^β f(x) dx,  α,β > −1.
  *       Nodes and weights are generated via the Jacobi three-term recurrence
  *       and the point count doubles at each refinement level.</li>
- *   <li>{@link #tanhSinh} — Tanh-sinh (double-exponential) quadrature for integrands
+ *   <li>{@link #logarithmic} — Boost-style double-exponential quadrature for integrands
  *       that also carry logarithmic endpoint factors.
- *       Substitution: x = tanh(π/2·sinh(t)), mapping t ∈ (−∞,+∞) to x ∈ (−1,1).
- *       Weight: w(t) = π/2·cosh(t)/cosh²(π/2·sinh(t)).
- *       Achieves doubly-exponential convergence for algebraic/logarithmic singularities.</li>
+ *       A power preconditioning map removes the algebraic endpoint weights before
+ *       the DE rule is applied, which stabilizes the near-{@code -1} exponent regime.</li>
  * </ul>
  *
  * <p>References:</p>
@@ -35,6 +37,8 @@ import java.util.function.DoubleUnaryOperator;
  * </ul>
  */
 final class EndpointSingularCore {
+
+    private static final int DE_TOLERANCE_RETRIES = 6;
 
     private EndpointSingularCore() {}
 
@@ -71,7 +75,12 @@ final class EndpointSingularCore {
         GaussRule rule = GaussRule.jacobi(beta, alpha);
         double halfSpan = 0.5 * (max - min);
         double center   = 0.5 * (min + max);
-        double scale    = Math.pow(halfSpan, alpha + beta + 1.0);
+        double exponent = alpha + beta + 1.0;
+        double scale    = powScale(halfSpan, exponent);
+        if (!Double.isFinite(scale)) {
+            return new Quadrature(Double.NaN, Double.NaN,
+                    Quadrature.Status.ABNORMAL_TERMINATION, 0, 0);
+        }
         double previous = Double.NaN, bestValue = Double.NaN, bestError = Double.POSITIVE_INFINITY;
         int totalEvaluations = 0;
 
@@ -80,8 +89,13 @@ final class EndpointSingularCore {
             workspace.ensure(points, rule);
 
             double value = 0.0;
+            double compensation = 0.0;
             for (int i = 0; i < points; i++) {
-                value += workspace.weightAt(i) * f.applyAsDouble(center + halfSpan * workspace.nodeAt(i));
+                double term = workspace.weightAt(i) * f.applyAsDouble(center + halfSpan * workspace.nodeAt(i));
+                double adjusted = term - compensation;
+                double updated = value + adjusted;
+                compensation = (updated - value) - adjusted;
+                value = updated;
             }
             value *= scale;
             totalEvaluations += points;
@@ -97,89 +111,130 @@ final class EndpointSingularCore {
     }
 
     // -----------------------------------------------------------------------
-    // Tanh-sinh (double-exponential) quadrature (algebraic + logarithmic)
+    // Double-exponential quadrature with endpoint power preconditioning
     // -----------------------------------------------------------------------
 
-    private static final double HALF_PI       = 0.5 * Math.PI;
-    private static final double MIN_COMPLEMENT = 64.0 * Math.ulp(1.0);
-    private static final int    MAX_TERMS      = 4096;
-    private static final int    TAIL_STREAK    = 6;
+    static Quadrature logarithmic(DoubleUnaryOperator function, double min, double max,
+                                  double alpha, double beta, EndpointOpts opts,
+                                  double absTol, double relTol, int maxRefinements) {
+        double interval = max - min;
+        double leftExponent = alpha + 1.0;
+        double rightExponent = beta + 1.0;
+        double inverseLeftExponent = 1.0 / leftExponent;
+        double inverseRightExponent = 1.0 / rightExponent;
+        double logInterval = Math.log(interval);
+        double intervalWeightLog = (alpha + beta + 1.0) * logInterval;
+        double denominatorExponent = alpha + beta + 2.0;
 
-    /**
-     * Integrates f on [min, max] via tanh-sinh (double-exponential) quadrature.
-     *
-     * <p>Substitution: x = c + h·tanh(π/2·sinh(t)),  c = (min+max)/2,  h = (max−min)/2
-     * Jacobian: dx/dt = h·π/2·cosh(t)/cosh²(π/2·sinh(t))
-     * Euler-Maclaurin sum at step size δ = 2^{−level}:
-     *   I ≈ h·δ · Σ_{k} w(k·δ) · [f(c − h·tanh(u_k)) + f(c + h·tanh(u_k))]
-     * where u_k = π/2·sinh(k·δ) and w(t) = π/2·cosh(t)/cosh²(π/2·sinh(t)).</p>
-     *
-     * <p>The abscissa complement xjc = 1/(exp(u)·cosh(u)) ≈ 1 − tanh(u) is used
-     * as the stopping criterion: when xjc ≤ 64·ε the abscissa is indistinguishable
-     * from the endpoint in double precision.</p>
-     *
-     * <p>Suitable when f carries logarithmic endpoint factors in addition to algebraic ones.
-     * The step size halves at each refinement level: δ = 2^{−level}.</p>
-     */
-    static Quadrature tanhSinh(DoubleUnaryOperator f, double min, double max,
-                               double absTol, double relTol, int maxRefinements) {
-        double halfSpan = 0.5 * (max - min);
-        double center   = 0.5 * (min + max);
-        double previous = Double.NaN, bestValue = Double.NaN, bestError = Double.POSITIVE_INFINITY;
-        int evaluations = 0;
-
-        for (int level = 0; level < maxRefinements; level++) {
-            double h = Math.scalb(1.0, -level);
-            double estimate = 0.0;
-            int smallTail = 0;
-
-            for (int k = 0; k < MAX_TERMS; k++) {
-                double t     = k * h;
-                double sinh  = Math.sinh(t);
-                double cosh  = Math.cosh(t);
-                double u     = HALF_PI * sinh;
-                double tanhU = Math.tanh(u);
-                double sechU = 1.0 / Math.cosh(u);
-                double weight = HALF_PI * cosh * sechU * sechU;
-
-                if (k == 0) {
-                    double value = f.applyAsDouble(center);
-                    evaluations++;
-                    if (!Double.isFinite(value)) {
-                        return new Quadrature(Double.NaN, Double.NaN, Quadrature.Status.ABNORMAL_TERMINATION, level, evaluations);
-                    }
-                    estimate += weight * value;
-                    continue;
-                }
-
-                // Stop when the abscissa complement underflows (indistinguishable from endpoint)
-                double xjc = sechU / (Math.exp(u) * Math.cosh(u));
-                if (!(xjc > MIN_COMPLEMENT)) break;
-
-                double left  = center - halfSpan * tanhU;
-                double right = center + halfSpan * tanhU;
-                double lv = f.applyAsDouble(left), rv = f.applyAsDouble(right);
-                evaluations += 2;
-                if (!Double.isFinite(lv) || !Double.isFinite(rv)) {
-                    return new Quadrature(Double.NaN, Double.NaN, Quadrature.Status.ABNORMAL_TERMINATION, level, evaluations);
-                }
-
-                double term = weight * (lv + rv);
-                estimate += term;
-
-                double tailLimit = Math.max(absTol / (halfSpan * h), relTol * Math.abs(estimate)) * 0.01;
-                if (Math.abs(term) <= tailLimit) { if (++smallTail >= TAIL_STREAK) break; }
-                else smallTail = 0;
+        DoubleBinaryOperator transformed = (unitPosition, unitComplement) -> {
+            double complement = Math.abs(unitComplement);
+            double leftUnit;
+            double rightUnit;
+            if (unitPosition <= 0.5) {
+                leftUnit = complement;
+                rightUnit = 1.0 - complement;
+            } else {
+                rightUnit = complement;
+                leftUnit = 1.0 - complement;
             }
 
-            double value = estimate * halfSpan * h;
-            double error = Double.isNaN(previous) ? Math.abs(value) : Math.abs(value - previous);
-            if (error < bestError) { bestValue = value; bestError = error; }
-            if (!Double.isNaN(previous) && error <= Math.max(absTol, relTol * Math.abs(value))) {
-                return new Quadrature(value, error, Quadrature.Status.CONVERGED, level + 1, evaluations);
+            double logLeftUnit = Math.log(leftUnit);
+            double logRightUnit = Math.log(rightUnit);
+            double logA = inverseLeftExponent * logLeftUnit;
+            double logB = inverseRightExponent * logRightUnit;
+            double maxLog = Math.max(logA, logB);
+            double scaledA = Math.exp(logA - maxLog);
+            double scaledB = Math.exp(logB - maxLog);
+            double scaledSum = scaledA + scaledB;
+            double logSum = maxLog + Math.log(scaledSum);
+            double leftFraction = scaledA / scaledSum;
+            double rightFraction = scaledB / scaledSum;
+            double point = leftFraction <= rightFraction
+                ? min + interval * leftFraction
+                : max - interval * rightFraction;
+            double blend = rightUnit * inverseLeftExponent + leftUnit * inverseRightExponent;
+            double value = function.applyAsDouble(point) * Math.exp(
+                intervalWeightLog + Math.log(blend) - denominatorExponent * logSum
+            );
+            if (opts.logLeft) {
+                value *= logInterval + logA - logSum;
             }
-            previous = value;
+            if (opts.logRight) {
+                value *= logInterval + logB - logSum;
+            }
+            return value;
+        };
+
+        Quadrature best = null;
+        double bestTolerance = Double.NaN;
+        DEPool workspace = new DEPool();
+        double tolerance = initialDeTolerance(absTol, relTol);
+        for (int attempt = 0; attempt < DE_TOLERANCE_RETRIES; attempt++) {
+            Quadrature current;
+            try {
+                current = DoubleExponentialCore.tanhSinh(
+                    transformed,
+                    0.0,
+                    1.0,
+                    tolerance,
+                    maxRefinements,
+                    DoubleExponentialCore.DEFAULT_MIN_COMPLEMENT,
+                    workspace
+                );
+            } catch (ArithmeticException ex) {
+                break;
+            }
+            if (best == null || current.getEstimatedError() <= best.getEstimatedError()) {
+                best = current;
+                bestTolerance = tolerance;
+            }
+            if (meetsTolerance(current, absTol, relTol, tolerance)) {
+                return new Quadrature(
+                    current.getValue(),
+                    current.getEstimatedError(),
+                    Quadrature.Status.CONVERGED,
+                    current.getIterations(),
+                    0
+                );
+            }
+
+            double tightened = tolerance * 0.25;
+            if (!(tightened > 0.0) || tightened == tolerance) {
+                break;
+            }
+            tolerance = tightened;
         }
-        return new Quadrature(bestValue, bestError, Quadrature.Status.MAX_REFINEMENTS_REACHED, maxRefinements, evaluations);
+
+        if (best == null) {
+            return new Quadrature(Double.NaN, Double.NaN, Quadrature.Status.ABNORMAL_TERMINATION, 0, 0);
+        }
+        Quadrature.Status status = meetsTolerance(best, absTol, relTol, bestTolerance)
+            ? Quadrature.Status.CONVERGED
+            : Quadrature.Status.MAX_REFINEMENTS_REACHED;
+        return new Quadrature(best.getValue(), best.getEstimatedError(), status, best.getIterations(), 0);
+    }
+
+    private static double powScale(double base, double exponent) {
+        double logScale = exponent * Math.log(base);
+        if (Math.abs(logScale) < 1e-4) {
+            return 1.0 + Math.expm1(logScale);
+        }
+        return Math.exp(logScale);
+    }
+
+    private static double initialDeTolerance(double absTol, double relTol) {
+        if (relTol > 0.0) {
+            return relTol;
+        }
+        if (absTol > 0.0) {
+            return Math.min(absTol, DoubleExponentialCore.DEFAULT_TOLERANCE);
+        }
+        return DoubleExponentialCore.DEFAULT_TOLERANCE;
+    }
+
+    private static boolean meetsTolerance(Quadrature result, double absTol, double relTol, double deTolerance) {
+        boolean absSatisfied = absTol > 0.0 && result.getEstimatedError() <= absTol;
+        boolean relSatisfied = relTol > 0.0 && deTolerance <= relTol && result.getStatus().isConverged();
+        return absSatisfied || relSatisfied;
     }
 }

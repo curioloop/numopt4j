@@ -28,10 +28,9 @@ import java.util.function.DoubleUnaryOperator;
  * <p>absTol scaling: before entering recursion the effective absolute tolerance is
  * scaled by the initial full-interval estimate, matching QuantLib's behaviour:
  *   effectiveAbsTol = max(absTol, relTol · |initialEstimate|)
- * Without this scaling, the absTol-halving at each bisection level causes the
- * tolerance to collapse to machine epsilon for deeply nested sub-intervals
- * (e.g. the oscillatory tail of a Heston characteristic-function integral),
- * leading to MAX_EVALUATIONS_REACHED even with generous absTol settings.</p>
+ * The same absolute budget is then propagated through recursion instead of being
+ * halved at every level; otherwise deeply nested sub-intervals collapse toward
+ * machine epsilon and spuriously exhaust the subdivision budget.</p>
  */
 final class GaussLobattoCore {
 
@@ -72,18 +71,19 @@ final class GaussLobattoCore {
         double effectiveAbsTol = Math.max(absTol, relTol * Math.abs(coarse));
 
         int[] subdivCount = {0};
+        double[] errorSum = {0.0};
         double result = refine(f, min, max, fa, fb, coarse,
                 effectiveAbsTol, relTol, maxSubdivisions, maxEvaluations,
-                evalCount, subdivCount, pool);
+            evalCount, subdivCount, errorSum);
 
         Quadrature.Status status = Double.isNaN(result)
                 ? Quadrature.Status.ABNORMAL_TERMINATION
-                : (evalCount[0] + 4 > maxEvaluations ? Quadrature.Status.MAX_EVALUATIONS_REACHED
+            : (evalCount[0] >= maxEvaluations ? Quadrature.Status.MAX_EVALUATIONS_REACHED
                 : (subdivCount[0] >= maxSubdivisions   ? Quadrature.Status.MAX_SUBDIVISIONS_REACHED
                 : Quadrature.Status.CONVERGED));
 
         pool.resultValue = Double.isNaN(result) ? Double.NaN : result;
-        pool.resultError = Double.isNaN(result) ? Double.NaN : 0.0;
+        pool.resultError = Double.isNaN(result) ? Double.NaN : errorSum[0];
         pool.resultIterations = subdivCount[0];
         pool.resultEvaluations = evalCount[0];
         return status;
@@ -120,12 +120,17 @@ final class GaussLobattoCore {
                                  double fa, double fb, double prevEst,
                                  double absTol, double relTol,
                                  int maxSubdivisions, int maxEvaluations,
-                                 int[] evals, int[] subdivs, AdaptivePool pool) {
+                                 int[] evals, int[] subdivs, double[] errorSum) {
         if (evals[0] >= maxEvaluations || subdivs[0] >= maxSubdivisions) {
+            errorSum[0] += Math.max(absTol, Math.ulp(1.0) * Math.max(1.0, Math.abs(prevEst)));
             return prevEst;
         }
 
         double m  = 0.5 * (a + b);
+        if (!(m > a && m < b)) {
+            errorSum[0] += Math.max(absTol, Math.ulp(1.0) * Math.max(1.0, Math.abs(prevEst)));
+            return prevEst;
+        }
         double fm = f.applyAsDouble(m);
         evals[0]++;
         if (!Double.isFinite(fm)) return Double.NaN;
@@ -142,17 +147,23 @@ final class GaussLobattoCore {
         double error    = Math.abs(combined - prevEst);
         double tol      = Math.max(absTol, relTol * Math.abs(combined));
 
-        if (error <= tol) return combined;
+        if (error <= tol) {
+            errorSum[0] += error;
+            return combined;
+        }
 
         // Protective check (QuantLib): if the sub-interval contribution is already
         // below numerical precision, further bisection cannot improve accuracy.
-        if (Math.abs(combined) == 0.0 || absTol > Math.abs(combined)) return combined;
+        if (Math.abs(combined) == 0.0 || absTol >= Math.abs(combined)) {
+            errorSum[0] += Math.max(error, Math.ulp(1.0) * Math.max(1.0, Math.abs(combined)));
+            return combined;
+        }
 
         // Bisect both halves
-        double l = refine(f, a, m, fa, fm, left,  absTol * 0.5, relTol,
-                maxSubdivisions, maxEvaluations, evals, subdivs, pool);
-        double r = refine(f, m, b, fm, fb, right, absTol * 0.5, relTol,
-                maxSubdivisions, maxEvaluations, evals, subdivs, pool);
+        double l = refine(f, a, m, fa, fm, left,  absTol, relTol,
+            maxSubdivisions, maxEvaluations, evals, subdivs, errorSum);
+        double r = refine(f, m, b, fm, fb, right, absTol, relTol,
+            maxSubdivisions, maxEvaluations, evals, subdivs, errorSum);
 
         if (!Double.isFinite(l) || !Double.isFinite(r)) return Double.NaN;
         return l + r;

@@ -123,8 +123,9 @@ public class AdaptiveIntegral implements Integral<Quadrature, AdaptivePool> {
     /**
      * Executes adaptive GK15 quadrature, splitting at any provided breakpoints.
      *
-     * <p>When breakpoints are present the tolerance is divided equally across segments.
-     * Integration stops early and returns the partial result if any segment fails.</p>
+    * <p>When breakpoints are present the absolute tolerance is consumed as a running
+    * global budget across segments, while the relative tolerance remains unchanged.
+    * Integration stops early and returns the partial result if any segment fails.</p>
      *
      * @param f              integrand
      * @param min            lower bound
@@ -149,29 +150,37 @@ public class AdaptiveIntegral implements Integral<Quadrature, AdaptivePool> {
 
         double totalValue = 0.0, totalError = 0.0;
         int totalIterations = 0, totalEvaluations = 0;
-        int remainingEvaluations = maxEvaluations, remainingSubdivisions = maxSubdivisions;
-        double segmentAbsTol = absTol / (internalPoints.length + 1.0);
+        int remainingEvaluations = maxEvaluations;
+        int segmentCount = internalPoints.length + 1;
+        double remainingAbsTol = absTol;
         double left = min;
 
-        for (int i = 0; i <= internalPoints.length; i++) {
+        for (int i = 0; i < segmentCount; i++) {
             double right = i == internalPoints.length ? max : internalPoints[i];
+            int segmentsLeft = segmentCount - i;
+            double segmentAbsTol = absTol > 0.0 ? remainingAbsTol / segmentsLeft : 0.0;
             Quadrature.Status status = GK15Core.integrate(
                     f, left, right, segmentAbsTol, relTol,
-                    Math.max(1, remainingSubdivisions), Math.max(1, remainingEvaluations), pool);
+                    Math.max(1, maxSubdivisions), Math.max(1, remainingEvaluations), pool);
 
             totalValue      += pool.resultValue;
             totalError      += pool.resultError;
             totalIterations += pool.resultIterations;
             totalEvaluations += pool.resultEvaluations;
             remainingEvaluations  -= pool.resultEvaluations;
-            remainingSubdivisions -= pool.resultIterations + 1;
+            if (absTol > 0.0) {
+                remainingAbsTol = Math.max(0.0, remainingAbsTol - Math.max(0.0, pool.resultError));
+            }
 
             if (!status.isConverged()) {
                 return new Quadrature(totalValue, totalError, status, totalIterations, totalEvaluations);
             }
             left = right;
         }
-        return new Quadrature(totalValue, totalError, Quadrature.Status.CONVERGED, totalIterations, totalEvaluations);
+        Quadrature.Status status = totalError <= tolerance(absTol, relTol, totalValue)
+                ? Quadrature.Status.CONVERGED
+                : Quadrature.Status.ROUND_OFF_DETECTED;
+        return new Quadrature(totalValue, totalError, status, totalIterations, totalEvaluations);
     }
 
     /**
@@ -183,5 +192,9 @@ public class AdaptiveIntegral implements Integral<Quadrature, AdaptivePool> {
                                                      int maxSubdivisions, int maxEvaluations,
                                                      AdaptivePool pool) {
         return GK15Core.integrate(f, min, max, absTol, relTol, maxSubdivisions, maxEvaluations, pool);
+    }
+
+    private static double tolerance(double absTol, double relTol, double estimate) {
+        return Math.max(absTol, relTol * Math.abs(estimate));
     }
 }

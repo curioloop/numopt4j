@@ -18,9 +18,9 @@ import java.util.function.DoubleUnaryOperator;
  * <p>The algorithm is selected by {@link EndpointOpts}:</p>
  * <ul>
  *   <li>{@link EndpointOpts#ALGEBRAIC}  — Gauss-Jacobi rule refinement (no log factor)</li>
- *   <li>{@link EndpointOpts#LOG_LEFT}   — tanh-sinh quadrature with ln(x−a) factor</li>
- *   <li>{@link EndpointOpts#LOG_RIGHT}  — tanh-sinh quadrature with ln(b−x) factor</li>
- *   <li>{@link EndpointOpts#LOG_BOTH}   — tanh-sinh quadrature with ln(x−a)·ln(b−x) factor</li>
+ *   <li>{@link EndpointOpts#LOG_LEFT}   — double-exponential quadrature with ln(x−a) factor</li>
+ *   <li>{@link EndpointOpts#LOG_RIGHT}  — double-exponential quadrature with ln(b−x) factor</li>
+ *   <li>{@link EndpointOpts#LOG_BOTH}   — double-exponential quadrature with ln(x−a)·ln(b−x) factor</li>
  * </ul>
  *
  * <p>Minimum required setters: {@code .function()}, {@code .bounds()}, {@code .exponents()},
@@ -103,14 +103,17 @@ public class EndpointSingularIntegral implements Integral<Quadrature, GaussPool>
             return EndpointSingularCore.algebraic(function, min, max, alpha, beta, absTol, relTol, maxRefinements, pool);
         }
 
-        DoubleUnaryOperator weighted = x -> {
-            double left = x - min, right = max - x;
-            double v = function.applyAsDouble(x) * Math.pow(left, alpha) * Math.pow(right, beta);
-            if (opts.logLeft)  v *= Math.log(left);
-            if (opts.logRight) v *= Math.log(right);
-            return v;
-        };
-        return EndpointSingularCore.tanhSinh(weighted, min, max, absTol, relTol, maxRefinements);
+        return EndpointSingularCore.logarithmic(
+            function,
+            min,
+            max,
+            alpha,
+            beta,
+            opts,
+            absTol,
+            relTol,
+            maxRefinements
+        );
     }
 
 }

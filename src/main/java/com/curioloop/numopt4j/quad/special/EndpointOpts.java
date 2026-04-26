@@ -9,9 +9,9 @@ package com.curioloop.numopt4j.quad.special;
  *
  * <ul>
  *   <li>{@link #ALGEBRAIC}  — no logarithmic factor; uses Gauss-Jacobi quadrature</li>
- *   <li>{@link #LOG_LEFT}   — multiply by ln(x−a); uses tanh-sinh quadrature</li>
- *   <li>{@link #LOG_RIGHT}  — multiply by ln(b−x); uses tanh-sinh quadrature</li>
- *   <li>{@link #LOG_BOTH}   — multiply by ln(x−a)·ln(b−x); uses tanh-sinh quadrature</li>
+ *   <li>{@link #LOG_LEFT}   — multiply by ln(x−a); uses double-exponential quadrature with endpoint power preconditioning</li>
+ *   <li>{@link #LOG_RIGHT}  — multiply by ln(b−x); uses double-exponential quadrature with endpoint power preconditioning</li>
+ *   <li>{@link #LOG_BOTH}   — multiply by ln(x−a)·ln(b−x); uses double-exponential quadrature with endpoint power preconditioning</li>
  * </ul>
  */
 public enum EndpointOpts {

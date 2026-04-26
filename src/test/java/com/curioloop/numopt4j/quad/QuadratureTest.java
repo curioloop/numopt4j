@@ -316,6 +316,50 @@ class QuadratureTest {
     }
 
     @Test
+    void endpointSingularLogLeftHandlesTinyIntervalNearBoundaryExponent() {
+        double upper = 1e-8;
+        double alpha = -0.5;
+        double exponent = alpha + 1.0;
+        double expected = Math.exp(exponent * Math.log(upper))
+                * (Math.log(upper) / exponent - 1.0 / (exponent * exponent));
+
+        Quadrature result = Integrator.endpointSingular(EndpointOpts.LOG_LEFT)
+                .function(x -> 1.0).bounds(0.0, upper).exponents(alpha, 0.0)
+                .tolerances(1e-10, 1e-10).integrate();
+
+        assertThat(result.isSuccessful()).isTrue();
+        assertThat(Math.abs((result.getValue() - expected) / expected)).isLessThan(1e-6);
+    }
+
+    @Test
+    void endpointSingularLogLeftHandlesNearMinusOneExponent() {
+        double alpha = -0.999;
+        double exponent = alpha + 1.0;
+        double expected = -1.0 / (exponent * exponent);
+
+        Quadrature result = Integrator.endpointSingular(EndpointOpts.LOG_LEFT)
+                .function(x -> 1.0).bounds(0.0, 1.0).exponents(alpha, 0.0)
+                .tolerances(1e-10, 1e-10).integrate();
+
+        assertThat(result.isSuccessful()).isTrue();
+        assertThat(Math.abs((result.getValue() - expected) / expected)).isLessThan(5e-7);
+    }
+
+    @Test
+    void endpointSingularLogRightHandlesNearMinusOneExponent() {
+        double beta = -0.999;
+        double exponent = beta + 1.0;
+        double expected = -1.0 / (exponent * exponent);
+
+        Quadrature result = Integrator.endpointSingular(EndpointOpts.LOG_RIGHT)
+                .function(x -> 1.0).bounds(0.0, 1.0).exponents(0.0, beta)
+                .tolerances(1e-10, 1e-10).integrate();
+
+        assertThat(result.isSuccessful()).isTrue();
+        assertThat(Math.abs((result.getValue() - expected) / expected)).isLessThan(5e-7);
+    }
+
+    @Test
     void endpointSingularRejectsInvalidExponent() {
         assertThatThrownBy(() -> Integrator.endpointSingular(EndpointOpts.ALGEBRAIC)
                 .function(x -> 1.0).bounds(0.0, 1.0).exponents(-1.0, 0.0)
@@ -370,6 +414,15 @@ class QuadratureTest {
                 .tolerances(1e-8, 1e-8).integrate())
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("pole must not coincide");
+    }
+
+    @Test
+    void principalValueRejectsPoleTooCloseToEndpoint() {
+        assertThatThrownBy(() -> Integrator.principalValue()
+                .function(x -> 1.0).bounds(0.0, 1.0).pole(Math.nextUp(0.0))
+                .tolerances(1e-8, 1e-8).integrate())
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("too close");
     }
 
     @Test
@@ -777,6 +830,23 @@ class QuadratureTest {
         assertThat(lobattoRatio).isLessThan(gk15Ratio);
     }
 
+    @Test
+    void gaussLobattoConvergesOnHighlyOscillatoryFiniteIntegral() {
+        double omega = 150.0;
+        double expected = (1.0 - Math.cos(omega)) / omega;
+        Quadrature result = Integrator.adaptive()
+            .function(x -> Math.sin(omega * x)).bounds(0.0, 1.0)
+                .tolerances(1e-10, 1e-10)
+            .maxSubdivisions(2048)
+                .maxEvaluations(8192)
+                .rule(com.curioloop.numopt4j.quad.adapt.AdaptiveRule.GAUSS_LOBATTO)
+                .integrate();
+
+        assertThat(result.isSuccessful()).isTrue();
+        assertThat(result.getValue()).isCloseTo(expected, offset(1e-8));
+        assertThat(result.getEstimatedError()).isLessThan(1e-6);
+    }
+
     // -----------------------------------------------------------------------
     // Filon quadrature
     // -----------------------------------------------------------------------
@@ -832,6 +902,40 @@ class QuadratureTest {
 
         assertThat(result.isSuccessful()).isTrue();
         assertThat(result.getValue()).isCloseTo(expected, offset(1e-9));
+    }
+
+    @Test
+    void oscillatoryUpperSmallFrequencyConvergesViaDirectFallback() {
+        double omega = 1e-3;
+        double expected = 1.0 / (1.0 + omega * omega);
+
+        Quadrature result = Integrator.oscillatory(OscillatoryOpts.COS_UPPER)
+            .function(x -> Math.exp(-x)).lowerBound(0.0).omega(omega)
+                .tolerances(1e-10, 1e-10)
+                .maxCycles(8)
+                .integrate();
+
+        assertThat(result.isSuccessful()).isTrue();
+        assertThat(result.getValue()).isCloseTo(expected, offset(1e-7));
+    }
+
+    @Test
+    void adaptiveManyBreakpointsPreservesAbsoluteBudget() {
+        double[] breakpoints = new double[15];
+        for (int i = 0; i < breakpoints.length; i++) {
+            breakpoints[i] = -1.0 + (i + 1) / 16.0;
+        }
+        double expected = 1.0 - Math.exp(-1.0);
+
+        Quadrature result = Integrator.adaptive()
+                .function(Math::exp).bounds(-1.0, 0.0)
+                .breakpoints(breakpoints)
+                .tolerances(1e-12, 0.0)
+                .integrate();
+
+        assertThat(result.isSuccessful()).isTrue();
+        assertThat(result.getValue()).isCloseTo(expected, offset(1e-10));
+        assertThat(result.getEstimatedError()).isLessThanOrEqualTo(1e-12);
     }
 
     // -----------------------------------------------------------------------

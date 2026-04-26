@@ -14,7 +14,7 @@ numopt4j is a Java numerical library supporting derivative-free optimization, un
 - Scalar root-finding → Brentq (`RootFinder.brentq()`)
 - Multivariate root-finding with Jacobian → HYBR (`RootFinder.hybr()`)
 - Multivariate root-finding Jacobian-free → Broyden (`RootFinder.broyden()`)
-- Numerical integration (adaptive/fixed/oscillatory/improper/singular/sampled/Filon) → `Integrator`
+- Numerical integration (adaptive/fixed/double-exponential/oscillatory/improper/singular/sampled/Filon) → `Integrator`
 - ODE initial value problems (RK23/RK45/DOP853/BDF/Radau, dense output, events) → `Integrator.ode()`
 - Matrix decompositions → `Decomposer` facade (LU, QR, LQ, SVD, Cholesky, Schur, Eigen, GEVD, GGEVD, GSVD)
 - Linear regression (OLS/WLS) → `Regressor` facade
@@ -30,6 +30,7 @@ com.curioloop.numopt4j.optim.slsqp       # SLSQPProblem, SLSQPWorkspace
 com.curioloop.numopt4j.optim.trf         # TRFProblem, TRFWorkspace
 com.curioloop.numopt4j.optim.root        # BrentqProblem, HYBRProblem, HYBRWorkspace, BroydenProblem, BroydenWorkspace
 com.curioloop.numopt4j.quad              # Integrator, Integral, Quadrature (result + Status), Trajectory (ODE result)
+com.curioloop.numopt4j.quad.de           # DoubleExponentialIntegral, DoubleExponentialCore, DEPool, DEOpts
 com.curioloop.numopt4j.quad.adapt        # AdaptiveIntegral, AdaptivePool
 com.curioloop.numopt4j.quad.gauss        # FixedIntegral, WeightedIntegral, GaussRule, GaussPool
 com.curioloop.numopt4j.quad.gauss.rule   # JacobiRule, LegendreRule, LaguerreRule, HermiteRule, GeneralizedLaguerreRule, GeneralizedHermiteRule
@@ -48,6 +49,7 @@ Typical import for quadrature:
 ```java
 import com.curioloop.numopt4j.quad.*;
 import com.curioloop.numopt4j.quad.adapt.*;
+import com.curioloop.numopt4j.quad.de.*;
 import com.curioloop.numopt4j.quad.gauss.*;
 import com.curioloop.numopt4j.quad.special.*;
 import com.curioloop.numopt4j.quad.sampled.*;
@@ -638,7 +640,7 @@ for (double[] mat : matrices) {
 
 `com.curioloop.numopt4j.quad.Integrator`
 
-Unified facade for one-dimensional numerical integration. All factory methods return a builder implementing `Integral<R, W>` with `alloc()` / `integrate()` / `integrate(workspace)` lifecycle.
+Unified facade for one-dimensional numerical integration. All factory methods return a builder implementing `Integral<R, W>` with `integrate()` / `integrate(workspace)` lifecycle.
 
 ### Factory Methods
 
@@ -646,6 +648,7 @@ Unified facade for one-dimensional numerical integration. All factory methods re
 Integrator.fixed()                        // → FixedIntegral
 Integrator.weighted()                     // → WeightedIntegral
 Integrator.adaptive()                     // → AdaptiveIntegral (GK15 or Gauss-Lobatto)
+Integrator.doubleExponential(DEOpts)      // → DoubleExponentialIntegral
 Integrator.oscillatory(OscillatoryOpts)   // → OscillatoryIntegral
 Integrator.principalValue()               // → PrincipalValueIntegral
 Integrator.endpointSingular(EndpointOpts) // → EndpointSingularIntegral
@@ -692,6 +695,34 @@ Integrator.adaptive()
     .rule(AdaptiveRule)              // optional: GK15 (default) or GAUSS_LOBATTO
     .integrate()                     // → Quadrature
     .integrate(AdaptivePool)
+```
+
+### DoubleExponentialIntegral — Boost-style tanh-sinh / exp-sinh / sinh-sinh
+
+```java
+Integrator.doubleExponential(DEOpts opts)
+    .function(DoubleUnaryOperator)        // required for all rules
+    .function(DoubleBinaryOperator)       // TANH_SINH only; callback receives (x, complement)
+    .bounds(double lower, double upper)   // required for TANH_SINH / EXP_SINH; omitted for SINH_SINH
+    .tolerance(double tol)                // optional, default √ulp(1.0)
+    .maxRefinements(int n)                // optional; TANH_SINH default 15, half-line rules default 9
+    .minComplement(double value)          // TANH_SINH only; optional endpoint-distance floor
+    .integrate()                          // → Quadrature
+    .integrate(DEPool)                    // workspace reuse across repeated DE calls
+```
+
+`DEOpts.TANH_SINH` handles finite intervals and mapped infinite bounds, `DEOpts.EXP_SINH`
+handles half-lines, and `DEOpts.SINH_SINH` targets the whole real line.
+
+```java
+Quadrature r = Integrator.doubleExponential(DEOpts.TANH_SINH)
+    .function(Math::sin).bounds(0.0, Math.PI).tolerance(1e-10).integrate();
+
+DoubleExponentialIntegral de = Integrator.doubleExponential(DEOpts.EXP_SINH)
+    .function(x -> Math.exp(-x)).bounds(0.0, Double.POSITIVE_INFINITY);
+DEPool ws = new DEPool();
+Quadrature a = de.integrate(ws);
+Quadrature b = de.bounds(1.0, Double.POSITIVE_INFINITY).integrate(ws);
 ```
 
 ### OscillatoryIntegral — ∫ f(x)·w(ω·x) dx
@@ -836,6 +867,13 @@ AdaptiveIntegral problem = Integrator.adaptive()
 AdaptivePool ws = new AdaptivePool();
 Quadrature r1 = problem.integrate(ws);
 Quadrature r2 = problem.bounds(0.0, 2.0).integrate(ws);  // ws reused
+
+// Reuse DEPool across repeated double-exponential calls
+DoubleExponentialIntegral de = Integrator.doubleExponential(DEOpts.TANH_SINH)
+    .function(Math::sin).bounds(0.0, Math.PI).tolerance(1e-10);
+DEPool deWs = new DEPool();
+Quadrature r3 = de.integrate(deWs);
+Quadrature r4 = de.bounds(0.0, 2.0).integrate(deWs);
 
 // Reuse GaussPool across fixed-point calls
 GaussPool gws = new GaussPool();

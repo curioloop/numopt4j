@@ -7,6 +7,8 @@ import com.curioloop.numopt4j.quad.ode.IVPIntegral;
 import com.curioloop.numopt4j.quad.ode.IVPMethod;
 import com.curioloop.numopt4j.quad.ode.ODE;
 import com.curioloop.numopt4j.quad.adapt.AdaptiveIntegral;
+import com.curioloop.numopt4j.quad.de.DoubleExponentialIntegral;
+import com.curioloop.numopt4j.quad.de.DEOpts;
 import com.curioloop.numopt4j.quad.gauss.FixedIntegral;
 import com.curioloop.numopt4j.quad.gauss.WeightedIntegral;
 import com.curioloop.numopt4j.quad.sampled.CumulativeIntegral;
@@ -36,6 +38,10 @@ import com.curioloop.numopt4j.quad.special.PrincipalValueIntegral;
  *
  * // Adaptive GK15 on [a, b]
  * Quadrature r = Integrator.adaptive().function(f).bounds(a, b).tolerances(1e-10, 1e-10).integrate();
+ *
+ * // Double-exponential tanh-sinh on [a, b]
+ * Quadrature r = Integrator.doubleExponential(DEOpts.TANH_SINH)
+ *     .function(f).bounds(a, b).tolerance(1e-10).integrate();
  *
  * // Oscillatory: ∫ f(x)·cos(ω·x) dx from a to +∞
  * Quadrature r = Integrator.oscillatory(OscillatoryOpts.COS_UPPER)
@@ -114,6 +120,15 @@ public final class Integrator {
      * Requires {@code .function()}, {@code .bounds()}, and {@code .tolerances()} before integrating.
      */
     public static AdaptiveIntegral adaptive() { return new AdaptiveIntegral(); }
+
+    /**
+     * Returns a builder pre-configured with the given double-exponential rule.
+     * Tanh-sinh supports finite intervals and mapped infinite bounds, exp-sinh covers half-lines,
+     * and sinh-sinh targets the whole real line.
+     */
+    public static DoubleExponentialIntegral doubleExponential(DEOpts opts) {
+        return new DoubleExponentialIntegral(opts);
+    }
 
     /**
      * Returns a builder pre-configured with the given oscillatory kernel and domain opts.

@@ -35,6 +35,8 @@ import java.util.function.DoubleUnaryOperator;
  */
 public class OscillatoryIntegral implements Integral<Quadrature, AdaptivePool> {
 
+    private static final double DIRECT_UPPER_OMEGA_THRESHOLD = 1e-6;
+
     private DoubleUnaryOperator function;
     private double min = Double.NaN;
     private double max = Double.NaN;
@@ -150,11 +152,27 @@ public class OscillatoryIntegral implements Integral<Quadrature, AdaptivePool> {
         if (omega == 0.0) {
             return opts.sine
                     ? new Quadrature(0.0, 0.0, Quadrature.Status.CONVERGED, 0, 0)
-                    : Integrator.adaptive().function(t -> { double d = 1.0 - t; return function.applyAsDouble(min + t / d) / (d * d); }).bounds(0.0, 1.0)
-                            .tolerances(absTol, relTol).maxSubdivisions(maxSubdivisions).maxEvaluations(maxEvaluations).integrate(pool);
+                    : integrateUpperDirect(pool, function);
+        }
+        if (Math.abs(omega) < DIRECT_UPPER_OMEGA_THRESHOLD) {
+            return integrateUpperDirect(pool, x -> function.applyAsDouble(x)
+                    * (opts.sine ? Math.sin(omega * x) : Math.cos(omega * x)));
         }
         return OscillatoryCore.integrateUpper(function, min, omega, opts.sine, absTol, relTol,
                 maxCycles, maxSubdivisions, maxEvaluations, pool);
+    }
+
+    private Quadrature integrateUpperDirect(AdaptivePool pool, DoubleUnaryOperator weighted) {
+        return Integrator.adaptive()
+                .function(t -> {
+                    double d = 1.0 - t;
+                    return weighted.applyAsDouble(min + t / d) / (d * d);
+                })
+                .bounds(0.0, 1.0)
+                .tolerances(absTol, relTol)
+                .maxSubdivisions(maxSubdivisions)
+                .maxEvaluations(maxEvaluations)
+                .integrate(pool);
     }
 
 }

@@ -49,7 +49,9 @@ final class OscillatoryCore {
         double cycleWidth = cycleWidth(omega);
         double factor = 1.0;
         double totalValue = 0.0;
+        double totalCompensation = 0.0;
         double totalError = 0.0;
+        double totalVariation = 0.0;
         double bestValue = Double.NaN;
         double bestError = Double.POSITIVE_INFINITY;
         int totalIterations = 0;
@@ -63,7 +65,7 @@ final class OscillatoryCore {
             }
 
             double right = left + cycleWidth;
-            double cycleAbsTol = cycleTolerance(absTol, relTol, totalValue, factor);
+                double cycleAbsTol = cycleTolerance(absTol, relTol, totalValue, totalVariation, factor);
             int cycleEvaluations = Math.max(1, maxEvaluations - totalEvaluations);
             Quadrature.Status cycleStatus = AdaptiveIntegral.integrateSegment(weighted, left, right,
                     cycleAbsTol, 0.0, maxSubdivisions, cycleEvaluations, workspace);
@@ -71,8 +73,12 @@ final class OscillatoryCore {
             totalIterations  += workspace.resultIterations();
             totalEvaluations += workspace.resultEvaluations();
             double cycleValue = workspace.resultValue();
-            totalValue += cycleValue;
+            double adjusted = cycleValue - totalCompensation;
+            double updated = totalValue + adjusted;
+            totalCompensation = (updated - totalValue) - adjusted;
+            totalValue = updated;
             totalError += workspace.resultError();
+            totalVariation += Math.abs(cycleValue);
             partialSums[cycle] = totalValue;
 
             // Only abort on hard numerical failures (NaN/Inf), not on limit-reached
@@ -101,7 +107,7 @@ final class OscillatoryCore {
                 bestError = candidateError;
             }
 
-            if (cycle >= 2 && candidateError <= tolerance(absTol, relTol, candidateValue)) {
+            if (cycle >= 2 && candidateError <= tolerance(absTol, relTol, candidateValue, totalVariation)) {
                 return new Quadrature(candidateValue, candidateError,
                         Quadrature.Status.CONVERGED, totalIterations, totalEvaluations);
             }
@@ -139,16 +145,17 @@ final class OscillatoryCore {
     // When omega < 1, floor(omega)=0 so multiple=1 and cycle = pi/|omega| (one half-period).
     // When omega >= 1, multiple >= 3 and the cycle spans at least one full period.
 
-    private static double cycleTolerance(double absTol, double relTol, double estimate, double factor) {
-        double base = absTol > 0.0
-                ? absTol * CYCLE_TOL_SCALE
-                : relTol * Math.max(1.0, Math.abs(estimate)) * CYCLE_TOL_SCALE;
+    private static double cycleTolerance(double absTol, double relTol,
+                                         double estimate, double l1Norm, double factor) {
+        double base = Math.max(absTol,
+                relTol * Math.max(1.0, Math.max(Math.abs(estimate), l1Norm))) * CYCLE_TOL_SCALE;
         double scaled = base * factor;
         return scaled > 0.0 ? scaled : CYCLE_TOL_SCALE * Math.ulp(1.0);
     }
 
-    private static double tolerance(double absTol, double relTol, double estimate) {
-        return Math.max(absTol, relTol * Math.abs(estimate));
+    private static double tolerance(double absTol, double relTol,
+                                    double estimate, double l1Norm) {
+        return Math.max(absTol, relTol * Math.max(Math.abs(estimate), l1Norm));
     }
 
     private static Quadrature resultOrDefault(double bestValue, double bestError,
@@ -187,7 +194,8 @@ final class OscillatoryCore {
         // Row 1: reciprocals of consecutive differences → rowB
         int len1 = count - 1;
         for (int i = 0; i < len1; i++) {
-            rowB[i] = reciprocal(partialSums[i + 1] - partialSums[i]);
+            double scale = Math.max(Math.abs(partialSums[i + 1]), Math.abs(partialSums[i]));
+            rowB[i] = reciprocal(partialSums[i + 1] - partialSums[i], scale);
         }
 
         double bestValue = Double.NaN;
@@ -203,7 +211,8 @@ final class OscillatoryCore {
             // Reuse the prePrevious buffer for the next row (it's no longer needed after this step)
             double[] next = prePrevious;
             for (int i = 0; i < length; i++) {
-                double r = reciprocal(previous[i + 1] - previous[i]);
+                double scale = Math.max(Math.abs(previous[i + 1]), Math.abs(previous[i]));
+                double r = reciprocal(previous[i + 1] - previous[i], scale);
                 next[i] = Double.isFinite(r) ? prePrevious[i + 1] + r : Double.NaN;
             }
 
@@ -227,11 +236,16 @@ final class OscillatoryCore {
         if (!Double.isFinite(bestValue)) {
             return Extrapolation.unavailable();
         }
-        return new Extrapolation(bestValue, Math.max(bestError, RECIPROCAL_EPS), true);
+        double errorFloor = RECIPROCAL_EPS * Math.max(1.0, Math.abs(bestValue));
+        return new Extrapolation(bestValue, Math.max(bestError, errorFloor), true);
     }
 
-    private static double reciprocal(double value) {
-        if (!Double.isFinite(value) || Math.abs(value) <= RECIPROCAL_EPS) {
+    private static double reciprocal(double value, double scale) {
+        if (!Double.isFinite(value)) {
+            return Double.NaN;
+        }
+        double threshold = RECIPROCAL_EPS * Math.max(1.0, scale);
+        if (Math.abs(value) <= threshold) {
             return Double.NaN;
         }
         return 1.0 / value;

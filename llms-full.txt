@@ -11,7 +11,7 @@ numopt4j is a high-performance Java numerical library providing optimization, ro
 - **L-BFGS-B**: Bounded quasi-Newton method, suitable for unconstrained or box-constrained optimization
 - **SLSQP**: Sequential Least Squares Programming, suitable for equality/inequality constrained optimization
 - **TRF**: Trust Region Reflective method, suitable for bounded nonlinear least-squares fitting
-- **Quadrature**: Adaptive GK15, fixed Gauss-Legendre, oscillatory, improper, endpoint-singular, Cauchy principal value, and sampled-data integration via `Integrator`
+- **Quadrature**: Adaptive GK15, fixed Gauss-Legendre, double-exponential (tanh-sinh / exp-sinh / sinh-sinh), oscillatory, improper, endpoint-singular, Cauchy principal value, and sampled-data integration via `Integrator`
 
 ### Maven Dependency
 
@@ -34,6 +34,7 @@ com.curioloop.numopt4j.optim.slsqp    # SLSQPProblem, SLSQPWorkspace
 com.curioloop.numopt4j.optim.trf      # TRFProblem, TRFWorkspace
 com.curioloop.numopt4j.optim.root     # BrentqProblem, HYBRProblem, HYBRWorkspace, BroydenProblem, BroydenWorkspace
 com.curioloop.numopt4j.quad           # Integrator, Integral, Quadrature (result + Status), Trajectory (ODE result)
+com.curioloop.numopt4j.quad.de        # DoubleExponentialIntegral, DEPool, DEOpts
 com.curioloop.numopt4j.quad.adapt     # AdaptiveIntegral, AdaptivePool
 com.curioloop.numopt4j.quad.gauss     # FixedIntegral, WeightedIntegral, GaussRule, GaussPool
 com.curioloop.numopt4j.quad.gauss.rule # JacobiRule, LegendreRule, LaguerreRule, HermiteRule, GeneralizedLaguerreRule, GeneralizedHermiteRule
@@ -54,7 +55,7 @@ Have a residual function (least squares)?
   └─ No  → Root-finding problem (F(x) = 0)?
             ├─ Yes → RootFinder.brentq() (1-D) or RootFinder.hybr() / RootFinder.broyden() (N-D)
             └─ No  → Numerical integration problem?
-                      ├─ Yes → Integrator.adaptive() / .fixed() / .oscillatory() / .improper() / ...
+                      ├─ Yes → Integrator.adaptive() / .fixed() / .doubleExponential() / .oscillatory() / .improper() / ...
                       └─ No  → ODE initial value problem?
                                 ├─ Yes → Integrator.ode(IVPMethod) → IVPIntegral
                                 └─ No  → Have equality/inequality constraints?
@@ -78,6 +79,7 @@ Have a residual function (least squares)?
 | 1-D root finding | `BrentqProblem` | Brentq, requires `Bound.between(a,b)` bracket |
 | N-D root finding | `HYBRProblem` / `BroydenProblem` | HYBR (with Jacobian) or Broyden (Jacobian-free) |
 | Adaptive integration on [a,b] | `AdaptiveIntegral` | GK15 with error estimate |
+| Double-exponential integration | `DoubleExponentialIntegral` | Tanh-sinh for finite intervals, exp-sinh for half-lines, sinh-sinh for whole-line decaying integrands |
 | Fixed Gauss-Legendre on [a,b] | `FixedIntegral` | Exact for polynomials ≤ degree 2n-1 |
 | Oscillatory ∫ f·cos/sin dx | `OscillatoryIntegral` | Finite or semi-infinite |
 | Improper ∫ on semi-∞ / ∞ | `ImproperIntegral` | Adaptive or fixed-point |
@@ -1886,6 +1888,7 @@ Unified entry point for one-dimensional numerical integration. All factory metho
 Integrator.fixed()                        // → FixedIntegral
 Integrator.weighted()                     // → WeightedIntegral
 Integrator.adaptive()                     // → AdaptiveIntegral (GK15 or Gauss-Lobatto)
+Integrator.doubleExponential(DEOpts)      // → DoubleExponentialIntegral
 Integrator.oscillatory(OscillatoryOpts)   // → OscillatoryIntegral
 Integrator.principalValue()               // → PrincipalValueIntegral
 Integrator.endpointSingular(EndpointOpts) // → EndpointSingularIntegral
@@ -1895,6 +1898,68 @@ Integrator.sampled(SampledRule)           // → SampledIntegral
 Integrator.cumulative(SampledRule)        // → CumulativeIntegral
 Integrator.filon(FilonOpts)               // → FilonIntegral
 Integrator.ode(IVPMethod)                // → IVPIntegral (ODE IVP solver)
+```
+
+### DoubleExponentialIntegral — Boost-style DE rules
+
+`com.curioloop.numopt4j.quad.de.DoubleExponentialIntegral`
+
+Builder for the three Boost-style double-exponential quadrature families exposed through
+`Integrator.doubleExponential(DEOpts)`.
+
+### DEOpts
+
+```java
+DEOpts.TANH_SINH   // finite intervals and mapped infinite domains
+DEOpts.EXP_SINH    // half-infinite intervals
+DEOpts.SINH_SINH   // whole real line, rapidly decaying integrands
+```
+
+### Builder Methods
+
+```java
+Integrator.doubleExponential(DEOpts opts)
+    .function(DoubleUnaryOperator f)           // required for all rules
+    .function(DoubleBinaryOperator f)          // TANH_SINH only; callback gets (x, complement)
+    .bounds(double lower, double upper)        // required for TANH_SINH / EXP_SINH
+    .opts(DEOpts opts)                         // optional rule override after construction
+    .tolerance(double tol)                     // optional, default DoubleExponentialCore.DEFAULT_TOLERANCE
+    .maxRefinements(int n)                     // optional, defaults depend on rule family
+    .minComplement(double value)               // TANH_SINH only; minimum retained endpoint distance
+    .integrate()                               // → Quadrature
+    .integrate(DEPool workspace)               // workspace reuse
+```
+
+### Notes
+
+- `TANH_SINH` supports both unary callbacks and complement-aware callbacks `g(x, c)` where
+  `c = min(x-a, b-x)` for finite intervals.
+- `EXP_SINH` expects a half-line domain: `[a, +∞)` or `(-∞, b]`.
+- `SINH_SINH` targets rapidly decaying whole-line integrands and normally omits explicit bounds.
+- `DEPool` caches rule-specific refined DE rows so repeated solves can reuse the same workspace.
+
+### Example
+
+```java
+Quadrature r = Integrator.doubleExponential(DEOpts.TANH_SINH)
+    .function(Math::sin)
+    .bounds(0.0, Math.PI)
+    .tolerance(1e-10)
+    .integrate();
+
+Quadrature tail = Integrator.doubleExponential(DEOpts.EXP_SINH)
+    .function(x -> Math.exp(-x))
+    .bounds(0.0, Double.POSITIVE_INFINITY)
+    .tolerance(1e-10)
+    .integrate();
+
+DoubleExponentialIntegral de = Integrator.doubleExponential(DEOpts.TANH_SINH)
+    .function(Math::sin)
+    .bounds(0.0, Math.PI)
+    .tolerance(1e-10);
+DEPool ws = new DEPool();
+Quadrature r1 = de.integrate(ws);
+Quadrature r2 = de.bounds(0.0, 2.0).integrate(ws);
 ```
 
 ---
