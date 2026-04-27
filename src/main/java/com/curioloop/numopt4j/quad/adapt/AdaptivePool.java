@@ -16,7 +16,11 @@ package com.curioloop.numopt4j.quad.adapt;
  * {@link com.curioloop.numopt4j.quad.Quadrature} without an extra allocation
  * per segment.</p>
  */
-public final class AdaptivePool {
+public class AdaptivePool {
+
+    private static final int GK15_RESULT_WIDTH = 2;
+    private static final int GK15_VALUES_WIDTH = 7;
+    private static final int GK15_SCRATCH_WIDTH = GK15_RESULT_WIDTH * 2 + GK15_VALUES_WIDTH * 2;
 
     double[] arena;
     int[] heap;
@@ -31,6 +35,7 @@ public final class AdaptivePool {
     double resultError;
     int    resultIterations;
     int    resultEvaluations;
+    boolean lobattoRoundOffDetected;
 
     public double resultValue()      { return resultValue; }
     public double resultError()      { return resultError; }
@@ -46,7 +51,7 @@ public final class AdaptivePool {
         intervalRightOffset = intervals;
         intervalEstimateOffset = intervals * 2;
         intervalErrorOffset = intervals * 3;
-        int required = intervals * 4;
+        int required = intervals * 4 + GK15_SCRATCH_WIDTH;
         if (arena == null || arena.length < required) arena = new double[required];
         if (heap == null || heap.length < intervals) heap = new int[intervals];
         this.intervals = intervals;
@@ -61,4 +66,8 @@ public final class AdaptivePool {
     public int intervalRightOffset()    { return intervalRightOffset; }
     public int intervalEstimateOffset() { return intervalEstimateOffset; }
     public int intervalErrorOffset()    { return intervalErrorOffset; }
+    int gkLeftOffset()                  { return intervals * 4; }
+    int gkRightOffset()                 { return gkLeftOffset() + GK15_RESULT_WIDTH; }
+    int gkLowerValuesOffset()           { return gkRightOffset() + GK15_RESULT_WIDTH; }
+    int gkUpperValuesOffset()           { return gkLowerValuesOffset() + GK15_VALUES_WIDTH; }
 }

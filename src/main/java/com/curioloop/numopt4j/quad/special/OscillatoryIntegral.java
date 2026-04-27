@@ -8,7 +8,6 @@ import com.curioloop.numopt4j.quad.Integrator;
 import com.curioloop.numopt4j.quad.Checks;
 import com.curioloop.numopt4j.quad.Integral;
 import com.curioloop.numopt4j.quad.Quadrature;
-import com.curioloop.numopt4j.quad.adapt.AdaptivePool;
 import com.curioloop.numopt4j.quad.adapt.AdaptiveIntegral;
 
 import java.util.function.DoubleUnaryOperator;
@@ -33,7 +32,7 @@ import java.util.function.DoubleUnaryOperator;
  *
  * <p>Minimum required setters: {@code .function()}, {@code .omega()}, bound(s), {@code .tolerances()}.</p>
  */
-public class OscillatoryIntegral implements Integral<Quadrature, AdaptivePool> {
+public class OscillatoryIntegral implements Integral<Quadrature, OscillatoryPool> {
 
     private static final double DIRECT_UPPER_OMEGA_THRESHOLD = 1e-6;
 
@@ -47,7 +46,7 @@ public class OscillatoryIntegral implements Integral<Quadrature, AdaptivePool> {
     private int maxCycles = Checks.DEFAULT_MAX_CYCLES;
     private int maxSubdivisions = Checks.DEFAULT_MAX_SUBDIVISIONS;
     private int maxEvaluations = Checks.DEFAULT_MAX_EVALUATIONS;
-    private transient AdaptivePool workspace;
+    private transient OscillatoryPool workspace;
 
     OscillatoryIntegral() {}
 
@@ -117,7 +116,7 @@ public class OscillatoryIntegral implements Integral<Quadrature, AdaptivePool> {
     }
 
     @Override
-    public Quadrature integrate(AdaptivePool workspace) {
+    public Quadrature integrate(OscillatoryPool workspace) {
         Checks.validateFunction(function);
         if (opts == null) throw new IllegalStateException("Missing required parameter: opts. Call .opts(OscillatoryOpts) before .integrate().");
         Checks.validateFrequency(omega);
@@ -129,14 +128,14 @@ public class OscillatoryIntegral implements Integral<Quadrature, AdaptivePool> {
             Checks.validateFiniteInterval(min, max);
         }
         if (workspace == null) {
-            if (this.workspace == null) this.workspace = new AdaptivePool();
+            if (this.workspace == null) this.workspace = new OscillatoryPool();
             workspace = this.workspace;
         }
-        AdaptivePool pool = workspace.ensure(maxSubdivisions);
+        OscillatoryPool pool = workspace.ensure(maxSubdivisions);
         return opts.upper ? integrateUpper(pool) : integrateFinite(pool);
     }
 
-    private Quadrature integrateFinite(AdaptivePool pool) {
+    private Quadrature integrateFinite(OscillatoryPool pool) {
         if (omega == 0.0) {
             return opts.sine
                     ? new Quadrature(0.0, 0.0, Quadrature.Status.CONVERGED, 0, 0)
@@ -147,7 +146,7 @@ public class OscillatoryIntegral implements Integral<Quadrature, AdaptivePool> {
         return AdaptiveIntegral.integrate(weighted, min, max, null, absTol, relTol, maxSubdivisions, maxEvaluations, pool);
     }
 
-    private Quadrature integrateUpper(AdaptivePool pool) {
+    private Quadrature integrateUpper(OscillatoryPool pool) {
         Checks.validateMaxCycles(maxCycles);
         if (omega == 0.0) {
             return opts.sine
@@ -159,10 +158,10 @@ public class OscillatoryIntegral implements Integral<Quadrature, AdaptivePool> {
                     * (opts.sine ? Math.sin(omega * x) : Math.cos(omega * x)));
         }
         return OscillatoryCore.integrateUpper(function, min, omega, opts.sine, absTol, relTol,
-                maxCycles, maxSubdivisions, maxEvaluations, pool);
+            maxCycles, maxSubdivisions, maxEvaluations, pool);
     }
 
-    private Quadrature integrateUpperDirect(AdaptivePool pool, DoubleUnaryOperator weighted) {
+    private Quadrature integrateUpperDirect(OscillatoryPool pool, DoubleUnaryOperator weighted) {
         return Integrator.adaptive()
                 .function(t -> {
                     double d = 1.0 - t;

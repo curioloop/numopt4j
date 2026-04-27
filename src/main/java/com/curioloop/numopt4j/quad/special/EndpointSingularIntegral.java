@@ -7,7 +7,9 @@ import java.util.Objects;
 import com.curioloop.numopt4j.quad.Checks;
 import com.curioloop.numopt4j.quad.Integral;
 import com.curioloop.numopt4j.quad.Quadrature;
+import com.curioloop.numopt4j.quad.de.DEPool;
 import com.curioloop.numopt4j.quad.gauss.GaussPool;
+import com.curioloop.numopt4j.quad.gauss.GaussRule;
 
 import java.util.function.DoubleUnaryOperator;
 
@@ -25,6 +27,11 @@ import java.util.function.DoubleUnaryOperator;
  *
  * <p>Minimum required setters: {@code .function()}, {@code .bounds()}, {@code .exponents()},
  * {@code .tolerances()}.</p>
+ *
+ * <p>Workspace semantics follow the selected algorithm: algebraic solves reuse a
+ * {@link GaussPool} through {@link #integrate(GaussPool)}, while logarithmic solves reuse a
+ * {@link DEPool} through {@link #integrateLogarithmic(DEPool)}. Calling {@link #integrate()} on a
+ * logarithmic configuration keeps an internal DE workspace for repeated solves on the same builder.</p>
  */
 public class EndpointSingularIntegral implements Integral<Quadrature, GaussPool> {
 
@@ -37,7 +44,9 @@ public class EndpointSingularIntegral implements Integral<Quadrature, GaussPool>
     private double absTol = 1e-10;
     private double relTol = 1e-10;
     private int maxRefinements = Checks.DEFAULT_MAX_REFINEMENTS;
-    private transient GaussPool workspace;
+    private transient GaussRule algebraicRule;
+    private transient GaussPool algebraicWorkspace;
+    private transient DEPool logarithmicWorkspace;
 
     EndpointSingularIntegral() {}
 
@@ -62,6 +71,7 @@ public class EndpointSingularIntegral implements Integral<Quadrature, GaussPool>
     public EndpointSingularIntegral exponents(double alpha, double beta) {
         this.alpha = alpha;
         this.beta = beta;
+        this.algebraicRule = null;
         return this;
     }
 
@@ -88,21 +98,43 @@ public class EndpointSingularIntegral implements Integral<Quadrature, GaussPool>
 
     @Override
     public Quadrature integrate(GaussPool workspace) {
-        Checks.validateFunction(function);
-        Checks.validateFiniteInterval(min, max);
-        Checks.validateEndpointExponents(alpha, beta);
-        Checks.validateTolerances(absTol, relTol);
-        Checks.validateMaxRefinements(maxRefinements);
+        validateState();
+        if (opts != EndpointOpts.ALGEBRAIC) {
+            return integrateLogarithmicValidated(null);
+        }
         if (workspace == null) {
-            if (this.workspace == null) this.workspace = new GaussPool();
-            workspace = this.workspace;
+            if (this.algebraicWorkspace == null) this.algebraicWorkspace = new GaussPool();
+            workspace = this.algebraicWorkspace;
         }
-        GaussPool pool = workspace;
+        if (algebraicRule == null) {
+            algebraicRule = GaussRule.jacobi(beta, alpha);
+        }
+        return EndpointSingularCore.algebraic(function, min, max, alpha, beta,
+                absTol, relTol, maxRefinements, algebraicRule, workspace);
+    }
 
+    /**
+     * Executes a logarithmic endpoint-singular solve with an explicit DE workspace.
+     *
+     * <p>This applies only to {@link EndpointOpts#LOG_LEFT}, {@link EndpointOpts#LOG_RIGHT}, and
+     * {@link EndpointOpts#LOG_BOTH}. Reuse a single {@link DEPool} across repeated solves to retain
+     * the DE refine table across calls.</p>
+     */
+    public Quadrature integrateLogarithmic(DEPool workspace) {
+        validateState();
+        return integrateLogarithmicValidated(workspace);
+    }
+
+    private Quadrature integrateLogarithmicValidated(DEPool workspace) {
         if (opts == EndpointOpts.ALGEBRAIC) {
-            return EndpointSingularCore.algebraic(function, min, max, alpha, beta, absTol, relTol, maxRefinements, pool);
+            throw new IllegalStateException(
+                "integrateLogarithmic(DEPool) requires LOG_LEFT, LOG_RIGHT, or LOG_BOTH opts"
+            );
         }
-
+        if (workspace == null) {
+            if (this.logarithmicWorkspace == null) this.logarithmicWorkspace = new DEPool();
+            workspace = this.logarithmicWorkspace;
+        }
         return EndpointSingularCore.logarithmic(
             function,
             min,
@@ -112,8 +144,17 @@ public class EndpointSingularIntegral implements Integral<Quadrature, GaussPool>
             opts,
             absTol,
             relTol,
-            maxRefinements
+            maxRefinements,
+            workspace
         );
+    }
+
+    private void validateState() {
+        Checks.validateFunction(function);
+        Checks.validateFiniteInterval(min, max);
+        Checks.validateEndpointExponents(alpha, beta);
+        Checks.validateTolerances(absTol, relTol);
+        Checks.validateMaxRefinements(maxRefinements);
     }
 
 }

@@ -1,6 +1,8 @@
 package com.curioloop.numopt4j.quad.de;
 
 import com.curioloop.numopt4j.quad.Quadrature;
+import com.curioloop.numopt4j.quad.special.EndpointOpts;
+import com.curioloop.numopt4j.quad.special.EndpointSingularIntegral;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -224,6 +226,82 @@ class DoubleExponentialCoreTest {
 
         assertNotNull(cached);
         assertSame(cached, pool.refine);
+    }
+
+    @Test
+    void defaultTanhSinhRefineIsSharedAcrossFreshPools() {
+        DEPool first = new DEPool();
+        DoubleExponentialCore.tanhSinh(
+            x -> x * x,
+            0.0,
+            1.0,
+            1.0e-10,
+            DoubleExponentialCore.DEFAULT_TANH_SINH_REFINEMENTS,
+            DoubleExponentialCore.DEFAULT_MIN_COMPLEMENT,
+            first
+        );
+        DETable cached = first.refine;
+
+        DEPool second = new DEPool();
+        DoubleExponentialCore.tanhSinh(
+            x -> x * x,
+            0.0,
+            1.0,
+            1.0e-10,
+            DoubleExponentialCore.DEFAULT_TANH_SINH_REFINEMENTS,
+            DoubleExponentialCore.DEFAULT_MIN_COMPLEMENT,
+            second
+        );
+
+        assertNotNull(cached);
+        assertSame(cached, second.refine);
+    }
+
+    @Test
+    void defaultExpSinhRefineIsSharedAcrossFreshPools() {
+        DEPool first = new DEPool();
+        DoubleExponentialCore.expSinh(
+            x -> Math.exp(-x),
+            0.0,
+            Double.POSITIVE_INFINITY,
+            1.0e-10,
+            DoubleExponentialCore.DEFAULT_HALF_LINE_REFINEMENTS,
+            first
+        );
+        DETable cached = first.refine;
+
+        DEPool second = new DEPool();
+        DoubleExponentialCore.expSinh(
+            x -> Math.exp(-x),
+            0.0,
+            Double.POSITIVE_INFINITY,
+            1.0e-10,
+            DoubleExponentialCore.DEFAULT_HALF_LINE_REFINEMENTS,
+            second
+        );
+
+        assertNotNull(cached);
+        assertSame(cached, second.refine);
+    }
+
+    @Test
+    void endpointLogarithmicBuilderUsesExplicitDeWorkspace() {
+        EndpointSingularIntegral integral = new EndpointSingularIntegral(EndpointOpts.LOG_LEFT)
+            .function(x -> 1.0)
+            .bounds(0.0, 1.0)
+            .exponents(0.0, 0.0)
+            .tolerances(1.0e-10, 1.0e-10);
+        DEPool pool = new DEPool();
+
+        Quadrature first = integral.integrateLogarithmic(pool);
+        DETable cached = pool.refine;
+        Quadrature second = integral.integrateLogarithmic(pool);
+
+        assertNotNull(cached);
+        assertSame(cached, pool.refine);
+        assertEquals(first.getValue(), second.getValue(), 0.0);
+        assertEquals(first.getEstimatedError(), second.getEstimatedError(), 0.0);
+        assertEquals(first.getStatus(), second.getStatus());
     }
 
     @Test

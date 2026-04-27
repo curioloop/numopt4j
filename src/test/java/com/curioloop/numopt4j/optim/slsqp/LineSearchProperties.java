@@ -531,22 +531,21 @@ class LineSearchProperties {
     @Property(tries = 50)
     void goldenSectionFindsQuadraticMinimum(
             @ForAll @IntRange(min = 2, max = 5) int n,
+            @ForAll @DoubleRange(min = 0.1, max = 2.0) double alphaOptimal,
             @ForAll("randomSeed") long seed
     ) {
         java.util.Random rand = new java.util.Random(seed);
 
-        // Generate initial position and descent direction
-        double[] x0 = generateVector(n, rand);
+        // Generate a descent direction, then construct x0 so the line minimum is
+        // guaranteed to occur at the generated alphaOptimal.
         double[] s = generateDescentDirection(n, rand);
+        double[] x0 = new double[n];
+        for (int i = 0; i < n; i++) {
+            x0[i] = -alphaOptimal * s[i];
+        }
 
-        // For quadratic f(x) = ||x||^2, the minimum along x0 + alpha*s is at
-        // alpha* = -dot(x0, s) / dot(s, s)
-        double x0DotS = dot(x0, s);
-        double sDotS = dot(s, s);
-        double alphaOptimal = -x0DotS / sDotS;
-
-        // Only test if optimal alpha is in a reasonable range
-        Assume.that(alphaOptimal > 0.1 && alphaOptimal < 2.0);
+        // For quadratic f(x) = ||x||^2 with x0 = -alphaOptimal * s,
+        // the minimum along x0 + alpha*s occurs exactly at alpha = alphaOptimal.
 
         double alphaLower = 0.0;
         double alphaUpper = Math.max(2.0, alphaOptimal * 1.5);

@@ -28,6 +28,7 @@ package com.curioloop.numopt4j.quad;
  *            {@link Double} for fixed/weighted Gauss rules,
  *            {@code double[]} for cumulative sampled integration
  * @param <W> workspace type — {@link com.curioloop.numopt4j.quad.adapt.AdaptivePool},
+ *            {@link com.curioloop.numopt4j.quad.special.OscillatoryPool},
  *            {@link com.curioloop.numopt4j.quad.gauss.GaussPool}, or {@link Void}
  *            when no workspace is needed (sampled data)
  */

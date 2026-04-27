@@ -19,7 +19,10 @@ import java.util.function.DoubleUnaryOperator;
  * where cᵢ = (a+b)/2 + (b−a)/2·xᵢ are the mapped Kronrod nodes.
  * The embedded G7 rule uses the 7 even-indexed Kronrod nodes (indices 1,3,5 and centre).</p>
  *
- * <p>Error estimate: |I_K15 − I_G7| · (b−a)/2</p>
+ * <p>Error estimate: a QUADPACK-style rescaling of the embedded difference
+ * |I_K15 − I_G7| · (b−a)/2 using the local absolute integral and deviation
+ * estimates, which avoids reporting unrealistically small errors near machine
+ * precision.</p>
  *
  * <p>Convergence criterion: totalError ≤ max(absTol, relTol·|totalEstimate|)</p>
  *
@@ -38,6 +41,9 @@ import java.util.function.DoubleUnaryOperator;
  * the absolute value is the number of function evaluations performed.</p>
  */
 final class GK15Core {
+
+    private static final double MACHINE_EPSILON = Math.ulp(1.0);
+    private static final double MIN_NORMAL = Double.MIN_NORMAL;
 
     // Gauss 7-point weights (for the 4 positive abscissae + centre)
     private static final double[] WG = {
@@ -84,14 +90,12 @@ final class GK15Core {
         int rightOffset = pool.intervalRightOffset();
         int estimateOffset = pool.intervalEstimateOffset();
         int errorOffset = pool.intervalErrorOffset();
+        int gkLeftOffset = pool.gkLeftOffset();
+        int gkRightOffset = pool.gkRightOffset();
+        int gkLowerValuesOffset = pool.gkLowerValuesOffset();
+        int gkUpperValuesOffset = pool.gkUpperValuesOffset();
 
-        // Two reusable buffers: buf[0] = value, buf[1] = error.
-        // gk15 returns: negative → finite (success), positive → non-finite (failure);
-        // absolute value = evaluations performed.
-        double[] left  = new double[2];
-        double[] right = new double[2];
-
-        int r0 = gk15(f, min, max, left);
+        int r0 = gk15(f, min, max, arena, gkLeftOffset, gkLowerValuesOffset, gkUpperValuesOffset);
         if (r0 > 0) {
             pool.resultValue = Double.NaN; pool.resultError = Double.NaN;
             pool.resultIterations = 0;     pool.resultEvaluations = r0;
@@ -100,8 +104,8 @@ final class GK15Core {
 
         arena[leftOffset]     = min;
         arena[rightOffset]    = max;
-        arena[estimateOffset] = left[0];
-        arena[errorOffset]    = left[1];
+        arena[estimateOffset] = arena[gkLeftOffset];
+        arena[errorOffset]    = arena[gkLeftOffset + 1];
 
         heap[0] = 0;
         int heapSize = 1;
@@ -109,8 +113,8 @@ final class GK15Core {
         int count = 1;
         int iterations = 0;
         int evaluations = -r0;
-        double totalEstimate = left[0];
-        double totalError    = left[1];
+        double totalEstimate = arena[gkLeftOffset];
+        double totalError    = arena[gkLeftOffset + 1];
         double estimateComp  = 0.0; // Kahan compensation
 
         while (totalError > tolerance(absTol, relTol, totalEstimate)) {
@@ -138,8 +142,8 @@ final class GK15Core {
             double oldEstimate = arena[estimateOffset + split];
             double oldError    = arena[errorOffset    + split];
 
-            int rL = gk15(f, lo, mid, left);
-            int rR = gk15(f, mid, hi, right);
+            int rL = gk15(f, lo, mid, arena, gkLeftOffset, gkLowerValuesOffset, gkUpperValuesOffset);
+            int rR = gk15(f, mid, hi, arena, gkRightOffset, gkLowerValuesOffset, gkUpperValuesOffset);
             evaluations += Math.abs(rL) + Math.abs(rR);
             if (rL > 0 || rR > 0) {
                 pool.resultValue = Double.NaN; pool.resultError = Double.NaN;
@@ -148,20 +152,22 @@ final class GK15Core {
             }
 
             // Kahan compensated update: (left + right) − old
-            double y = (left[0] + right[0] - oldEstimate) - estimateComp;
+            double y = (arena[gkLeftOffset] + arena[gkRightOffset] - oldEstimate) - estimateComp;
             double t = totalEstimate + y;
             estimateComp = (t - totalEstimate) - y;
             totalEstimate = t;
-            totalError += left[1] + right[1] - oldError;
+            totalError += arena[gkLeftOffset + 1] + arena[gkRightOffset + 1] - oldError;
 
             // Reuse split slot for left child, append right child at next free slot
             int newIdx = count;
             arena[leftOffset  + split]  = lo;   arena[rightOffset  + split]  = mid;
-            arena[estimateOffset + split] = left[0]; arena[errorOffset + split] = left[1];
+            arena[estimateOffset + split] = arena[gkLeftOffset];
+            arena[errorOffset + split] = arena[gkLeftOffset + 1];
             heapPush(heap, heapSize++, split, arena, errorOffset);
 
             arena[leftOffset  + newIdx] = mid;  arena[rightOffset  + newIdx] = hi;
-            arena[estimateOffset + newIdx] = right[0]; arena[errorOffset + newIdx] = right[1];
+            arena[estimateOffset + newIdx] = arena[gkRightOffset];
+            arena[errorOffset + newIdx] = arena[gkRightOffset + 1];
             heapPush(heap, heapSize++, newIdx, arena, errorOffset);
 
             count++;
@@ -234,25 +240,29 @@ final class GK15Core {
      * <p>The embedded G7 estimate uses nodes at Kronrod indices 1,3,5 (positive half)
      * plus the centre (index 7 in WGK / index 3 in WG).</p>
      *
-     * <p>Error estimate: |I_K15 − I_G7| · h</p>
+     * <p>Error estimate: QUADPACK-style rescaling of |I_K15 − I_G7| · h.</p>
      *
-     * <p>Writes {@code out[0] = value} and {@code out[1] = error}.</p>
+    * <p>Writes the value/error pair into {@code scratch[outOffset]} and
+    * {@code scratch[outOffset + 1]}.</p>
      *
      * <p>Returns: negative → finite result (success), positive → non-finite (failure);
      * {@code abs(return)} = evaluations performed.</p>
      */
-    private static int gk15(DoubleUnaryOperator f, double min, double max, double[] out) {
+    private static int gk15(DoubleUnaryOperator f, double min, double max,
+                            double[] scratch, int outOffset,
+                            int lowerValuesOffset, int upperValuesOffset) {
         double center = 0.5 * (min + max);
         double halfLength = 0.5 * (max - min);
 
         double fc = f.applyAsDouble(center);
         if (!Double.isFinite(fc)) {
-            out[0] = out[1] = Double.NaN;
+            scratch[outOffset] = scratch[outOffset + 1] = Double.NaN;
             return 1; // failure, 1 evaluation
         }
 
         double resGauss = WG[3] * fc;
         double resKronrod = WGK[7] * fc;
+        double resAbs = WGK[7] * Math.abs(fc);
 
         int evaluations = 1;
         for (int i = 0; i < 7; i++) {
@@ -261,12 +271,16 @@ final class GK15Core {
             double f2 = f.applyAsDouble(center + abscissa);
             evaluations += 2;
             if (!Double.isFinite(f1) || !Double.isFinite(f2)) {
-                out[0] = out[1] = Double.NaN;
+                scratch[outOffset] = scratch[outOffset + 1] = Double.NaN;
                 return evaluations; // failure
             }
 
+            scratch[lowerValuesOffset + i] = f1;
+            scratch[upperValuesOffset + i] = f2;
+
             double sum = f1 + f2;
             resKronrod += WGK[i] * sum;
+            resAbs += WGK[i] * (Math.abs(f1) + Math.abs(f2));
             if (i == 1) {
                 resGauss += WG[0] * sum;
             } else if (i == 3) {
@@ -276,8 +290,32 @@ final class GK15Core {
             }
         }
 
-        out[0] = resKronrod * halfLength;
-        out[1] = Math.abs(resKronrod - resGauss) * halfLength;
+        double mean = 0.5 * resKronrod;
+        double resAsc = WGK[7] * Math.abs(fc - mean);
+        for (int i = 0; i < 7; i++) {
+            resAsc += WGK[i] * (Math.abs(scratch[lowerValuesOffset + i] - mean)
+                    + Math.abs(scratch[upperValuesOffset + i] - mean));
+        }
+
+        scratch[outOffset] = resKronrod * halfLength;
+        resAbs *= halfLength;
+        resAsc *= halfLength;
+        scratch[outOffset + 1] = rescaleError((resKronrod - resGauss) * halfLength, resAbs, resAsc);
         return -evaluations; // success
+    }
+
+    private static double rescaleError(double error, double resultAbs, double resultAsc) {
+        error = Math.abs(error);
+        if (resultAsc != 0.0 && error != 0.0) {
+            double scale = Math.pow((200.0 * error / resultAsc), 1.5);
+            error = scale < 1.0 ? resultAsc * scale : resultAsc;
+        }
+        if (resultAbs > MIN_NORMAL / (50.0 * MACHINE_EPSILON)) {
+            double minError = 50.0 * MACHINE_EPSILON * resultAbs;
+            if (minError > error) {
+                error = minError;
+            }
+        }
+        return error;
     }
 }

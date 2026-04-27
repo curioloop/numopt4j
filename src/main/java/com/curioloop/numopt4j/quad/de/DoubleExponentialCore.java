@@ -48,6 +48,9 @@ public final class DoubleExponentialCore {
     private static final double TWO_DIV_PI = 2.0 / Math.PI;
     private static final double WHOLE_LINE_LIMIT = 4.0 * Math.sqrt(BOOST_MIN_VALUE);
     private static final double TANH_SINH_T_MAX = DoubleExponentialsTables.TANH_SINH_T_MAX;
+    private static final double EXP_SINH_T_MAX = Math.log(
+        2.0 * TWO_DIV_PI * Math.log(2.0 * TWO_DIV_PI * Math.sqrt(Double.MAX_VALUE))
+    );
     private static final int TANH_SINH_INITIAL_ROW_LENGTH = (int) TANH_SINH_T_MAX;
     private static final double TANH_SINH_INITIAL_STEP = TANH_SINH_T_MAX / TANH_SINH_INITIAL_ROW_LENGTH;
     private static final double[] EMPTY_DOUBLE_ARRAY = {};
@@ -57,6 +60,37 @@ public final class DoubleExponentialCore {
     public static final int DEFAULT_TANH_SINH_REFINEMENTS = 15;
     public static final int DEFAULT_HALF_LINE_REFINEMENTS = 9;
     public static final double DEFAULT_MIN_COMPLEMENT = 4.0 * BOOST_MIN_VALUE;
+
+    private static final class SharedRefineTables {
+        private static final int DEFAULT_TANH_SINH_ROW_COUNT = requestedRows(
+            DEFAULT_TANH_SINH_REFINEMENTS,
+            DEOpts.TANH_SINH.baseTable().rowCount()
+        );
+        private static final int DEFAULT_EXP_SINH_ROW_COUNT = requestedRows(
+            DEFAULT_HALF_LINE_REFINEMENTS,
+            DEOpts.EXP_SINH.baseTable().rowCount()
+        );
+        private static final int DEFAULT_SINH_SINH_ROW_COUNT = requestedRows(
+            DEFAULT_HALF_LINE_REFINEMENTS,
+            DEOpts.SINH_SINH.baseTable().rowCount()
+        );
+
+        private static final DETable TANH_SINH = buildTanhSinhRefineTable(
+            DEFAULT_TANH_SINH_ROW_COUNT,
+            DEOpts.TANH_SINH.baseTable(),
+            DEOpts.TANH_SINH.baseTable().rowCount()
+        );
+        private static final DETable EXP_SINH = buildExpSinhRefineTable(
+            DEFAULT_EXP_SINH_ROW_COUNT,
+            DEOpts.EXP_SINH.baseTable(),
+            DEOpts.EXP_SINH.baseTable().rowCount()
+        );
+        private static final DETable SINH_SINH = buildSinhSinhRefineTable(
+            DEFAULT_SINH_SINH_ROW_COUNT,
+            DEOpts.SINH_SINH.baseTable(),
+            DEOpts.SINH_SINH.baseTable().rowCount()
+        );
+    }
 
     private static Quadrature quadrature(double estimate, double error, double l1, int levels, double tolerance) {
         Quadrature.Status status = error <= Math.abs(tolerance * l1)
@@ -1015,32 +1049,9 @@ public final class DoubleExponentialCore {
             pool.refineRows = rowCount;
             return pool.refine;
         }
-
-        int[] rowData = Arrays.copyOf(DoubleExponentialsTables.EXP_SINH_ROWS, rowCount << 1);
-        int split = DoubleExponentialsTables.EXP_SINH_ABSCISSAS.length;
-        DoubleArrayBuilder extendedAbscissas = new DoubleArrayBuilder(128);
-        DoubleArrayBuilder extendedWeights = new DoubleArrayBuilder(128);
-
-        double tMin = DoubleExponentialsTables.EXP_SINH_T_MIN;
-        double tMax = Math.log(2.0 * TWO_DIV_PI * Math.log(2.0 * TWO_DIV_PI * Math.sqrt(Double.MAX_VALUE)));
-        for (int row = precomputedRows; row < rowCount; row++) {
-            double h = Math.scalb(1.0, -row);
-            int extensionStart = extendedAbscissas.size();
-            int rowStart = split + extensionStart;
-            double step = 2.0 * h;
-            double start = tMin + h;
-            for (double argument = start; argument + h < tMax; argument += step) {
-                double x = Math.exp(HALF_PI * Math.sinh(argument));
-                extendedAbscissas.add(x);
-                extendedWeights.add(Math.cosh(argument) * HALF_PI * x);
-            }
-            setRow(rowData, row, rowStart, extendedAbscissas.size() - extensionStart);
-        }
-        DETable refine = new DETable(
-            extendedAbscissas.toArray(),
-            extendedWeights.toArray(),
-            rowData
-        );
+        DETable refine = rowCount <= SharedRefineTables.DEFAULT_EXP_SINH_ROW_COUNT
+            ? SharedRefineTables.EXP_SINH
+            : buildExpSinhRefineTable(rowCount, base, precomputedRows);
         pool.refine = refine;
         pool.refineRows = rowCount;
         return refine;
@@ -1057,31 +1068,9 @@ public final class DoubleExponentialCore {
             pool.refineRows = rowCount;
             return pool.refine;
         }
-
-        int[] rowData = Arrays.copyOf(DoubleExponentialsTables.SINH_SINH_ROWS, rowCount << 1);
-        int split = DoubleExponentialsTables.SINH_SINH_ABSCISSAS.length;
-        DoubleArrayBuilder extendedAbscissas = new DoubleArrayBuilder(128);
-        DoubleArrayBuilder extendedWeights = new DoubleArrayBuilder(128);
-
-        double tMax = DoubleExponentialsTables.SINH_SINH_T_MAX;
-        for (int row = precomputedRows; row < rowCount; row++) {
-            double h = Math.scalb(1.0, -row);
-            int extensionStart = extendedAbscissas.size();
-            int rowStart = split + extensionStart;
-            double step = 2.0 * h;
-            for (double argument = h; argument < tMax; argument += step) {
-                double tmp = HALF_PI * Math.sinh(argument);
-                double x = Math.sinh(tmp);
-                extendedAbscissas.add(x);
-                extendedWeights.add(Math.cosh(argument) * HALF_PI * Math.cosh(tmp));
-            }
-            setRow(rowData, row, rowStart, extendedAbscissas.size() - extensionStart);
-        }
-        DETable refine = new DETable(
-            extendedAbscissas.toArray(),
-            extendedWeights.toArray(),
-            rowData
-        );
+        DETable refine = rowCount <= SharedRefineTables.DEFAULT_SINH_SINH_ROW_COUNT
+            ? SharedRefineTables.SINH_SINH
+            : buildSinhSinhRefineTable(rowCount, base, precomputedRows);
         pool.refine = refine;
         pool.refineRows = rowCount;
         return refine;
@@ -1096,7 +1085,9 @@ public final class DoubleExponentialCore {
         }
         DETable rawRefine = pool.refine;
         if (rowCount > precomputedRows && (rawRefine == null || rawRefine.rowCount() < rowCount)) {
-            rawRefine = buildTanhSinhRefineTable(rowCount, base, precomputedRows);
+            rawRefine = rowCount <= SharedRefineTables.DEFAULT_TANH_SINH_ROW_COUNT
+                ? SharedRefineTables.TANH_SINH
+                : buildTanhSinhRefineTable(rowCount, base, precomputedRows);
             pool.refine = rawRefine;
         }
         if (rowCount > precomputedRows) {
@@ -1145,6 +1136,68 @@ public final class DoubleExponentialCore {
         extendedWeightsArray = extendedWeights.toArray();
 
         return new DETable(extendedAbscissasArray, extendedWeightsArray, rowData, firstComplements);
+    }
+
+    private static DETable buildExpSinhRefineTable(int rowCount, DETable base, int precomputedRows) {
+        if (rowCount <= precomputedRows) {
+            return base;
+        }
+
+        int[] rowData = Arrays.copyOf(DoubleExponentialsTables.EXP_SINH_ROWS, rowCount << 1);
+        int split = DoubleExponentialsTables.EXP_SINH_ABSCISSAS.length;
+        DoubleArrayBuilder extendedAbscissas = new DoubleArrayBuilder(128);
+        DoubleArrayBuilder extendedWeights = new DoubleArrayBuilder(128);
+
+        double tMin = DoubleExponentialsTables.EXP_SINH_T_MIN;
+        for (int row = precomputedRows; row < rowCount; row++) {
+            double h = Math.scalb(1.0, -row);
+            int extensionStart = extendedAbscissas.size();
+            int rowStart = split + extensionStart;
+            double step = 2.0 * h;
+            double start = tMin + h;
+            for (double argument = start; argument + h < EXP_SINH_T_MAX; argument += step) {
+                double x = Math.exp(HALF_PI * Math.sinh(argument));
+                extendedAbscissas.add(x);
+                extendedWeights.add(Math.cosh(argument) * HALF_PI * x);
+            }
+            setRow(rowData, row, rowStart, extendedAbscissas.size() - extensionStart);
+        }
+        return new DETable(
+            extendedAbscissas.toArray(),
+            extendedWeights.toArray(),
+            rowData
+        );
+    }
+
+    private static DETable buildSinhSinhRefineTable(int rowCount, DETable base, int precomputedRows) {
+        if (rowCount <= precomputedRows) {
+            return base;
+        }
+
+        int[] rowData = Arrays.copyOf(DoubleExponentialsTables.SINH_SINH_ROWS, rowCount << 1);
+        int split = DoubleExponentialsTables.SINH_SINH_ABSCISSAS.length;
+        DoubleArrayBuilder extendedAbscissas = new DoubleArrayBuilder(128);
+        DoubleArrayBuilder extendedWeights = new DoubleArrayBuilder(128);
+
+        double tMax = DoubleExponentialsTables.SINH_SINH_T_MAX;
+        for (int row = precomputedRows; row < rowCount; row++) {
+            double h = Math.scalb(1.0, -row);
+            int extensionStart = extendedAbscissas.size();
+            int rowStart = split + extensionStart;
+            double step = 2.0 * h;
+            for (double argument = h; argument < tMax; argument += step) {
+                double tmp = HALF_PI * Math.sinh(argument);
+                double x = Math.sinh(tmp);
+                extendedAbscissas.add(x);
+                extendedWeights.add(Math.cosh(argument) * HALF_PI * Math.cosh(tmp));
+            }
+            setRow(rowData, row, rowStart, extendedAbscissas.size() - extensionStart);
+        }
+        return new DETable(
+            extendedAbscissas.toArray(),
+            extendedWeights.toArray(),
+            rowData
+        );
     }
 
     private static DETable viewTanhSinhTable(

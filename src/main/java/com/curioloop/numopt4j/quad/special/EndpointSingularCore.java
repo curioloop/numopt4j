@@ -65,14 +65,13 @@ final class EndpointSingularCore {
     static Quadrature algebraic(DoubleUnaryOperator f, double min, double max,
                                 double alpha, double beta,
                                 double absTol, double relTol,
-                                int maxRefinements, GaussPool workspace) {
+                                int maxRefinements, GaussRule rule, GaussPool workspace) {
         // Under the affine map x = center + halfSpan*t  (t ∈ [-1,1]):
         //   x - min  = halfSpan*(1+t)   →  contributes (1+t)^alpha
         //   max - x  = halfSpan*(1-t)   →  contributes (1-t)^beta
         // JacobiRule(a,b) generates weights for ∫(1-t)^a (1+t)^b g(t) dt,
         // so JacobiRule(beta, alpha) matches (1-t)^beta (1+t)^alpha.
         // The factor halfSpan^(alpha+beta+1) is absorbed into `scale`.
-        GaussRule rule = GaussRule.jacobi(beta, alpha);
         double halfSpan = 0.5 * (max - min);
         double center   = 0.5 * (min + max);
         double exponent = alpha + beta + 1.0;
@@ -116,7 +115,8 @@ final class EndpointSingularCore {
 
     static Quadrature logarithmic(DoubleUnaryOperator function, double min, double max,
                                   double alpha, double beta, EndpointOpts opts,
-                                  double absTol, double relTol, int maxRefinements) {
+                                  double absTol, double relTol, int maxRefinements,
+                                  DEPool workspace) {
         double interval = max - min;
         double leftExponent = alpha + 1.0;
         double rightExponent = beta + 1.0;
@@ -166,14 +166,18 @@ final class EndpointSingularCore {
         };
 
         Quadrature best = null;
-        double bestTolerance = Double.NaN;
-        DEPool workspace = new DEPool();
         double tolerance = initialDeTolerance(absTol, relTol);
+        int totalEvaluations = 0;
         for (int attempt = 0; attempt < DE_TOLERANCE_RETRIES; attempt++) {
+            int[] attemptEvaluations = {0};
+            DoubleBinaryOperator counted = (unitPosition, unitComplement) -> {
+                attemptEvaluations[0]++;
+                return transformed.applyAsDouble(unitPosition, unitComplement);
+            };
             Quadrature current;
             try {
                 current = DoubleExponentialCore.tanhSinh(
-                    transformed,
+                    counted,
                     0.0,
                     1.0,
                     tolerance,
@@ -182,19 +186,20 @@ final class EndpointSingularCore {
                     workspace
                 );
             } catch (ArithmeticException ex) {
+                totalEvaluations += attemptEvaluations[0];
                 break;
             }
+            totalEvaluations += attemptEvaluations[0];
             if (best == null || current.getEstimatedError() <= best.getEstimatedError()) {
                 best = current;
-                bestTolerance = tolerance;
             }
-            if (meetsTolerance(current, absTol, relTol, tolerance)) {
+            if (meetsTolerance(current, absTol, relTol)) {
                 return new Quadrature(
                     current.getValue(),
                     current.getEstimatedError(),
                     Quadrature.Status.CONVERGED,
                     current.getIterations(),
-                    0
+                    totalEvaluations
                 );
             }
 
@@ -206,12 +211,12 @@ final class EndpointSingularCore {
         }
 
         if (best == null) {
-            return new Quadrature(Double.NaN, Double.NaN, Quadrature.Status.ABNORMAL_TERMINATION, 0, 0);
+            return new Quadrature(Double.NaN, Double.NaN, Quadrature.Status.ABNORMAL_TERMINATION, 0, totalEvaluations);
         }
-        Quadrature.Status status = meetsTolerance(best, absTol, relTol, bestTolerance)
+        Quadrature.Status status = meetsTolerance(best, absTol, relTol)
             ? Quadrature.Status.CONVERGED
             : Quadrature.Status.MAX_REFINEMENTS_REACHED;
-        return new Quadrature(best.getValue(), best.getEstimatedError(), status, best.getIterations(), 0);
+        return new Quadrature(best.getValue(), best.getEstimatedError(), status, best.getIterations(), totalEvaluations);
     }
 
     private static double powScale(double base, double exponent) {
@@ -232,9 +237,7 @@ final class EndpointSingularCore {
         return DoubleExponentialCore.DEFAULT_TOLERANCE;
     }
 
-    private static boolean meetsTolerance(Quadrature result, double absTol, double relTol, double deTolerance) {
-        boolean absSatisfied = absTol > 0.0 && result.getEstimatedError() <= absTol;
-        boolean relSatisfied = relTol > 0.0 && deTolerance <= relTol && result.getStatus().isConverged();
-        return absSatisfied || relSatisfied;
+    private static boolean meetsTolerance(Quadrature result, double absTol, double relTol) {
+        return result.getEstimatedError() <= Math.max(absTol, relTol * Math.abs(result.getValue()));
     }
 }

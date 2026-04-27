@@ -10,11 +10,13 @@ package com.curioloop.numopt4j.quad.de;
  * <ul>
  *   <li>base — the shared baked Boost-compatible rows shipped in
  *       {@link DoubleExponentialsTables}</li>
- *   <li>refine — the caller-owned extension block for rows generated beyond the baked depth</li>
+ *   <li>refine — the cached extension block for rows generated beyond the baked depth</li>
  * </ul>
  *
  * <p>The pool stores one mutable refine segment at a time together with the currently selected DE
- * rule. The baked base segment stays shared on {@link DEOpts}. Reusing the
+ * rule. The baked base segment stays shared on {@link DEOpts}. The refine cache can point either
+ * to a shared immutable default block or to a workspace-owned extension built for deeper custom
+ * requests. Reusing the
  * same pool with a different DE rule replaces the previous refine cache.</p>
  *
  * <p>Pass a single {@code DEPool} to repeated {@link DoubleExponentialIntegral#integrate(DEPool)}

@@ -17,8 +17,9 @@ import java.util.function.DoubleUnaryOperator;
  *
  * <p>Endpoint reuse: when an interval [a, b] is bisected into [a, m] and [m, b],
  * the values f(a), f(m), f(b) are already known from the parent evaluation.
- * Each bisection therefore requires only 2 new function evaluations (the two
- * interior Lobatto nodes of each child), compared to 4 for a fresh 4-point rule.</p>
+ * Each split therefore needs 5 new function evaluations in total: the shared midpoint
+ * plus the two interior Lobatto nodes of each child, instead of 8 evaluations for two
+ * fresh child rules.</p>
  *
  * <p>Error estimate: |I_fine − I_coarse| where I_fine = I_left + I_right
  * and I_coarse is the parent interval estimate.</p>
@@ -60,32 +61,32 @@ final class GaussLobattoCore {
             return Quadrature.Status.ABNORMAL_TERMINATION;
         }
 
-        int[] evalCount = {2};
-        double coarse = lobatto4(f, min, max, fa, fb, evalCount);
+        pool.resultEvaluations = 2;
+        pool.resultIterations = 0;
+        pool.resultError = 0.0;
+        pool.lobattoRoundOffDetected = false;
+
+        double coarse = lobatto4(f, min, max, fa, fb, pool);
         if (!Double.isFinite(coarse)) {
             pool.resultValue = Double.NaN; pool.resultError = Double.NaN;
-            pool.resultIterations = 0;     pool.resultEvaluations = evalCount[0];
+            pool.resultIterations = 0;
             return Quadrature.Status.ABNORMAL_TERMINATION;
         }
 
         double effectiveAbsTol = Math.max(absTol, relTol * Math.abs(coarse));
 
-        int[] subdivCount = {0};
-        double[] errorSum = {0.0};
         double result = refine(f, min, max, fa, fb, coarse,
-                effectiveAbsTol, relTol, maxSubdivisions, maxEvaluations,
-            evalCount, subdivCount, errorSum);
+                effectiveAbsTol, relTol, maxSubdivisions, maxEvaluations, pool);
 
         Quadrature.Status status = Double.isNaN(result)
                 ? Quadrature.Status.ABNORMAL_TERMINATION
-            : (evalCount[0] >= maxEvaluations ? Quadrature.Status.MAX_EVALUATIONS_REACHED
-                : (subdivCount[0] >= maxSubdivisions   ? Quadrature.Status.MAX_SUBDIVISIONS_REACHED
-                : Quadrature.Status.CONVERGED));
+            : (pool.resultEvaluations >= maxEvaluations ? Quadrature.Status.MAX_EVALUATIONS_REACHED
+                : (pool.resultIterations >= maxSubdivisions   ? Quadrature.Status.MAX_SUBDIVISIONS_REACHED
+                : (pool.lobattoRoundOffDetected ? Quadrature.Status.ROUND_OFF_DETECTED
+                : Quadrature.Status.CONVERGED)));
 
         pool.resultValue = Double.isNaN(result) ? Double.NaN : result;
-        pool.resultError = Double.isNaN(result) ? Double.NaN : errorSum[0];
-        pool.resultIterations = subdivCount[0];
-        pool.resultEvaluations = evalCount[0];
+        pool.resultError = Double.isNaN(result) ? Double.NaN : pool.resultError;
         return status;
     }
 
@@ -98,13 +99,13 @@ final class GaussLobattoCore {
      * where h = (b−a)/2.</p>
      */
     private static double lobatto4(DoubleUnaryOperator f, double a, double b,
-                                   double fa, double fb, int[] evals) {
+                                   double fa, double fb, AdaptivePool pool) {
         double h  = 0.5 * (b - a);
         double n2 = a + h * (1.0 - INV_SQRT5);
         double n3 = a + h * (1.0 + INV_SQRT5);
         double fn2 = f.applyAsDouble(n2);
         double fn3 = f.applyAsDouble(n3);
-        evals[0] += 2;
+        pool.resultEvaluations += 2;
         if (!Double.isFinite(fn2) || !Double.isFinite(fn3)) return Double.NaN;
         return h * (W1 * fa + W2 * fn2 + W2 * fn3 + W1 * fb);
     }
@@ -120,26 +121,25 @@ final class GaussLobattoCore {
                                  double fa, double fb, double prevEst,
                                  double absTol, double relTol,
                                  int maxSubdivisions, int maxEvaluations,
-                                 int[] evals, int[] subdivs, double[] errorSum) {
-        if (evals[0] >= maxEvaluations || subdivs[0] >= maxSubdivisions) {
-            errorSum[0] += Math.max(absTol, Math.ulp(1.0) * Math.max(1.0, Math.abs(prevEst)));
+                                 AdaptivePool pool) {
+        if (pool.resultEvaluations >= maxEvaluations || pool.resultIterations >= maxSubdivisions) {
+            pool.resultError += Math.max(absTol, Math.ulp(1.0) * Math.max(1.0, Math.abs(prevEst)));
             return prevEst;
         }
 
         double m  = 0.5 * (a + b);
         if (!(m > a && m < b)) {
-            errorSum[0] += Math.max(absTol, Math.ulp(1.0) * Math.max(1.0, Math.abs(prevEst)));
+            pool.lobattoRoundOffDetected = true;
+            pool.resultError += Math.max(absTol, Math.ulp(1.0) * Math.max(1.0, Math.abs(prevEst)));
             return prevEst;
         }
         double fm = f.applyAsDouble(m);
-        evals[0]++;
+        pool.resultEvaluations++;
         if (!Double.isFinite(fm)) return Double.NaN;
 
-        int[] e = {0};
-        double left  = lobatto4(f, a, m, fa, fm, e);
-        double right = lobatto4(f, m, b, fm, fb, e);
-        evals[0] += e[0];
-        subdivs[0]++;
+        double left  = lobatto4(f, a, m, fa, fm, pool);
+        double right = lobatto4(f, m, b, fm, fb, pool);
+        pool.resultIterations++;
 
         if (!Double.isFinite(left) || !Double.isFinite(right)) return Double.NaN;
 
@@ -148,22 +148,23 @@ final class GaussLobattoCore {
         double tol      = Math.max(absTol, relTol * Math.abs(combined));
 
         if (error <= tol) {
-            errorSum[0] += error;
+            pool.resultError += error;
             return combined;
         }
 
         // Protective check (QuantLib): if the sub-interval contribution is already
         // below numerical precision, further bisection cannot improve accuracy.
         if (Math.abs(combined) == 0.0 || absTol >= Math.abs(combined)) {
-            errorSum[0] += Math.max(error, Math.ulp(1.0) * Math.max(1.0, Math.abs(combined)));
+            pool.lobattoRoundOffDetected = true;
+            pool.resultError += Math.max(error, Math.ulp(1.0) * Math.max(1.0, Math.abs(combined)));
             return combined;
         }
 
         // Bisect both halves
         double l = refine(f, a, m, fa, fm, left,  absTol, relTol,
-            maxSubdivisions, maxEvaluations, evals, subdivs, errorSum);
+            maxSubdivisions, maxEvaluations, pool);
         double r = refine(f, m, b, fm, fb, right, absTol, relTol,
-            maxSubdivisions, maxEvaluations, evals, subdivs, errorSum);
+            maxSubdivisions, maxEvaluations, pool);
 
         if (!Double.isFinite(l) || !Double.isFinite(r)) return Double.NaN;
         return l + r;

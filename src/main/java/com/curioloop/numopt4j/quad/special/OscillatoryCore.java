@@ -4,7 +4,6 @@
 package com.curioloop.numopt4j.quad.special;
 
 import com.curioloop.numopt4j.quad.Quadrature;
-import com.curioloop.numopt4j.quad.adapt.AdaptivePool;
 import com.curioloop.numopt4j.quad.adapt.AdaptiveIntegral;
 
 import java.util.function.DoubleUnaryOperator;
@@ -39,13 +38,14 @@ final class OscillatoryCore {
                                             double omega, boolean sine,
                                             double absTol, double relTol,
                                             int maxCycles, int maxSubdivisions, int maxEvaluations,
-                                            AdaptivePool workspace) {
-        DoubleUnaryOperator weighted = x -> f.applyAsDouble(x)
-                * (sine ? Math.sin(omega * x) : Math.cos(omega * x));
-
-        double[] partialSums = new double[maxCycles];
-        double[] epsilonA = new double[maxCycles];
-        double[] epsilonB = new double[maxCycles];
+                                            OscillatoryPool workspace) {
+        workspace.ensureSeries(maxCycles);
+        DoubleUnaryOperator weighted = workspace.weightedIntegrand().configure(f, omega, sine);
+        double[] scratch = workspace.seriesArena();
+        int partialSumsOffset = 0;
+        int epsilonAOffset = maxCycles;
+        int epsilonBOffset = maxCycles * 2;
+        int extrapolationOffset = maxCycles * 3;
         double cycleWidth = cycleWidth(omega);
         double factor = 1.0;
         double totalValue = 0.0;
@@ -65,7 +65,7 @@ final class OscillatoryCore {
             }
 
             double right = left + cycleWidth;
-                double cycleAbsTol = cycleTolerance(absTol, relTol, totalValue, totalVariation, factor);
+            double cycleAbsTol = cycleTolerance(absTol, relTol, totalValue, totalVariation, factor);
             int cycleEvaluations = Math.max(1, maxEvaluations - totalEvaluations);
             Quadrature.Status cycleStatus = AdaptiveIntegral.integrateSegment(weighted, left, right,
                     cycleAbsTol, 0.0, maxSubdivisions, cycleEvaluations, workspace);
@@ -79,7 +79,7 @@ final class OscillatoryCore {
             totalValue = updated;
             totalError += workspace.resultError();
             totalVariation += Math.abs(cycleValue);
-            partialSums[cycle] = totalValue;
+            scratch[partialSumsOffset + cycle] = totalValue;
 
             // Only abort on hard numerical failures (NaN/Inf), not on limit-reached
             // statuses — those are expected when per-cycle tolerance is tight.
@@ -89,15 +89,15 @@ final class OscillatoryCore {
                         cycleStatus, totalIterations, totalEvaluations);
             }
 
-            Extrapolation extrapolation = extrapolate(partialSums, cycle + 1, epsilonA, epsilonB);
             double directError = totalError + Math.abs(cycleValue);
             double candidateValue = totalValue;
             double candidateError = directError;
 
-            if (extrapolation.available) {
-                double acceleratedError = totalError + extrapolation.error;
+            if (extrapolate(scratch, partialSumsOffset, cycle + 1,
+                    epsilonAOffset, epsilonBOffset, extrapolationOffset)) {
+                double acceleratedError = totalError + scratch[extrapolationOffset + 1];
                 if (acceleratedError < candidateError) {
-                    candidateValue = extrapolation.value;
+                    candidateValue = scratch[extrapolationOffset];
                     candidateError = acceleratedError;
                 }
             }
@@ -168,10 +168,11 @@ final class OscillatoryCore {
         return new Quadrature(totalValue, totalError, status, iterations, evaluations);
     }
 
-    private static Extrapolation extrapolate(double[] partialSums, int count,
-                                             double[] rowA, double[] rowB) {
+    private static boolean extrapolate(double[] scratch, int partialSumsOffset, int count,
+                                       int rowAOffset, int rowBOffset,
+                                       int outOffset) {
         if (count < 3) {
-            return Extrapolation.unavailable();
+            return false;
         }
 
         // Wynn epsilon-algorithm on the partial-sum sequence.
@@ -181,45 +182,53 @@ final class OscillatoryCore {
         //   row 1 (length=count-1): reciprocals of consecutive diffs  (odd order)
         //   row k (length=count-k): computed from rows k-2 and k-1
         //
-        // We use a rolling two-row scheme with the two pre-allocated arrays rowA / rowB,
+        // We use a rolling two-row scheme with two regions inside the pre-allocated arena,
         // avoiding any heap allocation inside this method.
         //
-        // rowA holds the "previous-previous" row (prePrevious),
-        // rowB holds the "previous" row (previous).
+        // rowAOffset holds the "previous-previous" row (prePrevious),
+        // rowBOffset holds the "previous" row (previous).
         // After each step we swap roles: the old prePrevious buffer is reused for next.
 
-        // Row 0: copy partialSums into rowA
-        System.arraycopy(partialSums, 0, rowA, 0, count);
+        // Row 0: copy partial sums into row A.
+        System.arraycopy(scratch, partialSumsOffset, scratch, rowAOffset, count);
 
-        // Row 1: reciprocals of consecutive differences → rowB
+        // Row 1: reciprocals of consecutive differences → row B.
         int len1 = count - 1;
         for (int i = 0; i < len1; i++) {
-            double scale = Math.max(Math.abs(partialSums[i + 1]), Math.abs(partialSums[i]));
-            rowB[i] = reciprocal(partialSums[i + 1] - partialSums[i], scale);
+            double current = scratch[partialSumsOffset + i];
+            double next = scratch[partialSumsOffset + i + 1];
+            double scale = Math.max(Math.abs(next), Math.abs(current));
+            scratch[rowBOffset + i] = reciprocal(next - current, scale);
         }
 
         double bestValue = Double.NaN;
         double bestError = Double.POSITIVE_INFINITY;
         double previousEven = Double.NaN;
 
-        // prePrevious = rowA (row 0), previous = rowB (row 1)
-        // We alternate which buffer plays which role to avoid allocation.
-        double[] prePrevious = rowA;
-        double[] previous    = rowB;
+        // prePrevious = row A (row 0), previous = row B (row 1)
+        // We alternate which region plays which role to avoid allocation.
+        int prePreviousOffset = rowAOffset;
+        int previousOffset = rowBOffset;
 
         for (int order = 2, length = count - 2; length > 0; order++, length--) {
-            // Reuse the prePrevious buffer for the next row (it's no longer needed after this step)
-            double[] next = prePrevious;
+            // Reuse the prePrevious region for the next row (it's no longer needed after this step).
+            int nextOffset = prePreviousOffset;
             for (int i = 0; i < length; i++) {
-                double scale = Math.max(Math.abs(previous[i + 1]), Math.abs(previous[i]));
-                double r = reciprocal(previous[i + 1] - previous[i], scale);
-                next[i] = Double.isFinite(r) ? prePrevious[i + 1] + r : Double.NaN;
+                double previous = scratch[previousOffset + i];
+                double nextPrevious = scratch[previousOffset + i + 1];
+                double scale = Math.max(Math.abs(nextPrevious), Math.abs(previous));
+                double r = reciprocal(nextPrevious - previous, scale);
+                scratch[nextOffset + i] = Double.isFinite(r)
+                        ? scratch[prePreviousOffset + i + 1] + r
+                        : Double.NaN;
             }
 
             if ((order & 1) == 0) {
-                double candidate = next[0];
+                double candidate = scratch[nextOffset];
                 if (Double.isFinite(candidate)) {
-                    double reference = Double.isFinite(previousEven) ? previousEven : partialSums[count - 1];
+                    double reference = Double.isFinite(previousEven)
+                            ? previousEven
+                            : scratch[partialSumsOffset + count - 1];
                     double candidateError = Math.abs(candidate - reference);
                     if (candidateError < bestError) {
                         bestValue = candidate;
@@ -229,15 +238,17 @@ final class OscillatoryCore {
                 }
             }
 
-            prePrevious = previous;
-            previous    = next;
+            prePreviousOffset = previousOffset;
+            previousOffset = nextOffset;
         }
 
         if (!Double.isFinite(bestValue)) {
-            return Extrapolation.unavailable();
+            return false;
         }
         double errorFloor = RECIPROCAL_EPS * Math.max(1.0, Math.abs(bestValue));
-        return new Extrapolation(bestValue, Math.max(bestError, errorFloor), true);
+        scratch[outOffset] = bestValue;
+        scratch[outOffset + 1] = Math.max(bestError, errorFloor);
+        return true;
     }
 
     private static double reciprocal(double value, double scale) {
@@ -251,21 +262,4 @@ final class OscillatoryCore {
         return 1.0 / value;
     }
 
-    private static final class Extrapolation {
-        final double value;
-        final double error;
-        final boolean available;
-
-        private static final Extrapolation UNAVAILABLE = new Extrapolation(Double.NaN, Double.NaN, false);
-
-        Extrapolation(double value, double error, boolean available) {
-            this.value = value;
-            this.error = error;
-            this.available = available;
-        }
-
-        static Extrapolation unavailable() {
-            return UNAVAILABLE;
-        }
-    }
 }

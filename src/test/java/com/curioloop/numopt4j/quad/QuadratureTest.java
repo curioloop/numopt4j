@@ -14,6 +14,7 @@ import com.curioloop.numopt4j.quad.gauss.GaussRule;
 import com.curioloop.numopt4j.quad.special.EndpointOpts;
 import com.curioloop.numopt4j.quad.special.ImproperOpts;
 import com.curioloop.numopt4j.quad.special.OscillatoryOpts;
+import com.curioloop.numopt4j.quad.special.OscillatoryPool;
 import com.curioloop.numopt4j.quad.gauss.GaussPool;
 
 import org.junit.jupiter.api.Test;
@@ -103,6 +104,23 @@ class QuadratureTest {
         double expected = 2.5 / (2.5 * 2.5 + 2.3 * 2.3);
         assertThat(result.isSuccessful()).isTrue();
         assertThat(result.getValue()).isCloseTo(expected, offset(1e-9));
+    }
+
+    @Test
+    void oscillatoryUpperAcceptsSpecializedWorkspace() {
+        var problem = Integrator.oscillatory(OscillatoryOpts.COS_UPPER)
+                .function(x -> Math.exp(-2.5 * x)).lowerBound(0.0).omega(2.3)
+                .tolerances(1e-10, 1e-10);
+        OscillatoryPool workspace = new OscillatoryPool();
+
+        Quadrature first = problem.integrate(workspace);
+        Quadrature second = problem.integrate(workspace);
+
+        double expected = 2.5 / (2.5 * 2.5 + 2.3 * 2.3);
+        assertThat(first.isSuccessful()).isTrue();
+        assertThat(second.isSuccessful()).isTrue();
+        assertThat(first.getValue()).isCloseTo(expected, offset(1e-9));
+        assertThat(second.getValue()).isCloseTo(expected, offset(1e-9));
     }
 
     @Test
@@ -357,6 +375,29 @@ class QuadratureTest {
 
         assertThat(result.isSuccessful()).isTrue();
         assertThat(Math.abs((result.getValue() - expected) / expected)).isLessThan(5e-7);
+    }
+
+    @Test
+    void endpointSingularRelativeOnlyLogIntegralDoesNotFalseConverge() {
+        Quadrature result = Integrator.endpointSingular(EndpointOpts.LOG_LEFT)
+                .function(x -> 1.0 - 4.0 * x).bounds(0.0, 1.0).exponents(0.0, 0.0)
+                .tolerances(0.0, 1e-8).integrate();
+
+        assertThat(result.getStatus()).isEqualTo(Quadrature.Status.MAX_REFINEMENTS_REACHED);
+        assertThat(result.isSuccessful()).isFalse();
+        assertThat(result.getEstimatedError()).isPositive();
+        assertThat(result.getEvaluations()).isPositive();
+    }
+
+    @Test
+    void endpointSingularSuccessfulLogIntegralReportsEvaluations() {
+        Quadrature result = Integrator.endpointSingular(EndpointOpts.LOG_LEFT)
+                .function(x -> 1.0).bounds(0.0, 1.0).exponents(0.0, 0.0)
+                .tolerances(1e-10, 1e-10).integrate();
+
+        assertThat(result.isSuccessful()).isTrue();
+        assertThat(result.getValue()).isCloseTo(-1.0, offset(1e-8));
+        assertThat(result.getEvaluations()).isPositive();
     }
 
     @Test
@@ -739,6 +780,19 @@ class QuadratureTest {
         assertThat(result.isSuccessful()).isFalse();
     }
 
+    @Test
+    void adaptiveGk15ErrorFloorPreventsFalseConvergenceOnExactConstant() {
+        Quadrature result = Integrator.adaptive()
+                .function(x -> 1.0).bounds(0.0, 1.0)
+                .tolerances(0.0, 1e-20)
+                .maxSubdivisions(1)
+                .integrate();
+
+        assertThat(result.getStatus()).isEqualTo(Quadrature.Status.MAX_SUBDIVISIONS_REACHED);
+        assertThat(result.isSuccessful()).isFalse();
+        assertThat(result.getEstimatedError()).isPositive();
+    }
+
     // -----------------------------------------------------------------------
     // endpointSingular MAX_REFINEMENTS_REACHED
     // -----------------------------------------------------------------------
@@ -805,7 +859,7 @@ class QuadratureTest {
     @Test
     void gaussLobattoUsesFewerEvaluationsPerSubdivision() {
         // For the same number of subdivisions, Gauss-Lobatto needs fewer evaluations
-        // per subdivision than GK15 due to endpoint reuse (2 new evals vs 15).
+        // per subdivision than GK15 due to endpoint reuse (5 new evals vs 15).
         // We verify this by checking evaluations / subdivisions ratio.
         Quadrature lobatto = Integrator.adaptive()
                 .function(Math::sin).bounds(0.0, Math.PI)
@@ -828,6 +882,47 @@ class QuadratureTest {
         double lobattoRatio = (double) lobatto.getEvaluations() / Math.max(1, lobatto.getIterations());
         double gk15Ratio    = (double) gk15.getEvaluations()    / Math.max(1, gk15.getIterations());
         assertThat(lobattoRatio).isLessThan(gk15Ratio);
+    }
+
+    @Test
+    void gaussLobattoEvaluationCountMatchesEndpointReuseAccounting() {
+        Quadrature result = Integrator.adaptive()
+                .function(Math::sin).bounds(0.0, Math.PI)
+                .tolerances(1e-10, 1e-10)
+                .rule(com.curioloop.numopt4j.quad.adapt.AdaptiveRule.GAUSS_LOBATTO)
+                .integrate();
+
+        assertThat(result.isSuccessful()).isTrue();
+        assertThat(result.getEvaluations()).isEqualTo(4 + 5 * result.getIterations());
+    }
+
+    @Test
+    void gaussLobattoReportsRoundOffOnUnresolvableTinyInterval() {
+        double min = 1.0;
+        double max = Math.nextUp(min);
+
+        Quadrature result = Integrator.adaptive()
+                .function(Math::sin).bounds(min, max)
+                .tolerances(1e-30, 0.0)
+                .rule(com.curioloop.numopt4j.quad.adapt.AdaptiveRule.GAUSS_LOBATTO)
+                .integrate();
+
+        assertThat(result.getStatus()).isEqualTo(Quadrature.Status.ROUND_OFF_DETECTED);
+        assertThat(result.isSuccessful()).isFalse();
+    }
+
+    @Test
+    void adaptiveGk15ReportsRoundOffOnUnresolvableTinyInterval() {
+        double min = 1.0;
+        double max = Math.nextUp(min);
+
+        Quadrature result = Integrator.adaptive()
+                .function(Math::sin).bounds(min, max)
+                .tolerances(0.0, 1e-30)
+                .integrate();
+
+        assertThat(result.getStatus()).isEqualTo(Quadrature.Status.ROUND_OFF_DETECTED);
+        assertThat(result.isSuccessful()).isFalse();
     }
 
     @Test

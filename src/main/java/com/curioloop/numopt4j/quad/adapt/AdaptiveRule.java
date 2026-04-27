@@ -13,7 +13,7 @@ package com.curioloop.numopt4j.quad.adapt;
  *   <li>{@link #GAUSS_LOBATTO} — 4-point Gauss-Lobatto rule with endpoint reuse.
  *       Exact for polynomials of degree ≤ 5. Endpoints are fixed at the interval
  *       boundaries and shared between adjacent sub-intervals, so each bisection
- *       requires only 2 new function evaluations instead of 4.
+ *       needs 5 new function evaluations for the two child rules instead of 8.
  *       Preferred when function evaluations are expensive (e.g. Heston characteristic
  *       function integrals).</li>
  * </ul>
