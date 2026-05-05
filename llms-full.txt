@@ -1,5 +1,8 @@
 # numopt4j — Full API Reference
 
+> [!IMPORTANT]
+> This repository is archived at the `v0.20.0` snapshot. Active development has moved to [YUM4J](https://github.com/curioloop/yum4j); use the new repository for current code, documentation, issues, and releases.
+
 > For AI assistants to deeply understand how to use the numopt4j library.
 
 ## 1. Library Overview and Installation

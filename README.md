@@ -1,4 +1,9 @@
-# numopt4j
+# numopt4j has moved to YUM4J
+
+> [!IMPORTANT]
+> This repository is archived at the `v0.20.0` snapshot and is no longer actively maintained. Active development has moved to [YUM4J](https://github.com/curioloop/yum4j), the successor project for Java numerical optimization, linear algebra, time series, and scientific computing. Please use the new repository for current code, documentation, issues, and releases.
+
+The content below describes the archived numopt4j codebase and is kept for historical reference.
 
 High-performance numerical optimization library for Java.
 

@@ -1,5 +1,8 @@
 # numopt4j
 
+> [!IMPORTANT]
+> This repository is archived at the `v0.20.0` snapshot. Active development has moved to [YUM4J](https://github.com/curioloop/yum4j); use the new repository for current code, documentation, issues, and releases.
+
 > High-performance Java numerical optimization and integration library providing CMA-ES, Subplex, L-BFGS-B, SLSQP, TRF, root-finding, and numerical quadrature algorithms.
 
 numopt4j is a Java numerical library supporting derivative-free optimization, unconstrained/bound-constrained optimization, equality/inequality constrained optimization, nonlinear least-squares fitting, root finding, and one-dimensional numerical integration.
